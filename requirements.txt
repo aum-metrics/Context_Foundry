@@ -1,6 +1,6 @@
-# AUM: Unified Streamlit Cloud Dependencies - FINAL MINIMAL FIX
+# AUM: Unified Streamlit Cloud Dependencies - Final Stable Configuration
 
-# ---- Core UI (Pinned for consistency) ----
+# ---- Core UI (Pinned for stability) ----
 streamlit==1.40.1
 pandas==2.2.3
 numpy==1.26.4
@@ -13,10 +13,9 @@ sentence-transformers==2.5.1
 torch==2.2.0
 transformers==4.38.0
 
-# ---- Supabase/Networking FIX (Minimal Pins) ----
-# Pinned to 2.2.0 to avoid the proxy error. 
-# REMOVED: httpx, postgrest-py (letting supabase pull compatible versions)
-supabase==2.2.0 
+# ---- Supabase/Networking FIX (Rollback to Known Stable V1) ----
+# This rollback is the only reliable way to bypass the 'proxy' error on Streamlit Cloud
+supabase==1.0.0
 storage3==0.6.0
 tqdm==4.66.5
 
