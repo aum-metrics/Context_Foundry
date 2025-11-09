@@ -96,8 +96,7 @@ st.markdown("""
 # Supabase Configuration
 # ============================================================================
 
-from supabase import create_client
-from supabase.client import Client
+from supabase import create_client, Client
 
 def init_supabase():
     """
