@@ -1,21 +1,29 @@
+# AUM: Unified Streamlit Cloud Dependencies
+
 # ---- Core UI ----
 streamlit==1.40.1
 pandas==2.2.3
 numpy==1.26.4
 plotly==5.24.1
 openpyxl==3.1.5
-requests==2.32.3
+requests==2.31.0  # Pinned to local working version
 
 # ---- NLP & Embeddings ----
-sentence-transformers==3.2.1
-torch==2.5.1   # Works with Python 3.13 CPU
+# Use specific versions that match the environment's Python/OS
+sentence-transformers==2.5.1
+torch==2.2.0
+transformers==4.38.0
 
-# ---- Supabase + Networking ----
-supabase==2.4.0
-httpx==0.25.2
-postgrest==0.16.0
-storage3==0.6.0
+# ---- Supabase/Networking FIX ----
+# Downgrading and pinning dependencies to known stable versions
+supabase==2.2.0
+httpx==0.23.0 
+postgrest-py==1.1.0 
 
-# ---- Utility ----
-tqdm==4.66.5
+# ---- Visualization ----
+matplotlib==3.8.2
+seaborn==0.13.2
 altair==5.3.0
+
+# ---- Database ----
+duckdb==0.10.0
