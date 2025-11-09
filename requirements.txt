@@ -1,6 +1,6 @@
-# AUM: Unified Streamlit Cloud Dependencies - FINAL FIX
+# AUM: Unified Streamlit Cloud Dependencies - FINAL MINIMAL FIX
 
-# ---- Core UI ----
+# ---- Core UI (Pinned for consistency) ----
 streamlit==1.40.1
 pandas==2.2.3
 numpy==1.26.4
@@ -8,18 +8,15 @@ plotly==5.24.1
 openpyxl==3.1.5
 requests==2.31.0
 
-# ---- NLP & Embeddings ----
-# Running on Python 3.11/3.12, so these versions are now valid (no more Python 3.13 error)
+# ---- NLP & Embeddings (Requires Python 3.11) ----
 sentence-transformers==2.5.1
 torch==2.2.0
 transformers==4.38.0
 
-# ---- Supabase/Networking FIX ----
-# 1. httpx fixed: must be >=0.24.0 for supabase 2.2.0
-# 2. postgrest-py fixed: must be latest available 0.x.x
-supabase==2.2.0
-httpx==0.24.1  # <-- FIXED: Meets the >=0.24.0 requirement
-postgrest-py==0.10.6 # <-- FIXED: Latest version found by pip (Replaces 1.1.0)
+# ---- Supabase/Networking FIX (Minimal Pins) ----
+# Pinned to 2.2.0 to avoid the proxy error. 
+# REMOVED: httpx, postgrest-py (letting supabase pull compatible versions)
+supabase==2.2.0 
 storage3==0.6.0
 tqdm==4.66.5
 
