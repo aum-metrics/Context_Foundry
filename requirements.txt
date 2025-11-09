@@ -1,34 +1,25 @@
-# AUM: Augmented Universal Metrics - Dependencies
-# Version: 1.0.1 (TESTED & VALIDATED)
-# File: requirements.txt (SINGLE UNIFIED VERSION)
+# ---- AUM Core ----
+streamlit==1.40.1
+pandas==2.2.3
+numpy==1.26.4
+plotly==5.24.1
+openpyxl==3.1.5
+requests==2.32.3
 
-# Core Framework
-streamlit==1.32.0
+# ---- AI/NLP ----
+sentence-transformers==3.0.1
+torch==2.4.0+cpu
+torchvision==0.19.0+cpu
+torchaudio==2.4.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 
-# Data Processing
-pandas==2.2.0
-numpy==1.26.3
-openpyxl==3.1.2
-
-# Database
-duckdb==0.10.0
+# ---- Supabase + Utils ----
 supabase==2.4.0
+httpx==0.27.0
+realtime==1.2.0
+postgrest==0.16.0
+storage3==0.6.0
 
-# Machine Learning / Semantic (CRITICAL - Must be installed)
-sentence-transformers==2.5.1
-torch==2.2.0
-transformers==4.38.0
-
-# Visualization
-plotly==5.19.0
-matplotlib==3.8.2
-seaborn==0.13.2
-
-# Utilities
-python-dotenv==1.0.1
-requests==2.31.0
-pillow==10.2.0
-
-# Optional (uncomment if needed)
-# speechrecognition==3.10.1
-# psutil==5.9.8  # For memory monitoring in tests
+# ---- Optional (for smoother builds) ----
+tqdm==4.66.5
+altair==5.3.0
