@@ -8,9 +8,7 @@ requests==2.32.3
 
 # ---- NLP & Embeddings ----
 sentence-transformers==3.2.1
-torch==2.5.1
-torchvision==0.20.1
-torchaudio==2.5.1
+torch==2.5.1   # ✅ works with Python 3.13, CPU-only wheels available
 
 # ---- Supabase + Networking ----
 supabase==2.4.0
@@ -19,6 +17,6 @@ realtime==1.2.0
 postgrest==0.16.0
 storage3==0.6.0
 
-# ---- Utility ----
+# ---- Optional Utils ----
 tqdm==4.66.5
 altair==5.3.0
