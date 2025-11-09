@@ -249,21 +249,38 @@ def get_usage_count(supabase: Client, user_id: str) -> int:
 
 
 def record_payment(supabase: Client, user_id: str, amount: float):
-    """Record payment transaction"""
+    """Record payment transaction and handle Supabase responses safely"""
     try:
         payment_data = {
             "user_id": user_id,
-            "amount": amount,
+            "amount": float(amount),
             "currency": "INR",
             "mode": "razorpay_qr",
             "payment_status": "confirmed",
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.utcnow().isoformat()
         }
-        
-        supabase.table("transactions").insert(payment_data).execute()
-        return True
+
+        response = supabase.table("transactions").insert(payment_data).execute()
+
+        # Handle both dict and JSON string responses safely
+        if isinstance(response, str):
+            try:
+                response = json.loads(response)
+            except json.JSONDecodeError:
+                st.warning("⚠️ Supabase returned an empty response. This usually means Row-Level Security blocked the insert.")
+                st.info("➡️ Please disable RLS on the `transactions` table or use your Service Role Key.")
+                return False
+
+        # Check if insert was successful
+        if hasattr(response, "data") and response.data:
+            st.success("✅ Payment recorded successfully!")
+            return True
+        else:
+            st.warning(f"⚠️ Payment insert returned: {response}")
+            return False
+
     except Exception as e:
-        st.error(f"Payment recording failed: {e}")
+        st.error(f"❌ Payment recording failed: {str(e)}")
         return False
 
 
