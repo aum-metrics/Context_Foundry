@@ -1,4 +1,4 @@
-# AUM: Unified Streamlit Cloud Dependencies - FIXING PROXY/TORCH ERRORS
+# AUM: Unified Streamlit Cloud Dependencies - FINAL FIX
 
 # ---- Core UI ----
 streamlit==1.40.1
@@ -9,15 +9,17 @@ openpyxl==3.1.5
 requests==2.31.0
 
 # ---- NLP & Embeddings ----
-# torch 2.2.0 REQUIRES Python <= 3.11
+# Running on Python 3.11/3.12, so these versions are now valid (no more Python 3.13 error)
 sentence-transformers==2.5.1
 torch==2.2.0
 transformers==4.38.0
 
-# ---- Supabase/Networking FIX (Resolves Proxy Error) ----
+# ---- Supabase/Networking FIX ----
+# 1. httpx fixed: must be >=0.24.0 for supabase 2.2.0
+# 2. postgrest-py fixed: must be latest available 0.x.x
 supabase==2.2.0
-httpx==0.23.0 
-postgrest-py==1.1.0 
+httpx==0.24.1  # <-- FIXED: Meets the >=0.24.0 requirement
+postgrest-py==0.10.6 # <-- FIXED: Latest version found by pip (Replaces 1.1.0)
 storage3==0.6.0
 tqdm==4.66.5
 
