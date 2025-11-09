@@ -1,4 +1,4 @@
-# AUM: Unified Streamlit Cloud Dependencies - Final Stable Configuration
+# AUM: Unified Streamlit Cloud Dependencies - FINAL RESOLUTION
 
 # ---- Core UI (Pinned for stability) ----
 streamlit==1.40.1
@@ -13,10 +13,11 @@ sentence-transformers==2.5.1
 torch==2.2.0
 transformers==4.38.0
 
-# ---- Supabase/Networking FIX (Rollback to Known Stable V1) ----
-# This rollback is the only reliable way to bypass the 'proxy' error on Streamlit Cloud
-supabase==1.0.0
-storage3==0.6.0
+# ---- Supabase/Networking FIX ----
+# Rollback to 1.0.0 to avoid 'proxy' error
+supabase==1.0.0 
+# CRITICAL FIX: storage3 must be 0.5.0 for supabase 1.0.0
+storage3==0.5.0
 tqdm==4.66.5
 
 # ---- Database/Visualization ----
