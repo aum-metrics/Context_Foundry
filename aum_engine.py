@@ -391,30 +391,41 @@ class PromptInterpreter:
         numeric_indicators = ['sales', 'revenue', 'amount', 'price', 'cost', 'quantity', 
                             'count', 'total', 'value', 'sum', 'avg', 'rate', 'margin']
         
+        # PRIORITY: Direct exact mention in prompt (e.g., "by sales" should find "sales" column)
         for col in columns:
             col_lower = col.lower()
             
-            # Direct mention in prompt
-            if col_lower in prompt:
+            # Exact match has highest priority
+            if col_lower in prompt.split():
                 if self._is_numeric_column_name(col):
-                    metrics.append(col)
+                    metrics.insert(0, col)  # Add to front
                     continue
+        
+        # Secondary: Partial matches and indicators
+        for col in columns:
+            col_lower = col.lower()
+            
+            # Skip if already added
+            if col in metrics:
+                continue
             
             # Check domain metrics
             for metric in domain_metrics:
-                if metric in col_lower:
+                if metric in col_lower and self._is_numeric_column_name(col):
                     metrics.append(col)
                     break
             
-            # Check numeric indicators
+            # Check numeric indicators only if column name suggests it's numeric
             if any(indicator in col_lower for indicator in numeric_indicators):
-                metrics.append(col)
+                if self._is_numeric_column_name(col):
+                    metrics.append(col)
             
             # Check synonyms
             for key, synonyms in self.SYNONYMS.items():
                 if key in prompt and any(syn in col_lower for syn in synonyms):
                     if self._is_numeric_column_name(col):
                         metrics.append(col)
+                        break
         
         # Remove duplicates while preserving order
         seen = set()
@@ -424,6 +435,13 @@ class PromptInterpreter:
                 seen.add(m)
                 unique_metrics.append(m)
         
+        # If no metrics found, default to first numeric-looking column
+        if not unique_metrics:
+            for col in columns:
+                if self._is_numeric_column_name(col):
+                    unique_metrics.append(col)
+                    break
+        
         return unique_metrics[:3]  # Limit to 3
     
     def _extract_dimensions(self, prompt: str, columns: List[str]) -> List[str]:
@@ -431,39 +449,59 @@ class PromptInterpreter:
         dimensions = []
         domain_dims = self.domain_config['dimensions']
         
-        # Parse "by" keyword
+        # Parse "by" keyword - this is the most important signal
         by_pattern = r'\bby\s+(\w+(?:\s+\w+)?)'
         by_matches = re.findall(by_pattern, prompt)
         
+        # Priority 1: Columns mentioned after "by"
+        for match in by_matches:
+            match_normalized = match.replace(' ', '_').lower()
+            for col in columns:
+                col_lower = col.lower()
+                # Skip ID columns unless explicitly mentioned
+                if match == 'dealers' or match == 'dealer':
+                    # For "dealers", prefer "dealer_name" over "dealer_id"
+                    if 'name' in col_lower and 'dealer' in col_lower:
+                        if not self._is_numeric_column_name(col):
+                            dimensions.insert(0, col)  # Add to front
+                            break
+                    elif 'dealer' in col_lower and 'id' not in col_lower:
+                        if not self._is_numeric_column_name(col):
+                            dimensions.append(col)
+                elif match_normalized in col_lower or match.replace(' ', '') in col_lower:
+                    if not self._is_numeric_column_name(col):
+                        dimensions.append(col)
+        
+        # Priority 2: Direct column name mention (but not after "by")
         for col in columns:
             col_lower = col.lower()
             
-            # Direct "by" mention
-            for match in by_matches:
-                if match.replace(' ', '_') in col_lower or match.replace(' ', '') in col_lower:
-                    if not self._is_numeric_column_name(col):
-                        dimensions.append(col)
-                        continue
+            # Skip if already added
+            if col in dimensions:
+                continue
             
-            # Direct column name in prompt
-            if col_lower in prompt:
-                if not self._is_numeric_column_name(col):
-                    dimensions.append(col)
-                    continue
+            # Skip metric-like columns
+            if self._is_numeric_column_name(col):
+                continue
             
-            # Domain dimensions
+            # Check if column name appears in prompt (not after "by")
+            if col_lower in prompt and col not in dimensions:
+                dimensions.append(col)
+        
+        # Priority 3: Domain dimensions
+        for col in columns:
+            if col in dimensions:
+                continue
+            if self._is_numeric_column_name(col):
+                continue
+                
+            col_lower = col.lower()
             for dim in domain_dims:
                 if dim in col_lower:
                     dimensions.append(col)
                     break
-            
-            # Synonym matching
-            for key, synonyms in self.SYNONYMS.items():
-                if key in prompt and any(syn in col_lower for syn in synonyms):
-                    if not self._is_numeric_column_name(col):
-                        dimensions.append(col)
         
-        # Remove duplicates
+        # Remove duplicates while preserving order
         seen = set()
         unique_dims = []
         for d in dimensions:
@@ -605,6 +643,7 @@ class AUMEngine:
         metrics = query['metrics'] if query['metrics'] else []
         dimensions = query['dimensions'] if query['dimensions'] else []
         
+        # If no metrics or dimensions, return sample
         if not metrics and not dimensions:
             return df.head(100)
         
@@ -613,21 +652,39 @@ class AUMEngine:
             if m in df.columns:
                 df[m] = pd.to_numeric(df[m], errors='coerce')
         
-        # Aggregate
+        # CRITICAL FIX: Aggregate properly when dimensions exist
         if dimensions:
-            agg_dict = {m: 'sum' for m in metrics if m in df.columns}
-            if agg_dict:
-                result = df.groupby(dimensions, as_index=False, dropna=False).agg(agg_dict)
+            # Ensure dimensions exist in dataframe
+            valid_dims = [d for d in dimensions if d in df.columns]
+            valid_metrics = [m for m in metrics if m in df.columns]
+            
+            if valid_dims and valid_metrics:
+                # Aggregate all metrics by summing
+                agg_dict = {m: 'sum' for m in valid_metrics}
+                result = df.groupby(valid_dims, as_index=False, dropna=False).agg(agg_dict)
+            elif valid_dims:
+                # Only dimensions, no metrics - return unique combinations
+                result = df[valid_dims].drop_duplicates()
             else:
-                result = df[dimensions].drop_duplicates()
+                result = df
         else:
-            result = df[metrics].sum().to_frame().T if metrics else df
+            # No dimensions - just sum metrics
+            if metrics:
+                valid_metrics = [m for m in metrics if m in df.columns]
+                if valid_metrics:
+                    result = df[valid_metrics].sum().to_frame().T
+                else:
+                    result = df
+            else:
+                result = df
         
-        # Apply top-N
-        if query['top_n'] and metrics:
-            result = result.nlargest(query['top_n'], metrics[0])
+        # Apply top-N sorting
+        if query['top_n'] and metrics and len(metrics) > 0:
+            # Sort by first metric descending
+            if metrics[0] in result.columns:
+                result = result.nlargest(query['top_n'], metrics[0])
         
-        return result.head(1000)
+        return result.head(1000)  # Safety limit
     
     def _generate_insights(self, result_df: pd.DataFrame, query: Dict) -> List[str]:
         """Generate human-readable insights"""
