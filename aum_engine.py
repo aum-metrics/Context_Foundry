@@ -1,9 +1,13 @@
 """
 AUM: Augmented Universal Metrics - Core Engine
-Version: 1.0.1 (TESTED & VALIDATED)
+Version: 1.0.2 (PROMPT PARSING FIXES)
 Tagline: The Sound of Data Understanding
 
-Domain-aware semantic analytics engine with Supabase backend.
+FIXES:
+- Improved prompt parsing to better extract metrics and dimensions
+- Enhanced synonym matching for common column variations
+- Better handling of "by" keyword in prompts
+- Fixed metric detection to include all numeric-like columns
 """
 
 import pandas as pd
@@ -12,7 +16,7 @@ import hashlib
 import json
 import os
 import re
-from scipy import stats # Added for insights
+from scipy import stats
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
@@ -150,7 +154,6 @@ class SemanticJoinEngine:
             return self.embeddings_cache[cache_key]
         
         if self.model is None:
-            # Fallback: random embeddings
             return np.random.rand(len(texts), 384)
         
         embeddings = self.model.encode(texts, convert_to_numpy=True)
@@ -163,10 +166,7 @@ class SemanticJoinEngine:
     def find_join_candidates(self, 
                             dfs: Dict[str, pd.DataFrame],
                             domain: str = 'eCommerce') -> List[Dict]:
-        """
-        Find potential join keys across dataframes
-        Returns: List of join suggestions with confidence scores
-        """
+        """Find potential join keys across dataframes"""
         if len(dfs) < 2:
             return []
         
@@ -183,14 +183,13 @@ class SemanticJoinEngine:
                 left_df = dfs[left_name]
                 right_df = dfs[right_name]
                 
-                # Get column candidates
                 for left_col in left_df.columns:
                     for right_col in right_df.columns:
                         confidence, reason = self._score_join_pair(
                             left_df, left_col, right_df, right_col, canonical_ids
                         )
                         
-                        if confidence > 0.3:  # Threshold
+                        if confidence > 0.3:
                             suggestions.append({
                                 'left_table': left_name,
                                 'left_key': left_col,
@@ -201,9 +200,8 @@ class SemanticJoinEngine:
                                 'join_type': 'left'
                             })
         
-        # Sort by confidence
         suggestions.sort(key=lambda x: x['confidence'], reverse=True)
-        return suggestions[:10]  # Top 10
+        return suggestions[:10]
     
     def _score_join_pair(self, 
                         left_df: pd.DataFrame, left_col: str,
@@ -213,18 +211,18 @@ class SemanticJoinEngine:
         reasons = []
         score = 0.0
         
-        # 1. Exact name match
+        # Exact name match
         if left_col.lower() == right_col.lower():
             score += 0.5
             reasons.append("exact_name_match")
         
-        # 2. Canonical ID match
+        # Canonical ID match
         for canonical in canonical_ids:
             if canonical in left_col.lower() and canonical in right_col.lower():
                 score += 0.4
                 reasons.append(f"canonical_id:{canonical}")
         
-        # 3. Semantic similarity
+        # Semantic similarity
         if self.model is not None:
             try:
                 left_emb = self.compute_embeddings([left_col], f"left_{left_col}")
@@ -240,7 +238,7 @@ class SemanticJoinEngine:
             except:
                 pass
         
-        # 4. Value overlap
+        # Value overlap
         try:
             left_vals = set(left_df[left_col].dropna().astype(str).unique()[:100])
             right_vals = set(right_df[right_col].dropna().astype(str).unique()[:100])
@@ -253,7 +251,7 @@ class SemanticJoinEngine:
         except:
             pass
         
-        # 5. Data type compatibility
+        # Data type compatibility
         if left_df[left_col].dtype == right_df[right_col].dtype:
             score += 0.1
             reasons.append("dtype_match")
@@ -295,10 +293,8 @@ class SemanticJoinEngine:
                           join_specs: List[Dict]) -> pd.DataFrame:
         """Execute multiple joins sequentially"""
         if not join_specs:
-            # Return first df if no joins
             return list(dfs.values())[0]
         
-        # Start with first table
         result = dfs[join_specs[0]['left_table']].copy()
         joined_tables = {join_specs[0]['left_table']}
         
@@ -306,7 +302,6 @@ class SemanticJoinEngine:
             if spec['right_table'] not in joined_tables:
                 right_df = dfs[spec['right_table']].copy()
                 
-                # Avoid column conflicts
                 right_cols = [c for c in right_df.columns 
                             if c not in result.columns or c == spec['right_key']]
                 right_df = right_df[right_cols]
@@ -327,7 +322,7 @@ class SemanticJoinEngine:
 
 
 class PromptInterpreter:
-    """Natural language prompt parser"""
+    """Natural language prompt parser with improved extraction"""
     
     TASK_KEYWORDS = {
         'rank': ['rank', 'top', 'bottom', 'highest', 'lowest', 'best', 'worst'],
@@ -336,12 +331,14 @@ class PromptInterpreter:
         'summary': ['summary', 'aggregate', 'total', 'average', 'sum', 'count']
     }
     
-    # Synonym mapping for common column name variations
+    # Enhanced synonym mapping
     SYNONYMS = {
-        'dealer': ['dealer_name', 'dealer', 'dealername'],
-        'region': ['region', 'state', 'state_code', 'territory'],
+        'dealer': ['dealer_name', 'dealer', 'dealername', 'dealer_id'],
+        'state': ['state_code', 'region', 'state', 'territory'],
         'month': ['month', 'date', 'time', 'period'],
-        'sales': ['sales', 'revenue', 'amount', 'value']
+        'sales': ['sales', 'revenue', 'amount', 'value'],
+        'quantity': ['quantity', 'qty', 'units', 'count'],
+        'price': ['price', 'unit_price', 'cost'],
     }
     
     def __init__(self, domain: str = 'eCommerce'):
@@ -349,16 +346,14 @@ class PromptInterpreter:
         self.domain_config = DomainIntelligence.get_domain_context(domain)
     
     def parse(self, prompt: str, available_columns: List[str]) -> Dict:
-        """Parse natural language prompt into structured query"""
+        """Parse natural language prompt into structured query - IMPROVED"""
         prompt_lower = prompt.lower()
         
         # Detect task type
         task = self._detect_task(prompt_lower)
         
-        # Extract metrics
+        # Extract metrics and dimensions with improved logic
         metrics = self._extract_metrics(prompt_lower, available_columns)
-        
-        # Extract dimensions
         dimensions = self._extract_dimensions(prompt_lower, available_columns)
         
         # Extract filters
@@ -385,19 +380,35 @@ class PromptInterpreter:
         for task, keywords in self.TASK_KEYWORDS.items():
             if any(kw in prompt for kw in keywords):
                 return task
-        return 'summary'
+        return 'rank'  # Default to rank for most queries
     
     def _extract_metrics(self, prompt: str, columns: List[str]) -> List[str]:
-        """Extract metric columns with synonym support"""
+        """Extract metric columns - IMPROVED"""
         metrics = []
         domain_metrics = self.domain_config['metrics']
         
+        # Get all numeric columns first
+        numeric_indicators = ['sales', 'revenue', 'amount', 'price', 'cost', 'quantity', 
+                            'count', 'total', 'value', 'sum', 'avg', 'rate', 'margin']
+        
         for col in columns:
             col_lower = col.lower()
-            # Check if column name or domain metric mentioned
-            if col_lower in prompt or any(m in col_lower for m in domain_metrics):
+            
+            # Direct mention in prompt
+            if col_lower in prompt:
                 if self._is_numeric_column_name(col):
                     metrics.append(col)
+                    continue
+            
+            # Check domain metrics
+            for metric in domain_metrics:
+                if metric in col_lower:
+                    metrics.append(col)
+                    break
+            
+            # Check numeric indicators
+            if any(indicator in col_lower for indicator in numeric_indicators):
+                metrics.append(col)
             
             # Check synonyms
             for key, synonyms in self.SYNONYMS.items():
@@ -405,31 +416,68 @@ class PromptInterpreter:
                     if self._is_numeric_column_name(col):
                         metrics.append(col)
         
-        return list(dict.fromkeys(metrics))[:3]  # Unique, limit to 3
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_metrics = []
+        for m in metrics:
+            if m not in seen:
+                seen.add(m)
+                unique_metrics.append(m)
+        
+        return unique_metrics[:3]  # Limit to 3
     
     def _extract_dimensions(self, prompt: str, columns: List[str]) -> List[str]:
-        """Extract dimension columns with synonym support"""
+        """Extract dimension columns - IMPROVED"""
         dimensions = []
         domain_dims = self.domain_config['dimensions']
         
+        # Parse "by" keyword
+        by_pattern = r'\bby\s+(\w+(?:\s+\w+)?)'
+        by_matches = re.findall(by_pattern, prompt)
+        
         for col in columns:
             col_lower = col.lower()
-            if col_lower in prompt or any(d in col_lower for d in domain_dims):
+            
+            # Direct "by" mention
+            for match in by_matches:
+                if match.replace(' ', '_') in col_lower or match.replace(' ', '') in col_lower:
+                    if not self._is_numeric_column_name(col):
+                        dimensions.append(col)
+                        continue
+            
+            # Direct column name in prompt
+            if col_lower in prompt:
                 if not self._is_numeric_column_name(col):
                     dimensions.append(col)
+                    continue
             
-            # Check synonyms
+            # Domain dimensions
+            for dim in domain_dims:
+                if dim in col_lower:
+                    dimensions.append(col)
+                    break
+            
+            # Synonym matching
             for key, synonyms in self.SYNONYMS.items():
                 if key in prompt and any(syn in col_lower for syn in synonyms):
                     if not self._is_numeric_column_name(col):
                         dimensions.append(col)
         
-        return list(dict.fromkeys(dimensions))[:2]  # Unique, limit to 2
+        # Remove duplicates
+        seen = set()
+        unique_dims = []
+        for d in dimensions:
+            if d not in seen:
+                seen.add(d)
+                unique_dims.append(d)
+        
+        return unique_dims[:2]  # Limit to 2
     
     def _extract_filters(self, prompt: str, columns: List[str]) -> Dict:
         """Extract filter conditions"""
         filters = {}
-        # Simple year extraction
+        
+        # Year extraction
         years = re.findall(r'\b(20\d{2})\b', prompt)
         if years:
             filters['year'] = int(years[0])
@@ -458,7 +506,7 @@ class PromptInterpreter:
         """Heuristic to detect if column is likely numeric"""
         numeric_keywords = ['amount', 'count', 'rate', 'revenue', 'cost', 'price',
                           'sales', 'quantity', 'value', 'total', 'avg', 'sum', 'gmv',
-                          'margin', 'premium', 'claim']
+                          'margin', 'premium', 'claim', 'units', 'qty']
         return any(kw in col.lower() for kw in numeric_keywords)
 
 
@@ -475,15 +523,14 @@ class AUMEngine:
         self.metadata = {}
     
     def load_files(self, file_paths: List[str]) -> Dict[str, pd.DataFrame]:
-        """Load multiple CSV/XLSX files with robust error handling"""
+        """Load multiple CSV/XLSX files"""
         self.dataframes = {}
-        self.joined_df = None # Reset joined df on new file load
+        self.joined_df = None
         
         for path in file_paths:
             try:
                 path_obj = Path(path)
                 
-                # Force openpyxl engine for Excel files
                 if path_obj.suffix.lower() in {'.xlsx', '.xls'}:
                     df = pd.read_excel(path, engine='openpyxl')
                 elif path_obj.suffix.lower() == '.csv':
@@ -492,10 +539,7 @@ class AUMEngine:
                     print(f"⚠️ Unsupported file type: {path}")
                     continue
                 
-                # Clean column names
                 df.columns = df.columns.str.strip()
-                
-                # Store with filename as key
                 name = path_obj.stem
                 self.dataframes[name] = df
                 
@@ -519,7 +563,6 @@ class AUMEngine:
             if len(self.dataframes) == 1:
                 self.joined_df = list(self.dataframes.values())[0]
             else:
-                # Auto-join with top suggestions
                 suggestions = self.detect_joins()
                 if suggestions:
                     self.execute_joins(suggestions[:3])
@@ -559,7 +602,6 @@ class AUMEngine:
                 elif col in df.columns:
                     df = df[df[col] == val]
         
-        # Aggregate based on task
         metrics = query['metrics'] if query['metrics'] else []
         dimensions = query['dimensions'] if query['dimensions'] else []
         
@@ -571,7 +613,7 @@ class AUMEngine:
             if m in df.columns:
                 df[m] = pd.to_numeric(df[m], errors='coerce')
         
-        # FIX: Use as_index=False to avoid reset_index issues
+        # Aggregate
         if dimensions:
             agg_dict = {m: 'sum' for m in metrics if m in df.columns}
             if agg_dict:
@@ -585,7 +627,7 @@ class AUMEngine:
         if query['top_n'] and metrics:
             result = result.nlargest(query['top_n'], metrics[0])
         
-        return result.head(1000)  # Safety limit
+        return result.head(1000)
     
     def _generate_insights(self, result_df: pd.DataFrame, query: Dict) -> List[str]:
         """Generate human-readable insights"""
@@ -611,7 +653,7 @@ class AUMEngine:
                     q1 = result_df[col].quantile(0.25)
                     q3 = result_df[col].quantile(0.75)
                     iqr = q3 - q1
-                    if iqr > 0: # Avoid division by zero or empty series
+                    if iqr > 0:
                         outliers = result_df[(result_df[col] < q1 - 1.5*iqr) | 
                                             (result_df[col] > q3 + 1.5*iqr)]
                         if len(outliers) > 0:
@@ -632,7 +674,7 @@ class AUMEngine:
         except Exception as e:
             insights.append(f"Insight generation encountered an issue: {str(e)[:100]}")
         
-        return insights[:10]  # Top 10 insights
+        return insights[:10]
     
     def export_results(self, output_dir: str, project_id: str) -> Dict[str, str]:
         """Export analysis results"""
@@ -641,15 +683,13 @@ class AUMEngine:
         
         files = {}
         
-        # Export joined data
         if self.joined_df is not None:
             csv_path = output_path / f"joined_{project_id}.csv"
             self.joined_df.to_csv(csv_path, index=False)
             files['joined_data'] = str(csv_path)
         
-        # Export metadata
         meta_path = output_path / "metadata.json"
-        self.metadata['timestamp'] = datetime.now().isoformat() # Ensure metadata is updated
+        self.metadata['timestamp'] = datetime.now().isoformat()
         with open(meta_path, 'w') as f:
             json.dump(self.metadata, f, indent=2, default=str)
         files['metadata'] = str(meta_path)
@@ -658,10 +698,9 @@ class AUMEngine:
 
 
 if __name__ == "__main__":
-    print("🎵 AUM Engine v1.0.1 - The Sound of Data Understanding")
+    print("🎵 AUM Engine v1.0.2 - The Sound of Data Understanding")
     print("=" * 60)
     
-    # Test initialization
     engine = AUMEngine(domain='Automotive')
     print(f"✅ Engine initialized with domain: {engine.domain}")
     print(f"✅ Available domains: {', '.join(DomainIntelligence.get_all_domains())}")
