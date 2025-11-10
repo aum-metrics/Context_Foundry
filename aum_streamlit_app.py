@@ -1,12 +1,11 @@
 """
 AUM: Augmented Universal Metrics - Streamlit UI
-Version: 2.1.0 (FULLY TESTED & DEBUGGED)
+Version: 2.1.1 (CRITICAL SUPABASE FIX)
 Tagline: The Sound of Data Understanding
 
 CRITICAL FIXES:
-- FIXED: Supabase Filter Error (PGRST100) by ensuring all user_id UUIDs are cast to str().
-- FIXED: Simplified RLS-free queries (assuming database is RLS-free).
-- Polished UI with consistent styling.
+- FIXED: Supabase Filter Error (PGRST100) by ensuring user_id is checked and cast to str() for every filter call.
+- Initialized session state variables with UUID-dependent functions called ONLY after user.id is confirmed.
 """
 
 import streamlit as st
@@ -29,7 +28,7 @@ import os
 from datetime import datetime
 import hashlib
 import tempfile
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import warnings
 import io
 warnings.filterwarnings('ignore')
@@ -41,7 +40,7 @@ try:
 except ImportError:
     SUPABASE_AVAILABLE = False
 
-# Import AUM Engine
+# Import AUM Engine (Assuming aum_engine.py exists)
 try:
     from aum_engine import (
         AUMEngine, DomainIntelligence, SemanticJoinEngine, PromptInterpreter
@@ -59,7 +58,7 @@ except ImportError:
 
 st.markdown("""
 <style>
-    /* Main header - FIXED VISIBILITY */
+    /* Main header */
     .main-header {
         font-size: 2.8rem;
         font-weight: 800;
@@ -208,24 +207,36 @@ def safe_db_call(func, error_msg="Database operation failed"):
         elif "RLS" in error_detail or "policy" in error_detail.lower():
             st.warning(f"⚠️ {error_msg}. Database policy issue detected (Is RLS enabled?).")
         else:
-            # Catch the PGRST100 error and provide clear guidance
-            if "PGRST100" in error_detail:
-                st.error(f"❌ {error_msg}. Filter Error: Did you pass a non-string or corrupted UUID?")
+            # Explicitly catch the filter error and rephrase it
+            if "PGRST100" in error_detail and "filter" in error_detail.lower():
+                 st.error(f"❌ {error_msg}. Filter Error: Check if UUID is properly formatted.")
             else:
                 st.error(f"❌ {error_msg}: {error_detail[:200]}")
         return None
 
+# ============================================================================
+# CRITICAL FIX: UUID Caster
+# ============================================================================
+
+def get_user_uuid(user: Any) -> Optional[str]:
+    """Safely extracts and casts the user UUID."""
+    if hasattr(user, 'id') and user.id:
+        return str(user.id)
+    return None
 
 # ============================================================================
-# Database Operations (All with Error Handling)
+# Database Operations
 # ============================================================================
 
 
 def create_or_update_profile(supabase: Client, user):
     """Create/update user profile"""
+    user_id = get_user_uuid(user)
+    if not user_id: return None
+    
     def _operation():
         data = {
-            "id": str(user.id),  # CRITICAL FIX: Ensure str() casting
+            "id": user_id,
             "email": user.email,
             "name": user.email.split('@')[0],
             "last_login": datetime.now().isoformat()
@@ -236,27 +247,29 @@ def create_or_update_profile(supabase: Client, user):
 
 def get_usage_count(supabase: Client, user_id: str) -> int:
     """Get query count with error handling"""
+    if not user_id: return 0
+    
     def _operation():
-        # CRITICAL FIX: Ensure user_id is explicitly str() for filtering
         response = supabase.table("usage_logs")\
             .select("id")\
-            .eq("user_id", str(user_id))\
+            .eq("user_id", user_id)\
             .execute()
         return len(response.data) if response.data else 0
     result = safe_db_call(_operation, "Failed to fetch usage count")
     return result if result is not None else 0
 
 
-FREE_QUERY_LIMIT = 10  # Changed from 3 to 10 for testing
+FREE_QUERY_LIMIT = 10
 
 
 def check_paid_access(supabase: Client, user_id: str) -> bool:
     """Check paid status"""
+    if not user_id: return False
+    
     def _operation():
-        # CRITICAL FIX: Ensure user_id is explicitly str() for filtering
         response = supabase.table("transactions")\
             .select("id")\
-            .eq("user_id", str(user_id))\
+            .eq("user_id", user_id)\
             .eq("payment_status", "confirmed")\
             .execute()
         return len(response.data) > 0 if response.data else False
@@ -267,9 +280,11 @@ def check_paid_access(supabase: Client, user_id: str) -> bool:
 def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
               result_rows: int = 0, cost: float = 0):
     """Log query with error handling"""
+    if not user_id: return None
+    
     def _operation():
         data = {
-            "user_id": str(user_id),  # CRITICAL FIX: Ensure str() casting
+            "user_id": user_id,
             "prompt": prompt,
             "domain": domain,
             "execution_count": 1,
@@ -286,9 +301,11 @@ def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
 
 def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
     """Record payment"""
+    if not user_id: return False
+    
     def _operation():
         data = {
-            "user_id": str(user_id),  # CRITICAL FIX: Ensure str() casting
+            "user_id": user_id,
             "amount": float(amount),
             "currency": "INR",
             "mode": "razorpay_qr",
@@ -302,31 +319,33 @@ def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
 
 def save_domain_preference(supabase: Client, user_id: str, domain: str):
     """Save domain preference"""
+    if not user_id: return None
+    
     def _operation():
-        # CRITICAL FIX: Ensure str() casting for eq() and update()
         supabase.table("user_profiles")\
             .update({"domain_preference": domain})\
-            .eq("id", str(user_id))\
+            .eq("id", user_id)\
             .execute()
         
-        # Check if domain_settings row exists for upsert
         data = {
-            "user_id": str(user_id),
+            "user_id": user_id,
             "domain": domain,
             "canonical_synonyms": {},
             "last_updated": datetime.now().isoformat()
         }
+        # Assuming domain_settings is correctly set up for upsert based on user_id + domain
         return supabase.table("domain_settings").upsert(data).execute()
     return safe_db_call(_operation, "Failed to save domain preference")
 
 
 def get_domain_preference(supabase: Client, user_id: str) -> str:
     """Get saved domain"""
+    if not user_id: return 'eCommerce'
+    
     def _operation():
-        # CRITICAL FIX: Ensure str() casting for eq()
         response = supabase.table("user_profiles")\
             .select("domain_preference")\
-            .eq("id", str(user_id))\
+            .eq("id", user_id)\
             .single()\
             .execute()
         return response.data.get('domain_preference', 'eCommerce') if response.data else 'eCommerce'
@@ -959,7 +978,13 @@ def main():
         return
     
     user = st.session_state.user
+    user_id_str = get_user_uuid(user) # CRITICAL: Get safe UUID string once
     
+    # Check if user object is valid before continuing (safety gate)
+    if not user_id_str:
+        st.error("Authentication session corrupted. Please log out and try again.")
+        return
+
     # Initialize session state variables
     if 'consent' not in st.session_state:
         st.session_state.consent = False
@@ -971,12 +996,12 @@ def main():
         st.session_state.join_suggestions = []
     if 'project_id' not in st.session_state:
         st.session_state.project_id = hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8]
+    
+    # CRITICAL FIX: Initialization calls use the guaranteed str UUID
     if 'query_count' not in st.session_state:
-        # Calls the fixed get_usage_count
-        st.session_state.query_count = get_usage_count(supabase, user.id)
+        st.session_state.query_count = get_usage_count(supabase, user_id_str)
     if 'paid_access' not in st.session_state:
-        # Calls the fixed check_paid_access
-        st.session_state.paid_access = check_paid_access(supabase, user.id)
+        st.session_state.paid_access = check_paid_access(supabase, user_id_str)
     
     # Consent check
     if not st.session_state.consent:
