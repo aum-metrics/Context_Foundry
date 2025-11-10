@@ -78,6 +78,10 @@ st.markdown("""
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0 0; padding: 12px 24px; font-weight: 600; }
+    /* Info boxes */
+    .stAlert { border-radius: 10px; border-left: 4px solid; }
+    /* Dataframe */
+    .dataframe { border-radius: 8px; overflow: hidden; }
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
@@ -116,6 +120,9 @@ def safe_db_call(func, error_msg="Database operation failed"):
         else:
             if "PGRST100" in error_detail and "filter" in error_detail.lower():
                  st.error(f"❌ {error_msg}. Filter Error: Check if UUID is properly formatted.")
+            # This catches the "Expecting value: line 1 column 1 (char 0)" JSONDecodeError
+            elif "Expecting value" in error_detail:
+                 st.error(f"❌ {error_msg}. Received an empty or invalid response from the database.")
             else:
                 st.error(f"❌ {error_msg}: {error_detail[:200]}")
         return None
@@ -155,8 +162,8 @@ def get_usage_count(supabase: Client, user_id: str) -> int:
         return 0
         
     def _operation():
-        response = supabase.table("usage_logs").select("id").eq("user_id", user_id).execute()
-        return len(response.data) if response.data else 0
+        response = supabase.table("usage_logs").select("id", count='exact').eq("user_id", user_id).execute()
+        return response.count if response.count is not None else 0
     result = safe_db_call(_operation, "Failed to fetch usage count")
     return result if result is not None else 0
 
@@ -172,12 +179,12 @@ def check_paid_access(supabase: Client, user_id: str) -> bool:
     def _operation():
         response = (
             supabase.table("transactions")
-            .select("id")
+            .select("id", count='exact')
             .eq("user_id", user_id)
             .eq("payment_status", "confirmed")
             .execute()
         )
-        return len(response.data) > 0 if response.data else False
+        return (response.count > 0) if response.count is not None else False
     result = safe_db_call(_operation, "Failed to check payment status")
     return result if result is not None else False
 
@@ -198,9 +205,11 @@ def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
             "cost": cost,
             "created_at": datetime.now().isoformat()
         }
+        # .insert() returns a list of dictionaries in its 'data' attribute
         response = supabase.table("usage_logs").insert(data).execute()
         if not getattr(response, "data", None):
-            st.warning("⚠️ Insert returned no data — check Supabase logs.")
+            # This is normal for an insert if return=minimal is set, but if it fails, 'data' will be missing.
+            pass
         return response
     return safe_db_call(_operation, "Failed to log query")
 
@@ -221,6 +230,7 @@ def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
         }
         return supabase.table("transactions").insert(data).execute()
     result = safe_db_call(_operation, "Payment recording failed")
+    # Check if the insert was successful (result is not None)
     return result is not None
 
 
@@ -237,7 +247,8 @@ def save_domain_preference(supabase: Client, user_id: str, domain: str):
             "canonical_synonyms": {},
             "last_updated": datetime.now().isoformat()
         }
-        return supabase.table("domain_settings").upsert(data).execute()
+        # Upsert based on the unique constraint (user_id, domain)
+        return supabase.table("domain_settings").upsert(data, on_conflict="user_id, domain").execute()
     return safe_db_call(_operation, "Failed to save domain preference")
 
 
@@ -262,9 +273,9 @@ def export_to_csv(df: pd.DataFrame) -> bytes:
 
 def export_to_excel(df: pd.DataFrame) -> bytes:
     output = io.BytesIO()
-    # Use 'with' context manager to ensure writer is closed
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='AUM Results')
+    # seek(0) is not needed as getvalue() reads from the current position
     return output.getvalue()
 
 
@@ -383,6 +394,7 @@ def render_main_ui(supabase: Client, user):
                     supabase.auth.sign_out()
                 except:
                     pass
+            # Clear all session state keys on logout
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
@@ -529,6 +541,7 @@ def render_join_configuration(supabase: Client, user_id: str):
                 selected_joins = edited_df.to_dict('records')
                 engine = st.session_state.engine
                 joined_df = engine.execute_joins(selected_joins[:5])
+                st.session_state.engine.joined_df = joined_df # Save joined_df back to engine state
                 st.success(f"✅ Successfully joined: {len(joined_df)} rows × {len(joined_df.columns)} columns")
                 with st.expander("👁️ Preview Joined Data"): st.dataframe(joined_df.head(50), use_container_width=True)
             except Exception as e: st.error(f"❌ Join failed: {str(e)}")
@@ -573,12 +586,12 @@ def render_visualizations():
             fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
         elif task == 'heatmap' and len(dimensions) >= 2 and metrics:
             pivot = df.pivot_table(values=metrics[0], index=dimensions[0], columns=dimensions[1], aggfunc='sum'); pivot_numeric = pivot.apply(pd.to_numeric, errors='coerce').fillna(0)
-            fig = px.imshow(pivot_numeric, title=f"{metrics[0]} Heatmap", aspect='auto', template='plotly_white')
+            fig = px.imshow(pivot_numeric, title=f"{metrics[0]} Heatmap", aspect='auto', template='plotly_white', color_continuous_scale='RdYlBu_r')
             fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
         else:
             numeric_cols = df.select_dtypes(include=[np.number]).columns[:2]
             if len(numeric_cols) >= 2:
-                fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title="Data Distribution", template='plotly_white')
+                fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title="Data Distribution", template='plotly_white', color=numeric_cols[0], color_continuous_scale='Viridis')
                 fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
             else: st.info("Not enough numeric columns for visualization")
     except Exception as e: st.warning(f"Visualization error: {str(e)}")
@@ -601,7 +614,7 @@ def render_export():
     c1, c2, c3 = st.columns(3)
     with c1: st.download_button("📄 CSV", data=export_to_csv(df), file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", mime="text/csv", use_container_width=True)
     with c2: st.download_button("📊 Excel", data=export_to_excel(df), file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    with c3: json_data = df.to_json(orient='records', indent=2); st.download_button("🔧 JSON", data=json_data, file_name=f"aaum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", mime="application/json", use_container_width=True)
+    with c3: json_data = df.to_json(orient='records', indent=2); st.download_button("🔧 JSON", data=json_data, file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", mime="application/json", use_container_width=True)
     st.markdown("---")
     with st.expander("👁️ Preview Export Data"): st.dataframe(df, use_container_width=True, height=300)
 
@@ -629,6 +642,8 @@ def show_payment_modal(supabase: Client, user_id: str):
 # Main
 # ============================================================================
 def main():
+    """Main entry point with final robust flow control"""
+    
     supabase = init_supabase()
     if not supabase:
         st.error("### ❌ Configuration Error\n\nSupabase credentials not found. Add to `.streamlit/secrets.toml`:\n\n```toml\nSUPABASE_URL = \"your-url\"\nSUPABASE_KEY = \"your-key\"\n```")
@@ -654,7 +669,7 @@ def main():
     st.session_state.setdefault('join_suggestions', [])
     st.session_state.setdefault('project_id', hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8])
     
-    # CRITICAL FIX: Only call these functions once if the state hasn't been set
+    # CRITICAL FIX: Only call these functions ONCE if the state hasn't been set
     if '_db_state_initialized' not in st.session_state:
         st.session_state['query_count'] = get_usage_count(supabase, user_id_str)
         st.session_state['paid_access'] = check_paid_access(supabase, user_id_str)
