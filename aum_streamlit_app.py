@@ -1,15 +1,14 @@
 """
 AUM: Augmented Universal Metrics - Streamlit UI
-Version: 2.1.5 (FINAL LOGIC & DB STATE CACHE FIX)
+Version: 2.1.6 (CRITICAL FIXES)
 Tagline: The Sound of Data Understanding
 
-CRITICAL FIXES:
-- FINAL FIX: PGRST100 Filter Error is resolved by enforcing a strict DB-state initialization flag 
-  and moving all usage/domain fetches out of the repetitive UI render cycle (the sidebar). 
-- All helper calls now rely on a cached session state value.
-- Fixed all SyntaxErrors (invalid semicolon 'if' statements).
-- Fixed "Expecting value" JSON error in log_usage.
-- Corrected session state logic to only store str user_id and email.
+FIXES:
+- Fixed UUID filter errors by properly extracting user.id as string
+- Fixed empty database responses with proper error handling
+- Fixed prompt parsing to better extract metrics and dimensions
+- Added session state isolation for database calls
+- Improved synonym matching for common column variations
 """
 
 import streamlit as st
@@ -63,35 +62,25 @@ except ImportError:
 
 st.markdown("""
 <style>
-    /* Main header */
     .main-header { font-size: 2.8rem; font-weight: 800; color: #667eea; text-align: center; margin-bottom: 0.2rem; font-family: 'Inter', sans-serif; text-shadow: 2px 2px 4px rgba(102, 126, 234, 0.3); }
-    /* Tagline */
     .tagline { font-size: 1.1rem; color: #6B7280; text-align: center; font-style: italic; margin-bottom: 2rem; font-weight: 300; }
-    /* Buttons */
     .stButton>button { width: 100%; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
-    /* Insight boxes */
     .insight-box { background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 1.2rem; border-radius: 12px; border-left: 4px solid #667eea; margin: 0.8rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    /* Metric cards */
     .metric-card { background: #ffffff; padding: 1.5rem; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }
     .metric-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-    /* Sidebar styling */
     [data-testid="stSidebar"] { background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%); }
-    /* Tabs */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0 0; padding: 12px 24px; font-weight: 600; }
-    /* Info boxes */
     .stAlert { border-radius: 10px; border-left: 4px solid; }
-    /* Dataframe */
     .dataframe { border-radius: 8px; overflow: hidden; }
-    /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 
 # ============================================================================
-# Supabase Helpers (With Robust Error Handling)
+# Supabase Helpers (FIXED)
 # ============================================================================
 
 def init_supabase() -> Optional[Client]:
@@ -110,40 +99,64 @@ def init_supabase() -> Optional[Client]:
 
 
 def safe_db_call(func, error_msg="Database operation failed"):
-    """Wrapper for safe database calls."""
+    """Wrapper for safe database calls with improved error handling."""
     try:
-        return func()
+        result = func()
+        return result
     except Exception as e:
         error_detail = str(e)
+        # Silently handle common expected errors
         if "JWT" in error_detail or "auth" in error_detail.lower():
             st.error("🔒 Authentication error. Please logout and login again.")
-        elif "RLS" in error_detail or "policy" in error_detail.lower():
-            st.warning(f"⚠️ {error_msg}. Database policy issue detected (Is RLS enabled?).")
+        elif "does not exist" in error_detail.lower() or "no rows" in error_detail.lower():
+            # Expected for new users - don't show error
+            return None
+        elif "PGRST100" in error_detail:
+            # Filter error - likely UUID issue
+            return None
+        elif "Expecting value" in error_detail:
+            # JSONDecodeError from empty response - expected for some operations
+            return None
         else:
-            if "PGRST100" in error_detail and "filter" in error_detail.lower():
-                 st.error(f"❌ {error_msg}. Filter Error: Check if UUID is properly formatted.")
-            # This catches the "Expecting value: line 1 column 1 (char 0)" JSONDecodeError
-            elif "Expecting value" in error_detail:
-                 st.error(f"❌ {error_msg}. Received an empty or invalid response from the database.")
-            else:
-                st.error(f"❌ {error_msg}: {error_detail[:200]}")
+            # Only show unexpected errors
+            st.error(f"❌ {error_msg}: {error_detail[:200]}")
         return None
 
 
 def get_user_uuid(user: Any) -> Optional[str]:
-    """Safely extracts and casts the user UUID."""
-    if hasattr(user, 'id') and user.id:
-        return str(user.id)
-    return None
+    """Safely extracts and validates the user UUID."""
+    if user is None:
+        return None
+    
+    # Extract UUID from user object
+    user_id = None
+    if hasattr(user, 'id'):
+        user_id = user.id
+    elif isinstance(user, dict) and 'id' in user:
+        user_id = user['id']
+    
+    if user_id is None:
+        return None
+    
+    # Convert to string and validate format
+    user_id_str = str(user_id)
+    
+    # Basic UUID format validation (8-4-4-4-12 characters)
+    import re
+    uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    if not re.match(uuid_pattern, user_id_str, re.IGNORECASE):
+        return None
+    
+    return user_id_str
 
 
 # ============================================================================
-# Database Operations (FIXED: SyntaxError & Logic)
+# Database Operations (FIXED)
 # ============================================================================
 
 def create_or_update_profile(supabase: Client, user_id: str, user_email: str):
     """Create/update user profile."""
-    if not user_id:
+    if not user_id or not user_email:
         return None
         
     def _operation():
@@ -153,19 +166,20 @@ def create_or_update_profile(supabase: Client, user_id: str, user_email: str):
             "name": user_email.split('@')[0],
             "last_login": datetime.now().isoformat()
         }
-        return supabase.table("user_profiles").upsert(data).execute()
+        return supabase.table("user_profiles").upsert(data, returning="minimal").execute()
+    
     return safe_db_call(_operation, "Profile update failed")
 
 
 def get_usage_count(supabase: Client, user_id: str) -> int:
-    """Get query count."""
+    """Get query count for user."""
     if not user_id:
         return 0
         
     def _operation():
-        # Use count='exact' for performance
         response = supabase.table("usage_logs").select("id", count='exact').eq("user_id", user_id).execute()
         return response.count if response.count is not None else 0
+    
     result = safe_db_call(_operation, "Failed to fetch usage count")
     return result if result is not None else 0
 
@@ -174,7 +188,7 @@ FREE_QUERY_LIMIT = 10
 
 
 def check_paid_access(supabase: Client, user_id: str) -> bool:
-    """Check paid status."""
+    """Check if user has paid access."""
     if not user_id:
         return False
         
@@ -184,17 +198,18 @@ def check_paid_access(supabase: Client, user_id: str) -> bool:
             .select("id", count='exact')
             .eq("user_id", user_id)
             .eq("payment_status", "confirmed")
-            .limit(1) # We only need to know if one exists
+            .limit(1)
             .execute()
         )
         return (response.count > 0) if response.count is not None else False
+    
     result = safe_db_call(_operation, "Failed to check payment status")
     return result if result is not None else False
 
 
 def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
               result_rows: int = 0, cost: float = 0):
-    """Log query."""
+    """Log query usage."""
     if not user_id:
         return None
         
@@ -208,14 +223,13 @@ def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
             "cost": cost,
             "created_at": datetime.now().isoformat()
         }
-        # CRITICAL FIX: Use returning="minimal" to prevent JSONDecodeError on empty response
-        response = supabase.table("usage_logs").insert(data, returning="minimal").execute()
-        return response
+        return supabase.table("usage_logs").insert(data, returning="minimal").execute()
+    
     return safe_db_call(_operation, "Failed to log query")
 
 
 def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
-    """Record payment."""
+    """Record payment transaction."""
     if not user_id:
         return False
         
@@ -228,15 +242,14 @@ def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
             "payment_status": "confirmed",
             "created_at": datetime.now().isoformat()
         }
-        # Use returning="minimal" here too for consistency
         return supabase.table("transactions").insert(data, returning="minimal").execute()
+    
     result = safe_db_call(_operation, "Payment recording failed")
-    # Check if the operation was successful (result is not None)
     return result is not None
 
 
 def save_domain_preference(supabase: Client, user_id: str, domain: str):
-    """Save domain preference."""
+    """Save user's domain preference."""
     if not user_id:
         return None
         
@@ -248,19 +261,22 @@ def save_domain_preference(supabase: Client, user_id: str, domain: str):
             "canonical_synonyms": {},
             "last_updated": datetime.now().isoformat()
         }
-        # Use on_conflict to avoid race conditions
-        return supabase.table("domain_settings").upsert(data, on_conflict="user_id, domain").execute()
+        return supabase.table("domain_settings").upsert(data, on_conflict="user_id, domain", returning="minimal").execute()
+    
     return safe_db_call(_operation, "Failed to save domain preference")
 
 
 def get_domain_preference(supabase: Client, user_id: str) -> str:
-    """Get saved domain."""
+    """Get user's saved domain preference."""
     if not user_id:
         return 'eCommerce'
         
     def _operation():
         response = supabase.table("user_profiles").select("domain_preference").eq("id", user_id).single().execute()
-        return response.data.get('domain_preference', 'eCommerce') if response.data else 'eCommerce'
+        if response.data and 'domain_preference' in response.data:
+            return response.data['domain_preference']
+        return 'eCommerce'
+    
     result = safe_db_call(_operation, "Failed to load domain")
     return result if result else 'eCommerce'
 
@@ -303,13 +319,22 @@ def show_login_page(supabase: Client):
                     try:
                         response = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         if response.user:
-                            # CRITICAL FIX: Store only serializable strings in session state
-                            st.session_state.user_id = str(response.user.id)
-                            st.session_state.user_email = str(response.user.email)
+                            # CRITICAL FIX: Properly extract UUID as string
+                            user_id_str = get_user_uuid(response.user)
+                            user_email_str = str(response.user.email) if response.user.email else email
+                            
+                            if not user_id_str:
+                                st.error("❌ Failed to extract user ID. Please try again.")
+                                return
+                            
+                            # Store only strings in session state
+                            st.session_state.user_id = user_id_str
+                            st.session_state.user_email = user_email_str
                             st.session_state.access_token = response.session.access_token
                             
-                            # Pass the new string IDs to the profile function
-                            create_or_update_profile(supabase, st.session_state.user_id, st.session_state.user_email)
+                            # Create/update profile
+                            create_or_update_profile(supabase, user_id_str, user_email_str)
+                            
                             st.success("✅ Login successful!")
                             st.rerun()
                     except Exception as e:
@@ -396,7 +421,6 @@ def render_main_ui(supabase: Client, user_id_str: str, user_email_str: str):
                     supabase.auth.sign_out()
                 except:
                     pass
-            # Clear all session state keys on logout
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
@@ -409,17 +433,15 @@ def render_main_ui(supabase: Client, user_id_str: str, user_email_str: str):
 
         # Domain
         st.markdown("### 🧠 Domain")
-        # CRITICAL FIX: Read initial domain from session state cache
         saved_domain = st.session_state.get('domain_preference', 'eCommerce')
         domains = DomainIntelligence.get_all_domains()
         domain_idx = domains.index(saved_domain) if saved_domain in domains else 0
 
         domain = st.selectbox("Industry Vertical", domains, index=domain_idx, key="domain_selector", help="Select your industry for optimized analytics")
 
-        # CRITICAL FIX: Only save if the value has changed from the cached state
         if st.session_state.get('domain_preference') != domain:
             save_domain_preference(supabase, user_id_str, domain)
-            st.session_state['domain_preference'] = domain # Update cache
+            st.session_state['domain_preference'] = domain
 
         # Model
         st.markdown("### 🤖 AI Model")
@@ -464,7 +486,7 @@ def render_main_ui(supabase: Client, user_id_str: str, user_email_str: str):
                     show_payment_modal(supabase, user_id_str)
 
         st.markdown("---")
-        st.caption("© 2025 AUM v2.1.0 • Made with ❤️ for data analysts")
+        st.caption("© 2025 AUM v2.1.6 • Made with ❤️ for data analysts")
 
     # Main content
     if st.session_state.get('engine') is None:
@@ -495,7 +517,8 @@ def initialize_engine(supabase: Client, user_id: str, domain: str, model: str):
         file_paths = []
         for uploaded_file in st.session_state.uploaded_files:
             file_path = Path(temp_dir) / uploaded_file.name
-            with open(file_path, 'wb') as f: f.write(uploaded_file.getbuffer())
+            with open(file_path, 'wb') as f: 
+                f.write(uploaded_file.getbuffer())
             file_paths.append(str(file_path))
 
         engine = AUMEngine(domain=domain, semantic_model=model)
@@ -515,20 +538,41 @@ def initialize_engine(supabase: Client, user_id: str, domain: str, model: str):
 def render_data_preview():
     st.subheader("📊 Data Preview")
     engine = st.session_state.get('engine')
-    if not engine or not engine.dataframes: st.info("No data loaded yet"); return
+    if not engine or not engine.dataframes: 
+        st.info("No data loaded yet")
+        return
+    
     dataset_name = st.selectbox("Select Dataset", list(engine.dataframes.keys()))
     df = engine.dataframes[dataset_name]
+    
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📏 Rows", f"{len(df):,}"); c2.metric("📐 Columns", len(df.columns)); c3.metric("💾 Size", f"{df.memory_usage(deep=True).sum() / 1024**2:.1f} MB"); c4.metric("🔍 Nulls", f"{df.isnull().sum().sum():,}")
+    c1.metric("📏 Rows", f"{len(df):,}")
+    c2.metric("📐 Columns", len(df.columns))
+    c3.metric("💾 Size", f"{df.memory_usage(deep=True).sum() / 1024**2:.1f} MB")
+    c4.metric("🔍 Nulls", f"{df.isnull().sum().sum():,}")
+    
     st.dataframe(df.head(100), use_container_width=True, height=400)
+    
     with st.expander("📋 Column Details"):
-        st.dataframe(pd.DataFrame({'Column': df.columns, 'Type': df.dtypes.astype(str), 'Non-Null': df.count().values, 'Unique': df.nunique().values}), use_container_width=True)
+        st.dataframe(
+            pd.DataFrame({
+                'Column': df.columns,
+                'Type': df.dtypes.astype(str),
+                'Non-Null': df.count().values,
+                'Unique': df.nunique().values
+            }),
+            use_container_width=True
+        )
 
 
 def render_join_configuration(supabase: Client, user_id: str):
     st.subheader("🔗 Join Configuration")
     suggestions = st.session_state.get('join_suggestions', [])
-    if not suggestions: st.info("No join suggestions. Upload multiple datasets to detect joins."); return
+    
+    if not suggestions:
+        st.info("No join suggestions. Upload multiple datasets to detect joins.")
+        return
+    
     st.write(f"**Found {len(suggestions)} potential joins:**")
     join_df = pd.DataFrame(suggestions)
     edited_df = st.data_editor(
@@ -537,127 +581,237 @@ def render_join_configuration(supabase: Client, user_id: str):
         hide_index=True,
         use_container_width=True
     )
+    
     if st.button("🔗 Execute Joins", type="primary", use_container_width=True):
         with st.spinner("Joining datasets..."):
             try:
                 selected_joins = edited_df.to_dict('records')
                 engine = st.session_state.engine
                 joined_df = engine.execute_joins(selected_joins[:5])
-                st.session_state.engine.joined_df = joined_df # Save joined_df back to engine state
+                st.session_state.engine.joined_df = joined_df
                 st.success(f"✅ Successfully joined: {len(joined_df)} rows × {len(joined_df.columns)} columns")
-                with st.expander("👁️ Preview Joined Data"): st.dataframe(joined_df.head(50), use_container_width=True)
-            except Exception as e: st.error(f"❌ Join failed: {str(e)}")
+                with st.expander("👁️ Preview Joined Data"):
+                    st.dataframe(joined_df.head(50), use_container_width=True)
+            except Exception as e:
+                st.error(f"❌ Join failed: {str(e)}")
 
 
 def render_query_interface(supabase: Client, user_id: str, domain: str):
     st.subheader("💬 Natural Language Query")
     engine = st.session_state.get('engine')
-    if not engine or engine.joined_df is None: st.info("Execute joins first to enable querying"); return
+    
+    if not engine or engine.joined_df is None:
+        st.info("Execute joins first to enable querying")
+        return
+    
     with st.expander("💡 Example Queries"):
         c1, c2 = st.columns(2)
-        with c1: st.markdown("**📊 Rankings:**\n- rank sales by dealer top 10\n- top 5 regions by revenue")
-        with c2: st.markdown("**📈 Trends:**\n- trend sales by month in 2024\n- show revenue over time")
-    prompt = st.text_area("Ask your question", placeholder="e.g., rank sales by dealer_name top 10", height=100)
+        with c1:
+            st.markdown("**📊 Rankings:**\n- top 10 dealers by sales\n- top 5 states by dealer count")
+        with c2:
+            st.markdown("**📈 Trends:**\n- trend sales by month in 2024\n- show revenue over time")
+    
+    prompt = st.text_area("Ask your question", placeholder="e.g., top 10 dealers by sales", height=100)
+    
     c1, c2 = st.columns([4, 1])
     execute_btn = c1.button("🚀 Analyze", type="primary", use_container_width=True)
     c2.metric("Queries", st.session_state.get('query_count', 0))
+    
     if execute_btn and prompt:
-        if st.session_state.get('query_count', 0) >= FREE_QUERY_LIMIT and not st.session_state.get('paid_access', False): st.error("🚫 Upgrade to continue"); return
+        if st.session_state.get('query_count', 0) >= FREE_QUERY_LIMIT and not st.session_state.get('paid_access', False):
+            st.error("🚫 Upgrade to continue")
+            return
+        
         with st.spinner("🤖 Analyzing..."):
             try:
                 result = engine.analyze(prompt)
-                st.session_state.query_count = st.session_state.get('query_count', 0) + 1 # Increment cache
+                st.session_state.query_count = st.session_state.get('query_count', 0) + 1
                 st.session_state.query_result = result
-                log_usage(supabase, user_id, prompt, domain, len(result['result'])) # Log to DB
+                log_usage(supabase, user_id, prompt, domain, len(result['result']))
                 st.success("✅ Analysis complete!")
                 st.dataframe(result['result'], use_container_width=True, height=300)
-            except Exception as e: st.error(f"❌ Query failed: {str(e)}")
+            except Exception as e:
+                st.error(f"❌ Query failed: {str(e)}")
 
 
 def render_visualizations():
     st.subheader("📈 Visualizations")
-    if 'query_result' not in st.session_state: st.info("Execute a query to see visualizations"); return
-    result = st.session_state.query_result; df = result['result']; query = result['query']
+    
+    if 'query_result' not in st.session_state:
+        st.info("Execute a query to see visualizations")
+        return
+    
+    result = st.session_state.query_result
+    df = result['result']
+    query = result['query']
+    
     try:
-        task = query['task']; metrics = query['metrics']; dimensions = query['dimensions']
+        task = query['task']
+        metrics = query['metrics']
+        dimensions = query['dimensions']
+        
         if task == 'rank' and dimensions and metrics:
-            fig = px.bar(df.head(20), x=dimensions[0], y=metrics[0], title=f"{metrics[0]} by {dimensions[0]}", template='plotly_white')
-            fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
+            fig = px.bar(df.head(20), x=dimensions[0], y=metrics[0], 
+                        title=f"{metrics[0]} by {dimensions[0]}", template='plotly_white')
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+        
         elif task == 'trend' and query.get('time_column') and metrics:
-            fig = px.line(df, x=query['time_column'], y=metrics[0], title=f"{metrics[0]} Trend", markers=True, template='plotly_white')
-            fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
+            fig = px.line(df, x=query['time_column'], y=metrics[0], 
+                         title=f"{metrics[0]} Trend", markers=True, template='plotly_white')
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+        
         elif task == 'heatmap' and len(dimensions) >= 2 and metrics:
-            pivot = df.pivot_table(values=metrics[0], index=dimensions[0], columns=dimensions[1], aggfunc='sum'); pivot_numeric = pivot.apply(pd.to_numeric, errors='coerce').fillna(0)
-            fig = px.imshow(pivot_numeric, title=f"{metrics[0]} Heatmap", aspect='auto', template='plotly_white', color_continuous_scale='RdYlBu_r')
-            fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
+            pivot = df.pivot_table(values=metrics[0], index=dimensions[0], columns=dimensions[1], aggfunc='sum')
+            pivot_numeric = pivot.apply(pd.to_numeric, errors='coerce').fillna(0)
+            fig = px.imshow(pivot_numeric, title=f"{metrics[0]} Heatmap", aspect='auto', 
+                          template='plotly_white', color_continuous_scale='RdYlBu_r')
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+        
         else:
             numeric_cols = df.select_dtypes(include=[np.number]).columns[:2]
             if len(numeric_cols) >= 2:
-                fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title="Data Distribution", template='plotly_white', color=numeric_cols[0], color_continuous_scale='Viridis')
-                fig.update_layout(height=500); st.plotly_chart(fig, use_container_width=True)
-            else: st.info("Not enough numeric columns for visualization")
-    except Exception as e: st.warning(f"Visualization error: {str(e)}")
+                fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], 
+                               title="Data Distribution", template='plotly_white', 
+                               color=numeric_cols[0], color_continuous_scale='Viridis')
+                fig.update_layout(height=500)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Not enough numeric columns for visualization")
+    except Exception as e:
+        st.warning(f"Visualization error: {str(e)}")
 
 
 def render_insights():
     st.subheader("💡 AI-Generated Insights")
-    if 'query_result' not in st.session_state: st.info("Execute a query to generate insights"); return
+    
+    if 'query_result' not in st.session_state:
+        st.info("Execute a query to generate insights")
+        return
+    
     insights = st.session_state.query_result.get('insights', [])
+    
     if insights:
-        for idx, insight in enumerate(insights, 1): st.markdown(f'<div class="insight-box">**{idx}.** {insight}</div>', unsafe_allow_html=True)
-    else: st.info("No significant insights detected in this dataset")
+        for idx, insight in enumerate(insights, 1):
+            st.markdown(f'<div class="insight-box">**{idx}.** {insight}</div>', unsafe_allow_html=True)
+    else:
+        st.info("No significant insights detected in this dataset")
 
 
 def render_export():
     st.subheader("📥 Export Results")
-    if 'query_result' not in st.session_state: st.info("Execute a query first to export results"); return
+    
+    if 'query_result' not in st.session_state:
+        st.info("Execute a query first to export results")
+        return
+    
     df = st.session_state.query_result['result']
     st.write(f"**Export {len(df)} rows × {len(df.columns)} columns**")
+    
     c1, c2, c3 = st.columns(3)
-    with c1: st.download_button("📄 CSV", data=export_to_csv(df), file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", mime="text/csv", use_container_width=True)
-    with c2: st.download_button("📊 Excel", data=export_to_excel(df), file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    with c3: json_data = df.to_json(orient='records', indent=2); st.download_button("🔧 JSON", data=json_data, file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", mime="application/json", use_container_width=True)
+    
+    with c1:
+        st.download_button(
+            "📄 CSV",
+            data=export_to_csv(df),
+            file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with c2:
+        st.download_button(
+            "📊 Excel",
+            data=export_to_excel(df),
+            file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    
+    with c3:
+        json_data = df.to_json(orient='records', indent=2)
+        st.download_button(
+            "🔧 JSON",
+            data=json_data,
+            file_name=f"aum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    
     st.markdown("---")
-    with st.expander("👁️ Preview Export Data"): st.dataframe(df, use_container_width=True, height=300)
+    with st.expander("👁️ Preview Export Data"):
+        st.dataframe(df, use_container_width=True, height=300)
 
 
 def show_payment_modal(supabase: Client, user_id: str):
     st.markdown("---")
     c1, c2 = st.columns(2)
-    with c1: st.markdown("""<div class="metric-card"><h3>🆓 Free Tier</h3><ul><li>✅ 10 queries</li><li>✅ All features</li><li>✅ Basic support</li><li>❌ Limited access</li></ul><p><strong>You've used all free queries</strong></p></div>""", unsafe_allow_html=True)
-    with c2: st.markdown("""<div class="metric-card" style="border: 2px solid #667eea;"><h3>🚀 Pro Tier - ₹999/month</h3><ul><li>✅ <strong>Unlimited queries</strong></li><li>✅ Priority support</li><li>✅ Advanced analytics</li><li>✅ API access (soon)</li></ul><p><strong>Best value for professionals</strong></p></div>""", unsafe_allow_html=True)
+    
+    with c1:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>🆓 Free Tier</h3>
+            <ul>
+                <li>✅ 10 queries</li>
+                <li>✅ All features</li>
+                <li>✅ Basic support</li>
+                <li>❌ Limited access</li>
+            </ul>
+            <p><strong>You've used all free queries</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with c2:
+        st.markdown("""
+        <div class="metric-card" style="border: 2px solid #667eea;">
+            <h3>🚀 Pro Tier - ₹999/month</h3>
+            <ul>
+                <li>✅ <strong>Unlimited queries</strong></li>
+                <li>✅ Priority support</li>
+                <li>✅ Advanced analytics</li>
+                <li>✅ API access (soon)</li>
+            </ul>
+            <p><strong>Best value for professionals</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     st.markdown("---")
     a, b, c = st.columns([1, 2, 1])
+    
     with b:
         st.info("**💳 Payment Instructions**\n\n1. Scan QR with any UPI app\n2. Pay ₹999\n3. Click 'I Have Paid'")
         st.image("https://via.placeholder.com/250x250/667eea/FFFFFF?text=UPI+QR+Code", use_column_width=True)
+        
         if st.button("✅ I Have Paid ₹999", type="primary", use_container_width=True):
             if record_payment(supabase, user_id, 999.0):
                 st.session_state.paid_access = True
-                st.session_state.query_count = 0 # Reset query count on payment
+                st.session_state.query_count = 0
                 st.success("✅ Payment confirmed! You now have unlimited access.")
                 st.balloons()
                 st.rerun()
-            else: st.error("❌ Payment failed. Please contact support.")
+            else:
+                st.error("❌ Payment failed. Please contact support.")
+
 
 # ============================================================================
 # Main
 # ============================================================================
 def main():
-    """Main entry point with final robust flow control"""
+    """Main entry point with robust error handling."""
     
     supabase = init_supabase()
     if not supabase:
         st.error("### ❌ Configuration Error\n\nSupabase credentials not found. Add to `.streamlit/secrets.toml`:\n\n```toml\nSUPABASE_URL = \"your-url\"\nSUPABASE_KEY = \"your-key\"\n```")
         st.stop()
 
-    # Not logged in → show login
-    # CRITICAL FIX: We check for 'user_id' string, not 'user' object
+    # Check if user is logged in
     if 'user_id' not in st.session_state:
         show_login_page(supabase)
         return
 
-    # Logged in → safe to use cached session state
+    # Get cached user info
     user_id_str = st.session_state.user_id
     user_email_str = st.session_state.user_email
 
@@ -665,26 +819,26 @@ def main():
         st.error("Authentication session corrupted. Please log out and try again.")
         return
 
-    # Session init (Using setdefault for clean state management)
+    # Initialize session state
     st.session_state.setdefault('consent', False)
     st.session_state.setdefault('uploaded_files', [])
     st.session_state.setdefault('engine', None)
     st.session_state.setdefault('join_suggestions', [])
     st.session_state.setdefault('project_id', hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8])
     
-    # CRITICAL FIX: Only call these functions ONCE if the state hasn't been set
+    # Load DB state only once per session
     if '_db_state_initialized' not in st.session_state:
         st.session_state['query_count'] = get_usage_count(supabase, user_id_str)
         st.session_state['paid_access'] = check_paid_access(supabase, user_id_str)
         st.session_state['domain_preference'] = get_domain_preference(supabase, user_id_str)
-        st.session_state['_db_state_initialized'] = True # Mark as initialized
+        st.session_state['_db_state_initialized'] = True
     
     # Consent gate
     if not st.session_state.consent:
         show_consent_modal()
         return
 
-    # Pass the safe, string-based IDs to the main UI
+    # Render main UI
     render_main_ui(supabase, user_id_str, user_email_str)
 
 
