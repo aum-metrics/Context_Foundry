@@ -8,7 +8,8 @@ CRITICAL FIXES:
   and moving all usage/domain fetches out of the repetitive UI render cycle (the sidebar). 
 - All helper calls now rely on a cached session state value.
 - Fixed all SyntaxErrors (invalid semicolon 'if' statements).
-- Cleaned up imports and comments.
+- Fixed "Expecting value" JSON error in log_usage.
+- Corrected session state logic to only store str user_id and email.
 """
 
 import streamlit as st
@@ -42,6 +43,7 @@ try:
     SUPABASE_AVAILABLE = True
 except ImportError:
     SUPABASE_AVAILABLE = False
+    st.error("❌ Supabase library not found. Check requirements.txt.")
 
 # Import AUM Engine
 try:
@@ -136,20 +138,19 @@ def get_user_uuid(user: Any) -> Optional[str]:
 
 
 # ============================================================================
-# Database Operations (FIXED: SyntaxError)
+# Database Operations (FIXED: SyntaxError & Logic)
 # ============================================================================
 
-def create_or_update_profile(supabase: Client, user):
+def create_or_update_profile(supabase: Client, user_id: str, user_email: str):
     """Create/update user profile."""
-    user_id = get_user_uuid(user)
     if not user_id:
         return None
         
     def _operation():
         data = {
             "id": user_id,
-            "email": user.email,
-            "name": user.email.split('@')[0],
+            "email": user_email,
+            "name": user_email.split('@')[0],
             "last_login": datetime.now().isoformat()
         }
         return supabase.table("user_profiles").upsert(data).execute()
@@ -162,6 +163,7 @@ def get_usage_count(supabase: Client, user_id: str) -> int:
         return 0
         
     def _operation():
+        # Use count='exact' for performance
         response = supabase.table("usage_logs").select("id", count='exact').eq("user_id", user_id).execute()
         return response.count if response.count is not None else 0
     result = safe_db_call(_operation, "Failed to fetch usage count")
@@ -182,6 +184,7 @@ def check_paid_access(supabase: Client, user_id: str) -> bool:
             .select("id", count='exact')
             .eq("user_id", user_id)
             .eq("payment_status", "confirmed")
+            .limit(1) # We only need to know if one exists
             .execute()
         )
         return (response.count > 0) if response.count is not None else False
@@ -205,11 +208,8 @@ def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
             "cost": cost,
             "created_at": datetime.now().isoformat()
         }
-        # .insert() returns a list of dictionaries in its 'data' attribute
-        response = supabase.table("usage_logs").insert(data).execute()
-        if not getattr(response, "data", None):
-            # This is normal for an insert if return=minimal is set, but if it fails, 'data' will be missing.
-            pass
+        # CRITICAL FIX: Use returning="minimal" to prevent JSONDecodeError on empty response
+        response = supabase.table("usage_logs").insert(data, returning="minimal").execute()
         return response
     return safe_db_call(_operation, "Failed to log query")
 
@@ -228,9 +228,10 @@ def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
             "payment_status": "confirmed",
             "created_at": datetime.now().isoformat()
         }
-        return supabase.table("transactions").insert(data).execute()
+        # Use returning="minimal" here too for consistency
+        return supabase.table("transactions").insert(data, returning="minimal").execute()
     result = safe_db_call(_operation, "Payment recording failed")
-    # Check if the insert was successful (result is not None)
+    # Check if the operation was successful (result is not None)
     return result is not None
 
 
@@ -247,7 +248,7 @@ def save_domain_preference(supabase: Client, user_id: str, domain: str):
             "canonical_synonyms": {},
             "last_updated": datetime.now().isoformat()
         }
-        # Upsert based on the unique constraint (user_id, domain)
+        # Use on_conflict to avoid race conditions
         return supabase.table("domain_settings").upsert(data, on_conflict="user_id, domain").execute()
     return safe_db_call(_operation, "Failed to save domain preference")
 
@@ -275,7 +276,6 @@ def export_to_excel(df: pd.DataFrame) -> bytes:
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='AUM Results')
-    # seek(0) is not needed as getvalue() reads from the current position
     return output.getvalue()
 
 
@@ -303,9 +303,13 @@ def show_login_page(supabase: Client):
                     try:
                         response = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         if response.user:
-                            st.session_state.user = response.user
+                            # CRITICAL FIX: Store only serializable strings in session state
+                            st.session_state.user_id = str(response.user.id)
+                            st.session_state.user_email = str(response.user.email)
                             st.session_state.access_token = response.session.access_token
-                            create_or_update_profile(supabase, response.user)
+                            
+                            # Pass the new string IDs to the profile function
+                            create_or_update_profile(supabase, st.session_state.user_id, st.session_state.user_email)
                             st.success("✅ Login successful!")
                             st.rerun()
                     except Exception as e:
@@ -371,16 +375,14 @@ def show_consent_modal():
 # ============================================================================
 # UI: Main
 # ============================================================================
-def render_main_ui(supabase: Client, user):
+def render_main_ui(supabase: Client, user_id_str: str, user_email_str: str):
     st.markdown('<h1 class="main-header">🎵 AUM Studio</h1>', unsafe_allow_html=True)
     st.markdown('<p class="tagline">The Sound of Data Understanding</p>', unsafe_allow_html=True)
-
-    user_id_str = get_user_uuid(user)
 
     # Top bar
     c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
     with c1:
-        st.markdown(f"**👤 {user.email.split('@')[0]}**")
+        st.markdown(f"**👤 {user_email_str.split('@')[0]}**")
     with c2:
         if 'project_id' in st.session_state:
             st.markdown(f"**📁 Project:** `{st.session_state.project_id[:8]}`")
@@ -650,13 +652,14 @@ def main():
         st.stop()
 
     # Not logged in → show login
-    if 'user' not in st.session_state:
+    # CRITICAL FIX: We check for 'user_id' string, not 'user' object
+    if 'user_id' not in st.session_state:
         show_login_page(supabase)
         return
 
-    # Logged in → safe to fetch usage/payment
-    user = st.session_state.user
-    user_id_str = get_user_uuid(user)
+    # Logged in → safe to use cached session state
+    user_id_str = st.session_state.user_id
+    user_email_str = st.session_state.user_email
 
     if not user_id_str:
         st.error("Authentication session corrupted. Please log out and try again.")
@@ -681,7 +684,8 @@ def main():
         show_consent_modal()
         return
 
-    render_main_ui(supabase, user)
+    # Pass the safe, string-based IDs to the main UI
+    render_main_ui(supabase, user_id_str, user_email_str)
 
 
 if __name__ == "__main__":
