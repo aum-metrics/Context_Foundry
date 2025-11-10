@@ -217,26 +217,28 @@ def safe_db_call(func, error_msg="Database operation failed"):
 # Database Operations (All with Error Handling)
 # ============================================================================
 
+
 def create_or_update_profile(supabase: Client, user):
     """Create/update user profile"""
     def _operation():
         data = {
-            "id": user.id,
+            "id": str(user.id),
             "email": user.email,
             "name": user.email.split('@')[0],
             "last_login": datetime.now().isoformat()
         }
         return supabase.table("user_profiles").upsert(data).execute()
-    
     return safe_db_call(_operation, "Profile update failed")
 
 
 def get_usage_count(supabase: Client, user_id: str) -> int:
     """Get query count with error handling"""
     def _operation():
-        response = supabase.table("usage_logs").select("id").eq("user_id", str(user_id)).execute()
+        response = supabase.table("usage_logs")\
+            .select("id")\
+            .eq("user_id", str(user_id))\
+            .execute()
         return len(response.data) if response.data else 0
-    
     result = safe_db_call(_operation, "Failed to fetch usage count")
     return result if result is not None else 0
 
@@ -253,12 +255,14 @@ def check_paid_access(supabase: Client, user_id: str) -> bool:
             .eq("payment_status", "confirmed")\
             .execute()
         return len(response.data) > 0 if response.data else False
+    result = safe_db_call(_operation, "Failed to check payment status")
+    return result if result is not None else False
     
     result = safe_db_call(_operation, "Failed to check payment status")
     return result if result is not None else False
 
 
-def log_usage(supabase: Client, user_id: str, prompt: str, domain: str, 
+def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
               result_rows: int = 0, cost: float = 0):
     """Log query with error handling"""
     def _operation():
@@ -275,7 +279,6 @@ def log_usage(supabase: Client, user_id: str, prompt: str, domain: str,
         if not getattr(response, "data", None):
             st.warning("⚠️ Insert returned no data — check Supabase logs.")
         return response
-    
     return safe_db_call(_operation, "Failed to log query")
 
 
@@ -291,7 +294,6 @@ def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
             "created_at": datetime.now().isoformat()
         }
         return supabase.table("transactions").insert(data).execute()
-    
     result = safe_db_call(_operation, "Payment recording failed")
     return result is not None
 
@@ -299,13 +301,10 @@ def record_payment(supabase: Client, user_id: str, amount: float) -> bool:
 def save_domain_preference(supabase: Client, user_id: str, domain: str):
     """Save domain preference"""
     def _operation():
-        # Update user_profiles
         supabase.table("user_profiles")\
             .update({"domain_preference": domain})\
             .eq("id", str(user_id))\
             .execute()
-        
-        # Upsert domain_settings
         data = {
             "user_id": str(user_id),
             "domain": domain,
@@ -313,7 +312,6 @@ def save_domain_preference(supabase: Client, user_id: str, domain: str):
             "last_updated": datetime.now().isoformat()
         }
         return supabase.table("domain_settings").upsert(data).execute()
-    
     return safe_db_call(_operation, "Failed to save domain preference")
 
 
