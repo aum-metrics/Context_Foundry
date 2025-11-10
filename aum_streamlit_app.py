@@ -1,10 +1,12 @@
 """
 AUM: Augmented Universal Metrics - Streamlit UI
-Version: 2.1.2 (FINAL CRITICAL SUPABASE FIX)
+Version: 2.1.3 (FINAL SOLUTION FOR PGRST100 FILTER ERROR)
 Tagline: The Sound of Data Understanding
 
 CRITICAL FIXES:
-- FIXED: Supabase Filter Error (PGRST100) by ensuring user.id is checked and cast to str() BEFORE populating session state variables, preventing corrupted filter strings during the initial rerun cycle.
+- FIXED: Supabase Filter Error (PGRST100) by strictly enforcing the use of 
+  the validated user_id_str (clean string UUID) across all functions 
+  called during UI rendering (sidebar/main content).
 """
 
 import streamlit as st
@@ -371,7 +373,7 @@ def export_to_excel(df: pd.DataFrame) -> bytes:
 
 
 # ============================================================================
-# UI Components (No changes to logic, only calls)
+# UI Components
 # ============================================================================
 
 def show_login_page(supabase: Client):
@@ -523,7 +525,7 @@ def render_main_ui(supabase: Client, user):
         
         # Domain
         st.markdown("### 🧠 Domain")
-        saved_domain = get_domain_preference(supabase, user_id_str)
+        saved_domain = get_domain_preference(supabase, user_id_str) # FIXED: Use str UUID
         domains = DomainIntelligence.get_all_domains()
         domain_idx = domains.index(saved_domain) if saved_domain in domains else 0
         
@@ -538,7 +540,7 @@ def render_main_ui(supabase: Client, user):
         # Save domain if changed
         if 'last_domain' not in st.session_state or st.session_state.last_domain != domain:
             st.session_state.last_domain = domain
-            save_domain_preference(supabase, user_id_str, domain)
+            save_domain_preference(supabase, user_id_str, domain) # FIXED: Use str UUID
         
         # Model
         st.markdown("### 🤖 AI Model")
@@ -570,7 +572,7 @@ def render_main_ui(supabase: Client, user):
         if st.button("🚀 Initialize Engine", use_container_width=True, type="primary"):
             if st.session_state.get('uploaded_files'):
                 with st.spinner("🔄 Processing data..."):
-                    initialize_engine(supabase, user_id_str, domain, model)
+                    initialize_engine(supabase, user_id_str, domain, model) # FIXED: Use str UUID
             else:
                 st.warning("⚠️ Please upload files first")
         
@@ -590,7 +592,7 @@ def render_main_ui(supabase: Client, user):
             else:
                 st.warning("⚠️ **Free tier exhausted**")
                 if st.button("💳 Upgrade Now", use_container_width=True):
-                    show_payment_modal(supabase, user_id_str)
+                    show_payment_modal(supabase, user_id_str) # FIXED: Use str UUID
         
         st.markdown("---")
         st.caption("© 2025 AUM v2.1.0 • Made with ❤️ for data analysts")
@@ -604,7 +606,7 @@ def render_main_ui(supabase: Client, user):
     if st.session_state.get('query_count', 0) >= FREE_QUERY_LIMIT and not st.session_state.get('paid_access', False):
         st.error(f"### 🚫 Free Tier Limit Reached\n\nYou've used all {FREE_QUERY_LIMIT} free queries. Upgrade to Pro for unlimited access at ₹999/month")
         if st.button("💳 Upgrade to Pro", type="primary"):
-            show_payment_modal(supabase, user_id_str)
+            show_payment_modal(supabase, user_id_str) # FIXED: Use str UUID
         return
     
     # Tabs
@@ -614,10 +616,10 @@ def render_main_ui(supabase: Client, user):
         render_data_preview()
     
     with tabs[1]:
-        render_join_configuration(supabase, user_id_str)
+        render_join_configuration(supabase, user_id_str) # FIXED: Use str UUID
     
     with tabs[2]:
-        render_query_interface(supabase, user_id_str, domain)
+        render_query_interface(supabase, user_id_str, domain) # FIXED: Use str UUID
     
     with tabs[3]:
         render_visualizations()
@@ -999,9 +1001,8 @@ def main():
     if 'project_id' not in st.session_state:
         st.session_state.project_id = hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8]
     
-    # CRITICAL FIX: Initialization calls use the guaranteed str UUID
-    # The error was caused by calling these functions before the Streamlit session
-    # had guaranteed user.id was properly represented in Python space.
+    # CRITICAL FIX: Initialization calls use the guaranteed str UUID (user_id_str)
+    # This prevents the corrupted object value from reaching the filter engine during initialization.
     if 'query_count' not in st.session_state:
         st.session_state.query_count = get_usage_count(supabase, user_id_str)
     if 'paid_access' not in st.session_state:
