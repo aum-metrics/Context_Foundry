@@ -344,7 +344,7 @@ def show_consent_modal():
         - 📊 Your uploaded data is processed **locally** and stored in your Supabase project
         - 🔒 No third-party data sharing beyond Supabase infrastructure
         - 🧪 **Verify all outputs independently** - this is AI-assisted analysis
-        - 💳 Payment features are **demonstration only** (₹5 microtransaction simulation)
+        - 💳 Payment features are **demonstration only** (₹XXXXX microtransaction simulation)
         - 📜 Usage logs stored for service improvement
         
         ---
@@ -770,16 +770,16 @@ def show_payment_modal(supabase: Client, user_id: str):
     st.markdown("---")
     st.subheader("💳 Unlock Unlimited Queries")
     
-    st.info("Pay **₹5** to unlock unlimited queries for this session")
+    st.info("Pay **₹XXXXX** to unlock unlimited queries for this session")
     
     # Razorpay QR placeholder
     st.image("https://via.placeholder.com/200x200/4F46E5/FFFFFF?text=Razorpay+QR", 
-             caption="Scan to pay ₹5", width=200)
+             caption="Scan to pay ₹XXXXX", width=200)
     
     st.markdown("""
     **Payment Instructions:**
     1. Scan QR code with any UPI app
-    2. Pay ₹5 to the merchant
+    2. Pay ₹XXXXX to the merchant
     3. Click "I Have Paid" below
     """)
     
