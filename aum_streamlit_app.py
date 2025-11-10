@@ -628,10 +628,23 @@ def render_query_interface(supabase: Client, user_id: str, domain: str):
                 st.session_state.query_count = st.session_state.get('query_count', 0) + 1
                 st.session_state.query_result = result
                 log_usage(supabase, user_id, prompt, domain, len(result['result']))
+                
+                # Show what was parsed (for debugging)
+                with st.expander("🔍 Query Interpretation"):
+                    query_info = result['query']
+                    st.write(f"**Task:** {query_info['task']}")
+                    st.write(f"**Metrics (aggregated):** {', '.join(query_info['metrics']) if query_info['metrics'] else 'None'}")
+                    st.write(f"**Dimensions (group by):** {', '.join(query_info['dimensions']) if query_info['dimensions'] else 'None'}")
+                    if query_info.get('top_n'):
+                        st.write(f"**Top N:** {query_info['top_n']}")
+                
                 st.success("✅ Analysis complete!")
                 st.dataframe(result['result'], use_container_width=True, height=300)
             except Exception as e:
                 st.error(f"❌ Query failed: {str(e)}")
+                import traceback
+                with st.expander("🐛 Error Details"):
+                    st.code(traceback.format_exc())
 
 
 def render_visualizations():
@@ -650,38 +663,114 @@ def render_visualizations():
         metrics = query['metrics']
         dimensions = query['dimensions']
         
+        # Only create viz if we have valid data
+        if df.empty:
+            st.warning("No data to visualize")
+            return
+        
+        # RANK visualization - bar chart
         if task == 'rank' and dimensions and metrics:
-            fig = px.bar(df.head(20), x=dimensions[0], y=metrics[0], 
-                        title=f"{metrics[0]} by {dimensions[0]}", template='plotly_white')
-            fig.update_layout(height=500)
+            # Use first dimension and first metric
+            dim_col = dimensions[0] if dimensions[0] in df.columns else df.columns[0]
+            metric_col = metrics[0] if metrics[0] in df.columns else df.select_dtypes(include=[np.number]).columns[0]
+            
+            fig = px.bar(
+                df.head(20), 
+                x=dim_col, 
+                y=metric_col, 
+                title=f"{metric_col} by {dim_col}",
+                template='plotly_white',
+                color=metric_col,
+                color_continuous_scale='Blues'
+            )
+            fig.update_layout(
+                height=500,
+                xaxis_tickangle=-45,
+                showlegend=False
+            )
             st.plotly_chart(fig, use_container_width=True)
         
+        # TREND visualization - line chart
         elif task == 'trend' and query.get('time_column') and metrics:
-            fig = px.line(df, x=query['time_column'], y=metrics[0], 
-                         title=f"{metrics[0]} Trend", markers=True, template='plotly_white')
+            time_col = query['time_column']
+            metric_col = metrics[0] if metrics[0] in df.columns else df.select_dtypes(include=[np.number]).columns[0]
+            
+            fig = px.line(
+                df, 
+                x=time_col, 
+                y=metric_col, 
+                title=f"{metric_col} Trend Over Time",
+                markers=True,
+                template='plotly_white'
+            )
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
         
+        # HEATMAP visualization
         elif task == 'heatmap' and len(dimensions) >= 2 and metrics:
-            pivot = df.pivot_table(values=metrics[0], index=dimensions[0], columns=dimensions[1], aggfunc='sum')
+            pivot = df.pivot_table(
+                values=metrics[0], 
+                index=dimensions[0], 
+                columns=dimensions[1], 
+                aggfunc='sum'
+            )
             pivot_numeric = pivot.apply(pd.to_numeric, errors='coerce').fillna(0)
-            fig = px.imshow(pivot_numeric, title=f"{metrics[0]} Heatmap", aspect='auto', 
-                          template='plotly_white', color_continuous_scale='RdYlBu_r')
+            
+            fig = px.imshow(
+                pivot_numeric, 
+                title=f"{metrics[0]} Heatmap", 
+                aspect='auto', 
+                template='plotly_white', 
+                color_continuous_scale='RdYlBu_r'
+            )
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
         
+        # DEFAULT - scatter or bar based on available data
         else:
-            numeric_cols = df.select_dtypes(include=[np.number]).columns[:2]
-            if len(numeric_cols) >= 2:
-                fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], 
-                               title="Data Distribution", template='plotly_white', 
-                               color=numeric_cols[0], color_continuous_scale='Viridis')
-                fig.update_layout(height=500)
-                st.plotly_chart(fig, use_container_width=True)
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            
+            if len(numeric_cols) >= 1 and len(df.columns) >= 2:
+                # If we have dimensions and metrics, use bar chart
+                non_numeric = [c for c in df.columns if c not in numeric_cols]
+                if non_numeric:
+                    fig = px.bar(
+                        df.head(20),
+                        x=non_numeric[0],
+                        y=numeric_cols[0],
+                        title=f"{numeric_cols[0]} by {non_numeric[0]}",
+                        template='plotly_white',
+                        color=numeric_cols[0],
+                        color_continuous_scale='Viridis'
+                    )
+                    fig.update_layout(
+                        height=500,
+                        xaxis_tickangle=-45
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                elif len(numeric_cols) >= 2:
+                    # Two numeric columns - scatter plot
+                    fig = px.scatter(
+                        df, 
+                        x=numeric_cols[0], 
+                        y=numeric_cols[1], 
+                        title="Data Distribution",
+                        template='plotly_white',
+                        color=numeric_cols[0],
+                        color_continuous_scale='Viridis'
+                    )
+                    fig.update_layout(height=500)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("Not enough data variety for visualization")
             else:
                 st.info("Not enough numeric columns for visualization")
+                
     except Exception as e:
         st.warning(f"Visualization error: {str(e)}")
+        import traceback
+        with st.expander("🐛 Error Details"):
+            st.code(traceback.format_exc())
 
 
 def render_insights():
