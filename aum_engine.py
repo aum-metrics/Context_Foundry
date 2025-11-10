@@ -12,7 +12,7 @@ import hashlib
 import json
 import os
 import re
-from scipy import stats
+from scipy import stats # Added for insights
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
@@ -477,6 +477,7 @@ class AUMEngine:
     def load_files(self, file_paths: List[str]) -> Dict[str, pd.DataFrame]:
         """Load multiple CSV/XLSX files with robust error handling"""
         self.dataframes = {}
+        self.joined_df = None # Reset joined df on new file load
         
         for path in file_paths:
             try:
@@ -549,7 +550,13 @@ class AUMEngine:
         if query['filters']:
             for col, val in query['filters'].items():
                 if col in df.columns:
-                    df = df[df[col] == val]
+                    # Basic year filter from date column
+                    if col == 'year' and query.get('time_column'):
+                        time_col = query['time_column']
+                        df[time_col] = pd.to_datetime(df[time_col], errors='coerce')
+                        df = df[df[time_col].dt.year == val]
+                    elif col in df.columns:
+                        df = df[df[col] == val]
         
         # Aggregate based on task
         metrics = query['metrics'] if query['metrics'] else []
@@ -603,10 +610,11 @@ class AUMEngine:
                     q1 = result_df[col].quantile(0.25)
                     q3 = result_df[col].quantile(0.75)
                     iqr = q3 - q1
-                    outliers = result_df[(result_df[col] < q1 - 1.5*iqr) | 
-                                        (result_df[col] > q3 + 1.5*iqr)]
-                    if len(outliers) > 0:
-                        insights.append(f"Found {len(outliers)} outliers in {col}")
+                    if iqr > 0: # Avoid division by zero or empty series
+                        outliers = result_df[(result_df[col] < q1 - 1.5*iqr) | 
+                                            (result_df[col] > q3 + 1.5*iqr)]
+                        if len(outliers) > 0:
+                            insights.append(f"Found {len(outliers)} outliers in {col}")
             
             # Domain validations
             domain_config = DomainIntelligence.get_domain_context(self.domain)
