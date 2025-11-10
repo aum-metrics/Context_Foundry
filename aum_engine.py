@@ -11,6 +11,8 @@ import numpy as np
 import hashlib
 import json
 import os
+import re
+from scipy import stats
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
@@ -428,7 +430,6 @@ class PromptInterpreter:
         """Extract filter conditions"""
         filters = {}
         # Simple year extraction
-        import re
         years = re.findall(r'\b(20\d{2})\b', prompt)
         if years:
             filters['year'] = int(years[0])
@@ -437,7 +438,6 @@ class PromptInterpreter:
     
     def _extract_top_n(self, prompt: str) -> Optional[int]:
         """Extract top-N value"""
-        import re
         matches = re.findall(r'\btop\s+(\d+)\b', prompt)
         if matches:
             return int(matches[0])
@@ -470,8 +470,8 @@ class AUMEngine:
         self.semantic_model = semantic_model
         self.join_engine = SemanticJoinEngine(semantic_model)
         self.interpreter = PromptInterpreter(domain)
-        self.dataframes = {}
-        self.joined_df = None
+        self.dataframes: Dict[str, pd.DataFrame] = {}
+        self.joined_df: Optional[pd.DataFrame] = None
         self.metadata = {}
     
     def load_files(self, file_paths: List[str]) -> Dict[str, pd.DataFrame]:
@@ -640,8 +640,9 @@ class AUMEngine:
         
         # Export metadata
         meta_path = output_path / "metadata.json"
+        self.metadata['timestamp'] = datetime.now().isoformat() # Ensure metadata is updated
         with open(meta_path, 'w') as f:
-            json.dump(self.metadata, f, indent=2)
+            json.dump(self.metadata, f, indent=2, default=str)
         files['metadata'] = str(meta_path)
         
         return files
