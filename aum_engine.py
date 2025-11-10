@@ -405,7 +405,7 @@ class PromptInterpreter:
                     if self._is_numeric_column_name(col):
                         metrics.append(col)
         
-        return list(set(metrics))[:3]  # Unique, limit to 3
+        return list(dict.fromkeys(metrics))[:3]  # Unique, limit to 3
     
     def _extract_dimensions(self, prompt: str, columns: List[str]) -> List[str]:
         """Extract dimension columns with synonym support"""
@@ -424,7 +424,7 @@ class PromptInterpreter:
                     if not self._is_numeric_column_name(col):
                         dimensions.append(col)
         
-        return list(set(dimensions))[:2]  # Unique, limit to 2
+        return list(dict.fromkeys(dimensions))[:2]  # Unique, limit to 2
     
     def _extract_filters(self, prompt: str, columns: List[str]) -> Dict:
         """Extract filter conditions"""
@@ -549,14 +549,15 @@ class AUMEngine:
         # Apply filters
         if query['filters']:
             for col, val in query['filters'].items():
-                if col in df.columns:
-                    # Basic year filter from date column
-                    if col == 'year' and query.get('time_column'):
-                        time_col = query['time_column']
+                if col == 'year' and query.get('time_column'):
+                    time_col = query['time_column']
+                    try:
                         df[time_col] = pd.to_datetime(df[time_col], errors='coerce')
                         df = df[df[time_col].dt.year == val]
-                    elif col in df.columns:
-                        df = df[df[col] == val]
+                    except Exception as e:
+                        print(f"Could not apply year filter: {e}")
+                elif col in df.columns:
+                    df = df[df[col] == val]
         
         # Aggregate based on task
         metrics = query['metrics'] if query['metrics'] else []
@@ -578,7 +579,7 @@ class AUMEngine:
             else:
                 result = df[dimensions].drop_duplicates()
         else:
-            result = df[metrics] if metrics else df
+            result = df[metrics].sum().to_frame().T if metrics else df
         
         # Apply top-N
         if query['top_n'] and metrics:
