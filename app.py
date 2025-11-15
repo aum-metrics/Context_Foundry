@@ -113,7 +113,7 @@ if not st.session_state.seen_welcome:
         """, unsafe_allow_html=True)
         if st.button("Got it — hide this"):
             st.session_state.seen_welcome = True
-            st.experimental_rerun()
+            st.rerun()
 
 # ------------------------------
 # Sidebar Quick Guide (persistent)
@@ -139,7 +139,7 @@ def render_quick_guide_box():
     if st.button("Show Help", key='show_help_sidebar'):
         st.session_state.temp_query = ''
         st.session_state.show_help_tab = True
-        st.experimental_rerun()
+        st.rerun()
 
 # The actual injection in the sidebar happens later where the sidebar block runs; we expose the helper here.
 
@@ -158,7 +158,7 @@ if not st.session_state.user_id:
             else:
                 st.session_state.user_email = email.strip().lower()
                 st.session_state.user_id = hashlib.md5(email.encode()).hexdigest()[:24]
-                st.experimental_rerun()
+                st.rerun()
     st.stop()
 
 # ------------------------------------------------------------
@@ -259,12 +259,12 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Auto insights error: {e}")
 
-                st.experimental_rerun()
+                st.rerun()
 
     st.markdown("---")
     if st.button("Reset Session"):
         for k in list(st.session_state.keys()): del st.session_state[k]
-        st.experimental_rerun()
+        st.rerun()
 
 # ------------------------------------------------------------
 # IF NO DATA LOADED
@@ -301,7 +301,7 @@ if len(st.session_state.uploaded_files) > 1 and st.session_state.dataframes:
                 if result is not None:
                     st.session_state.joined_df = result
                     st.success(f"Joined {suggestions[0]['left']} + {suggestions[0]['right']}")
-                    st.experimental_rerun()
+                    st.rerun()
             except Exception as e:
                 st.error(f"Join execution failed: {e}")
     else:
@@ -505,7 +505,7 @@ with col2:
         try:
             auto = AutoInsightsEngine(st.session_state.domain, st.session_state.sku_price_map)
             st.session_state.insights = auto.analyze_on_upload(st.session_state.joined_df)
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"Refresh failed: {e}")
 
@@ -518,3 +518,4 @@ with st.expander("Debug & Session"):
         'files_loaded': list(st.session_state.dataframes.keys()),
         'insights': len(st.session_state.insights)
     })
+
