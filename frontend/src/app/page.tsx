@@ -348,20 +348,59 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* Footer */}
-                <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-slate-200 dark:border-white/5 mt-20 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
-                    <div className="flex items-center space-x-2 mb-4 md:mb-0">
-                        <Image src="/favicon.ico" alt="Logo" width={16} height={16} className="opacity-70 grayscale" />
-                        <span>© 2026 AUM Context Foundry. By AUM Data Labs.</span>
+                {/* Footer Section */}
+                <footer className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                        <div className="col-span-1 md:col-span-2">
+                            <h3 className="text-xl font-medium mb-6 flex items-center">
+                                <BrainCircuit className="w-6 h-6 mr-3 text-indigo-600 dark:text-indigo-400" />
+                                AUM Context Foundry
+                            </h3>
+                            <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-8">
+                                Strategic Generative Engine Optimization (GEO) for the agentic era.
+                                Secure your narrative in the latent space with vector-verified facts.
+                            </p>
+                            <div className="flex space-x-4">
+                                <Link href="/contact" className="px-4 py-2 bg-indigo-500/10 text-indigo-500 rounded-full text-xs font-semibold hover:bg-indigo-500/20 transition-all">
+                                    hello@AUMDataLabs.com
+                                </Link>
+                                <a href="tel:+919080735297" className="px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-full text-xs font-semibold hover:bg-emerald-500/20 transition-all">
+                                    +91 9080735297
+                                </a>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-400 mb-6">Foundry</h4>
+                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
+                                <li><a href="#moat" className="hover:text-indigo-600 transition-colors">The Moat</a></li>
+                                <li><a href="#features" className="hover:text-indigo-600 transition-colors">LCRS Math</a></li>
+                                <li><Link href="/dashboard" className="hover:text-indigo-600 transition-colors">Dashboard</Link></li>
+                                <li><Link href="/status" className="hover:text-indigo-600 transition-colors">System Status</Link></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-400 mb-6">Legal</h4>
+                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
+                                <li><Link href="/privacy" className="hover:text-indigo-600 transition-colors">Privacy Policy</Link></li>
+                                <li><Link href="/terms" className="hover:text-indigo-600 transition-colors">Terms of Service</Link></li>
+                                <li><Link href="/contact" className="hover:text-indigo-600 transition-colors">CISO Audits</Link></li>
+                            </ul>
+                        </div>
                     </div>
-                    <div className="flex space-x-6">
-                        <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Privacy Policy</a>
-                        <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Terms of Service</a>
-                        <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">System Status</a>
+
+                    <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500 gap-4">
+                        <p>&copy; 2025 AUM Data Labs. All rights reserved.</p>
+                        <div className="flex space-x-8">
+                            <span>Author: Sambath Kumar Natarajan</span>
+                            <span className="flex items-center"><Globe className="w-3 h-3 mr-1" /> Global Edge Distribution</span>
+                        </div>
                     </div>
                 </footer>
             </main>
-        </div >
+        </div>
+    ); >
     );
 }
 
