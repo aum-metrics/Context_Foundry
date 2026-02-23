@@ -176,7 +176,7 @@ export default function SoMCommandCenter() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">SoM Command Center</h1>
-                        <p className="text-slate-500 text-sm mt-1">Live scoring across GPT-4, Gemini, and Claude</p>
+                        <p className="text-slate-500 text-sm mt-1">Live scoring across GPT-4o, Claude 3.5, and Gemini 2.0 Flash</p>
                     </div>
                 </div>
                 <div className="mt-4 md:mt-0 flex items-center space-x-6">

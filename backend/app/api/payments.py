@@ -48,24 +48,24 @@ def get_razorpay_client():
 PLANS = {
     "starter": {
         "name": "Starter",
-        "amount": 1500000,  # ₹15,000 in paise
+        "amount": 1500000,  # ₹15,000 (~$180)
         "currency": "INR",
         "period": "monthly",
-        "description": "1 org, GPT-4 scoring only, 50 simulations/mo",
+        "description": "1 org, Gemini 2.0 Flash scoring only, 50 simulations/mo",
     },
     "growth": {
         "name": "Growth",
-        "amount": 2500000,  # ₹25,000 in paise
+        "amount": 2500000,  # ₹25,000 (~$300)
         "currency": "INR",
         "period": "monthly",
-        "description": "1 org, all 3 models, unlimited simulations, batch analysis",
+        "description": "1 org, all 3 models, 500 simulations/mo",
     },
     "enterprise": {
         "name": "Enterprise",
-        "amount": 7500000,  # ₹75,000 in paise
+        "amount": 7500000,  # ₹75,000 (~$900)
         "currency": "INR",
         "period": "monthly",
-        "description": "Unlimited orgs, SSO, dedicated API keys, priority support",
+        "description": "Unlimited orgs, SSO (coming soon), dedicated keys, weekly cron",
     },
 }
 

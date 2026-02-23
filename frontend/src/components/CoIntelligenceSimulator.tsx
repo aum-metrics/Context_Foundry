@@ -3,7 +3,7 @@
  * Date: "26-Dec-2025"
  * Org: " Start-up/AUM Data Labs"
  * Product: "Context Foundry"
- * Description: Multi-Model Co-Intelligence Simulator — tests across GPT-4, Gemini, and Claude.
+ * Description: Multi-Model Co-Intelligence Simulator — tests across frontier models.
  */
 "use client";
 
@@ -121,7 +121,7 @@ export default function CoIntelligenceSimulator() {
                     <Beaker className="w-6 h-6 mr-3 text-amber-500" />
                     Co-Intelligence Simulator
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">Test how accurately AI models represent your business. We run the same prompt across GPT-4, Gemini, and Claude — then score each against your verified Context Document.</p>
+                <p className="text-sm text-slate-500 mt-1">Test how accurately AI models represent your business. We run the same prompt across GPT-4o, Claude 3.5, and Gemini 2.0 Flash — then score each against your verified Context Document.</p>
             </header>
 
             <div className="flex-1 w-full flex flex-col lg:flex-row gap-6">
@@ -207,7 +207,7 @@ export default function CoIntelligenceSimulator() {
                         {loading && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-500">
                                 <div className="w-10 h-10 rounded-full border-t-2 border-amber-500 animate-spin mb-4"></div>
-                                <p className="text-sm">Running across GPT-4, Gemini, and Claude...</p>
+                                <p className="text-sm">Running across frontier models...</p>
                                 <p className="text-xs mt-1 opacity-60">Scoring each response against your Context Document</p>
                             </motion.div>
                         )}

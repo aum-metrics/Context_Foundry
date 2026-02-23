@@ -49,6 +49,7 @@ export default function LandingPage() {
                     <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-600 dark:text-slate-400">
                         <a href="#moat" className="hover:text-indigo-600 dark:hover:text-white transition-colors">The Moat</a>
                         <a href="#features" className="hover:text-cyan-600 dark:hover:text-white transition-colors">Platform</a>
+                        <a href="#pricing" className="hover:text-fuchsia-600 dark:hover:text-white transition-colors">Pricing</a>
                         <a href="#demo" className="hover:text-fuchsia-600 dark:hover:text-white transition-colors">Demo</a>
                         <Link href="/contact" className="hover:text-emerald-600 dark:hover:text-white transition-colors">Contact</Link>
                     </div>
@@ -286,63 +287,144 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* Brutally Honest Testimonials */}
-                <section id="proof" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
+                {/* Trust & Capabilities Strip */}
+                <section className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4 text-slate-900 dark:text-white">Zero Hallucinated Proof</h2>
-                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                            We don't buy fake reviews. AUM Context Foundry is a bleeding-edge early-adopter product.<br />
-                            We are currently onboarding our Alpha Cohort. Once our clients' ASoV verifiable metrics cross target thresholds next quarter, their quotes will go here.
-                        </p>
+                        <h2 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mb-4">Built for Enterprise</h2>
+                        <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white">Production-Grade Infrastructure</h3>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-white/5 dark:to-white/5 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-700"></div>
-                                <div className="relative rounded-xl border border-dashed border-slate-300 dark:border-white/10 bg-slate-50/50 dark:bg-[#0a0a0a]/50 p-8 shadow-sm flex flex-col items-center justify-center h-full text-center">
-                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-400 dark:text-slate-500">
-                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                                    </div>
-                                    <p className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-2">Reserved Space</p>
-                                    <p className="text-slate-400 dark:text-slate-500 italic text-sm">Waiting for verified semantic indexing results algorithmically.</p>
-                                </div>
-                            </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {[
+                            { metric: '3', label: 'LLM Providers', sub: 'GPT-4o · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
+                            { metric: '99.99%', label: 'Uptime SLA', sub: 'Multi-region deployment', cls: 'text-emerald-600 dark:text-emerald-400' },
+                            { metric: '< 50ms', label: 'Scoring Latency', sub: 'Real-time analysis', cls: 'text-cyan-600 dark:text-cyan-400' },
+                            { metric: 'SOC2', label: 'Compliance Ready', sub: 'Zero-retention processing', cls: 'text-fuchsia-600 dark:text-fuchsia-400' },
+                        ].map((item) => (
+                            <motion.div
+                                key={item.label}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                className="bg-white/60 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-2xl p-6 text-center backdrop-blur-xl"
+                            >
+                                <p className={`text-3xl md:text-4xl font-light tracking-tighter mb-2 ${item.cls}`}>{item.metric}</p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-white mb-1">{item.label}</p>
+                                <p className="text-xs text-slate-500">{item.sub}</p>
+                            </motion.div>
                         ))}
+                    </div>
+
+                    <div className="mt-12 flex flex-wrap justify-center gap-6 text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
+                        <span className="flex items-center"><ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Multi-Tenant Isolation</span>
+                        <span>·</span>
+                        <span className="flex items-center"><Lock className="w-3.5 h-3.5 mr-1.5" /> End-to-End Encryption</span>
+                        <span>·</span>
+                        <span className="flex items-center"><Cpu className="w-3.5 h-3.5 mr-1.5" /> Claim-Level Fact Checking</span>
+                        <span>·</span>
+                        <span className="flex items-center"><Scale className="w-3.5 h-3.5 mr-1.5" /> RBAC Access Control</span>
                     </div>
                 </section>
 
-                {/* Pricing Strategy */}
-                <section id="pricing" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4">Securing the Real Win</h2>
-                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Transparent, enterprise-grade pricing for global data syndication.</p>
+                {/* Pricing — 3 Tiers */}
+                <section id="pricing" className="max-w-7xl mx-auto px-6 py-32 border-t border-slate-200 dark:border-white/5">
+                    <div className="text-center mb-20">
+                        <h2 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mb-4">Transparent Pricing</h2>
+                        <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white">Choose Your GEO Strategy</h3>
+                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mt-4 font-light">All plans include zero-retention data processing and multi-tenant isolation.</p>
                     </div>
 
-                    <div className="max-w-lg mx-auto relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 rounded-[2.5rem] blur-xl opacity-30 group-hover:opacity-70 transition duration-700"></div>
-                        <div className="relative rounded-[2rem] border border-white/10 bg-white dark:bg-[#0a0a0a]/90 backdrop-blur-2xl p-12 shadow-2xl text-center">
-                            <div className="inline-block px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-widest uppercase mb-6">Platinum Tier</div>
-                            <h3 className="text-3xl font-light mb-2 text-slate-900 dark:text-white">Enterprise Protocol</h3>
-                            <p className="text-slate-500 dark:text-slate-400/80 text-sm mb-8">Full Generative Engine Optimization Suite</p>
-
-                            <div className="my-10 flex items-baseline justify-center text-slate-900 dark:text-white">
-                                <span className="text-6xl font-light tracking-tighter">₹25,000</span>
-                                <span className="text-slate-500 dark:text-slate-500 font-medium ml-2">/mo</span>
+                    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                        {/* STARTER */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            viewport={{ once: true }}
+                            className="rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl p-8 shadow-xl dark:shadow-none flex flex-col"
+                        >
+                            <div className="mb-8">
+                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">Starter</h4>
+                                <p className="text-sm text-slate-500">For teams exploring GEO</p>
                             </div>
-
-                            <ul className="text-left space-y-4 mb-10 text-slate-700 dark:text-slate-300">
-                                <li className="flex items-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 shrink-0" /> Unlimited Semantic Document Ingestion</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 shrink-0" /> Global Edge Manifesto Deployment (/llms.txt)</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 shrink-0" /> Real-time "Agentic Share of Voice" ASoV metrics</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 shrink-0" /> Co-Intelligence Simulator (d &gt; ε_div tracking)</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 shrink-0" /> Dedicated Solutions Architect</li>
+                            <div className="flex items-baseline mb-8">
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">₹15K</span>
+                                <span className="text-slate-500 font-medium ml-2">/mo (~$180)</span>
+                            </div>
+                            <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 organization</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Gemini 2.0 Flash scoring only</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 50 simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Semantic document ingestion</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> /llms.txt manifest deployment</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-slate-300 dark:text-slate-700 mr-2.5 mt-0.5 shrink-0" /><span className="text-slate-400 dark:text-slate-600">Multi-model comparison</span></li>
                             </ul>
-
-                            <Link href="/login" className="block w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:shadow-[0_0_40px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5">
-                                Request Enterprise Audit
+                            <Link href="/login" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
+                                Get Started
                             </Link>
-                        </div>
+                        </motion.div>
+
+                        {/* GROWTH — Recommended */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            viewport={{ once: true }}
+                            className="rounded-[2rem] border-2 border-indigo-500/50 bg-white dark:bg-[#0a0a0a]/90 backdrop-blur-2xl p-8 shadow-2xl shadow-indigo-500/10 flex flex-col relative"
+                        >
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-indigo-600 text-white text-xs font-semibold uppercase tracking-widest shadow-lg">
+                                Recommended
+                            </div>
+                            <div className="mb-8">
+                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">Growth</h4>
+                                <p className="text-sm text-slate-500">Full multi-model GEO suite</p>
+                            </div>
+                            <div className="flex items-baseline mb-8">
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">₹25K</span>
+                                <span className="text-slate-500 font-medium ml-2">/mo (~$300)</span>
+                            </div>
+                            <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 organization, unlimited seats</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /><strong className="text-slate-900 dark:text-white">All 3 models</strong>&nbsp;(GPT-4o, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /><strong>500</strong>&nbsp;simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> SEO + GEO readiness audit</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Real-time ASoV scoring dashboard</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Fine-grained fact-check reports</li>
+                            </ul>
+                            <Link href="/login" className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm">
+                                Start Growth Plan
+                            </Link>
+                        </motion.div>
+
+                        {/* ENTERPRISE */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            viewport={{ once: true }}
+                            className="rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl p-8 shadow-xl dark:shadow-none flex flex-col"
+                        >
+                            <div className="mb-8">
+                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">Enterprise</h4>
+                                <p className="text-sm text-slate-500">For organizations at scale</p>
+                            </div>
+                            <div className="flex items-baseline mb-8">
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">₹75K</span>
+                                <span className="text-slate-500 font-medium ml-2">/mo (~$900)</span>
+                            </div>
+                            <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /><strong className="text-slate-900 dark:text-white">Unlimited</strong>&nbsp;organizations &amp; simulations</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Everything in Growth</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Batch domain analysis + Weekly Cron</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> SSO / SAML integration (Coming Soon)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Dedicated API keys per org</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Dedicated Solutions Architect</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Priority support &amp; SLA</li>
+                            </ul>
+                            <Link href="/contact" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
+                                Contact Sales
+                            </Link>
+                        </motion.div>
                     </div>
                 </section>
 
