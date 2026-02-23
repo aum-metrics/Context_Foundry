@@ -38,7 +38,7 @@ export default function LandingPage() {
             <nav className="fixed w-full z-50 bg-white/50 dark:bg-[#030303]/60 backdrop-blur-2xl border-b border-slate-200/50 dark:border-white/5 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center space-x-3 group cursor-pointer">
-                        <Logo size={40} showText={true} />
+                        <Logo size={40} showText={true} theme="auto" />
                     </div>
 
                     <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-600 dark:text-slate-400">

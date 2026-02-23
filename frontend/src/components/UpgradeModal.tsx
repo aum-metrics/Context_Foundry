@@ -3,6 +3,7 @@ import { useOrganization } from "./OrganizationContext";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { X, CheckCircle, Zap, ShieldCheck, Cpu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Logo } from "./Logo";
 
 interface UpgradeModalProps {
     isOpen: boolean;
@@ -66,8 +67,8 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
 
                         <div className="p-8 relative z-10">
                             {/* Icon & Title */}
-                            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/20">
-                                <Zap className="w-8 h-8 text-white" />
+                            <div className="flex items-center justify-center mb-6">
+                                <Logo size={64} showText={false} />
                             </div>
 
                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
@@ -115,8 +116,8 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                     onClick={handleUpgrade}
                                     disabled={isButtonDisabled}
                                     className={`relative overflow-hidden px-6 py-3 rounded-lg font-medium text-white transition-all ${isButtonDisabled
-                                            ? "bg-indigo-400 cursor-not-allowed"
-                                            : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40"
+                                        ? "bg-indigo-400 cursor-not-allowed"
+                                        : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40"
                                         }`}
                                 >
                                     {isProcessing ? "Processing..." : isScriptLoading ? "Loading Secure Checkout..." : "Pay with Razorpay"}

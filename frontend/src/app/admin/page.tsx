@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/Logo";
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -46,8 +47,8 @@ export default function AdminLoginPage() {
                 className="w-full max-w-md"
             >
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-rose-500 to-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose-500/20">
-                        <Shield className="w-8 h-8 text-white" />
+                    <div className="flex items-center justify-center mx-auto mb-4">
+                        <Logo size={64} showText={false} />
                     </div>
                     <h1 className="text-2xl font-light text-white">Product Admin</h1>
                     <p className="text-sm text-slate-500 mt-1">AUM Context Foundry — Internal Operations</p>

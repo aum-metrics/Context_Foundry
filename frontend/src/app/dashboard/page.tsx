@@ -26,7 +26,7 @@ export default function AUMContextFoundry() {
         <div>
           <div className="p-6 pb-2">
             <div className="flex items-center space-x-3 mb-8">
-              <Logo size={36} showText={true} />
+              <Logo size={36} showText={true} theme="auto" />
             </div>
           </div>
 

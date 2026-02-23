@@ -8,6 +8,7 @@ import {
     CheckCircle, XCircle, Send, RotateCcw, Eye, EyeOff, Activity
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/Logo";
 import { db } from "@/lib/firestorePaths";
 import { collection, doc, getDocs, getDoc, updateDoc, query, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 
@@ -210,9 +211,7 @@ export default function AdminDashboard() {
         <div className="min-h-screen bg-slate-950 text-white">
             <header className="bg-slate-900 border-b border-white/5 px-6 py-4 flex justify-between items-center">
                 <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-amber-500 rounded-lg flex items-center justify-center">
-                        <Shield className="w-4 h-4 text-white" />
-                    </div>
+                    <Logo size={32} showText={false} theme="auto" />
                     <div>
                         <h1 className="text-sm font-semibold text-white">AUM Product Admin</h1>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest">Firestore-Connected Operations</p>

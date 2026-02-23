@@ -6,6 +6,7 @@ import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { CodeSquare, ShieldAlert, Key } from "lucide-react";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -60,9 +61,7 @@ export default function LoginPage() {
                 className="relative w-full max-w-md z-10 p-8 rounded-3xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-2xl"
             >
                 <div className="flex justify-center mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <CodeSquare className="w-6 h-6 text-white" />
-                    </div>
+                    <Logo size={48} showText={false} theme="auto" />
                 </div>
 
                 <h1 className="text-2xl font-light text-slate-900 dark:text-white text-center mb-2 tracking-tight">Enterprise Access</h1>
