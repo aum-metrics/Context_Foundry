@@ -52,7 +52,7 @@ export default function LandingPage() {
                         <a href="#moat" className="hover:text-indigo-600 dark:hover:text-white transition-colors">The Moat</a>
                         <a href="#features" className="hover:text-cyan-600 dark:hover:text-white transition-colors">Platform</a>
                         <a href="#demo" className="hover:text-fuchsia-600 dark:hover:text-white transition-colors">Demo</a>
-                        <a href="#pricing" className="hover:text-emerald-600 dark:hover:text-white transition-colors">Enterprise</a>
+                        <Link href="/contact" className="hover:text-emerald-600 dark:hover:text-white transition-colors">Contact</Link>
                     </div>
 
                     <div className="flex items-center space-x-4">

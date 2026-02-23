@@ -4,6 +4,7 @@ import "./globals.css";
 import { Analytics } from '@vercel/analytics/next';
 import AuthWrapper from "@/components/AuthWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import SupportChatbot from "@/components/SupportChatbot";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthWrapper>
             {children}
+            <SupportChatbot />
             <Analytics />
           </AuthWrapper>
         </ThemeProvider>

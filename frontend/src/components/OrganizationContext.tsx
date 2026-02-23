@@ -10,6 +10,11 @@ export interface Organization {
     name: string;
     activeSeats: number;
     subscriptionTier: string;
+    apiKeys?: {
+        openai?: string;
+        gemini?: string;
+        claude?: string;
+    };
 }
 
 export interface OrgUser {
@@ -52,6 +57,10 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     name: "Acme Corp",
                     activeSeats: 1,
                     subscriptionTier: "enterprise",
+                    apiKeys: {
+                        openai: "sk-mock-acme-openai-key",
+                        gemini: "g-mock-acme-gemini-key"
+                    }
                 });
                 setOrgUser({
                     uid: user.uid || "mock_uid",
