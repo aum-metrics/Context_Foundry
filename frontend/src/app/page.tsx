@@ -427,10 +427,9 @@ export default function LandingPage() {
                 <footer className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                         <div className="col-span-1 md:col-span-2">
-                            <h3 className="text-xl font-medium mb-6 flex items-center">
-                                <BrainCircuit className="w-6 h-6 mr-3 text-indigo-600 dark:text-indigo-400" />
-                                AUM Context Foundry
-                            </h3>
+                            <div className="mb-6">
+                                <Logo size={32} showText={true} theme="auto" />
+                            </div>
                             <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-8">
                                 Strategic Generative Engine Optimization (GEO) for the agentic era.
                                 Secure your narrative in the latent space with vector-verified facts.

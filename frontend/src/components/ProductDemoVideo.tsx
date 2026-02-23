@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, BrainCircuit, Search, Database } from 'lucide-react';
+import { Play, Search, Database } from 'lucide-react';
 import Image from 'next/image';
+import { Logo } from './Logo';
 
 export default function ProductDemoVideo() {
     const [currentStep, setCurrentStep] = useState(0);
@@ -14,7 +15,7 @@ export default function ProductDemoVideo() {
             id: 0,
             title: "Global ASoV Dashboard",
             subtitle: "Track your latent space penetration against frontier models.",
-            icon: BrainCircuit,
+            icon: Logo,
             image: "/mockups/dashboard.png"
         },
         {
@@ -111,8 +112,8 @@ export default function ProductDemoVideo() {
                         key={idx}
                         onClick={() => setCurrentStep(idx)}
                         className={`h-1.5 rounded-full transition-all duration-300 ${currentStep === idx
-                                ? "w-12 bg-indigo-500"
-                                : "w-4 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600"
+                            ? "w-12 bg-indigo-500"
+                            : "w-4 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600"
                             }`}
                         aria-label={`View ${step.title}`}
                     />

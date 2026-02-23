@@ -12,7 +12,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "AUM Context Foundry",
   description: "AUM Context Foundry — Generative Engine Optimization (GEO) for the Agentic Web",
-  icons: { icon: "/favicon.ico" },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" }
+    ]
+  },
 };
 
 export default function RootLayout({
