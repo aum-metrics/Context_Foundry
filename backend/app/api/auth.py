@@ -9,10 +9,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 import random
 import string
-import smtplib
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 from core.config import settings
 from core.jwt import create_access_token, TokenData
@@ -74,55 +71,20 @@ def generate_otp(length: int = 6) -> str:
 
 async def send_otp_email(email: str, otp: str) -> bool:
     """
-    Send OTP via SMTP
-    Falls back to console output in dev mode
+    Send OTP to user.
+    Currently outputs to server console (dev mode).
+    For production, integrate with a transactional email service (e.g., SendGrid, SES).
     """
     try:
-        # Dev mode: print to console
-        if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-            logger.info(f"[DEV MODE] OTP for {email}: {otp}")
-            print(f"\n{'='*50}")
-            print(f"🔐 LOGIN CODE FOR {email}")
-            print(f"{'='*50}")
-            print(f"   {otp}")
-            print(f"{'='*50}\n")
-            return True
-        
-        # Production: send via SMTP
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"Your AUM Studio Login Code: {otp}"
-        msg['From'] = settings.SMTP_USER
-        msg['To'] = email
-        
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px;">
-                <h1 style="text-align: center;">🎵 AUM Studio</h1>
-                <h3>Your Login Code</h3>
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; text-align: center;">
-                    <h1 style="color: white; font-size: 48px; letter-spacing: 12px; margin: 0;">{otp}</h1>
-                </div>
-                <p style="margin-top: 20px;">This code expires in 5 minutes.</p>
-            </div>
-        </body>
-        </html>
-        """
-        
-        msg.attach(MIMEText(html, 'html'))
-        
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.send_message(msg)
-        
-        logger.info(f"✅ Email sent to {email}")
+        logger.info(f"[DEV MODE] OTP for {email}: {otp}")
+        print(f"\n{'='*50}")
+        print(f"🔐 LOGIN CODE FOR {email}")
+        print(f"{'='*50}")
+        print(f"   {otp}")
+        print(f"{'='*50}\n")
         return True
-        
     except Exception as e:
-        logger.error(f"❌ Email send failed: {e}")
-        # Don't block login flow on email failure
+        logger.error(f"❌ OTP delivery failed: {e}")
         return True
 
 
@@ -383,6 +345,5 @@ async def auth_health():
     return {
         "status": "healthy",
         "supabase_connected": supabase is not None,
-        "smtp_configured": bool(settings.SMTP_USER and settings.SMTP_PASSWORD),
         "jwt_configured": bool(settings.JWT_SECRET)
     }

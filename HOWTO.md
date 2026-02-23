@@ -7,7 +7,7 @@ AUM Context Foundry is designed for high-scale enterprise multi-tenancy. To prov
 1.  **Navigate to Team Settings**: Go to the Admin Dashboard > Settings > Organizations.
 2.  **Provision New Moat**: Click the "Provision New Moat" button. This creates a fresh logical sandbox with a unique `orgId`.
 3.  **Deploy /llms.txt**: Host the business's semantic manifest at `yourbusiness.com/llms.txt`.
-4.  **Sync Source**: Enter the URL in the Foundry Dashboard to initiate the ARGUS-Thesis ingestion pipeline.
+4.  **Sync Source**: Enter the URL in the Foundry Dashboard to initiate the semantic ingestion pipeline.
 
 ### 2. Offboarding a Tenant
 To safely remove a business and purge its latent footprint:
@@ -17,12 +17,12 @@ To safely remove a business and purge its latent footprint:
 
 ## API Key Management Architecture
 
-### "Why separate keys vary by business?"
-We strongly recommend **separate API keys** (Gemini, Claude, OpenAI) for each business tenant for the following enterprise reasons:
-*   **Cost Attribution**: Precisely track LLM spend per business unit or client without complex cross-billing logic.
-*   **Rate Limit Isolation**: Prevent a heavy-usage business from exhausting the shared quota of other tenants (noisy neighbor problem).
-*   **Security & Compliance**: If one business's key is compromised, the others remain secure. Each business can maintain their own CISO-approved keys.
-*   **Model Specialization**: Different businesses may prefer different models (e.g., Gemini for high-performance retrieval vs. GPT-4 for complex reasoning).
+### "Why does AUM manage separate keys per business?"
+AUM provisions and manages **dedicated API keys** (OpenAI, Gemini, Claude) for each business tenant. Tenants never need to handle keys themselves. This architecture provides:
+*   **Cost Attribution**: Precisely track LLM spend per business unit without complex cross-billing.
+*   **Rate Limit Isolation**: Prevent a heavy-usage business from exhausting shared quota (noisy neighbor problem).
+*   **Security & Compliance**: If one business's key is compromised, others remain secure.
+*   **Threshold Enforcement**: AUM can set per-org usage limits and cut off abuse.
 
 ---
 *Support: hello@AUMDataLabs.com / +91-9080735297*

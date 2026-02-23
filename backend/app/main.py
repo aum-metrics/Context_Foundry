@@ -55,9 +55,9 @@ logger.info("🚀 Initializing AUM Analytics API...")
 # ============================================================================
 
 app = FastAPI(
-    title="AUM Analytics API",
-    description="Intelligent data analytics platform with business intelligence",
-    version="2.0.0",
+    title="AUM Context Foundry API",
+    description="Contextual Rigor & Generative Engine Optimization (GEO) Infrastructure",
+    version="2.1.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc"
 )
@@ -143,16 +143,20 @@ load_router("api.auth", "/api/auth", "Authentication")
 # ============================================================================
 load_router("api.simulation", "/api/simulation", "LCRS Simulation Engine")
 load_router("api.ingestion", "/api/ingestion", "GEO Semantic Ingestion")
-load_router("api.query", "/api/query", "Query Engine")
-load_router("api.webhooks", "/api/webhooks", "Webhooks")
-load_router("api.collaboration", "/api/collaboration", "Collaboration")
-load_router("api.connectors", "/api/connectors", "Data Connectors")
+load_router("api.batch_analysis", "/api/batch", "Batch Evaluation")
+
+# ============================================================================
+# TENANT MANAGEMENT & CONFIG
+# ============================================================================
 load_router("api.api_keys", "/api/keys", "API Keys")
-load_router("api.statistics", "/api/statistics", "Statistics")
-load_router("api.export", "/api/export", "Export")
-load_router("api.realtime", "/api/realtime", "Real-Time")
 load_router("api.workspaces", "/api/workspaces", "Workspaces")
 load_router("api.sso", "/api/sso", "Enterprise SSO")
+
+# ============================================================================
+# PAYMENTS & SEO
+# ============================================================================
+load_router("api.payments", "/api/payments", "Razorpay Payments")
+load_router("api.seo", "/api/seo", "SEO/GEO Audit")
 
 logger.info("📡 Route loading complete\n")
 

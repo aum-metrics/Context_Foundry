@@ -12,7 +12,7 @@ import { ArrowLeft, CheckCircle2, Activity, Globe, Zap, Shield } from "lucide-re
 export default function StatusPage() {
     const services = [
         { name: "LCRS Math Engine", status: "Operational", latency: "42ms" },
-        { name: "ARGUS Ingestion Engine", status: "Operational", latency: "1.2s" },
+        { name: "Semantic Ingestion Engine", status: "Operational", latency: "1.2s" },
         { name: "Multi-Tenant Auth", status: "Operational", latency: "15ms" },
         { name: "Edge Manifest Delivery", status: "Operational", latency: "8ms" },
     ];

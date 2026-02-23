@@ -70,7 +70,7 @@ export default function SemanticIngestion() {
         setSchemaData(null);
 
         setLogs(prev => [...prev, `Initiating secure ingestion for: ${file.name}`]);
-        setLogs(prev => [...prev, `Protocol: ARGUS-Thesis Zero-Retention Volatile Memory`]);
+        setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
 
         try {
             await processWithPythonBackend(file);
@@ -88,7 +88,7 @@ export default function SemanticIngestion() {
      * 3. Receives and renders the structured JSON-LD schema.
      */
     const processWithPythonBackend = async (file: File) => {
-        setLogs(prev => [...prev, "Connecting to Python GEO Ingestion Engine..."]);
+        setLogs(prev => [...prev, "Connecting to Semantic Ingestion Engine..."]);
 
         // Assemble Multi-Part Form Data
         const formData = new FormData();
@@ -246,7 +246,7 @@ export default function SemanticIngestion() {
                             <div className="rounded-2xl border border-indigo-200 dark:border-indigo-500/20 bg-white dark:bg-slate-950 overflow-hidden shadow-xl dark:shadow-[0_0_40px_rgba(99,102,241,0.1)]">
                                 <div className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center">
                                     <TerminalIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2" />
-                                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">adversarial_extraction.sh</span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">semantic_ingestion_pipeline</span>
                                     <div className="ml-auto flex space-x-2">
                                         <div className="w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-700"></div>
                                         <div className="w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-700"></div>

@@ -25,7 +25,7 @@ export default function PrivacyPage() {
                 <section>
                     <h2 className="text-2xl font-medium mb-4">1. Zero-Retention Commitment</h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                        At AUM Data Labs, your proprietary corporate data is processed using the **ARGUS-Thesis Zero-Retention** model. PDF binaries are read into volatile RAM buffers, extracted for semantic JSON-LD structures, and immediately purged. We do not cache or store unstructured proprietary documents.
+                        At AUM Data Labs, your proprietary corporate data is processed using our **Zero-Retention Processing** model. PDF binaries are read into volatile RAM buffers, extracted for semantic JSON-LD structures, and immediately purged. We do not cache or store unstructured proprietary documents on disk.
                     </p>
                 </section>
 

@@ -27,18 +27,21 @@ async def parse_document(file: UploadFile = File(...), orgId: str = Form(None)):
     Semantic Ingestion & Structuring Pipeline:
     1. STREAM: Accepts binary PDF stream directly to RAM.
     2. TEXTRACT: Uses PyPDF2 to pull unstructured text from the buffer.
-    3. SECURE: Enforces ARGUS-Thesis Zero-Retention by flushing RAM immediately.
+    3. SECURE: Zero-Retention — flushes raw PDF from RAM immediately after extraction.
     4. SCHEMA: Leverages LLM to map raw text into Schema.org compliant JSON-LD.
     
-    This process is designed to pass high-grade Enterprise CISO security audits by
-    ensuring no proprietary corporate data is cached on the server's disk.
+    API Key Strategy (AUM-Managed, Per-Org Isolation):
+    - Each org gets a dedicated OpenAI key provisioned by AUM.
+    - Keys are stored in Firestore under organizations/{orgId}/apiKeys.
+    - Falls back to AUM's master key during onboarding.
+    - Enables per-org billing tracking and threshold enforcement.
     """
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are currently supported for ingestion.")
 
     content = await file.read()
     
-    # 1. Extract Text
+    # 1. Extract Text from PDF binary stream
     raw_text = ""
     try:
         if PdfReader:
@@ -47,8 +50,7 @@ async def parse_document(file: UploadFile = File(...), orgId: str = Form(None)):
             for page in reader.pages:
                 raw_text += page.extract_text() + "\n"
             
-            # CRITICAL SECURITY: ARGUS-Thesis Zero-Retention Volatile Memory Model
-            # Flush raw PDF binary buffers instantly from RAM to pass CISO audits
+            # SECURITY: Zero-Retention — flush raw PDF binary from RAM
             del content
             del pdf_stream
         else:
@@ -56,33 +58,33 @@ async def parse_document(file: UploadFile = File(...), orgId: str = Form(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read PDF binary. {e}")
 
-    # Ensure reasonable size
-    raw_text = raw_text[:20000] # Trim massive documents for demo constraints
+    # Trim massive documents
+    raw_text = raw_text[:20000]
 
-    # 2. Extract JSON-LD Semantic Web schema
-    key_to_use = os.getenv("OPENAI_API_KEY")
-    
+    # 2. Resolve API Key: Per-Org (Firestore) → Master Fallback (.env)
+    api_key = os.getenv("OPENAI_API_KEY")  # Master fallback
+
     if orgId and db:
         try:
             org_doc = db.collection("organizations").document(orgId).get()
             if org_doc.exists:
-                org_keys = org_doc.to_dict().get("apiKeys", {})
-                if "openai" in org_keys:
-                    key_to_use = org_keys["openai"]
+                org_data = org_doc.to_dict()
+                if org_data:
+                    org_keys = org_data.get("apiKeys", {})
+                    if "openai" in org_keys and org_keys["openai"]:
+                        api_key = org_keys["openai"]
         except Exception as e:
-            print(f"Firestore Key Fetch Error: {e}")
+            print(f"Firestore key lookup failed (using fallback): {e}")
 
-    if not key_to_use:
-        # Return fallback generic schema if no keys attached
-        return {
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            "name": "Key Missing",
-            "description": "Tenant API Key missing. Please configure OpenAI keys in Team Settings to enable semantic extraction.",
-        }
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="No API key configured for this organization. Please contact AUM support."
+        )
 
+    # 3. LLM-powered Schema Extraction
     try:
-        client = OpenAI(api_key=key_to_use)
+        client = OpenAI(api_key=api_key)
         structured_schema_prompt = f"""
         Extract the following unstructured corporate document text into a highly structured JSON-LD mapping vocabulary using schema.org definitions (Organization, Product, Offer, etc.). 
         Identify the primary entity name, its descriptions, pricing models, and key capabilities.

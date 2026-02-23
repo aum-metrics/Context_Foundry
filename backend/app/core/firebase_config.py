@@ -1,32 +1,40 @@
 # backend/app/core/firebase_config.py
-import firebase_admin
-from firebase_admin import credentials, firestore
 import os
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+db = None
 
 def initialize_firebase():
     """
-    Initializes Firebase Admin SDK to allow backend to read from Firestore.
-    Uses environment variables for credentials.
+    Initializes Firebase Admin SDK.
+    Returns a Firestore client, or None if credentials are not available.
     """
-    if not firebase_admin._apps:
-        # For local development, we look for a service account key or use default credentials
-        cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
-        
-        if cred_path and Path(cred_path).exists():
-            cred = credentials.Certificate(cred_path)
-            firebase_admin.initialize_app(cred)
-        else:
-            # Fallback to application default credentials (useful for GCP deployment)
-            try:
-                firebase_admin.initialize_app()
-            except Exception as e:
-                print(f"⚠️  Firebase initialization failed: {e}")
-                # We don't raise here to allow the app to start, 
-                # but specific routes will fail if they need Firestore.
-                return None
-                
-    return firestore.client()
+    global db
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, firestore
 
-# Singleton instance
-db = initialize_firebase()
+        if not firebase_admin._apps:
+            cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
+            
+            if cred_path and Path(cred_path).exists():
+                cred = credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred)
+                logger.info("✅ Firebase Admin SDK initialized with service account.")
+            else:
+                firebase_admin.initialize_app()
+                logger.info("✅ Firebase Admin SDK initialized with default credentials.")
+        
+        db = firestore.client()
+        return db
+
+    except Exception as e:
+        logger.warning(f"⚠️  Firebase not available (non-fatal): {e}")
+        db = None
+        return None
+
+# Initialize on import — but never crash
+initialize_firebase()
