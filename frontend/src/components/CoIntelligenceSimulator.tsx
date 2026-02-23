@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { MessageSquare, Beaker, Send, AlertTriangle, Cpu, Zap, CheckCircle, XCircle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
+import { useRazorpay } from "@/hooks/useRazorpay";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -23,7 +24,8 @@ interface ModelResult {
 }
 
 export default function CoIntelligenceSimulator() {
-    const { organization } = useOrganization();
+    const { organization, orgUser } = useOrganization();
+    const { checkout, isScriptLoading } = useRazorpay();
     const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
         "What is the best enterprise solution for this category?",
         "How much does it cost?",
@@ -252,13 +254,25 @@ export default function CoIntelligenceSimulator() {
                                             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5" />
                                             <Lock className="w-5 h-5 text-slate-400 mb-2" />
                                             <p className="text-xs text-slate-500 font-medium mb-1">GPT-4o Mini</p>
-                                            <p className="text-[10px] text-indigo-500 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105">Upgrade to Growth to unlock</p>
+                                            <button
+                                                onClick={() => orgUser && checkout("growth", organization.id, orgUser.email, () => window.location.reload())}
+                                                disabled={isScriptLoading}
+                                                className="text-[10px] text-indigo-500 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105"
+                                            >
+                                                {isScriptLoading ? "Loading..." : "Upgrade to Growth to unlock"}
+                                            </button>
                                         </div>
                                         <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900 px-4 py-6 text-center flex flex-col items-center justify-center relative overflow-hidden group">
                                             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5" />
                                             <Lock className="w-5 h-5 text-slate-400 mb-2" />
                                             <p className="text-xs text-slate-500 font-medium mb-1">Claude 3.5 Haiku</p>
-                                            <p className="text-[10px] text-amber-600 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105">Upgrade to Growth to unlock</p>
+                                            <button
+                                                onClick={() => orgUser && checkout("growth", organization.id, orgUser.email, () => window.location.reload())}
+                                                disabled={isScriptLoading}
+                                                className="text-[10px] text-amber-600 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105"
+                                            >
+                                                {isScriptLoading ? "Loading..." : "Upgrade to Growth to unlock"}
+                                            </button>
                                         </div>
                                     </>
                                 )}

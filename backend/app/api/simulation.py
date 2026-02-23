@@ -300,11 +300,59 @@ async def evaluate_simulation(request: SimulationRequest):
     if not request.prompt or not request.orgId:
         raise HTTPException(status_code=400, detail="Prompt and orgId required")
 
+    # ----- 1. FETCH SUBSCRIPTION & ENFORCE LIMITS -----
+    org_plan = "growth" # default fallback
+    org_data = {}
+    if db:
+        try:
+            org_doc = db.collection("organizations").document(request.orgId).get()
+            if org_doc.exists:
+                org_data = org_doc.to_dict() or {}
+                org_plan = org_data.get("subscription", {}).get("planId", "starter")
+        except Exception as e:
+            logger.error(f"Failed to fetch org plan: {e}")
+
+    # Count usage (this billing cycle)
+    sims_this_cycle = 0
+    if db:
+        try:
+            from datetime import datetime, timedelta
+            
+            # Default to 1st of month calendar fallback
+            period_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            # Try to fetch true prorated cycle start from subscription
+            sub_data = org_data.get("subscription", {})
+            start_ts = sub_data.get("currentPeriodStart")
+            if start_ts:
+                # Handle possible Firestore DatetimeWithNanoseconds vs standard Python datetime
+                period_start = start_ts
+                
+            hist_query = db.collection("organizations").document(request.orgId)\
+                .collection("scoringHistory")\
+                .where("timestamp", ">=", period_start)\
+                .get()
+            sims_this_cycle = len(hist_query)
+        except Exception as e:
+            logger.error(f"Failed to fetch usage: {e}")
+
+    # Enforce Limits
+    if org_plan == "starter" and sims_this_cycle >= 50:
+        raise HTTPException(status_code=402, detail="Starter plan limit of 50 simulations per billing cycle reached. Please upgrade.")
+    if org_plan == "growth" and sims_this_cycle >= 500:
+        raise HTTPException(status_code=402, detail="Growth plan limit of 500 simulations per billing cycle reached. Please upgrade to Enterprise.")
+
+    # ----- 2. FETCH CONTEXT & KEYS -----
     manifest_content, api_keys = _fetch_manifest_and_keys(request)
 
     openai_key = api_keys.get("openai") or os.getenv("OPENAI_API_KEY")
     gemini_key = api_keys.get("gemini") or os.getenv("GEMINI_API_KEY")
     claude_key = api_keys.get("anthropic") or os.getenv("ANTHROPIC_API_KEY")
+
+    # Enforce Model Gating (Starter gets Gemini ONLY)
+    if org_plan == "starter":
+        openai_key = None
+        claude_key = None
 
     system_prompt = f"""You are a knowledgeable AI assistant. Use the following Context Document to answer the user's question accurately. Do not invent pricing, features, or constraints not explicitly present in the Context Document.
 

@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Activity, ArrowUpRight, Search, ShieldAlert, Globe, Lock } from "lucide-react";
+import { Activity, ArrowUpRight, Search, ShieldAlert, Globe, Lock, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "@/lib/firestorePaths";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useOrganization } from "./OrganizationContext";
+import { useRazorpay } from "@/hooks/useRazorpay";
 
 // Fallback data — only used when Firestore is unavailable
 const fallbackData = {
@@ -32,7 +33,8 @@ interface SEOResult {
 }
 
 export default function SoMCommandCenter() {
-    const { organization } = useOrganization();
+    const { organization, orgUser } = useOrganization();
+    const { checkout, isScriptLoading } = useRazorpay();
     const [activeTab, setActiveTab] = useState<"gpt4" | "claude" | "gemini">("gpt4");
     const [loading, setLoading] = useState(true);
     const [chartData, setChartData] = useState<Record<string, unknown>[]>([]);
@@ -273,7 +275,13 @@ export default function SoMCommandCenter() {
                             <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
                                 <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
                                 <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth or Enterprise plan.</p>
-                                <p className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline">Upgrade to Growth to unlock</p>
+                                <button
+                                    onClick={() => orgUser && checkout("growth", organization.id, orgUser.email, () => window.location.reload())}
+                                    disabled={isScriptLoading}
+                                    className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline"
+                                >
+                                    {isScriptLoading ? "Loading..." : "Upgrade to Growth to unlock"}
+                                </button>
                             </div>
                         ) : (
                             <div className="flex space-x-3 mb-4">

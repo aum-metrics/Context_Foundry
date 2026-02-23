@@ -12,7 +12,7 @@ import os
 import logging
 import hmac
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -170,14 +170,34 @@ async def verify_payment(request: VerifyPaymentRequest):
 
         # Update org subscription in Firestore
         if db:
+            plan_id = "growth"
+            try:
+                # Find the pending payment record to get the planId
+                payments = db.collection("organizations").document(request.orgId).collection("payments").where("orderId", "==", request.razorpay_order_id).get()
+                if payments:
+                    plan_id = payments[0].to_dict().get("planId", "growth")
+            except Exception as e:
+                logger.warning(f"Could not fetch planId for order {request.razorpay_order_id}, defaulting to growth: {e}")
+
+            now = datetime.utcnow()
             db.collection("organizations").document(request.orgId).update({
+                "subscription.planId": plan_id,
                 "subscription.status": "active",
                 "subscription.paymentId": request.razorpay_payment_id,
                 "subscription.orderId": request.razorpay_order_id,
-                "subscription.activatedAt": datetime.utcnow(),
+                "subscription.activatedAt": now,
+                "subscription.currentPeriodStart": now,
+                "subscription.currentPeriodEnd": now + timedelta(days=30),
             })
 
-        return {"status": "verified", "paymentId": request.razorpay_payment_id}
+            # Update the payment record status
+            try:
+                if payments:
+                    payments[0].reference.update({"status": "paid", "paidAt": now})
+            except Exception:
+                pass
+
+        return {"status": "verified", "paymentId": request.razorpay_payment_id, "planId": plan_id}
     except HTTPException:
         raise
     except Exception as e:
