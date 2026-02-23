@@ -7,7 +7,6 @@ import json
 from openai import OpenAI
 from typing import List, Dict
 import numpy as np
-import logging
 
 from core.firebase_config import db
 from core.security import get_current_user

@@ -10,10 +10,13 @@ from pydantic import BaseModel
 from typing import Optional, Dict, List
 import os
 import json
+import logging
 import numpy as np
 import hashlib
 from fastapi import Depends, BackgroundTasks
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 from core.security import get_current_user, verify_user_org_access
 from openai import OpenAI

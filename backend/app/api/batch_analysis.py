@@ -15,11 +15,13 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 
+logger = logging.getLogger(__name__)
+
 from api.simulation import evaluate_simulation, SimulationRequest
 from core.firebase_config import db
 from core.security import get_current_user, verify_user_org_access
 
-logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
