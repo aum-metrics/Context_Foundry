@@ -8,10 +8,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Beaker, Send, AlertTriangle, Cpu, Zap, CheckCircle, XCircle, Lock } from "lucide-react";
+import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, AlertCircle, RefreshCw, Beaker, Play, FileText, ChevronRight, Send, MessageSquare, Cpu, CheckCircle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
+import { auth } from "../lib/firebase";
 import { useRazorpay } from "@/hooks/useRazorpay";
+import { UpgradeModal } from "./UpgradeModal";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -26,6 +28,8 @@ interface ModelResult {
 export default function CoIntelligenceSimulator() {
     const { organization, orgUser } = useOrganization();
     const { checkout, isScriptLoading } = useRazorpay();
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
     const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
         "What is the best enterprise solution for this category?",
         "How much does it cost?",
@@ -36,6 +40,7 @@ export default function CoIntelligenceSimulator() {
     const [manifestVersions, setManifestVersions] = useState<{ id: string, name: string }[]>([]);
     const [selectedVersion, setSelectedVersion] = useState("latest");
     const [modelResults, setModelResults] = useState<ModelResult[]>([]);
+    const [lockedModels, setLockedModels] = useState<string[]>([]);
     const [lastPrompt, setLastPrompt] = useState("");
 
     useEffect(() => {
@@ -73,9 +78,15 @@ export default function CoIntelligenceSimulator() {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/simulation/evaluate', {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("Authentication required to run simulations.");
+
+            const response = await fetch('/api/simulation/run', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     prompt: promptText,
                     orgId: organization?.id,
@@ -90,6 +101,7 @@ export default function CoIntelligenceSimulator() {
 
             const data = await response.json();
             setModelResults(data.results || []);
+            setLockedModels(data.lockedModels || []);
         } catch (error) {
             console.error('Simulation Failed:', error);
             setModelResults([{
@@ -227,7 +239,7 @@ export default function CoIntelligenceSimulator() {
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+                                className="grid grid-cols-1 lg:grid-cols-3 gap-4"
                             >
                                 {modelResults.map((result, i) => (
                                     <div key={i} className={`rounded-xl border p-4 text-center ${getAccuracyBg(result.accuracy)}`}>
@@ -247,35 +259,23 @@ export default function CoIntelligenceSimulator() {
                                     </div>
                                 ))}
 
-                                {/* Premium Model Upsell Locks for Starter Plan */}
-                                {organization?.subscriptionTier === "starter" && modelResults.length === 1 && (
-                                    <>
-                                        <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900 px-4 py-6 text-center flex flex-col items-center justify-center relative overflow-hidden group">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5" />
-                                            <Lock className="w-5 h-5 text-slate-400 mb-2" />
-                                            <p className="text-xs text-slate-500 font-medium mb-1">GPT-4o Mini</p>
-                                            <button
-                                                onClick={() => orgUser && checkout("growth", organization.id, orgUser.email, () => window.location.reload())}
-                                                disabled={isScriptLoading}
-                                                className="text-[10px] text-indigo-500 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105"
-                                            >
-                                                {isScriptLoading ? "Loading..." : "Upgrade to Growth to unlock"}
-                                            </button>
-                                        </div>
-                                        <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900 px-4 py-6 text-center flex flex-col items-center justify-center relative overflow-hidden group">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5" />
-                                            <Lock className="w-5 h-5 text-slate-400 mb-2" />
-                                            <p className="text-xs text-slate-500 font-medium mb-1">Claude 3.5 Haiku</p>
-                                            <button
-                                                onClick={() => orgUser && checkout("growth", organization.id, orgUser.email, () => window.location.reload())}
-                                                disabled={isScriptLoading}
-                                                className="text-[10px] text-amber-600 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105"
-                                            >
-                                                {isScriptLoading ? "Loading..." : "Upgrade to Growth to unlock"}
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
+                                {/* Premium Model Upsell Locks (Dynamic) */}
+                                {lockedModels.map((modelName, idx) => (
+                                    <div key={`lock-${idx}`} className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900 px-4 py-6 text-center flex flex-col items-center justify-center relative overflow-hidden group">
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${idx % 2 === 0 ? 'from-indigo-500/5 to-purple-500/5' : 'from-amber-500/5 to-orange-500/5'}`} />
+                                        <Lock className="w-5 h-5 text-slate-400 mb-2" />
+                                        <p className="text-xs text-slate-500 font-medium mb-1">{modelName}</p>
+                                        <button
+                                            onClick={() => {
+                                                setUpgradeFeatureName(`${modelName} Integration`);
+                                                setIsUpgradeModalOpen(true);
+                                            }}
+                                            className="text-[10px] text-indigo-500 font-semibold cursor-pointer py-1 px-3 border border-indigo-200 dark:border-indigo-500/20 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors relative z-10"
+                                        >
+                                            Upgrade to Growth
+                                        </button>
+                                    </div>
+                                ))}
                             </motion.div>
                         )}
 
@@ -314,6 +314,12 @@ export default function CoIntelligenceSimulator() {
                     </div>
                 </div>
             </div>
+
+            <UpgradeModal
+                isOpen={isUpgradeModalOpen}
+                onClose={() => setIsUpgradeModalOpen(false)}
+                featureHighlight={upgradeFeatureName}
+            />
         </div>
     );
 }

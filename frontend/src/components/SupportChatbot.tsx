@@ -11,6 +11,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Bot, BookOpen, Shield, Key } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
+import { auth } from "../lib/firebase";
 
 interface Message {
     id: string;
@@ -23,14 +24,35 @@ export default function SupportChatbot() {
     const orgContext = useOrganization();
     const organization = orgContext?.organization;
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: "1",
-            role: "bot",
-            text: `Hello! I'm your AUM Assistant. How can I help you ${organization && orgContext?.orgUser ? `manage context for ${organization.name}` : 'explore AUM Context Foundry'} today?`,
-            timestamp: new Date()
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    useEffect(() => {
+        const stored = sessionStorage.getItem('aum_chat_history');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                const hydrated = parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+                setMessages(hydrated);
+            } catch (e) {
+                console.error("Failed to parse chat history", e);
+            }
+        } else {
+            setMessages([{
+                id: "1",
+                role: "bot",
+                text: "Hello! I'm your AUM Assistant. How can I help you manage your context today?",
+                timestamp: new Date()
+            }]);
         }
-    ]);
+        setIsInitialized(true);
+    }, []);
+
+    useEffect(() => {
+        if (isInitialized) {
+            sessionStorage.setItem('aum_chat_history', JSON.stringify(messages));
+        }
+    }, [messages, isInitialized]);
     const [input, setInput] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -58,44 +80,66 @@ export default function SupportChatbot() {
         }, 800);
     };
 
-    const generateBotResponse = (query: string) => {
+    const generateBotResponse = async (query: string) => {
         let response = "";
         const orgName = (organization && orgContext?.orgUser) ? organization.name : "your enterprise";
 
-        if (query.includes("onboard") || query.includes("add business") || query.includes("setup")) {
-            response = `To onboard a new branch or entity for ${orgName}, navigate to Organization Settings and provision a new Context Moat. Ensure your semantic manifest is ready for distillation.`;
-        } else if (query.includes("api key") || query.includes("gemini") || query.includes("openai") || query.includes("claude")) {
-            response = `AUM Context Foundry supports isolated API keys for Gemini, Claude, and OpenAI at the tenant level. This ensures ${orgName}'s usage is cryptographically separated and billed accurately.`;
-        } else if (query.includes("hallucination") || query.includes("lcrs") || query.includes("score")) {
-            response = `The LCRS (Latent Contextual Rigor Scoring) calculates high-dimension vector divergence ($d > \\epsilon_{div}$). A score > 0.45 indicates context drift. You can tighten grounding by updating your Context Manifest.`;
-        } else if (query.includes("ingest") || query.includes("pdf") || query.includes("zero-retention") || query.includes("distill")) {
-            response = `Our Semantic Ingestion Engine uses a Zero-Retention architecture. It distills unstructured data into JSON-LD manifests in volatile memory. No proprietary documents ever touch persistent disk.`;
-        } else if (query.includes("audit") || query.includes("ciso") || query.includes("security")) {
-            response = `For CISO Audits, we provide a full trace of the LCRS provenance. To request a manual architectural deep-dive, please contact our security team at hello@AUMDataLabs.com.`;
-        } else if (query.includes("offboard") || query.includes("delete")) {
-            response = `To offboard an entity, an Admin must revoke its manifest sync and archive the organization. This permanently purges the latent mapping to ensure absolute data sovereignty.`;
-        } else {
-            response = `I'm monitoring the AUM Context Engine for ${orgName}. I can assist with Ingestion protocols, LCRS mathematical divergence, API Key isolation, or Security Audits.`;
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token || !organization?.id) {
+                response = "Please authenticate and select an organization to use the AI Context Assistant.";
+            } else {
+                setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your Context Moat...", timestamp: new Date() }]);
+
+                const res = await fetch("/api/chatbot/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        orgId: organization.id,
+                        query: query,
+                        chatHistory: messages.map(m => ({
+                            id: m.id,
+                            text: m.text,
+                            sender: m.role,
+                            timestamp: m.timestamp.toISOString()
+                        }))
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    response = data.response;
+                } else {
+                    response = "I encountered an error querying your Context Engine. Please check your API keys.";
+                }
+            }
+        } catch (error) {
+            response = "Network error communicating with AUM Foundry.";
         }
 
-        const botMsg: Message = {
-            id: Date.now().toString() + "-bot",
-            role: "bot",
-            text: response,
-            timestamp: new Date()
-        };
-        setMessages(prev => [...prev, botMsg]);
+        setMessages(prev => {
+            const clean = prev.filter(m => m.id !== "loading");
+            return [...clean, {
+                id: Date.now().toString() + "-bot",
+                role: "bot",
+                text: response,
+                timestamp: new Date()
+            }];
+        });
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-[100] font-sans">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] font-sans">
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 w-[320px] h-[480px] sm:w-[360px] sm:h-[500px] rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden mb-4 relative"
+                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 w-[calc(100vw-2rem)] h-[calc(100vh-10rem)] max-h-[500px] sm:w-[360px] sm:h-[500px] rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden mb-4 relative"
                     >
                         {/* Header */}
                         <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-4 flex justify-between items-center text-white shrink-0">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { Logo } from "@/components/Logo";
 import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
 import SemanticIngestion from "@/components/SemanticIngestion";
@@ -25,13 +26,7 @@ export default function AUMContextFoundry() {
         <div>
           <div className="p-6 pb-2">
             <div className="flex items-center space-x-3 mb-8">
-              <div className="w-10 h-10 relative flex items-center justify-center">
-                <Image src="/favicon.ico" alt="AUM Context Foundry Logo" width={32} height={32} className="object-contain" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">AUM Context Foundry</span>
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">by AUM Data Labs</span>
-              </div>
+              <Logo size={36} showText={true} />
             </div>
           </div>
 

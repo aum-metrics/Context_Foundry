@@ -8,9 +8,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { UploadCloud, FileText, CheckCircle2, ChevronRight, Terminal as TerminalIcon, Box } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Upload, FileText, CheckCircle, Database, Server, Hexagon, Shield, FileJson, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2 } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
+import { auth } from "../lib/firebase";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -97,8 +98,14 @@ export default function SemanticIngestion() {
             formData.append('orgId', organization.id);
         }
 
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error("Authentication required for secure ingestion.");
+
         const response = await fetch('/api/ingestion/parse', {
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
             body: formData,
         });
 

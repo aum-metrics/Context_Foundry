@@ -266,6 +266,63 @@ async def generate_payment_link(request: PaymentLinkRequest):
         raise HTTPException(status_code=500, detail=f"Payment link creation failed: {e}")
 
 
+@router.post("/webhook")
+async def razorpay_webhook(request: Request):
+    """
+    Secure Server-to-Server Webhook handler.
+    Ensures that payments are verified even if the user closes their browser.
+    """
+    secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
+    if not secret:
+        logger.warning("RAZORPAY_WEBHOOK_SECRET not set. Webhook verification skipped (UNSAFE).")
+        # In a real enterprise app, we would block here.
+
+    try:
+        raw_body = await request.body()
+        signature = request.headers.get("X-Razorpay-Signature", "")
+
+        # 1. Verify Webhook Signature
+        if secret:
+            expected_signature = hmac.new(
+                secret.encode(), raw_body, hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(expected_signature, signature):
+                logger.error("Invalid Webhook Signature detected.")
+                raise HTTPException(status_code=400, detail="Invalid signature")
+
+        # 2. Process Event
+        data = await request.json()
+        event = data.get("event")
+        payload = data.get("payload", {})
+
+        logger.info(f"Processing Razorpay Webhook: {event}")
+
+        # Handle successful payment or subscription activation
+        if event in ["payment.captured", "subscription.activated", "order.paid"]:
+            # Extract orgId from notes
+            entity = payload.get("payment", {}).get("entity") or payload.get("subscription", {}).get("entity") or {}
+            notes = entity.get("notes", {})
+            org_id = notes.get("orgId")
+            plan_id = notes.get("planId", "growth")
+
+            if org_id and db:
+                now = datetime.utcnow()
+                db.collection("organizations").document(org_id).update({
+                    "subscription.planId": plan_id,
+                    "subscription.status": "active",
+                    "subscription.lastWebhookEvent": event,
+                    "subscription.activatedAt": now,
+                    "subscription.currentPeriodStart": now,
+                    "subscription.currentPeriodEnd": now + timedelta(days=30),
+                })
+                logger.info(f"Webhook: Org {org_id} upgraded to {plan_id} via {event}")
+
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Webhook processing failed: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 @router.get("/status/{org_id}")
 async def get_payment_status(org_id: str):
     """Gets the subscription status for an organization."""

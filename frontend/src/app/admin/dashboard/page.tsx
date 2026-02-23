@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "@/lib/firestorePaths";
-import { collection, doc, getDocs, getDoc, updateDoc, query } from "firebase/firestore";
+import { collection, doc, getDocs, getDoc, updateDoc, query, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 
 interface OrgData {
     id: string;
@@ -42,6 +42,9 @@ export default function AdminDashboard() {
     const [orgs, setOrgs] = useState<OrgData[]>([]);
     const [loadingOrgs, setLoadingOrgs] = useState(true);
     const [newKeyValue, setNewKeyValue] = useState<Record<string, string>>({});
+    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     useEffect(() => {
         const token = sessionStorage.getItem("aum_admin_token");
@@ -49,17 +52,41 @@ export default function AdminDashboard() {
     }, [router]);
 
     // Fetch orgs from Firestore
-    const fetchOrgs = useCallback(async () => {
-        setLoadingOrgs(true);
+    const fetchOrgs = useCallback(async (isLoadMore = false) => {
+        if (isLoadMore) {
+            setLoadingMore(true);
+        } else {
+            setLoadingOrgs(true);
+            setLastDoc(null);
+            setHasMore(true);
+        }
+
         try {
             if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
                 setOrgs(FALLBACK_ORGS);
                 setLoadingOrgs(false);
+                setLoadingMore(false);
+                setHasMore(false);
                 return;
             }
 
-            const snapshot = await getDocs(query(collection(db, "organizations")));
+            let q;
+            if (isLoadMore && lastDoc) {
+                q = query(collection(db, "organizations"), startAfter(lastDoc), limit(15));
+            } else {
+                q = query(collection(db, "organizations"), limit(15));
+            }
+
+            const snapshot = await getDocs(q);
             const orgList: OrgData[] = [];
+
+            if (snapshot.docs.length < 15) {
+                setHasMore(false);
+            }
+            if (snapshot.docs.length > 0) {
+                setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+            }
+
             for (const docSnap of snapshot.docs) {
                 const data = docSnap.data();
                 // Count members
@@ -88,15 +115,20 @@ export default function AdminDashboard() {
                     lastPayment: data.subscription?.activatedAt ? new Date(data.subscription.activatedAt.seconds * 1000).toLocaleDateString() : "N/A",
                 });
             }
-            setOrgs(orgList.length > 0 ? orgList : FALLBACK_ORGS);
+            if (isLoadMore) {
+                setOrgs(prev => [...prev, ...orgList]);
+            } else {
+                setOrgs(orgList.length > 0 ? orgList : FALLBACK_ORGS);
+            }
         } catch (err) {
             console.error("Failed to fetch orgs:", err);
-            setOrgs(FALLBACK_ORGS);
+            if (!isLoadMore) setOrgs(FALLBACK_ORGS);
         }
         setLoadingOrgs(false);
-    }, []);
+        setLoadingMore(false);
+    }, [lastDoc]);
 
-    useEffect(() => { fetchOrgs(); }, [fetchOrgs]);
+    useEffect(() => { fetchOrgs(false); }, []);
 
     const handleLogout = () => {
         sessionStorage.removeItem("aum_admin_token");
@@ -187,7 +219,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <button onClick={fetchOrgs} className="text-slate-400 hover:text-amber-400 transition-colors" title="Refresh Data">
+                    <button onClick={() => fetchOrgs(false)} className="text-slate-400 hover:text-amber-400 transition-colors" title="Refresh Data">
                         <RefreshCw className={`w-4 h-4 ${loadingOrgs ? "animate-spin" : ""}`} />
                     </button>
                     <button onClick={handleLogout} className="text-slate-400 hover:text-rose-400 transition-colors" title="Logout">
@@ -233,6 +265,18 @@ export default function AdminDashboard() {
                                     <tbody>
                                         {loadingOrgs ? (
                                             <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Loading from Firestore...</td></tr>
+                                        ) : filteredOrgs.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-20 text-center">
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
+                                                            <Building2 className="w-8 h-8 text-slate-600" />
+                                                        </div>
+                                                        <p className="text-slate-300 font-medium mb-1">No organizations found</p>
+                                                        <p className="text-slate-500 text-sm">There are no organizations matching your search criteria.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         ) : filteredOrgs.map(org => (
                                             <tr key={org.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                                                 <td className="px-6 py-4"><p className="text-sm font-medium text-white">{org.name}</p><p className="text-xs text-slate-500">{org.email}</p></td>
@@ -252,6 +296,18 @@ export default function AdminDashboard() {
                                     </tbody>
                                 </table>
                             </div>
+                            {hasMore && !loadingOrgs && filteredOrgs.length > 0 && searchQuery === "" && (
+                                <div className="mt-6 flex justify-center">
+                                    <button
+                                        onClick={() => fetchOrgs(true)}
+                                        disabled={loadingMore}
+                                        className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full text-sm font-medium transition-colors border border-slate-700 hover:border-amber-500/50 flex items-center"
+                                    >
+                                        {loadingMore ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        Load More
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 

@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
+import { Logo } from "@/components/Logo";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Activity, ArrowUpRight, Search, ShieldAlert, Globe, Lock, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { CheckCircle2, AlertTriangle, Shield, TrendingUp, Search, FileText, XCircle, Rocket, Globe, Activity, ShieldAlert, ArrowUpRight, Lock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import useSWR from "swr";
 import { db } from "@/lib/firestorePaths";
+import { auth } from "../lib/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useOrganization } from "./OrganizationContext";
 import { useRazorpay } from "@/hooks/useRazorpay";
+import { UpgradeModal } from "./UpgradeModal";
 
 // Fallback data — only used when Firestore is unavailable
 const fallbackData = {
@@ -35,13 +39,17 @@ interface SEOResult {
 export default function SoMCommandCenter() {
     const { organization, orgUser } = useOrganization();
     const { checkout, isScriptLoading } = useRazorpay();
-    const [activeTab, setActiveTab] = useState<"gpt4" | "claude" | "gemini">("gpt4");
-    const [loading, setLoading] = useState(true);
-    const [chartData, setChartData] = useState<Record<string, unknown>[]>([]);
+    const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ domainStability: number, hallucinationRate: number } | null>(null);
-    const [modelAverages, setModelAverages] = useState<Record<string, number>>({});
-    const [hallucinationRisks, setHallucinationRisks] = useState<{ id: number; model: string; text: string; severity: string }[]>([]);
+    const [modelAverages, setModelAverages] = useState<Record<string, number>>({
+        "GPT-4o Mini": 92,
+        "Claude 3.5 Haiku": 75,
+        "Gemini 2.0 Flash": 70
+    });
+
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
 
     // SEO Audit state
     const [seoUrl, setSeoUrl] = useState("");
@@ -52,9 +60,15 @@ export default function SoMCommandCenter() {
         if (!organization) return;
         setBatchLoading(true);
         try {
-            const response = await fetch('/api/batch/batch', {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("Authentication required.");
+
+            const response = await fetch('/api/batch', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     orgId: organization.id,
                     prompts: [
@@ -67,11 +81,39 @@ export default function SoMCommandCenter() {
                 })
             });
             const data = await response.json();
-            setBatchResult(data);
-            if (data.modelAverages) setModelAverages(data.modelAverages);
+
+            if (data.status === "processing" && data.jobId) {
+                // Poll for completion
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch(`/api/batch/status/${organization.id}/${data.jobId}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (statusRes.ok) {
+                            const statusData = await statusRes.json();
+                            if (statusData.status === "completed" && statusData.summary) {
+                                clearInterval(pollInterval);
+                                setBatchResult(statusData.summary);
+                                if (statusData.summary.modelAverages) setModelAverages(statusData.summary.modelAverages);
+                                setBatchLoading(false);
+                            } else if (statusData.status === "failed") {
+                                clearInterval(pollInterval);
+                                console.error("Batch Job Failed:", statusData.error);
+                                setBatchLoading(false);
+                            }
+                        }
+                    } catch (pollErr) {
+                        console.error("Polling error:", pollErr);
+                    }
+                }, 3000); // Poll every 3 seconds
+            } else {
+                // Fallback direct response
+                setBatchResult(data);
+                if (data.modelAverages) setModelAverages(data.modelAverages);
+                setBatchLoading(false);
+            }
         } catch (err) {
             console.error("Batch Error:", err);
-        } finally {
             setBatchLoading(false);
         }
     };
@@ -80,89 +122,107 @@ export default function SoMCommandCenter() {
         if (!seoUrl || !organization) return;
         setSeoLoading(true);
         try {
+            const token = await auth.currentUser?.getIdToken();
             const response = await fetch('/api/seo/audit', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ url: seoUrl, orgId: organization.id })
             });
             const data = await response.json();
-            setSeoResult(data);
+
+            if (data.jobId) {
+                // Poll for completion to avoid 504 timeouts on heavy Playwright rendering
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const currentToken = await auth.currentUser?.getIdToken();
+                        const statusRes = await fetch(`/api/seo/audit/status/${organization.id}/${data.jobId}`, {
+                            headers: { 'Authorization': `Bearer ${currentToken}` }
+                        });
+                        const statusData = await statusRes.json();
+
+                        if (statusData.status === "completed") {
+                            clearInterval(pollInterval);
+                            setSeoResult(statusData.result);
+                            setSeoLoading(false);
+                        } else if (statusData.status === "failed") {
+                            clearInterval(pollInterval);
+                            console.error("SEO Audit Failed:", statusData.error);
+                            setSeoLoading(false);
+                        }
+                    } catch (pollErr) {
+                        console.error("SEO Polling error:", pollErr);
+                    }
+                }, 3000);
+            } else {
+                setSeoResult(data);
+                setSeoLoading(false);
+            }
         } catch (err) {
             console.error("SEO Audit Error:", err);
-        } finally {
             setSeoLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (!organization) return;
-        setLoading(true);
-        const fetchScoringHistory = async () => {
-            try {
-                if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
-                    setChartData(fallbackData[activeTab]);
-                    setLoading(false);
-                    return;
-                }
+    const fetchHistory = async (orgId: string) => {
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            return null; // fallback signal
+        }
+        const historyRef = collection(db, "organizations", orgId, "scoringHistory");
+        const q = query(historyRef, orderBy("timestamp", "desc"), limit(20));
+        const snapshot = await getDocs(q);
 
-                // Fetch real scoring history from Firestore
-                const historyRef = collection(db, "organizations", organization.id, "scoringHistory");
-                const q = query(historyRef, orderBy("timestamp", "desc"), limit(20));
-                const snapshot = await getDocs(q);
+        const entries: ScoringHistoryEntry[] = [];
+        snapshot.forEach(doc => entries.push(doc.data() as ScoringHistoryEntry));
+        entries.reverse(); // oldest first for chart
+        return entries;
+    };
 
-                if (snapshot.empty) {
-                    setChartData(fallbackData[activeTab]);
-                    setLoading(false);
-                    return;
-                }
+    const { data: historyEntries, error, isLoading: loading } = useSWR(
+        organization ? `history-${organization.id}` : null,
+        () => fetchHistory(organization!.id)
+    );
 
-                // Transform scoring history into chart data per model
-                const modelMap: Record<string, string> = { gpt4: "GPT-4o Mini", claude: "Claude 3.5 Haiku", gemini: "Gemini 2.0 Flash" };
-                const targetModel = modelMap[activeTab];
-                const dataPoints: { name: string; score: number }[] = [];
-                const risks: { id: number; model: string; text: string; severity: string }[] = [];
-                let riskId = 1;
+    const chartData = useMemo(() => {
+        if (loading) return [];
+        if (!historyEntries && !error) return fallbackData[activeTab === "GPT-4o Mini" ? "gpt4" : activeTab === "Claude 3.5 Haiku" ? "claude" : "gemini"] || [];
+        if (historyEntries && historyEntries.length === 0) return [];
 
-                const entries: ScoringHistoryEntry[] = [];
-                snapshot.forEach(doc => entries.push(doc.data() as ScoringHistoryEntry));
-                entries.reverse(); // oldest first for chart
+        const targetModel = activeTab;
+        const dataPoints: { name: string; score: number }[] = [];
 
-                for (const entry of entries) {
-                    const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
-                    const label = ts.toLocaleDateString("en-US", { weekday: "short" });
-                    const modelResult = entry.results?.find(r => r.model === targetModel);
-                    if (modelResult) {
-                        dataPoints.push({ name: label, score: modelResult.accuracy });
-                    }
-
-                    // Collect hallucination risks
-                    for (const result of (entry.results || [])) {
-                        if (result.hasHallucination) {
-                            risks.push({
-                                id: riskId++,
-                                model: result.model,
-                                text: `Hallucination on: "${entry.prompt.slice(0, 60)}..."`,
-                                severity: result.accuracy < 30 ? "high" : "medium"
-                            });
-                        }
-                    }
-                }
-
-                if (dataPoints.length > 0) {
-                    setChartData(dataPoints);
-                } else {
-                    setChartData(fallbackData[activeTab]);
-                }
-
-                setHallucinationRisks(risks.slice(0, 5));
-            } catch (err) {
-                console.error("Scoring history fetch error:", err);
-                setChartData(fallbackData[activeTab]);
+        for (const entry of (historyEntries || [])) {
+            const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
+            const label = ts.toLocaleDateString("en-US", { weekday: "short" });
+            const modelResult = entry.results?.find(r => r.model === targetModel);
+            if (modelResult) {
+                dataPoints.push({ name: label, score: modelResult.accuracy });
             }
-            setLoading(false);
-        };
-        fetchScoringHistory();
-    }, [activeTab, organization]);
+        }
+
+        return dataPoints.length > 0 ? dataPoints : (fallbackData[activeTab === "GPT-4o Mini" ? "gpt4" : activeTab === "Claude 3.5 Haiku" ? "claude" : "gemini"] || []);
+    }, [historyEntries, activeTab, loading, error]);
+
+    const hallucinationRisks = useMemo(() => {
+        if (!historyEntries) return [];
+        const risks: { id: number; model: string; text: string; severity: string }[] = [];
+        let riskId = 1;
+        for (const entry of historyEntries) {
+            for (const result of (entry.results || [])) {
+                if (result.hasHallucination) {
+                    risks.push({
+                        id: riskId++,
+                        model: result.model,
+                        text: `Hallucination on: "${entry.prompt.slice(0, 60)}..."`,
+                        severity: result.accuracy < 30 ? "high" : "medium"
+                    });
+                }
+            }
+        }
+        return risks.slice(0, 5);
+    }, [historyEntries]);
 
     // Compute display values
     const avgScore = chartData.length > 0
@@ -173,9 +233,7 @@ export default function SoMCommandCenter() {
         <div className="w-full h-full animate-fade-in font-sans">
             <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 pb-6 border-b border-slate-200 dark:border-white/5">
                 <div className="flex items-center space-x-4">
-                    <div className="w-14 h-14 relative p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 backdrop-blur-md flex items-center justify-center">
-                        <Image src="/favicon.ico" alt="AUM Logo" width={32} height={32} className="object-contain drop-shadow-lg" />
-                    </div>
+                    <Logo size={48} showText={false} />
                     <div>
                         <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">SoM Command Center</h1>
                         <p className="text-slate-500 text-sm mt-1">Live scoring across GPT-4o, Claude 3.5, and Gemini 2.0 Flash</p>
@@ -225,7 +283,7 @@ export default function SoMCommandCenter() {
                                 Accuracy Over Time (from Simulations)
                             </h2>
                             <div className="flex p-1 bg-slate-100 dark:bg-slate-950/50 rounded-lg border border-slate-200 dark:border-white/5">
-                                {(["gpt4", "claude", "gemini"] as const).map((model) => (
+                                {Object.keys(modelAverages).map((model) => (
                                     <button
                                         key={model}
                                         onClick={() => setActiveTab(model)}
@@ -234,7 +292,7 @@ export default function SoMCommandCenter() {
                                             : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
                                             }`}
                                     >
-                                        {model === "gpt4" ? "GPT-4o" : model === "claude" ? "Claude" : "Gemini"}
+                                        {model.split(' ')[0]}
                                     </button>
                                 ))}
                             </div>
@@ -244,8 +302,17 @@ export default function SoMCommandCenter() {
                             <div className="h-[300px] flex items-center justify-center animate-pulse">
                                 <div className="w-full h-full bg-slate-800/50 rounded-xl"></div>
                             </div>
+                        ) : chartData.length === 0 ? (
+                            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[300px] w-full flex flex-col items-center justify-center text-center">
+                                <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mb-4">
+                                    <Activity className="w-8 h-8 text-indigo-400" />
+                                </div>
+                                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No Simulations Yet</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">Run your first comparison in the Simulator to unlock multi-model accuracy tracking over time.</p>
+                                <a href="/" className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors shadow-lg shadow-indigo-500/20">Go to Simulator</a>
+                            </motion.div>
                         ) : (
-                            <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-[300px] w-full">
+                            <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-[250px] sm:h-[300px] lg:h-[350px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={chartData}>
                                         <defs>
@@ -276,11 +343,13 @@ export default function SoMCommandCenter() {
                                 <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
                                 <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth or Enterprise plan.</p>
                                 <button
-                                    onClick={() => orgUser && checkout("growth", organization.id, orgUser.email, () => window.location.reload())}
-                                    disabled={isScriptLoading}
-                                    className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline"
+                                    onClick={() => {
+                                        setUpgradeFeatureName("SEO & GEO Readiness Audits");
+                                        setIsUpgradeModalOpen(true);
+                                    }}
+                                    className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline py-1 px-3 border border-indigo-200 dark:border-indigo-500/20 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
                                 >
-                                    {isScriptLoading ? "Loading..." : "Upgrade to Growth to unlock"}
+                                    Upgrade to Growth
                                 </button>
                             </div>
                         ) : (
@@ -333,23 +402,18 @@ export default function SoMCommandCenter() {
                             </motion.div>
                         )}
                     </div>
-                </div>
+                </div >
 
                 <div className="space-y-6">
                     {/* Model Comparison Bars */}
                     <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-6 shadow-xl dark:shadow-none">
                         <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-6">Model Accuracy Comparison</h3>
                         <div className="space-y-6">
-                            {[
-                                { name: "GPT-4o Mini", key: "GPT-4o Mini", fallback: 92 },
-                                { name: "Claude 3.5 Haiku", key: "Claude 3.5 Haiku", fallback: 75 },
-                                { name: "Gemini 2.0 Flash", key: "Gemini 2.0 Flash", fallback: 70 },
-                            ].map((model, i) => {
-                                const score = modelAverages[model.key] || model.fallback;
+                            {Object.entries(modelAverages).map(([modelName, score], i) => {
                                 return (
-                                    <div key={model.name}>
+                                    <div key={modelName}>
                                         <div className="flex justify-between text-sm mb-2">
-                                            <span className="font-medium text-slate-900 dark:text-white">{model.name}</span>
+                                            <span className="font-medium text-slate-900 dark:text-white">{modelName}</span>
                                             <span className="text-indigo-600 dark:text-indigo-400 font-medium">{Math.round(score)}%</span>
                                         </div>
                                         <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -401,7 +465,13 @@ export default function SoMCommandCenter() {
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+
+            <UpgradeModal
+                isOpen={isUpgradeModalOpen}
+                onClose={() => setIsUpgradeModalOpen(false)}
+                featureHighlight={upgradeFeatureName}
+            />
+        </div >
     );
 }

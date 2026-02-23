@@ -6,13 +6,14 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 db = None
+app = None
 
 def initialize_firebase():
     """
     Initializes Firebase Admin SDK.
     Returns a Firestore client, or None if credentials are not available.
     """
-    global db
+    global db, app
     try:
         import firebase_admin
         from firebase_admin import credentials, firestore
@@ -22,10 +23,10 @@ def initialize_firebase():
             
             if cred_path and Path(cred_path).exists():
                 cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
+                app = firebase_admin.initialize_app(cred)
                 logger.info("✅ Firebase Admin SDK initialized with service account.")
             else:
-                firebase_admin.initialize_app()
+                app = firebase_admin.initialize_app()
                 logger.info("✅ Firebase Admin SDK initialized with default credentials.")
         
         db = firestore.client()

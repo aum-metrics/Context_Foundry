@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles, Globe } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { Logo } from "@/components/Logo";
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import ProductDemoVideo from "@/components/ProductDemoVideo";
@@ -37,13 +38,7 @@ export default function LandingPage() {
             <nav className="fixed w-full z-50 bg-white/50 dark:bg-[#030303]/60 backdrop-blur-2xl border-b border-slate-200/50 dark:border-white/5 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center space-x-3 group cursor-pointer">
-                        <div className="w-10 h-10 relative flex items-center justify-center">
-                            <Image src="/favicon.ico" alt="AUM Context Foundry Logo" width={32} height={32} className="object-contain" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="font-semibold text-xl tracking-tight text-slate-900 dark:text-white leading-tight">AUM Context Foundry</span>
-                            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">by AUM Data Labs</span>
-                        </div>
+                        <Logo size={40} showText={true} />
                     </div>
 
                     <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-600 dark:text-slate-400">
