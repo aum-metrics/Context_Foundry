@@ -12,9 +12,9 @@ AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) 
 We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and hallucination risks.
 
 ## Pricing Structure
-- **Starter:** ₹15,000 (~$180) / month — 1 org, Gemini 2.0 Flash scoring, 50 simulations/mo
-- **Growth:** ₹25,000 (~$300) / month — All 3 models, 500 simulations/mo
-- **Enterprise:** ₹75,000 (~$900) / month — Unlimited sims, Weekly Cron runs, Dedicated Keys, SSO (coming soon)
+- **Starter:** ₹15,000 (~$180) / month — 1 org (up to 25 seats), Gemini 2.0 Flash scoring, 50 simulations/mo
+- **Growth:** ₹25,000 (~$300) / month — All 3 models, 500 simulations/mo (up to 25 seats)
+- **Enterprise:** ₹75,000 (~$900) / month — Unlimited sims, Weekly Cron runs, SSO (coming soon). Max 25 seats per org standard.
 
 ## System Architecture
 The platform is built on a multi-tenant SaaS architecture supporting strictly isolated corporate datasets. Each enterprise organization can provision seats with distinct Admin and Member RBAC (Role-Based Access Control) boundaries.

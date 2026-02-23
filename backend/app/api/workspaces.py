@@ -195,8 +195,13 @@ async def invite_member(
     if user_email != workspace["owner_email"]:
         raise HTTPException(status_code=403, detail="Only workspace owner can invite members")
     
+    # Enforce Hard Limit: Max 25 seats per organization
+    current_members = workspace_members.get(workspace_id, [])
+    if len(current_members) >= 25:
+        raise HTTPException(status_code=403, detail="Maximum limit of 25 seats per organization reached. Contact support to negotiate an Enterprise custom limit.")
+
     # Check if already a member
-    if request.email in workspace_members.get(workspace_id, []):
+    if request.email in current_members:
         raise HTTPException(status_code=400, detail="User is already a member")
     
     # Add member
