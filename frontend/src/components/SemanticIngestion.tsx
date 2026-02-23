@@ -151,14 +151,21 @@ export default function SemanticIngestion() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            if (apiKeysCache.openai) {
-                formData.append("openai_key", apiKeysCache.openai);
+            if (organization?.id) {
+                formData.append("orgId", organization.id);
             }
+
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("Authentication required for ingestion.");
 
             const res = await fetch("/api/ingestion/parse", {
                 method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
                 body: formData
             });
+
             const schemaJson = await res.json();
 
             clearInterval(interval);
