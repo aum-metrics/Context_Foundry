@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is the owner (based on email)
+    function isOwner(userEmail) {
+      return isSignedIn() && request.auth.token.email == userEmail;
+    }
+
+    // Users collection
+    match /users/{email} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(email);
+    }
+
+    // Canvases
+    match /artifacts/aum-data-labs/public/data/canvases/{canvasId} {
+      // Anyone signed in can read (for sharing)
+      allow read: if isSignedIn();
+      
+      // Anyone signed in can create
+      allow create: if isSignedIn();
+      
+      // Only owner or editors can update
+      allow update: if isSignedIn() && (
+        resource.data.owner_uid == request.auth.token.email || 
+        (resource.data.share_settings.editors != null && request.auth.token.email in resource.data.share_settings.editors)
+      );
+      
+      // Only owner can delete
+      allow delete: if isSignedIn() && resource.data.owner_uid == request.auth.token.email;
+    }
+
+    // Cursors (Real-time)
+    match /artifacts/aum-data-labs/public/data/canvas_cursors/{cursorId} {
+      // Allow read/write for any signed in user
+      allow read, write: if isSignedIn();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

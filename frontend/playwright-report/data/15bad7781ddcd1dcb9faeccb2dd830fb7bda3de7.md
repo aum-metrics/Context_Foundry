@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e7]:
+        - img [ref=e8]
+        - heading "Drop your CSV here" [level=3] [ref=e11]
+        - paragraph [ref=e12]: or click to browse
+        - generic [ref=e13] [cursor=pointer]: Select File
+      - generic [ref=e14]: "Scale: 100% | X: 0 Y: 0"
+      - generic [ref=e15]:
+        - img "AUM Data Labs" [ref=e16]
+        - button "+ Data" [ref=e18]
+        - button [ref=e20]:
+          - img [ref=e21]
+        - button "Share" [ref=e24]:
+          - img [ref=e25]
+          - text: Share
+        - button [ref=e32]:
+          - img [ref=e33]
+      - generic [ref=e40]:
+        - img [ref=e42]
+        - textbox "Ask a question about your data..." [ref=e45]
+        - button [disabled] [ref=e46]:
+          - img [ref=e47]
+  - generic [active]:
+    - menu "Next.js Dev Tools Items" [ref=e50]:
+      - generic [ref=e51]:
+        - menuitem "Route Static" [ref=e52] [cursor=pointer]:
+          - generic [ref=e53]: Route
+          - generic [ref=e54]: Static
+        - generic "Turbopack is enabled." [ref=e55]:
+          - generic [ref=e56]: Turbopack
+          - generic [ref=e57]: Enabled
+        - menuitem "Route Info" [ref=e58]:
+          - generic [ref=e59]: Route Info
+          - img [ref=e61]
+      - menuitem "Preferences" [ref=e64]:
+        - generic [ref=e65]: Preferences
+        - img [ref=e67]
+    - button "Close Next.js Dev Tools" [expanded] [ref=e74] [cursor=pointer]:
+      - img [ref=e75]
+  - alert [ref=e78]
+```

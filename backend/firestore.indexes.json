@@ -1,0 +1,28 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "canvases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "canvases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workspace_id", "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "canvas_cursors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "canvas_id", "order": "ASCENDING" },
+        { "fieldPath": "last_active", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}
