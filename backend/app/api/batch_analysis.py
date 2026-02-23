@@ -35,6 +35,19 @@ async def run_batch_simulation(request: BatchSimulationRequest):
     if not request.prompts or not request.orgId:
         raise HTTPException(status_code=400, detail="Prompts and orgId required")
 
+    # Enforce Enterprise Plan Limit for Batch Analysis
+    if db:
+        try:
+            org_doc = db.collection("organizations").document(request.orgId).get()
+            if org_doc.exists:
+                org_plan = org_doc.to_dict().get("subscription", {}).get("planId", "starter")
+                if org_plan != "enterprise":
+                    raise HTTPException(status_code=403, detail="Batch Domain Analysis requires an Enterprise plan.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to fetch org plan for batch analysis: {e}")
+
     tasks = []
     for prompt in request.prompts:
         sim_req = SimulationRequest(

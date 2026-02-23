@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Beaker, Send, AlertTriangle, Cpu, Zap, CheckCircle, XCircle } from "lucide-react";
+import { MessageSquare, Beaker, Send, AlertTriangle, Cpu, Zap, CheckCircle, XCircle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
 import { db } from "@/lib/firestorePaths";
@@ -244,6 +244,24 @@ export default function CoIntelligenceSimulator() {
                                         </p>
                                     </div>
                                 ))}
+
+                                {/* Premium Model Upsell Locks for Starter Plan */}
+                                {organization?.subscriptionTier === "starter" && modelResults.length === 1 && (
+                                    <>
+                                        <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900 px-4 py-6 text-center flex flex-col items-center justify-center relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5" />
+                                            <Lock className="w-5 h-5 text-slate-400 mb-2" />
+                                            <p className="text-xs text-slate-500 font-medium mb-1">GPT-4o Mini</p>
+                                            <p className="text-[10px] text-indigo-500 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105">Upgrade to Growth to unlock</p>
+                                        </div>
+                                        <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900 px-4 py-6 text-center flex flex-col items-center justify-center relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5" />
+                                            <Lock className="w-5 h-5 text-slate-400 mb-2" />
+                                            <p className="text-xs text-slate-500 font-medium mb-1">Claude 3.5 Haiku</p>
+                                            <p className="text-[10px] text-amber-600 font-semibold cursor-pointer hover:underline relative z-10 transition-transform group-hover:scale-105">Upgrade to Growth to unlock</p>
+                                        </div>
+                                    </>
+                                )}
                             </motion.div>
                         )}
 

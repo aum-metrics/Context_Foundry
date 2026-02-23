@@ -11,6 +11,7 @@ from typing import Optional, List
 import httpx
 import re
 import logging
+from core.firebase_config import db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -35,6 +36,19 @@ async def run_seo_audit(request: SEOAuditRequest):
     """
     if not request.url:
         raise HTTPException(status_code=400, detail="URL required")
+
+    # Enforce Plan Limits
+    if db:
+        try:
+            org_doc = db.collection("organizations").document(request.orgId).get()
+            if org_doc.exists:
+                org_plan = org_doc.to_dict().get("subscription", {}).get("planId", "starter")
+                if org_plan == "starter":
+                    raise HTTPException(status_code=403, detail="SEO & GEO Readiness Audits require a Growth or Enterprise plan.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to fetch org plan for SEO audit: {e}")
 
     results: List[dict] = []
     geo_score = 0

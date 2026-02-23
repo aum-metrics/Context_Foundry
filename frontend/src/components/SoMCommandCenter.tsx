@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Activity, ArrowUpRight, Search, ShieldAlert, Globe } from "lucide-react";
+import { Activity, ArrowUpRight, Search, ShieldAlert, Globe, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "@/lib/firestorePaths";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -188,11 +188,20 @@ export default function SoMCommandCenter() {
                     )}
                     <button
                         onClick={runBatchStabilityCheck}
-                        disabled={batchLoading}
-                        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs px-4 py-2 rounded-lg transition-colors flex items-center"
+                        disabled={batchLoading || organization?.subscriptionTier !== "enterprise"}
+                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${organization?.subscriptionTier === "enterprise" ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
                     >
-                        <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
-                        {batchLoading ? 'Analyzing...' : 'Run Batch Analysis'}
+                        {organization?.subscriptionTier === "enterprise" ? (
+                            <>
+                                <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
+                                {batchLoading ? 'Analyzing...' : 'Run Batch Analysis'}
+                            </>
+                        ) : (
+                            <>
+                                <Lock className="w-3 h-3 mr-2 text-slate-500" />
+                                Enterprise Only
+                            </>
+                        )}
                     </button>
                     <div className="text-right">
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Avg Accuracy</p>
@@ -260,23 +269,31 @@ export default function SoMCommandCenter() {
                             <Globe className="w-4 h-4 mr-2 text-emerald-500" />
                             SEO + GEO Readiness Audit
                         </h2>
-                        <div className="flex space-x-3 mb-4">
-                            <input
-                                type="url"
-                                value={seoUrl}
-                                onChange={(e) => setSeoUrl(e.target.value)}
-                                placeholder="https://yourbusiness.com"
-                                className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 outline-none"
-                                onKeyDown={(e) => { if (e.key === "Enter") runSEOAudit(); }}
-                            />
-                            <button
-                                onClick={runSEOAudit}
-                                disabled={seoLoading || !seoUrl}
-                                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm transition-colors"
-                            >
-                                {seoLoading ? "Auditing..." : "Audit"}
-                            </button>
-                        </div>
+                        {organization?.subscriptionTier === "starter" ? (
+                            <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
+                                <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth or Enterprise plan.</p>
+                                <p className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline">Upgrade to Growth to unlock</p>
+                            </div>
+                        ) : (
+                            <div className="flex space-x-3 mb-4">
+                                <input
+                                    type="url"
+                                    value={seoUrl}
+                                    onChange={(e) => setSeoUrl(e.target.value)}
+                                    placeholder="https://yourbusiness.com"
+                                    className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 outline-none"
+                                    onKeyDown={(e) => { if (e.key === "Enter") runSEOAudit(); }}
+                                />
+                                <button
+                                    onClick={runSEOAudit}
+                                    disabled={seoLoading || !seoUrl}
+                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm transition-colors"
+                                >
+                                    {seoLoading ? "Auditing..." : "Audit"}
+                                </button>
+                            </div>
+                        )}
 
                         {seoResult && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
