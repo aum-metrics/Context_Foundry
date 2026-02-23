@@ -8,7 +8,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles } from "lucide-react";
+import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles, Globe } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
@@ -134,12 +134,12 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div>
                             <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-6">
-                                The <span className="font-semibold text-indigo-600 dark:text-indigo-400">Agentic Commerce</span> Moat
+                                The <span className="font-semibold text-indigo-600 dark:text-indigo-400">AUM Context</span> Moat
                             </h2>
-                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8">
+                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
                                 Traditional SEO is dead. Tomorrow's buyers won't search Google; their AI agents will synthesize options and make purchasing decisions for them.
                             </p>
-                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8">
+                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
                                 Our platform ensures your enterprise data is the **most heavily weighted** and **least hallucinated** entity in the latent space of models like GPT-4, Claude, and Gemini.
                             </p>
 
@@ -243,12 +243,12 @@ export default function LandingPage() {
                             </div>
                             <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">Zero-Retention Ingestion</h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Built for CISO level compliance. Our **ARGUS-Thesis** pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches our disk.
+                                Built for CISO-level compliance. Our **Semantic Ingestion** pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches our persistent disk.
                             </p>
                             <ul className="space-y-2 text-xs text-slate-500 dark:text-fuchsia-300/60">
                                 <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> SOC2/CISO Audit Ready</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Volatile Buffer Flushing</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Direct Text-to-Schema Map</li>
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Volatitle Buffer Distillation</li>
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Verified JSON-LD Output</li>
                             </ul>
                         </motion.div>
 
@@ -400,7 +400,6 @@ export default function LandingPage() {
                 </footer>
             </main>
         </div>
-    ); >
     );
 }
 
