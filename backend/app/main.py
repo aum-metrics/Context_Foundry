@@ -168,10 +168,12 @@ load_router("api.workspaces", "/api/workspaces", "Workspaces")
 load_router("api.sso", "/api/sso", "Enterprise SSO")
 
 # ============================================================================
-# PAYMENTS & SEO
+# PAYMENTS, CHATBOT & SEO
 # ============================================================================
 load_router("api.payments", "/api/payments", "Razorpay Payments")
+load_router("api.chatbot", "/api/chatbot", "RAG Support Chatbot")
 load_router("api.seo", "/api/seo", "SEO/GEO Audit")
+
 
 logger.info("📡 Route loading complete\n")
 
