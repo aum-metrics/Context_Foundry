@@ -1,6 +1,9 @@
-# backend/app/main.py
 """
-AUM Analytics API - Main Application Entry Point
+Author: "Sambath Kumar Natarajan"
+Date: "26-Dec-2025"
+Org: " Start-up/AUM Data Labs"
+Product: "Context Foundry"
+Description: AUM Analytics API - Main Application Entry Point
 """
 
 from fastapi import FastAPI, Request
@@ -134,11 +137,13 @@ def load_router(module_path: str, prefix: str, tag: str) -> bool:
 logger.info("\n📡 Loading API routes...")
 
 load_router("api.auth", "/api/auth", "Authentication")
-load_router("api.data", "/api/data", "Data Management")
-load_router("api.intelligence", "/api/intelligence", "Business Intelligence")
+
+# ============================================================================
+# CORE CONTEXT FOUNDRY ENGINES
+# ============================================================================
+load_router("api.simulation", "/api/simulation", "LCRS Simulation Engine")
+load_router("api.ingestion", "/api/ingestion", "GEO Semantic Ingestion")
 load_router("api.query", "/api/query", "Query Engine")
-load_router("api.joins", "/api/joins", "Data Joins")
-load_router("api.payments", "/api/payments", "Payments")
 load_router("api.webhooks", "/api/webhooks", "Webhooks")
 load_router("api.collaboration", "/api/collaboration", "Collaboration")
 load_router("api.connectors", "/api/connectors", "Data Connectors")

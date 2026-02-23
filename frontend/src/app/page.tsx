@@ -1,7 +1,14 @@
+/**
+ * Author: "Sambath Kumar Natarajan"
+ * Date: "26-Dec-2025"
+ * Org: " Start-up/AUM Data Labs"
+ * Product: "Context Foundry"
+ * Description: Public Landing Page for AUM Context Foundry.
+ */
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun } from "lucide-react";
+import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
@@ -65,7 +72,7 @@ export default function LandingPage() {
                         <div className="relative group">
                             <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-full blur opacity-30 group-hover:opacity-70 transition duration-500"></div>
                             <Link href="/login" className="relative text-sm font-medium bg-slate-900 dark:bg-[#0a0a0a] border border-slate-700/50 dark:border-white/10 text-white px-6 py-2.5 rounded-full flex items-center transition-all">
-                                Start Building
+                                Request Audit
                             </Link>
                         </div>
                     </div>
@@ -114,7 +121,7 @@ export default function LandingPage() {
                         className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6"
                     >
                         <Link href="/login" className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center transition-all shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 transform hover:-translate-y-1">
-                            Deploy Context Manifest <ArrowRight className="ml-2 w-5 h-5" />
+                            Request Strategic Audit <ArrowRight className="ml-2 w-5 h-5" />
                         </Link>
                         <a href="#demo" className="w-full sm:w-auto px-8 py-4 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 font-medium flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                             <Play className="w-5 h-5 mr-2 text-indigo-500" /> Watch Demo
@@ -192,6 +199,83 @@ export default function LandingPage() {
                     </div>
                 </section>
 
+                {/* Proprietary Technical Moats: THE NICHE FEATURES */}
+                <section id="features" className="max-w-7xl mx-auto px-6 py-32 border-t border-slate-200 dark:border-white/5 relative overflow-hidden">
+                    {/* Animated background element for this section */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+
+                    <div className="text-center mb-20 relative z-10">
+                        <h2 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mb-4 text-center">Proprietary Technical Moats</h2>
+                        <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white text-center">Engineering the Future of Fact.</h3>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-12 relative z-10">
+                        {/* Moat 1: LCRS */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            viewport={{ once: true }}
+                            className="bg-white/40 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-8 rounded-[2.5rem] backdrop-blur-xl group hover:border-indigo-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/5"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                                <Binary className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">LCRS Math</h4>
+                            <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
+                                Our **Latent Contextual Rigor Scoring** engine uses high-dimension vector divergence (d &gt; ε_div) to mathematically prove AI accuracy against your ground truth.
+                            </p>
+                            <div className="font-mono text-[10px] bg-slate-100 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-white/5 text-slate-500 dark:text-indigo-300/60 leading-relaxed">
+                                d = 1.0 - (v_manifest ⋅ v_answer) / (||v_manifest|| ||v_answer||)
+                            </div>
+                        </motion.div>
+
+                        {/* Moat 2: Zero-Retention */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            viewport={{ once: true }}
+                            className="bg-white/40 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-8 rounded-[2.5rem] backdrop-blur-xl group hover:border-fuchsia-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-fuchsia-500/5"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-fuchsia-50 dark:bg-fuchsia-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                                <Lock className="w-7 h-7 text-fuchsia-600 dark:text-fuchsia-400" />
+                            </div>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">Zero-Retention Ingestion</h4>
+                            <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
+                                Built for CISO level compliance. Our **ARGUS-Thesis** pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches our disk.
+                            </p>
+                            <ul className="space-y-2 text-xs text-slate-500 dark:text-fuchsia-300/60">
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> SOC2/CISO Audit Ready</li>
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Volatile Buffer Flushing</li>
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Direct Text-to-Schema Map</li>
+                            </ul>
+                        </motion.div>
+
+                        {/* Moat 3: ASoV */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            viewport={{ once: true }}
+                            className="bg-white/40 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-8 rounded-[2.5rem] backdrop-blur-xl group hover:border-cyan-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/5"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-cyan-50 dark:bg-cyan-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                                <BarChart3 className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
+                            </div>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">ASoV Indexing</h4>
+                            <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
+                                Move beyond clicks. **Agentic Share of Voice** measures how often and how accurately your brand is cited by LLMs during competitive purchasing simulations.
+                            </p>
+                            <div className="flex items-center space-x-2">
+                                <span className="px-3 py-1 bg-cyan-500/10 text-cyan-500 rounded-full text-[10px] uppercase font-bold tracking-widest">Moat Factor: 1.8x</span>
+                                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[10px] uppercase font-bold tracking-widest">ASoV Score: Delta+</span>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+
                 {/* Demo Video Area */}
                 <section id="demo" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
                     <div className="text-center mb-16">
@@ -258,7 +342,7 @@ export default function LandingPage() {
                             </ul>
 
                             <Link href="/login" className="block w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:shadow-[0_0_40px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5">
-                                Secure Your Seat Today
+                                Request Enterprise Audit
                             </Link>
                         </div>
                     </div>

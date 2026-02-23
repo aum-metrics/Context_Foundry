@@ -1,3 +1,10 @@
+/**
+ * Author: "Sambath Kumar Natarajan"
+ * Date: "26-Dec-2025"
+ * Org: " Start-up/AUM Data Labs"
+ * Product: "Context Foundry"
+ * Description: Co-Intelligence Simulator UI for mathematical hallucination detection.
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -54,30 +61,35 @@ export default function CoIntelligenceSimulator() {
         setLoading(true);
 
         setChatLog(prev => [...prev, { role: "system", text: "Retrieving /llms.txt from edge..." }]);
-        setChatLog(prev => [...prev, { role: "system", text: "Synthesizing answer with Backend API..." }]);
-
         try {
-            const res = await fetch("/api/simulate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+            const response = await fetch('/api/simulation/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: promptText,
-                    manifestContent: manifestCache,
-                    apiKeys: apiKeysCache
-                })
+                    manifestContent: manifestCache, // Ground Truth for vector comparison
+                    apiKeys: apiKeysCache // Passed securely to backend
+                }),
             });
-            const data = await res.json();
 
-            setLoading(false);
+            if (!response.ok) throw new Error('Simulation Engine Offline');
+
+            const data = await response.json();
+
+            // MATH LOGIC:
+            // Backend returns d (divergence). Higher 'd' = Higher Hallucination.
+            // If d > epsilon_div, the AI flagged a hallucination.
             setChatLog(prev => [...prev, {
                 role: "ai",
                 text: data.answer || "No response generated.",
                 hasHallucination: data.hasHallucination || false,
-                score: data.score || 0.01
+                score: data.score || 0.01 // Vector divergence score
             }]);
         } catch (error) {
-            setLoading(false);
+            console.error('Simulation Failed:', error);
             setChatLog(prev => [...prev, { role: "system", text: "Error connecting to AI backend." }]);
+        } finally {
+            setLoading(false);
         }
     };
 

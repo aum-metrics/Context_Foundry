@@ -1,16 +1,42 @@
+/**
+ * Author: "Sambath Kumar Natarajan"
+ * Date: "26-Dec-2025"
+ * Org: " Start-up/AUM Data Labs"
+ * Product: "Context Foundry"
+ * Description: Semantic Ingestion UI for processing corporate assets into JSON-LD.
+ */
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { UploadCloud, FileText, CheckCircle2, ChevronRight, Terminal as TerminalIcon, Box } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useOrganization } from "./OrganizationContext";
+import { db } from "@/lib/firestorePaths";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function SemanticIngestion() {
+    const { organization } = useOrganization();
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
     const [isDragging, setIsDragging] = useState(false);
     const [schemaData, setSchemaData] = useState<string | null>(null);
+    const [apiKeysCache, setApiKeysCache] = useState<{ openai?: string, gemini?: string }>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Processing simulation logs
     const [logs, setLogs] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (!organization) return;
+        const fetchKeys = async () => {
+            try {
+                const orgDoc = await getDoc(doc(db, "organizations", organization.id));
+                if (orgDoc.exists() && orgDoc.data().apiKeys) {
+                    setApiKeysCache(orgDoc.data().apiKeys);
+                }
+            } catch (err) { }
+        };
+        fetchKeys();
+    }, [organization]);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -19,7 +45,82 @@ export default function SemanticIngestion() {
 
     const handleDragLeave = () => setIsDragging(false);
 
-    const simulateExtraction = async () => {
+    const triggerFileInput = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            simulateExtraction(e.target.files[0]);
+        }
+    };
+
+    /**
+     * Entry point for document processing.
+     * Hardened for Zero-Retention compliance by streaming directly to the 
+     * multipart/form-data payload without secondary disk caching.
+     */
+    const handleFileUpload = async (file: File) => {
+        if (!file) return;
+
+        setStep("processing");
+        setLogs([]);
+        setSchemaData(null);
+
+        setLogs(prev => [...prev, `Initiating secure ingestion for: ${file.name}`]);
+        setLogs(prev => [...prev, `Protocol: ARGUS-Thesis Zero-Retention Volatile Memory`]);
+
+        try {
+            await processWithPythonBackend(file);
+        } catch (error) {
+            console.error('Ingestion Error:', error);
+            setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : 'Unknown ingestion failure'}`]);
+        }
+    };
+
+
+    /**
+     * Orchestrates the communication with the Python FastAPI GEO Engine.
+     * 1. Packets the binary PDF and Auth Context.
+     * 2. Proxies through Next.js rewrite to local:8000.
+     * 3. Receives and renders the structured JSON-LD schema.
+     */
+    const processWithPythonBackend = async (file: File) => {
+        setLogs(prev => [...prev, "Connecting to Python GEO Ingestion Engine..."]);
+
+        // Assemble Multi-Part Form Data
+        const formData = new FormData();
+        formData.append('file', file);
+        if (apiKeysCache.openai) {
+            formData.append('openai_key', apiKeysCache.openai);
+        }
+
+        const response = await fetch('/api/ingestion/parse', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Backend processing failed');
+        }
+
+        setLogs(prev => [...prev, "PDF Binary Streamed to Volatile Memory. (Zero-Retention Active)"]);
+        setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
+
+        const result = await response.json();
+
+        // Update UI state with extracted JSON-LD
+        setSchemaData(JSON.stringify(result, null, 2));
+        setLogs(prev => [...prev, "SUCCESS: Structured JSON-LD generated."]);
+
+        // Move to editor view
+        setTimeout(() => setStep("editor"), 1500);
+    };
+
+    const simulateExtraction = async (file: File) => {
         setStep("processing");
         const stages = [
             "[SYS] Initializing Adversarial Logic Extraction...",
@@ -37,20 +138,25 @@ export default function SemanticIngestion() {
         }, 800);
 
         try {
-            const res = await fetch("/api/ingest", {
+            const formData = new FormData();
+            formData.append("file", file);
+            if (apiKeysCache.openai) {
+                formData.append("openai_key", apiKeysCache.openai);
+            }
+
+            const res = await fetch("/api/ingestion/parse", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ unstructuredData: "Acme Enterprise CRM is a comprehensive suite designed to optimize sales workflows. Pricing starts at $99/user/month for the professional tier." })
+                body: formData
             });
-            const data = await res.json();
+            const schemaJson = await res.json();
 
             clearInterval(interval);
             setLogs((prev) => [...prev, "[SUCCESS] Extraction complete. Ready for Schema Editor."]);
 
-            if (data.schema) {
-                setSchemaData(JSON.stringify(data.schema, null, 2));
+            if (res.ok) {
+                setSchemaData(JSON.stringify(schemaJson, null, 2));
             } else {
-                setSchemaData(JSON.stringify({ error: data.error || "Failed API" }, null, 2));
+                setSchemaData(JSON.stringify({ error: schemaJson.detail || "Failed API" }, null, 2));
             }
 
             setTimeout(() => setStep("editor"), 1500);
@@ -80,6 +186,7 @@ export default function SemanticIngestion() {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="w-full max-w-2xl"
                         >
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf" className="hidden" />
                             <div
                                 className={`relative group rounded-3xl border-2 border-dashed transition-all duration-300 ${isDragging
                                     ? "border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-400/10"
@@ -90,9 +197,11 @@ export default function SemanticIngestion() {
                                 onDrop={(e) => {
                                     e.preventDefault();
                                     setIsDragging(false);
-                                    simulateExtraction();
+                                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                        simulateExtraction(e.dataTransfer.files[0]);
+                                    }
                                 }}
-                                onClick={simulateExtraction}
+                                onClick={triggerFileInput}
                             >
                                 <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-sm dark:shadow-none">
                                     <UploadCloud className={`w-10 h-10 ${isDragging ? "text-cyan-500 dark:text-cyan-400" : "text-slate-400 group-hover:text-cyan-500 dark:group-hover:text-cyan-400"}`} />
