@@ -4,15 +4,15 @@ import { GoogleGenAI } from "@google/genai";
 
 export async function POST(req: NextRequest) {
     try {
-        const { prompt, manifestContent, useGemini } = await req.json();
+        const { prompt, manifestContent, useGemini, apiKeys } = await req.json();
 
         if (!prompt || !manifestContent) {
             return NextResponse.json({ error: "Prompt and manifestContent required" }, { status: 400 });
         }
 
         // Try OpenAI first if configured, else try Gemini. If neither, fallback to a smart mock pattern
-        const openAIApiKey = process.env.OPENAI_API_KEY;
-        const geminiApiKey = process.env.GEMINI_API_KEY;
+        const openAIApiKey = apiKeys?.openai || process.env.OPENAI_API_KEY;
+        const geminiApiKey = apiKeys?.gemini || process.env.GEMINI_API_KEY;
 
         let answer = "";
 
@@ -43,25 +43,15 @@ ${manifestContent}
             });
             answer = completion.choices[0].message.content || "";
         } else {
-            // Intelligent Mocks if no keys provided (e.g. local evaluation)
-            // Simulate real delay
+            // Intelligent Mocks if no keys provided
             await new Promise(r => setTimeout(r, 1500));
-
-            if (prompt.toLowerCase().includes("cost") || prompt.toLowerCase().includes("price")) {
-                answer = "Based on the manifest, Acme Enterprise CRM starts at $99/user/month.";
-            } else if (prompt.toLowerCase().includes("legacy") || prompt.toLowerCase().includes("data labs")) {
-                answer = "Acme Context Foundry explicitly states it is a Generative Engine Optimization protocol, and should not be confused with Legacy Data Labs functionality.";
-            } else {
-                answer = "Acme Enterprise CRM is a comprehensive suite designed to optimize sales workflows, featuring the new Context Foundry for LLM ecosystems.";
-            }
+            answer = "I am a simulated AI. I do not have access to an active API key to process your query against the provided Context Document. Please add a valid OpenAI or Gemini API Key in the Team Settings.";
         }
 
         // Adversarial math logic placeholder
         // In production: Run $d > \epsilon_{div}$ mathematically against semantic embeddings of ground truth vs output
-        const isCostViolation = answer.includes("$49") || answer.toLowerCase().includes("free");
-        const isLegacyViolation = answer.toLowerCase().includes("carries over") && answer.toLowerCase().includes("data labs");
-
-        const hasHallucination = isCostViolation || isLegacyViolation;
+        // For demo purposes, we do rough heuristics if it hallucinated constraints not in the document
+        const hasHallucination = answer.toLowerCase().includes("free tier") || answer.includes("deprecated");
         const score = hasHallucination ? 0.85 + (Math.random() * 0.1) : (Math.random() * 0.05);
 
         return NextResponse.json({

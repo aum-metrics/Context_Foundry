@@ -1,22 +1,54 @@
 "use client";
 
-import { useState } from "react";
-import { MessageSquare, Beaker, Send, AlertTriangle, Cpu, Share2, Activity, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MessageSquare, Beaker, Send, AlertTriangle, Cpu, Share2, Activity, Zap, ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const prompts = [
-    "What is the best enterprise CRM for a 500-person team?",
-    "How much does Acme CRM cost?",
-    "Does Acme CRM have an AI integration?",
-    "Compare Acme CRM vs Legacy Data Labs."
-];
+import { useOrganization } from "./OrganizationContext";
+import { db } from "@/lib/firestorePaths";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function CoIntelligenceSimulator() {
-    const [activePrompt, setActivePrompt] = useState(prompts[0]);
+    const { organization } = useOrganization();
+    const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
+        "What is the best enterprise solution for this category?",
+        "How much does it cost?",
+        "Does it have an AI integration?",
+    ]);
+    const [activePrompt, setActivePrompt] = useState("");
     const [chatLog, setChatLog] = useState<{ role: "system" | "user" | "ai", text: string, hasHallucination?: boolean, score?: number }[]>([]);
     const [loading, setLoading] = useState(false);
+    const [manifestCache, setManifestCache] = useState("No semantic document uploaded yet.");
+    const [apiKeysCache, setApiKeysCache] = useState({});
+
+    useEffect(() => {
+        if (!organization) return;
+        setDynamicPrompts([
+            `What is the core offering of ${organization.name}?`,
+            `What is the pricing model for ${organization.name}?`,
+            `Does ${organization.name} offer API integration?`,
+            `Compare ${organization.name} against previous legacy tools.`
+        ]);
+        setActivePrompt(`What is the core offering of ${organization.name}?`);
+
+        const fetchData = async () => {
+            try {
+                const orgDoc = await getDoc(doc(db, "organizations", organization.id));
+                if (orgDoc.exists() && orgDoc.data().apiKeys) {
+                    setApiKeysCache(orgDoc.data().apiKeys);
+                }
+                const manifestDoc = await getDoc(doc(db, "organizations", organization.id, "manifests", "default"));
+                if (manifestDoc.exists() && manifestDoc.data().content) {
+                    setManifestCache(manifestDoc.data().content);
+                } else {
+                    setManifestCache(`Default verified Context Document for ${organization.name}. Pricing: Contact Sales.`);
+                }
+            } catch (err) { }
+        };
+        fetchData();
+    }, [organization]);
 
     const handleSimulate = async (promptText: string) => {
+        if (!promptText) return;
         setActivePrompt(promptText);
         setChatLog([{ role: "user", text: promptText }]);
         setLoading(true);
@@ -30,7 +62,8 @@ export default function CoIntelligenceSimulator() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     prompt: promptText,
-                    manifestContent: "Acme Enterprise CRM. Price: $99/mo. GEO protocol powered."
+                    manifestContent: manifestCache,
+                    apiKeys: apiKeysCache
                 })
             });
             const data = await res.json();
@@ -67,7 +100,7 @@ export default function CoIntelligenceSimulator() {
                             <Zap className="w-4 h-4 mr-2 text-cyan-600 dark:text-cyan-400" /> Synthetic Prompts
                         </h3>
                         <div className="space-y-3 overflow-y-auto flex-1 pr-2">
-                            {prompts.map((p, i) => (
+                            {dynamicPrompts.map((p, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleSimulate(p)}

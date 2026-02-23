@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Activity, Brain, ArrowUpRight, Search, ShieldAlert } from "lucide-react";
+import { Activity, ArrowUpRight, Search, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "@/lib/firestorePaths";
 import { collection, doc, getDocs, setDoc, query } from "firebase/firestore";
@@ -84,8 +85,8 @@ export default function SoMCommandCenter() {
         <div className="w-full h-full animate-fade-in font-sans">
             <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 pb-6 border-b border-slate-200 dark:border-white/5">
                 <div className="flex items-center space-x-4">
-                    <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 backdrop-blur-md">
-                        <Brain className="w-8 h-8 text-indigo-400" />
+                    <div className="w-14 h-14 relative p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 backdrop-blur-md flex items-center justify-center">
+                        <Image src="/favicon.ico" alt="AUM Logo" width={32} height={32} className="object-contain drop-shadow-lg" />
                     </div>
                     <div>
                         <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">AUM Context Foundry</h1>

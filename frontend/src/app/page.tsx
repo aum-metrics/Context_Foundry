@@ -204,6 +204,32 @@ export default function LandingPage() {
                     </div>
                 </section>
 
+                {/* Brutally Honest Testimonials */}
+                <section id="proof" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4 text-slate-900 dark:text-white">Zero Hallucinated Proof</h2>
+                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                            We don't buy fake reviews. AUM Context Foundry is a bleeding-edge early-adopter product.<br />
+                            We are currently onboarding our Alpha Cohort. Once our clients' ASoV verifiable metrics cross target thresholds next quarter, their quotes will go here.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-white/5 dark:to-white/5 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-700"></div>
+                                <div className="relative rounded-xl border border-dashed border-slate-300 dark:border-white/10 bg-slate-50/50 dark:bg-[#0a0a0a]/50 p-8 shadow-sm flex flex-col items-center justify-center h-full text-center">
+                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-400 dark:text-slate-500">
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-2">Reserved Space</p>
+                                    <p className="text-slate-400 dark:text-slate-500 italic text-sm">Waiting for verified semantic indexing results algorithmically.</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
                 {/* Pricing Strategy */}
                 <section id="pricing" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
                     <div className="text-center mb-16">
