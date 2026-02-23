@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -67,3 +68,4 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+.streamlit/secrets.toml
