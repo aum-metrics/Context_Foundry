@@ -61,7 +61,7 @@ logger.info("🚀 Initializing AUM Analytics API...")
 app = FastAPI(
     title="AUM Context Foundry API",
     description="Contextual Rigor & Generative Engine Optimization (GEO) Infrastructure",
-    version="2.1.0",
+    version="2.2.0-hardened",
     docs_url="/api/docs",
     redoc_url="/api/redoc"
 )
@@ -184,7 +184,7 @@ async def root():
     """Root endpoint"""
     return {
         "message": "AUM Analytics API",
-        "version": "2.0.0",
+        "version": "2.2.0-hardened",
         "status": "operational",
         "docs": "/api/docs",
         "health": "/api/health"
@@ -193,11 +193,29 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    """Service health status"""
+    """Service health status with dependency validation"""
+    firestore_status = "unconfigured"
+    try:
+        from core.firebase_config import db
+        if db:
+            # Performs a lightweight read to verify connectivity
+            db.collection("health_check").document("ping").get()
+            firestore_status = "connected"
+        else:
+            firestore_status = "unavailable"
+    except Exception as e:
+        logger.error(f"Health check: Firestore unreachable: {e}")
+        firestore_status = "disconnected"
+
+    status = "healthy" if firestore_status == "connected" else "degraded"
+    
     return {
-        "status": "healthy",
+        "status": status,
         "service": "aum-api",
-        "version": "2.0.0"
+        "version": "2.2.0-hardened",
+        "dependencies": {
+            "firestore": firestore_status
+        }
     }
 
 # ============================================================================
@@ -208,8 +226,23 @@ async def health_check():
 async def on_startup():
     """Application startup"""
     logger.info("\n" + "="*60)
-    logger.info("🚀 AUM ANALYTICS API STARTUP")
+    logger.info("🚀 AUM ANALYTICS API STARTUP - v2.2.0-hardened")
     logger.info("="*60)
+    
+    # Check Required Environment Variables
+    required_secrets = [
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "RAZORPAY_KEY_ID",
+        "RAZORPAY_KEY_SECRET"
+    ]
+    missing = [s for s in required_secrets if not os.getenv(s)]
+    if missing:
+        logger.critical(f"❌ MISSSING MISSION-CRITICAL SECRETS: {', '.join(missing)}")
+        logger.critical("🛑 APPLICATION SHUTDOWN INITIATED.")
+        import sys
+        sys.exit(1)
     
     # Check environment
     from core.config import settings
