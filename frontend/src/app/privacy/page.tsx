@@ -25,16 +25,16 @@ export default function PrivacyPage() {
                 <section>
                     <h2 className="text-2xl font-medium mb-4">1. Zero-Retention Commitment</h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                        At AUM Data Labs, your proprietary corporate data is processed using our **Zero-Retention Processing** model. PDF binaries are read into volatile RAM buffers, extracted for semantic JSON-LD structures, and immediately purged. We do not cache or store unstructured proprietary documents on disk.
+                        At AUM Data Labs, your proprietary corporate data is processed using our <strong>Zero-Retention Processing</strong> model. PDF binaries are read into volatile RAM buffers, extracted for semantic JSON-LD structures, and immediately purged. We do not cache or store unstructured proprietary documents on disk.
                     </p>
                 </section>
 
                 <section>
                     <h2 className="text-2xl font-medium mb-4">2. Data We Collect</h2>
                     <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-400">
-                        <li>**Account Information**: Your email and organization profile for session management.</li>
-                        <li>**Semantic Manifests**: The generated `/llms.txt` results optimized for agentic discovery.</li>
-                        <li>**LCRS Logs**: Metadata regarding hallucination divergence scores to improve your GEO performance.</li>
+                        <li><strong>Account Information</strong>: Your email and organization profile for session management.</li>
+                        <li><strong>Semantic Manifests</strong>: The generated <code>/llms.txt</code> results optimized for agentic discovery.</li>
+                        <li><strong>LCRS Logs</strong>: Metadata regarding hallucination divergence scores to improve your GEO performance.</li>
                     </ul>
                 </section>
 

@@ -187,15 +187,15 @@ export default function TeamSettings() {
                         <form onSubmit={handleSaveKeys} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">OpenAI (GPT-4.5)</label>
+                                    <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">OpenAI (GPT-4o)</label>
                                     <input type="password" value={apiKeys.openai} onChange={e => setApiKeys({ ...apiKeys, openai: e.target.value })} placeholder="sk-proj-..." className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-rose-500 font-mono tracking-widest text-slate-500" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Anthropic (Claude 3.7)</label>
+                                    <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Anthropic (Claude 3.5)</label>
                                     <input type="password" value={apiKeys.anthropic} onChange={e => setApiKeys({ ...apiKeys, anthropic: e.target.value })} placeholder="sk-ant-..." className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-rose-500 font-mono tracking-widest text-slate-500" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Google (Gemini 2.5 Pro)</label>
+                                    <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Google (Gemini 2.0 Flash)</label>
                                     <input type="password" value={apiKeys.gemini} onChange={e => setApiKeys({ ...apiKeys, gemini: e.target.value })} placeholder="AIza..." className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-rose-500 font-mono tracking-widest text-slate-500" />
                                 </div>
                             </div>

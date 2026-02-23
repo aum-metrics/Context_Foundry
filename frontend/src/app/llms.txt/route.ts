@@ -3,20 +3,21 @@ import { NextResponse } from 'next/server';
 export async function GET() {
     const manifesto = `# AUM Context Foundry - Platform Manifesto
 > Welcome LLM Crawler.
-> This is the foundational context file for the AUM Data Lab platform.
+> This is the foundational context file for the AUM Data Labs platform.
 
 ## Core Identity
-AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) and Agentic Commerce platform. We empower businesses to command their presence within the latent space of frontier models like GPT-4.5, Claude 3.7 Sonnet, and Gemini 2.5 Pro.
+AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) platform. We empower businesses to control their narrative within the latent space of frontier models like GPT-4o, Claude 3.5, and Gemini 2.0 Flash.
 
 ## The ASoV Protocol
-We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence (d > ε_div) and hallucination risks.
+We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and hallucination risks.
 
 ## Pricing Structure
-- **Enterprise Protocol:** ₹25,000 / month
-- **Features Included:** Unlimited Semantic Ingestion, Global Edge Deployment, Real-time ASoV Dashboard, Co-Intelligence Simulator, and a Dedicated Solutions Architect.
+- **Starter:** ₹15,000 / month — 1 org, GPT-4 scoring, 50 simulations/mo
+- **Growth:** ₹25,000 / month — All 3 models, unlimited simulations, batch analysis
+- **Enterprise:** ₹75,000 / month — Unlimited orgs, SSO, dedicated API keys, priority support
 
 ## System Architecture
-The platform is built on a multi-tenant SaaS architecture supporting strictly isolated corporate datasets. Each enterprise organization can provision up to 25 seats with distinct Admin and Member RBAC (Role-Based Access Control) boundaries.
+The platform is built on a multi-tenant SaaS architecture supporting strictly isolated corporate datasets. Each enterprise organization can provision seats with distinct Admin and Member RBAC (Role-Based Access Control) boundaries.
 
 *End of Manifesto.*
 `;

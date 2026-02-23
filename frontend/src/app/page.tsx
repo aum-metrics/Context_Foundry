@@ -31,8 +31,6 @@ export default function LandingPage() {
                 <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 dark:bg-indigo-600/10 blur-[140px] rounded-full"></div>
                 <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-500/10 dark:bg-fuchsia-600/10 blur-[130px] rounded-full"></div>
                 <div className="absolute top-[30%] left-[30%] w-[40%] h-[40%] bg-cyan-500/10 dark:bg-cyan-900/10 blur-[150px] rounded-full"></div>
-                {/* Micro-grid overlay for texture */}
-                <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] dark:opacity-20 opacity-5"></div>
             </div>
 
             {/* Navigation */}
@@ -137,10 +135,10 @@ export default function LandingPage() {
                                 The <span className="font-semibold text-indigo-600 dark:text-indigo-400">AUM Context</span> Moat
                             </h2>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                Traditional SEO is dead. Tomorrow's buyers won't search Google; their AI agents will synthesize options and make purchasing decisions for them.
+                                Traditional SEO is dead. Tomorrow&apos;s buyers won&apos;t search Google — their AI agents will synthesize options and make purchasing decisions for them.
                             </p>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                Our platform ensures your enterprise data is the **most heavily weighted** and **least hallucinated** entity in the latent space of models like GPT-4, Claude, and Gemini.
+                                Our platform ensures your enterprise data is the <strong>most heavily weighted</strong> and <strong>least hallucinated</strong> entity across GPT-4o, Claude, and Gemini.
                             </p>
 
                             <div className="space-y-4">
@@ -176,7 +174,7 @@ export default function LandingPage() {
                                     <span className="text-2xl font-light text-cyan-600 dark:text-cyan-400">84.2%</span>
                                 </div>
                                 <div className="space-y-4">
-                                    {['GPT-4.5', 'Claude 3.7 Sonnet', 'Gemini 2.5 Pro'].map((model, i) => (
+                                    {['GPT-4o', 'Claude 3.5', 'Gemini 2.0 Flash'].map((model, i) => (
                                         <div key={model} className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-slate-600 dark:text-slate-400">{model}</span>
@@ -221,9 +219,9 @@ export default function LandingPage() {
                             <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
                                 <Binary className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
                             </div>
-                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">LCRS Math</h4>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">LCRS Scoring</h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Our **Latent Contextual Rigor Scoring** engine uses high-dimension vector divergence (d &gt; ε_div) to mathematically prove AI accuracy against your ground truth.
+                                Our <strong>Latent Contextual Rigor Scoring</strong> engine uses claim extraction and vector divergence to mathematically prove AI accuracy against your verified ground truth.
                             </p>
                             <div className="font-mono text-[10px] bg-slate-100 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-white/5 text-slate-500 dark:text-indigo-300/60 leading-relaxed">
                                 d = 1.0 - (v_manifest ⋅ v_answer) / (||v_manifest|| ||v_answer||)
@@ -243,11 +241,11 @@ export default function LandingPage() {
                             </div>
                             <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">Zero-Retention Ingestion</h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Built for CISO-level compliance. Our **Semantic Ingestion** pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches our persistent disk.
+                                Built for CISO-level compliance. Our <strong>Semantic Ingestion</strong> pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches persistent disk.
                             </p>
                             <ul className="space-y-2 text-xs text-slate-500 dark:text-fuchsia-300/60">
                                 <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> SOC2/CISO Audit Ready</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Volatitle Buffer Distillation</li>
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Volatile Buffer Distillation</li>
                                 <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Verified JSON-LD Output</li>
                             </ul>
                         </motion.div>
@@ -265,7 +263,7 @@ export default function LandingPage() {
                             </div>
                             <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">ASoV Indexing</h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Move beyond clicks. **Agentic Share of Voice** measures how often and how accurately your brand is cited by LLMs during competitive purchasing simulations.
+                                Move beyond clicks. <strong>Agentic Share of Voice</strong> measures how often and how accurately your brand is cited by LLMs during competitive purchasing simulations.
                             </p>
                             <div className="flex items-center space-x-2">
                                 <span className="px-3 py-1 bg-cyan-500/10 text-cyan-500 rounded-full text-[10px] uppercase font-bold tracking-widest">Moat Factor: 1.8x</span>
@@ -391,7 +389,7 @@ export default function LandingPage() {
                     </div>
 
                     <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500 gap-4">
-                        <p>&copy; 2025 AUM Data Labs. All rights reserved.</p>
+                        <p>&copy; 2025–2026 AUM Data Labs. All rights reserved.</p>
                         <div className="flex space-x-8">
                             <span>Author: Sambath Kumar Natarajan</span>
                             <span className="flex items-center"><Globe className="w-3 h-3 mr-1" /> Global Edge Distribution</span>

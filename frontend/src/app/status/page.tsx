@@ -29,7 +29,7 @@ export default function StatusPage() {
                     <span>All Systems Operational</span>
                 </div>
                 <h1 className="text-5xl font-light tracking-tighter mb-4">System Status</h1>
-                <p className="text-slate-500">Real-time performance metrics for the Agentic Commerce Protocol.</p>
+                <p className="text-slate-500">Real-time performance metrics for AUM Context Foundry services.</p>
             </header>
 
             <main className="max-w-4xl mx-auto space-y-6">

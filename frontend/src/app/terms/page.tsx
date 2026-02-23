@@ -32,7 +32,7 @@ export default function TermsPage() {
                 <section>
                     <h2 className="text-2xl font-medium mb-4">2. Agentic Integrity</h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                        Users must not use the LCRS engine to intentionally generate deceptive latent-space signals. We empower enterprises to be **factually accurate**, not synthetically dominant.
+                        Users must not use the LCRS engine to intentionally generate deceptive latent-space signals. We empower enterprises to be <strong>factually accurate</strong>, not synthetically dominant.
                     </p>
                 </section>
 
