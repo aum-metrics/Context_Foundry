@@ -13,6 +13,8 @@ import numpy as np
 
 from openai import OpenAI
 from google import genai
+from core.firebase_config import db
+from core.config import settings
 
 router = APIRouter()
 
@@ -40,33 +42,64 @@ def cosine_sim(v1, v2):
 
 class SimulationRequest(BaseModel):
     prompt: str
-    manifestContent: str
+    orgId: str
+    manifestVersion: Optional[str] = "latest"
     useGemini: Optional[bool] = False
-    apiKeys: Optional[Dict[str, str]] = {}
 
 @router.post("/evaluate")
-async def evaluate_simulation(request: SimulationRequest):
     """
     LCRS Simulation Pipeline:
-    1. PROMPT: Sends context-aware system prompt to the designated LLM (GPT-4 / Gemini).
+    1. CONTEXT: Fetches targeted Manifest Version and API Keys from Firestore.
     2. GENERATE: Captures the raw AI response based on the active Context Manifest.
     3. EMBED: Generates high-dimension vectors via API to ensure environment compatibility.
     4. SCORE: Performs (d > eps_div) divergence check to mathematically prove accuracy.
-    
-    Returns:
-        JSON: { answer: str, hasHallucination: bool, score: float }
     """
-    if not request.prompt or not request.manifestContent:
-        raise HTTPException(status_code=400, detail="Prompt and manifestContent required")
+    if not request.prompt or not request.orgId:
+        raise HTTPException(status_code=400, detail="Prompt and orgId required")
 
-    keys = request.apiKeys or {}
-    open_ai_key = keys.get("openai") or os.getenv("OPENAI_API_KEY")
-    gemini_key = keys.get("gemini") or os.getenv("GEMINI_API_KEY")
+    # 1. Fetch Secure Multi-Tenant Context from Firestore
+    if not db:
+        raise HTTPException(status_code=500, detail="Firestore not initialized on backend.")
+
+    try:
+        org_ref = db.collection("organizations").document(request.orgId)
+        org_doc = org_ref.get()
+        
+        if not org_doc.exists:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        
+        org_data = org_doc.to_dict()
+        api_keys = org_data.get("apiKeys", {})
+        
+        # Determine Manifest Content (Earlier vs Reload)
+        manifest_content = ""
+        if request.manifestVersion == "latest":
+            # For latest, we assume it's stored on the org doc or in a subcollection
+            # Checking subcollection 'manifests' for the most recent one
+            manifests = org_ref.collection("manifests").order_by("createdAt", direction="DESCENDING").limit(1).stream()
+            latest_manifest = next(manifests, None)
+            if latest_manifest:
+                manifest_content = latest_manifest.to_dict().get("content", "")
+        else:
+            # Fetch specific version
+            version_doc = org_ref.collection("manifests").document(request.manifestVersion).get()
+            if version_doc.exists:
+                manifest_content = version_doc.to_dict().get("content", "")
+        
+        if not manifest_content:
+            # Fallback to placeholder if manifest is missing
+            raise HTTPException(status_code=400, detail="No Context Manifest found for this version.")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firestore Access Error: {e}")
+
+    open_ai_key = api_keys.get("openai") or os.getenv("OPENAI_API_KEY")
+    gemini_key = api_keys.get("gemini") or os.getenv("GEMINI_API_KEY")
 
     system_prompt = f"""You are a knowledgeable AI assistant. Use the following Context Document to answer the user's question accurately. Do not invent pricing, features, or constraints not explicitly present in the Context Document.
 
 <Context Document>
-{request.manifestContent}
+{manifest_content}
 </Context Document>"""
 
     answer = ""
@@ -92,11 +125,9 @@ async def evaluate_simulation(request: SimulationRequest):
             )
             answer = completion.choices[0].message.content or ""
         else:
-            answer = "I am a simulated AI. I do not have access to an active API key. Please add a valid OpenAI or Gemini API Key in the Team Settings."
-            return {"answer": answer, "hasHallucination": True, "score": 1.0}
+            return {"answer": "Error: Active API Key not found in Organization Vault.", "hasHallucination": True, "score": 1.0}
             
     except Exception as e:
-        print(f"Model Gen Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     # Perform True Mathematical Verification: (d > ε_div)
@@ -105,24 +136,17 @@ async def evaluate_simulation(request: SimulationRequest):
 
     if open_ai_key:
         try:
-            # Generate Embeddings via API (Passes CISO local DLL audits)
             client = OpenAI(api_key=open_ai_key)
             
-            # Get Ground Truth (Manifest) Vector
-            manifest_resp = client.embeddings.create(input=[request.manifestContent], model="text-embedding-3-small")
+            # Use specific manifest for embedding comparison
+            manifest_resp = client.embeddings.create(input=[manifest_content], model="text-embedding-3-small")
             manifest_vec = np.array(manifest_resp.data[0].embedding)
             
-            # Get Generated Answer Vector
             answer_resp = client.embeddings.create(input=[answer], model="text-embedding-3-small")
             answer_vec = np.array(answer_resp.data[0].embedding)
             
-            # Calculate Similarity
             sim = cosine_sim(manifest_vec, answer_vec)
-            
-            # d = 1.0 - sim (Divergence metric)
             divergence_score = 1.0 - sim
-            
-            # Set ε_div Threshold (Strictness)
             eps_div = 0.45 
             
             if divergence_score > eps_div:
@@ -130,18 +154,11 @@ async def evaluate_simulation(request: SimulationRequest):
                 
         except Exception as e:
             print(f"Embedding/Math Error: {e}")
-            # Fallback for UI if API fails
-            if "free tier" in answer.lower() or "deprecated" in answer.lower():
-                has_hallucination = True
-                divergence_score = 0.85
-    else:
-        # Fallback keyword logic if no key for embeddings
-        if "free tier" in answer.lower() or "deprecated" in answer.lower():
-            has_hallucination = True
-        divergence_score = 0.85 if has_hallucination else 0.05
-
+            divergence_score = 0.85 # Fallback
+    
     return {
         "answer": answer,
         "hasHallucination": has_hallucination,
-        "score": float(divergence_score)
+        "score": float(divergence_score),
+        "version": request.manifestVersion
     }

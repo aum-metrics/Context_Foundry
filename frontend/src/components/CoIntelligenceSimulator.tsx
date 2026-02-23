@@ -22,10 +22,11 @@ export default function CoIntelligenceSimulator() {
         "Does it have an AI integration?",
     ]);
     const [activePrompt, setActivePrompt] = useState("");
-    const [chatLog, setChatLog] = useState<{ role: "system" | "user" | "ai", text: string, hasHallucination?: boolean, score?: number }[]>([]);
+    const [chatLog, setChatLog] = useState<{ role: "system" | "user" | "ai", text: string, hasHallucination?: boolean, score?: number, version?: string }[]>([]);
     const [loading, setLoading] = useState(false);
+    const [manifestVersions, setManifestVersions] = useState<{ id: string, name: string }[]>([]);
+    const [selectedVersion, setSelectedVersion] = useState("latest");
     const [manifestCache, setManifestCache] = useState("No semantic document uploaded yet.");
-    const [apiKeysCache, setApiKeysCache] = useState({});
 
     useEffect(() => {
         if (!organization) return;
@@ -39,15 +40,15 @@ export default function CoIntelligenceSimulator() {
 
         const fetchData = async () => {
             try {
-                const orgDoc = await getDoc(doc(db, "organizations", organization.id));
-                if (orgDoc.exists() && orgDoc.data().apiKeys) {
-                    setApiKeysCache(orgDoc.data().apiKeys);
-                }
-                const manifestDoc = await getDoc(doc(db, "organizations", organization.id, "manifests", "default"));
+                // Fetch available manifest versions for 'Earlier vs Reload' comparison
+                const orgRef = doc(db, "organizations", organization.id);
+                const manifestDoc = await getDoc(doc(orgRef, "manifests", "default"));
                 if (manifestDoc.exists() && manifestDoc.data().content) {
                     setManifestCache(manifestDoc.data().content);
+                    setManifestVersions([{ id: "latest", name: "Current Context" }, { id: "v1_baseline", name: "V1 Baseline (Earlier)" }]);
                 } else {
                     setManifestCache(`Default verified Context Document for ${organization.name}. Pricing: Contact Sales.`);
+                    setManifestVersions([{ id: "latest", name: "Current Context" }]);
                 }
             } catch (err) { }
         };
@@ -67,8 +68,9 @@ export default function CoIntelligenceSimulator() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: promptText,
-                    manifestContent: manifestCache, // Ground Truth for vector comparison
-                    apiKeys: apiKeysCache // Passed securely to backend
+                    orgId: organization?.id,
+                    manifestVersion: selectedVersion,
+                    useGemini: false
                 }),
             });
 
@@ -83,7 +85,8 @@ export default function CoIntelligenceSimulator() {
                 role: "ai",
                 text: data.answer || "No response generated.",
                 hasHallucination: data.hasHallucination || false,
-                score: data.score || 0.01 // Vector divergence score
+                score: data.score || 0.01,
+                version: data.version
             }]);
         } catch (error) {
             console.error('Simulation Failed:', error);
@@ -152,8 +155,16 @@ export default function CoIntelligenceSimulator() {
                             <MessageSquare className="w-4 h-4 mr-2 text-amber-500 cursor-auto" /> Agent Response Sandbox
                         </h3>
 
-                        <div className="flex items-center space-x-1 border border-slate-300 dark:border-slate-800 rounded-md p-1 bg-slate-200 dark:bg-slate-900">
-                            <span className="px-3 py-1 text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-sm shadow-sm dark:shadow-none">Global Mode</span>
+                        <div className="flex items-center space-x-2">
+                            <select
+                                value={selectedVersion}
+                                onChange={(e) => setSelectedVersion(e.target.value)}
+                                className="text-[10px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded px-2 py-1 outline-none text-slate-600 dark:text-slate-300 uppercase tracking-widest font-semibold"
+                            >
+                                {manifestVersions.map(v => (
+                                    <option key={v.id} value={v.id}>{v.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

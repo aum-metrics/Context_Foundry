@@ -35,6 +35,35 @@ export default function SoMCommandCenter() {
     const [activeTab, setActiveTab] = useState<"gemini" | "claude" | "gpt4">("gpt4");
     const [loading, setLoading] = useState(true);
     const [chartData, setChartData] = useState<Record<string, unknown>[]>([]);
+    const [batchLoading, setBatchLoading] = useState(false);
+    const [batchResult, setBatchResult] = useState<{ domainStability: number, hallucinationRate: number } | null>(null);
+
+    const runBatchStabilityCheck = async () => {
+        if (!organization) return;
+        setBatchLoading(true);
+        try {
+            const response = await fetch('/api/batch/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orgId: organization.id,
+                    prompts: [
+                        "What is our current Enterprise pricing?",
+                        "Is the /llms.txt synced at edge?",
+                        "Does AUM support multi-tenant API isolation?",
+                        "What is the LCRS drift threshold?"
+                    ],
+                    manifestVersion: "latest"
+                })
+            });
+            const data = await response.json();
+            setBatchResult(data);
+        } catch (err) {
+            console.error("Batch Error:", err);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (!organization) return;
@@ -94,6 +123,20 @@ export default function SoMCommandCenter() {
                     </div>
                 </div>
                 <div className="mt-4 md:mt-0 flex items-center space-x-6">
+                    {batchResult && (
+                        <div className="hidden md:block bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-4 py-2">
+                            <div className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Domain Stability</div>
+                            <div className="text-xl font-light text-white">{(batchResult.domainStability * 100).toFixed(1)}%</div>
+                        </div>
+                    )}
+                    <button
+                        onClick={runBatchStabilityCheck}
+                        disabled={batchLoading}
+                        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs px-4 py-2 rounded-lg transition-colors flex items-center"
+                    >
+                        <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
+                        {batchLoading ? 'Analyzing Domain...' : 'Run Batch Stability'}
+                    </button>
                     <div className="text-right">
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Global ASoV Index</p>
                         <div className="flex items-center space-x-2">

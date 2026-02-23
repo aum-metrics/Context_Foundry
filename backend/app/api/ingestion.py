@@ -17,11 +17,12 @@ except ImportError:
     PdfReader = None
 
 from openai import OpenAI
+from core.firebase_config import db
 
 router = APIRouter()
 
 @router.post("/parse")
-async def parse_document(file: UploadFile = File(...), openai_key: str = Form(None)):
+async def parse_document(file: UploadFile = File(...), orgId: str = Form(None)):
     """
     Semantic Ingestion & Structuring Pipeline:
     1. STREAM: Accepts binary PDF stream directly to RAM.
@@ -59,15 +60,25 @@ async def parse_document(file: UploadFile = File(...), openai_key: str = Form(No
     raw_text = raw_text[:20000] # Trim massive documents for demo constraints
 
     # 2. Extract JSON-LD Semantic Web schema
-    key_to_use = openai_key or os.getenv("OPENAI_API_KEY")
+    key_to_use = os.getenv("OPENAI_API_KEY")
+    
+    if orgId and db:
+        try:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                org_keys = org_doc.to_dict().get("apiKeys", {})
+                if "openai" in org_keys:
+                    key_to_use = org_keys["openai"]
+        except Exception as e:
+            print(f"Firestore Key Fetch Error: {e}")
+
     if not key_to_use:
         # Return fallback generic schema if no keys attached
         return {
             "@context": "https://schema.org",
             "@type": "Organization",
-            "name": "Ingested Enterprise",
-            "description": "API Key missing. Local PyPDF parse succeeded but GPT-4 schema extraction bypassed.",
-            "raw_text_snippet": f"{raw_text[:500]}..."
+            "name": "Key Missing",
+            "description": "Tenant API Key missing. Please configure OpenAI keys in Team Settings to enable semantic extraction.",
         }
 
     try:

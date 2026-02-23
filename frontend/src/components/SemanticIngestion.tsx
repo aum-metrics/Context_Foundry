@@ -53,7 +53,7 @@ export default function SemanticIngestion() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            simulateExtraction(e.target.files[0]);
+            handleFileUpload(e.target.files[0]);
         }
     };
 
@@ -93,8 +93,8 @@ export default function SemanticIngestion() {
         // Assemble Multi-Part Form Data
         const formData = new FormData();
         formData.append('file', file);
-        if (apiKeysCache.openai) {
-            formData.append('openai_key', apiKeysCache.openai);
+        if (organization?.id) {
+            formData.append('orgId', organization.id);
         }
 
         const response = await fetch('/api/ingestion/parse', {
@@ -111,6 +111,10 @@ export default function SemanticIngestion() {
         setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
 
         const result = await response.json();
+
+        if (result.name === "Key Missing") {
+            setLogs(prev => [...prev, "WARNING: Tenant Key Missing in Vault."]);
+        }
 
         // Update UI state with extracted JSON-LD
         setSchemaData(JSON.stringify(result, null, 2));
@@ -198,7 +202,7 @@ export default function SemanticIngestion() {
                                     e.preventDefault();
                                     setIsDragging(false);
                                     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                                        simulateExtraction(e.dataTransfer.files[0]);
+                                        handleFileUpload(e.dataTransfer.files[0]);
                                     }
                                 }}
                                 onClick={triggerFileInput}
