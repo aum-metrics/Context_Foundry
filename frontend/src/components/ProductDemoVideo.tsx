@@ -10,7 +10,7 @@ export default function ProductDemoVideo() {
     const [currentStep, setCurrentStep] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
 
-    const steps = [
+    const steps: { id: number; title: string; subtitle: string; icon: any; image: string; }[] = [
         {
             id: 0,
             title: "Global ASoV Dashboard",
@@ -91,7 +91,10 @@ export default function ProductDemoVideo() {
                             transition={{ duration: 0.4 }}
                         >
                             <div className="inline-flex items-center space-x-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-4 border border-indigo-500/30 backdrop-blur-md">
-                                {React.createElement(steps[currentStep].icon, { className: "w-3.5 h-3.5" })}
+                                {(() => {
+                                    const IconComponent = steps[currentStep].icon;
+                                    return <IconComponent className="w-3.5 h-3.5" />;
+                                })()}
                                 <span>Platform View</span>
                             </div>
                             <h3 className="text-2xl md:text-3xl font-medium text-white mb-2 tracking-tight">
