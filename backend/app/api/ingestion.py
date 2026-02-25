@@ -26,6 +26,30 @@ except ImportError:
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+def recursive_split(text, max_size, overlap_size):
+    """
+    Smarter chunking: prioritizes splitting on paragraphs, then sentences.
+    """
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = min(start + max_size, len(text))
+        if end < len(text):
+            # Try to find a paragraph break
+            last_para = text.rfind('\n\n', start, end)
+            if last_para != -1 and last_para > start + max_size // 2:
+                end = last_para + 2
+            else:
+                # Try to find a sentence break
+                last_sent = text.rfind('. ', start, end)
+                if last_sent != -1 and last_sent > start + max_size // 2:
+                    end = last_sent + 2
+        
+        chunks.append(text[start:end])
+        start = end - overlap_size if end < len(text) else end
+        if start >= len(text): break
+    return chunks
+
 @router.post("/parse")
 async def parse_document(
     file: UploadFile = File(...), 
@@ -95,30 +119,6 @@ async def parse_document(
         chunk_size = 2000
         overlap = 200
         
-        def recursive_split(text, max_size, overlap_size):
-            """
-            Smarter chunking: prioritizes splitting on paragraphs, then sentences.
-            """
-            chunks = []
-            start = 0
-            while start < len(text):
-                end = min(start + max_size, len(text))
-                if end < len(text):
-                    # Try to find a paragraph break
-                    last_para = text.rfind('\n\n', start, end)
-                    if last_para != -1 and last_para > start + max_size // 2:
-                        end = last_para + 2
-                    else:
-                        # Try to find a sentence break
-                        last_sent = text.rfind('. ', start, end)
-                        if last_sent != -1 and last_sent > start + max_size // 2:
-                            end = last_sent + 2
-                
-                chunks.append(text[start:end])
-                start = end - overlap_size if end < len(text) else end
-                if start >= len(text): break
-            return chunks
-
         chunks = recursive_split(full_text, chunk_size, overlap)
 
         # Vectorize chunks in batches
