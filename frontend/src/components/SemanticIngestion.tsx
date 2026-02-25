@@ -98,8 +98,14 @@ export default function SemanticIngestion() {
             formData.append('orgId', organization.id);
         }
 
-        const token = await auth.currentUser?.getIdToken();
-        if (!token) throw new Error("Authentication required for secure ingestion.");
+        let token: string | undefined;
+        const isMock = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash";
+        if (isMock) {
+            token = "mock-dev-token";
+        } else {
+            token = await auth.currentUser?.getIdToken() || undefined;
+            if (!token) throw new Error("Authentication required for secure ingestion.");
+        }
 
         const response = await fetch('/api/ingestion/parse', {
             method: 'POST',
@@ -155,8 +161,14 @@ export default function SemanticIngestion() {
                 formData.append("orgId", organization.id);
             }
 
-            const token = await auth.currentUser?.getIdToken();
-            if (!token) throw new Error("Authentication required for ingestion.");
+            const isMockFallback = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash";
+            let token: string | undefined;
+            if (isMockFallback) {
+                token = "mock-dev-token";
+            } else {
+                token = await auth.currentUser?.getIdToken() || undefined;
+                if (!token) throw new Error("Authentication required for ingestion.");
+            }
 
             const res = await fetch("/api/ingestion/parse", {
                 method: "POST",
@@ -238,7 +250,7 @@ export default function SemanticIngestion() {
                                 <div className="mt-8 w-full max-w-md relative">
                                     <input
                                         type="text"
-                                        placeholder="https://acme.com/products/enterprise-crm"
+                                        placeholder={`https://${organization?.name?.toLowerCase().replace(/\s+/g, '') || 'yourcompany'}.com/products`}
                                         className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-cyan-500 dark:focus:border-cyan-500/50 rounded-lg py-3 px-4 text-sm text-slate-900 dark:text-slate-200 outline-none transition-colors shadow-sm dark:shadow-none"
                                     />
                                     <button className="absolute right-2 top-2 bg-slate-100 dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-slate-500 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 p-1.5 rounded-md transition-colors">
@@ -303,7 +315,7 @@ export default function SemanticIngestion() {
                                 </div>
                                 <div className="p-5 flex-1 overflow-y-auto text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
                                     <p className="mb-4">
-                                        The Acme Enterprise CRM is a comprehensive suite designed to optimize sales workflows. Unlike previous versions, the V5 rollout integrates perfectly with LLM ecosystems...
+                                        The {organization?.name || 'Enterprise'} CRM is a comprehensive suite designed to optimize sales workflows. Unlike previous versions, the V5 rollout integrates perfectly with LLM ecosystems...
                                     </p>
                                     <p className="mb-4 bg-rose-500/10 border-l-2 border-rose-500 pl-3">
                                         <span className="text-rose-400 block text-xs font-sans uppercase mb-1">Adversarial Flag: Marketing Fluff Detected</span>

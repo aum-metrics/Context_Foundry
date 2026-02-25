@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { CodeSquare, ShieldAlert, Key } from "lucide-react";
+import { CodeSquare, ShieldAlert, Key, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
 
@@ -13,9 +13,10 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSignUp, setIsSignUp] = useState(false);
     const router = useRouter();
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
@@ -31,22 +32,24 @@ export default function LoginPage() {
                 return;
             }
 
-            await signInWithEmailAndPassword(auth, email, password);
+            if (isSignUp) {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } else {
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (loginErr: any) {
+                    // Backwards-compatible: auto-create if user not found during sign-in
+                    if (loginErr.code === "auth/invalid-credential" || loginErr.code === "auth/user-not-found") {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        throw loginErr;
+                    }
+                }
+            }
             router.push("/dashboard");
         } catch (err: any) {
-            // If user not found, create them to allow easy demo testing
-            if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found") {
-                try {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                    router.push("/dashboard");
-                } catch (signupErr: any) {
-                    setError(signupErr.message);
-                    setLoading(false);
-                }
-            } else {
-                setError(err.message);
-                setLoading(false);
-            }
+            setError(err.message);
+            setLoading(false);
         }
     };
 
@@ -64,7 +67,9 @@ export default function LoginPage() {
                     <Logo size={48} showText={false} theme="auto" />
                 </div>
 
-                <h1 className="text-2xl font-light text-slate-900 dark:text-white text-center mb-2 tracking-tight">Enterprise Access</h1>
+                <h1 className="text-2xl font-light text-slate-900 dark:text-white text-center mb-2 tracking-tight">
+                    {isSignUp ? "Create Account" : "Enterprise Access"}
+                </h1>
                 <p className="text-slate-500 text-sm text-center mb-8 uppercase tracking-widest">AUM Context Foundry</p>
 
                 {error && (
@@ -74,25 +79,30 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Corporate Email</label>
+                        <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                            {isSignUp ? "Email Address" : "Corporate Email"}
+                        </label>
                         <input
                             type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700/50 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-sm dark:shadow-none"
-                            placeholder="director@acme.com"
+                            placeholder={isSignUp ? "you@company.com" : "you@company.com"}
                         />
                     </div>
                     <div>
-                        <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Authorization Token</label>
+                        <label className="block text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                            {isSignUp ? "Create Password" : "Password"}
+                        </label>
                         <div className="relative">
                             <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                             <input
                                 type="password"
                                 required
+                                minLength={6}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700/50 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-sm dark:shadow-none"
@@ -106,9 +116,24 @@ export default function LoginPage() {
                         disabled={loading}
                         className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 flex justify-center items-center shadow-lg shadow-indigo-600/20"
                     >
-                        {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : "Authenticate Entity"}
+                        {loading ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        ) : isSignUp ? (
+                            <><UserPlus className="w-4 h-4 mr-2" /> Create Account</>
+                        ) : (
+                            "Sign In"
+                        )}
                     </button>
                 </form>
+
+                <div className="mt-6 text-center">
+                    <button
+                        onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+                        className="text-sm text-indigo-500 hover:text-indigo-400 transition-colors"
+                    >
+                        {isSignUp ? "Already have an account? Sign In" : "New here? Create an Account"}
+                    </button>
+                </div>
             </motion.div>
         </div>
     );

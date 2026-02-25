@@ -7,39 +7,38 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper function to check if user is the owner (based on email)
-    function isOwner(userEmail) {
-      return isSignedIn() && request.auth.token.email == userEmail;
+    // Get user data from users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Users collection
-    match /users/{email} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(email);
+    // Check if user belongs to an organization
+    function belongsToOrg(orgId) {
+      return isSignedIn() && getUserData().orgId == orgId;
     }
 
-    // Canvases
-    match /artifacts/aum-data-labs/public/data/canvases/{canvasId} {
-      // Anyone signed in can read (for sharing)
-      allow read: if isSignedIn();
-      
-      // Anyone signed in can create
-      allow create: if isSignedIn();
-      
-      // Only owner or editors can update
-      allow update: if isSignedIn() && (
-        resource.data.owner_uid == request.auth.token.email || 
-        (resource.data.share_settings.editors != null && request.auth.token.email in resource.data.share_settings.editors)
-      );
-      
-      // Only owner can delete
-      allow delete: if isSignedIn() && resource.data.owner_uid == request.auth.token.email;
+    // Users collection: User can only read/write their own document
+    match /users/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Cursors (Real-time)
-    match /artifacts/aum-data-labs/public/data/canvas_cursors/{cursorId} {
-      // Allow read/write for any signed in user
-      allow read, write: if isSignedIn();
+    // Organizations and their subcollections
+    match /organizations/{orgId} {
+      // Basic org info access
+      allow read: if belongsToOrg(orgId);
+      
+      // Admin might need to update org settings (limited for now)
+      allow write: if belongsToOrg(orgId) && getUserData().role == 'admin';
+
+      // Recursively allow access to all subcollections if user belongs to org
+      match /{allSubcollections=**} {
+        allow read, write: if belongsToOrg(orgId);
+      }
+    }
+
+    // Public Assets (if any)
+    match /public/{doc=**} {
+      allow read: if true;
     }
 
     // Default deny

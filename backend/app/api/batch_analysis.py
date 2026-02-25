@@ -31,20 +31,17 @@ class BatchSimulationRequest(BaseModel):
     manifestVersion: Optional[str] = "latest"
 
 
+from utils.task_queue import FirestoreTaskQueue
+
 async def _process_batch_background(request: BatchSimulationRequest, job_id: str):
     """Background worker to process the batch and write results to Firestore."""
-    try:
-        tasks = []
-        for prompt in request.prompts:
-            sim_req = SimulationRequest(
-                prompt=prompt,
-                orgId=request.orgId,
-                manifestVersion=request.manifestVersion
-            )
-            tasks.append(evaluate_simulation(sim_req))
-
+    async def worker():
+        tasks = [evaluate_simulation(SimulationRequest(
+            prompt=p, orgId=request.orgId, manifestVersion=request.manifestVersion
+        )) for p in request.prompts]
+        
         results = await asyncio.gather(*tasks, return_exceptions=True)
-
+        
         formatted_results = []
         total_accuracy = 0
         hallucination_count = 0
@@ -55,21 +52,18 @@ async def _process_batch_background(request: BatchSimulationRequest, job_id: str
                 formatted_results.append({"prompt": request.prompts[i], "error": str(res)})
             else:
                 formatted_results.append(res)
-                # Aggregate per-model scores
                 for model_result in res.get("results", []):
-                    model_name = model_result.get("model", "unknown")
+                    m_name = model_result.get("model", "unknown")
                     acc = model_result.get("accuracy", 0)
-                    if model_name not in model_scores:
-                        model_scores[model_name] = []
-                    model_scores[model_name].append(acc)
+                    if m_name not in model_scores: model_scores[m_name] = []
+                    model_scores[m_name].append(acc)
                     total_accuracy += acc
-                    if model_result.get("hasHallucination"):
-                        hallucination_count += 1
+                    if model_result.get("hasHallucination"): hallucination_count += 1
 
         total_checks = sum(len(v) for v in model_scores.values())
         avg_accuracy = total_accuracy / total_checks if total_checks else 0
 
-        summary = {
+        return {
             "domainStability": round(avg_accuracy, 1),
             "hallucinationRate": round((hallucination_count / total_checks * 100) if total_checks else 0, 1),
             "modelAverages": {m: round(sum(s)/len(s), 1) for m, s in model_scores.items()},
@@ -77,19 +71,7 @@ async def _process_batch_background(request: BatchSimulationRequest, job_id: str
             "results": formatted_results,
         }
 
-        if db:
-            db.collection("organizations").document(request.orgId).collection("batchJobs").document(job_id).update({
-                "status": "completed",
-                "completedAt": datetime.utcnow(),
-                "summary": summary
-            })
-    except Exception as e:
-        logger.error(f"Background Batch Job {job_id} failed: {e}")
-        if db:
-            db.collection("organizations").document(request.orgId).collection("batchJobs").document(job_id).update({
-                "status": "failed",
-                "error": str(e)
-            })
+    await FirestoreTaskQueue.run_persistent_task(request.orgId, "batchJobs", job_id, worker)
 
 @router.post("/batch")
 async def run_batch_simulation(
@@ -97,42 +79,15 @@ async def run_batch_simulation(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Executes multiple simulations asynchronously to generate a Domain-Level Stability report.
-    Pushes job to BackgroundTasks and returns a job ID to poll.
-    """
     uid = current_user.get("uid")
     if not verify_user_org_access(uid, request.orgId):
-        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
-
-    if not request.prompts or not request.orgId:
-        raise HTTPException(status_code=400, detail="Prompts and orgId required")
-
-    # Enforce Enterprise Plan Limit for Batch Analysis
-    if db:
-        try:
-            org_doc = db.collection("organizations").document(request.orgId).get()
-            if org_doc.exists:
-                org_plan = org_doc.to_dict().get("subscription", {}).get("planId", "starter")
-                if org_plan != "enterprise":
-                    raise HTTPException(status_code=403, detail="Batch Domain Analysis requires an Enterprise plan.")
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to fetch org plan for batch analysis: {e}")
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     job_id = str(uuid.uuid4())
+    FirestoreTaskQueue.register_job(request.orgId, "batchJobs", job_id, request.model_dump())
     
-    if db:
-        db.collection("organizations").document(request.orgId).collection("batchJobs").document(job_id).set({
-            "status": "processing",
-            "createdAt": datetime.utcnow(),
-            "totalPrompts": len(request.prompts)
-        })
-
     background_tasks.add_task(_process_batch_background, request, job_id)
-
-    return {"status": "processing", "jobId": job_id, "message": "Batch analysis queued successfully"}
+    return {"status": "processing", "jobId": job_id, "message": "Batch analysis queued"}
 
 
 @router.get("/batch/status/{org_id}/{job_id}")

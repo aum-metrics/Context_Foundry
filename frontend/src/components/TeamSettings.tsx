@@ -27,7 +27,7 @@ export default function TeamSettings() {
             if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
                 setMembers([
                     orgUser,
-                    { uid: "mock_user_2", email: "colleague@acme.com", role: "member", orgId: organization.id }
+                    { uid: "mock_user_2", email: `colleague@${organization.name.toLowerCase().replace(/\s+/g, '')}.com`, role: "member", orgId: organization.id }
                 ]);
                 setLoadingMembers(false);
                 return;
@@ -232,7 +232,7 @@ export default function TeamSettings() {
                                         value={inviteEmail}
                                         onChange={(e) => setInviteEmail(e.target.value)}
                                         className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700/50 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
-                                        placeholder="colleague@acme.com"
+                                        placeholder="colleague@company.com"
                                     />
                                 </div>
 

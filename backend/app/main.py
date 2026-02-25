@@ -8,6 +8,8 @@ Description: AUM Analytics API - Main Application Entry Point
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from core.config import settings
 from fastapi.responses import JSONResponse
 import logging
 import sys
@@ -34,23 +36,8 @@ if app_path not in sys.path:
 # ============================================================================
 # LOGGING SETUP
 # ============================================================================
-
-log_format = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
-
-logging.basicConfig(
-    level=logging.INFO,
-    format=log_format,
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        RotatingFileHandler(
-            "app.log",
-            maxBytes=1024 * 1024,
-            backupCount=2,
-            encoding='utf-8'
-        )
-    ]
-)
-
+from core.logging_config import setup_logging
+setup_logging()
 logger = logging.getLogger("AUM-API")
 logger.info("🚀 Initializing AUM Analytics API...")
 
@@ -59,11 +46,11 @@ logger.info("🚀 Initializing AUM Analytics API...")
 # ============================================================================
 
 app = FastAPI(
-    title="AUM Context Foundry API",
+    title=settings.APP_NAME,
     description="Contextual Rigor & Generative Engine Optimization (GEO) Infrastructure",
     version="2.2.0-hardened",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    docs_url="/api/docs" if settings.ENV != "production" else None,
+    redoc_url="/api/redoc" if settings.ENV != "production" else None,
 )
 
 logger.info("✅ FastAPI app created")
@@ -79,27 +66,21 @@ app.add_middleware(SlowAPIMiddleware)
 
 logger.info("✅ Global Rate Limiter configured (100/min)")
 
-# ============================================================================
-# CORS CONFIGURATION
-# ============================================================================
+# Security Middleware
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=settings.TRUSTED_HOSTS
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "https://aumdatalabs.com",
-        "https://www.aumdatalabs.com",
-        "*"
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"]
 )
 
-logger.info("✅ CORS middleware configured")
+logger.info("✅ Security middleware (CORS & TrustedHost) configured")
 
 # ============================================================================
 # GLOBAL EXCEPTION HANDLER
@@ -107,8 +88,19 @@ logger.info("✅ CORS middleware configured")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Handle all unhandled exceptions"""
+    """Handle all unhandled exceptions with production safety."""
     logger.error(f"❌ Unhandled exception: {type(exc).__name__}: {exc}", exc_info=True)
+    
+    # Hide internal details in production
+    if settings.ENV == "production":
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "An internal server error occurred. Our engineers have been notified.",
+                "type": "InternalServerError"
+            }
+        )
+    
     return JSONResponse(
         status_code=500,
         content={

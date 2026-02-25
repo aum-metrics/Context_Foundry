@@ -85,7 +85,13 @@ export default function SupportChatbot() {
         const orgName = (organization && orgContext?.orgUser) ? organization.name : "your enterprise";
 
         try {
-            const token = await auth.currentUser?.getIdToken();
+            let token = await auth.currentUser?.getIdToken();
+
+            // Mock bypass for development/demo mode
+            if (!token && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
+                token = "mock-dev-token";
+            }
+
             if (!token || !organization?.id) {
                 response = "Please authenticate and select an organization to use the AI Context Assistant.";
             } else {

@@ -13,6 +13,7 @@ import json
 import logging
 import numpy as np
 import hashlib
+import asyncio
 from fastapi import Depends, BackgroundTasks
 from datetime import datetime, timedelta
 
@@ -56,63 +57,81 @@ def cosine_sim(v1, v2):
     return float(dot_product / (norm_v1 * norm_v2))
 
 
-def extract_claims(api_key: str, manifest_content: str) -> list:
+def extract_claims(manifest_content: str, api_keys: dict) -> list:
     """
     Extract verifiable factual claims from the Context Document.
-    Returns a list of specific claims that can be individually verified.
+    Uses OpenAI by default, falls back to Gemini if available.
     """
+    openai_key = api_keys.get("openai")
+    gemini_key = api_keys.get("gemini")
+    
+    prompt = "Extract specific verifiable claims from this document. Return JSON array of strings under the key 'claims'. Each claim should be a single factual statement (e.g., pricing, features, capabilities). Max 10 claims."
+    
     try:
-        client = OpenAI(api_key=api_key)
-        resp = client.chat.completions.create(
-            messages=[{
-                "role": "system",
-                "content": "Extract specific verifiable claims from this document. Return JSON array of strings. Each claim should be a single factual statement (e.g., pricing, features, capabilities). Max 10 claims."
-            }, {
-                "role": "user",
-                "content": manifest_content[:5000]
-            }],
-            model="gpt-4o-mini",
-            response_format={"type": "json_object"},
-            temperature=0,
-        )
-        result = json.loads(resp.choices[0].message.content or "{}")
+        if openai_key:
+            client = OpenAI(api_key=openai_key)
+            resp = client.chat.completions.create(
+                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": manifest_content[:5000]}],
+                model="gpt-4o-mini",
+                response_format={"type": "json_object"},
+                temperature=0,
+            )
+            result = json.loads(resp.choices[0].message.content or "{}")
+        elif gemini_key and GEMINI_AVAILABLE:
+            client = genai.Client(api_key=gemini_key)
+            resp = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=[f"{prompt}\n\nDocument:\n{manifest_content[:5000]}"],
+                config={'response_mime_type': 'application/json'}
+            )
+            result = json.loads(resp.text)
+        else:
+            return []
+            
         claims = result.get("claims", result.get("facts", []))
-        if isinstance(claims, list):
-            return claims[:10]
-        return []
+        return claims[:10] if isinstance(claims, list) else []
     except Exception as e:
         logger.error(f"Claim extraction failed: {e}")
         return []
 
 
-def verify_claims(api_key: str, claims: list, ai_response: str) -> list:
+def verify_claims(claims: list, ai_response: str, api_keys: dict) -> list:
     """
     Verify each extracted claim against the AI response.
     Returns a list of {claim, verdict, explanation} objects.
     """
-    if not claims:
-        return []
-    try:
-        client = OpenAI(api_key=api_key)
-        claims_text = "\n".join(f"{i+1}. {c}" for i, c in enumerate(claims))
-        resp = client.chat.completions.create(
-            messages=[{
-                "role": "system",
-                "content": """Compare each claim against the AI response. For each claim, determine:
+    if not claims: return []
+    openai_key = api_keys.get("openai")
+    gemini_key = api_keys.get("gemini")
+    
+    sys_prompt = """Compare each claim against the AI response. For each claim, determine:
 - "supported": The AI response correctly states this fact
 - "contradicted": The AI response states something different
 - "not_mentioned": The AI response doesn't address this fact
 
 Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|not_mentioned", "detail": "brief explanation"}]}"""
-            }, {
-                "role": "user",
-                "content": f"CLAIMS:\n{claims_text}\n\nAI RESPONSE:\n{ai_response}"
-            }],
-            model="gpt-4o-mini",
-            response_format={"type": "json_object"},
-            temperature=0,
-        )
-        result = json.loads(resp.choices[0].message.content or "{}")
+
+    try:
+        if openai_key:
+            client = OpenAI(api_key=openai_key)
+            resp = client.chat.completions.create(
+                messages=[{"role": "system", "content": sys_prompt}, 
+                          {"role": "user", "content": f"CLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"}],
+                model="gpt-4o-mini",
+                response_format={"type": "json_object"},
+                temperature=0,
+            )
+            result = json.loads(resp.choices[0].message.content or "{}")
+        elif gemini_key and GEMINI_AVAILABLE:
+            client = genai.Client(api_key=gemini_key)
+            resp = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=[f"{sys_prompt}\n\nCLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"],
+                config={'response_mime_type': 'application/json'}
+            )
+            result = json.loads(resp.text)
+        else:
+            return []
         return result.get("results", [])
     except Exception as e:
         logger.error(f"Claim verification failed: {e}")
@@ -216,15 +235,21 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
     manifest_embedding = None
     api_keys: Dict[str, str] = {}
 
+    from core.config import settings
+    is_dev = settings.ENV == "development"
+
     if db:
         try:
             org_ref = db.collection("organizations").document(request.orgId)
             org_doc = org_ref.get()
             if not org_doc.exists:
-                raise HTTPException(status_code=404, detail="Organization not found")
-
-            org_data = org_doc.to_dict() or {}
-            api_keys = org_data.get("apiKeys", {})
+                if not is_dev:
+                    raise HTTPException(status_code=404, detail="Organization not found")
+                else:
+                    logger.info(f"🧪 Dev-mode: Org {request.orgId} not found, using mock keys.")
+            else:
+                org_data = org_doc.to_dict() or {}
+                api_keys = org_data.get("apiKeys", {})
 
             if request.manifestVersion == "latest":
                 manifests = org_ref.collection("manifests").order_by("createdAt", direction="DESCENDING").limit(1).stream()
@@ -247,38 +272,62 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
             logger.error(f"Firestore error: {e}")
 
     if not manifest_content:
-        manifest_content = f"Default context for organization {request.orgId}. Contact AUM support to upload your Context Document."
+        if is_dev:
+            logger.info("🧪 Dev-mode: Providing mock manifest content")
+            manifest_content = f"Mock manifest content for {request.orgId}. This is a simulated corporate strategy document."
+            # A dummy 1536-dim embedding
+            manifest_embedding = [0.1] * 1536
+        else:
+            manifest_content = f"Default context for organization {request.orgId}. Contact AUM support to upload your Context Document."
 
     return manifest_content, manifest_embedding, api_keys
 
 
-def _score_model(model_name: str, runner_fn, runner_key: str, openai_key: str,
+def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                  system_prompt: str, user_prompt: str, manifest_embedding: list,
                  claims: list, eps_div: float) -> dict:
     """Score a single model's response against the manifest."""
     try:
+        from core.config import settings
+        if settings.ENV == "development" and not runner_key:
+            logger.info(f"🧪 Dev-mode: Simulated response for {model_name}")
+            import random
+            accuracy = round(random.uniform(75, 98), 1)
+            return {
+                "model": model_name,
+                "answer": f"This is a simulated response from {model_name} for the prompt: '{user_prompt}'. In a real environment, this would be generated using your API keys.",
+                "accuracy": accuracy,
+                "hasHallucination": accuracy < 80,
+                "claimResults": [{"claim": "Mock Claim 1", "verdict": "supported", "detail": "Simulated verification"}],
+                "claimScore": "1/1 claims supported",
+            }
+
         answer = runner_fn(runner_key, system_prompt, user_prompt)
 
+        openai_key = api_keys.get("openai")
+        
         # Embedding-based divergence
         if openai_key:
             divergence = compute_divergence(openai_key, manifest_embedding, answer)
         else:
             divergence = 0.5
 
-        # Fine-grained claim verification
+        # Fine-grained claim verification (Hardened with fallback)
         claim_results = []
         claim_score = None
-        if openai_key and claims:
-            claim_results = verify_claims(openai_key, claims, answer)
+        if claims:
+            claim_results = verify_claims(claims, answer, api_keys)
             supported = sum(1 for c in claim_results if c.get("verdict") == "supported")
             total = len(claim_results)
             claim_score = f"{supported}/{total} claims supported"
 
-            # Blend: 40% embedding, 60% claim accuracy (claims are more trustworthy)
+            # LCRS Blend (Spec Section 10.F): 40% embedding, 60% claim accuracy
             if total > 0:
                 claim_accuracy = supported / total
-                blended = (0.4 * (1.0 - divergence)) + (0.6 * claim_accuracy)
+                semantic_accuracy = (1.0 - divergence)
+                blended = (0.4 * semantic_accuracy) + (0.6 * claim_accuracy)
                 accuracy = round(blended * 100, 1)
+                # Hallucination flag: OR condition (Spec v2.2.0)
                 has_hallucination = accuracy < 55 or any(c.get("verdict") == "contradicted" for c in claim_results)
             else:
                 accuracy = round((1.0 - divergence) * 100, 1)
@@ -336,26 +385,30 @@ async def _store_simulation_results(org_id: str, prompt: str, manifest_version: 
         logger.error(f"Failed to store background simulation data: {e}")
 
 
-@router.post("/run")
+@router.post("/run", response_model=None)
 async def evaluate_simulation(
     request: SimulationRequest, 
-    background_tasks: BackgroundTasks,
-    current_user: dict = Depends(get_current_user)
+    background_tasks: BackgroundTasks = None,
+    current_user: Optional[dict] = Depends(get_current_user)
 ):
     """
     Evaluates a user prompt against the Organization's context manifest using multi-model checks.
-    1. Fetches org Context Manifest + API keys from Firestore.
-    2. Extracts verifiable claims from the manifest.
-    3. Runs prompt across GPT-4, Gemini, Claude.
-    4. Scores each response via embedding divergence + per-claim verification.
-    5. Returns blended accuracy (40% embedding, 60% fact-checking).
+    BRUTAL AUDIT FIX: Parallelized Inference & Optimized Context Retrieval.
     """
+    from core.config import settings
+    is_dev = settings.ENV == "development"
+
     if not request.prompt or not request.orgId:
         raise HTTPException(status_code=400, detail="Prompt and orgId required")
 
-    uid = current_user.get("uid")
-    if not verify_user_org_access(uid, request.orgId):
-        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    if current_user:
+        uid = current_user.get("uid")
+        if not verify_user_org_access(uid, request.orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    elif not is_dev:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    else:
+        logger.info(f"🧪 Dev-mode: Skipping org access check for {request.orgId} (Internal Call)")
 
     # ----- 0. MD5 HASH CACHE CHECK (Zero-Burn Optimization) -----
     cache_input = f"{request.prompt}_{request.manifestVersion}".encode('utf-8')
@@ -395,16 +448,12 @@ async def evaluate_simulation(
     sims_this_cycle = 0
     if db:
         try:
-            from datetime import datetime, timedelta
-            
             # Default to 1st of month calendar fallback
             period_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             
-            # Try to fetch true prorated cycle start from subscription
             sub_data = org_data.get("subscription", {})
             start_ts = sub_data.get("currentPeriodStart")
             if start_ts:
-                # Handle possible Firestore DatetimeWithNanoseconds vs standard Python datetime
                 period_start = start_ts
                 
             hist_query = db.collection("organizations").document(request.orgId)\
@@ -417,57 +466,88 @@ async def evaluate_simulation(
         except Exception as e:
             logger.error(f"Failed to fetch usage: {e}")
 
-    # Enforce Limits
-    if org_plan == "starter" and sims_this_cycle >= 50:
-        raise HTTPException(status_code=402, detail="Starter plan limit of 50 simulations per billing cycle reached. Please upgrade.")
-    if org_plan == "growth" and sims_this_cycle >= 500:
-        raise HTTPException(status_code=402, detail="Growth plan limit of 500 simulations per billing cycle reached. Please upgrade to Enterprise.")
+    # Enforce Dynamic Limits (Hardened)
+    limits = {
+        "starter": 50,
+        "growth": 500,
+        "enterprise": 5000
+    }
+    # Allow DB override for specific organizations
+    plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 50))
+    
+    if sims_this_cycle >= plan_limit:
+        raise HTTPException(
+            status_code=402, 
+            detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
+        )
 
     # ----- 2. FETCH CONTEXT & KEYS -----
-    # Fetch global metadata first
     manifest_content, manifest_embedding, api_keys = _fetch_manifest_and_keys(request)
 
     openai_key = api_keys.get("openai") or os.getenv("OPENAI_API_KEY")
     gemini_key = api_keys.get("gemini") or os.getenv("GEMINI_API_KEY")
     claude_key = api_keys.get("anthropic") or os.getenv("ANTHROPIC_API_KEY")
 
+    # Override for dev mock mode
+    if is_dev:
+        if not openai_key:
+            logger.info("🧪 Dev-mode: OpenAI key missing, enabling mock scoring")
+        if not gemini_key:
+            logger.info("🧪 Dev-mode: Gemini key missing, enabling mock scoring")
+
     # --- PHASE 7: DEEP CONTEXT RETRIEVAL ---
-    # Perform semantic search to pull specific context for this simulation prompt
     if openai_key and db:
         try:
             client = OpenAI(api_key=openai_key)
             q_embed = client.embeddings.create(input=[request.prompt], model="text-embedding-3-small").data[0].embedding
             
-            # Search chunks in the specified manifest version
             manifest_version = request.manifestVersion
             if manifest_version == "latest":
-                # Get the true latest ID
                 latest_ref = db.collection("organizations").document(request.orgId).collection("manifests").document("latest").get()
                 if latest_ref.exists:
                     manifest_version = latest_ref.to_dict().get("version", "latest")
 
-            chunks_ref = db.collection("organizations").document(request.orgId) \
-                           .collection("manifests").document(manifest_version) \
-                           .collection("chunks").get()
-            
-            import numpy as np
-            def cosine_sim(v1, v2):
-                return float(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+            # --- PHASE 8: NATIVE VECTOR SEARCH (O(log N)) ---
+            # REQUIRES: Firestore Vector Index on 'embedding' field
+            try:
+                from google.cloud.firestore_v1.vector import Vector
+                from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 
-            matches = []
-            for doc in chunks_ref:
-                c_data = doc.to_dict()
-                matches.append((cosine_sim(q_embed, c_data["embedding"]), c_data["text"]))
-            
-            matches.sort(key=lambda x: x[0], reverse=True)
-            top_chunks = [m[1] for m in matches[:5]]
-            if top_chunks:
-                manifest_content = "\n\n---\n\n".join(top_chunks)
-                logger.info(f"Simulation Retrieval: Pulled {len(top_chunks)} chunks for semantic context.")
+                collection_ref = db.collection("organizations").document(request.orgId) \
+                                   .collection("manifests").document(manifest_version) \
+                                   .collection("chunks")
+
+                vector_query = collection_ref.find_nearest(
+                    vector_field="embedding",
+                    query_vector=Vector(q_embed),
+                    distance_measure=DistanceMeasure.COSINE,
+                    limit=5
+                )
+                
+                top_chunks = [doc.to_dict().get("text", "") for doc in vector_query.get()]
+                if top_chunks:
+                    manifest_content = "\n\n---\n\n".join(top_chunks)
+                    logger.info(f"Simulation Retrieval: Native Vector Search pulled {len(top_chunks)} chunks.")
+            except Exception as e:
+                logger.warning(f"Native Vector Search failed (falling back to legacy): {e}")
+                # Legacy Fallback (O(N))
+                chunks_ref = db.collection("organizations").document(request.orgId) \
+                               .collection("manifests").document(manifest_version) \
+                               .collection("chunks").get()
+                
+                matches = []
+                for doc in chunks_ref:
+                    c_data = doc.to_dict()
+                    matches.append((cosine_sim(q_embed, c_data["embedding"]), c_data["text"]))
+                
+                matches.sort(key=lambda x: x[0], reverse=True)
+                top_chunks = [m[1] for m in matches[:5]]
+                if top_chunks:
+                    manifest_content = "\n\n---\n\n".join(top_chunks)
         except Exception as e:
             logger.warning(f"Simulation semantic retrieval failed: {e}")
 
-    # Enforce Model Gating (Starter gets Gemini ONLY)
+    # Enforce Model Gating
     if org_plan == "starter":
         openai_key = None
         claude_key = None
@@ -479,50 +559,44 @@ async def evaluate_simulation(
 </Retrieved Context>"""
 
     eps_div = 0.45
-
-    # Extract verifiable claims from manifest (once, shared across models)
     claims = []
-    if openai_key:
-        claims = extract_claims(openai_key, manifest_content)
+    # Hardened Claim Extraction with multi-provider fallback
+    claims = extract_claims(manifest_content, api_keys)
 
-    results = []
-
-    # --- OpenAI ---
-    if openai_key:
-        results.append(_score_model(
-            "GPT-4o Mini", run_openai, openai_key, openai_key,
+    # --- PARALLEL INFERENCE & SCORING ---
+    async def _run_and_score(model_name: str, runner_fn, key: str):
+        return await asyncio.to_thread(
+            _score_model,
+            model_name, runner_fn, key, api_keys,
             system_prompt, request.prompt, manifest_embedding, claims, eps_div
-        ))
+        )
 
-    # --- Gemini ---
-    if gemini_key and GEMINI_AVAILABLE:
-        results.append(_score_model(
-            "Gemini 2.0 Flash", run_gemini, gemini_key, openai_key or "",
-            system_prompt, request.prompt, manifest_embedding, claims, eps_div
-        ))
+    tasks = []
+    if openai_key or is_dev:
+        tasks.append(_run_and_score("GPT-4o Mini", run_openai, openai_key))
+    if (gemini_key and GEMINI_AVAILABLE) or (is_dev and GEMINI_AVAILABLE):
+        tasks.append(_run_and_score("Gemini 2.0 Flash", run_gemini, gemini_key))
+    if (claude_key and CLAUDE_AVAILABLE) or (is_dev and CLAUDE_AVAILABLE):
+        tasks.append(_run_and_score("Claude 3.5 Haiku", run_claude, claude_key))
 
-    # --- Claude ---
-    if claude_key and CLAUDE_AVAILABLE:
-        results.append(_score_model(
-            "Claude 3.5 Haiku", run_claude, claude_key, openai_key or "",
-            system_prompt, request.prompt, manifest_embedding, claims, eps_div
-        ))
+    if not tasks:
+        raise HTTPException(status_code=503, detail="No AI providers configured.")
 
-    if not results:
-        raise HTTPException(status_code=503, detail="No API keys configured. Contact AUM support.")
+    results = await asyncio.gather(*tasks)
 
     # ----- 5. ATOMIC BILLING & CACHE UPDATE (Background) -----
-    background_tasks.add_task(
-        _store_simulation_results, 
-        request.orgId, 
-        request.prompt, 
-        request.manifestVersion, 
-        results, 
-        cache_key
-    )
-
-    # --- PHASE 7: OPERATIONAL CLEANUP ---
-    background_tasks.add_task(_cleanup_expired_cache, request.orgId)
+    if background_tasks and db:
+        background_tasks.add_task(
+            _store_simulation_results, 
+            request.orgId, 
+            request.prompt, 
+            request.manifestVersion, 
+            results, 
+            cache_key
+        )
+        import random
+        if random.random() < 0.1:
+            background_tasks.add_task(_cleanup_expired_cache, request.orgId)
 
     locked_models = []
     if org_plan == "starter":
@@ -536,6 +610,7 @@ async def evaluate_simulation(
         "claimsExtracted": len(claims),
         "cached": False
     }
+
 async def _cleanup_expired_cache(org_id: str):
     """Purges simulation cache entries older than 7 days to keep storage lean."""
     if not db:

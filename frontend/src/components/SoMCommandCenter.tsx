@@ -60,7 +60,13 @@ export default function SoMCommandCenter() {
         if (!organization) return;
         setBatchLoading(true);
         try {
-            const token = await auth.currentUser?.getIdToken();
+            let token = await auth.currentUser?.getIdToken();
+
+            // Mock bypass for development/demo mode
+            if (!token && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
+                token = "mock-dev-token";
+            }
+
             if (!token) throw new Error("Authentication required.");
 
             const response = await fetch('/api/batch', {
@@ -82,7 +88,7 @@ export default function SoMCommandCenter() {
             });
             const data = await response.json();
 
-            if (data.status === "processing" && data.jobId) {
+            if (data.status === "processing" || data.status === "queued" && data.jobId) {
                 // Poll for completion
                 const pollInterval = setInterval(async () => {
                     try {
@@ -91,10 +97,11 @@ export default function SoMCommandCenter() {
                         });
                         if (statusRes.ok) {
                             const statusData = await statusRes.json();
-                            if (statusData.status === "completed" && statusData.summary) {
+                            if (statusData.status === "completed" && (statusData.summary || statusData.result)) {
                                 clearInterval(pollInterval);
-                                setBatchResult(statusData.summary);
-                                if (statusData.summary.modelAverages) setModelAverages(statusData.summary.modelAverages);
+                                const result = statusData.summary || statusData.result;
+                                setBatchResult(result);
+                                if (result.modelAverages) setModelAverages(result.modelAverages);
                                 setBatchLoading(false);
                             } else if (statusData.status === "failed") {
                                 clearInterval(pollInterval);
@@ -106,7 +113,8 @@ export default function SoMCommandCenter() {
                         console.error("Polling error:", pollErr);
                     }
                 }, 3000); // Poll every 3 seconds
-            } else {
+            }
+            else {
                 // Fallback direct response
                 setBatchResult(data);
                 if (data.modelAverages) setModelAverages(data.modelAverages);
@@ -122,7 +130,12 @@ export default function SoMCommandCenter() {
         if (!seoUrl || !organization) return;
         setSeoLoading(true);
         try {
-            const token = await auth.currentUser?.getIdToken();
+            let token = await auth.currentUser?.getIdToken();
+
+            // Mock bypass for development/demo mode
+            if (!token && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
+                token = "mock-dev-token";
+            }
             const response = await fetch('/api/seo/audit', {
                 method: 'POST',
                 headers: {

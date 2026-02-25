@@ -6,18 +6,22 @@ import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { OrganizationProvider } from "./OrganizationContext";
 
+const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/privacy", "/terms", "/contact", "/status"];
+
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
 
+    const isPublicPath = PUBLIC_PATHS.includes(pathname);
+
     useEffect(() => {
         if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
             const checkMockAuth = () => {
                 const mockUserEmail = localStorage.getItem("mock_auth_user");
 
-                if (pathname === "/llms.txt" || pathname === "/") {
+                if (isPublicPath) {
                     setLoading(false);
                     return;
                 }
@@ -42,8 +46,8 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
             setUser(currentUser);
             setLoading(false);
 
-            // Allow public paths like /llms.txt and /
-            if (pathname === "/llms.txt" || pathname === "/") return;
+            // Allow public paths
+            if (isPublicPath) return;
 
             if (!currentUser && pathname !== "/login") {
                 router.push("/login");
@@ -53,7 +57,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         });
 
         return () => unsubscribe();
-    }, [router, pathname]);
+    }, [router, pathname, isPublicPath]);
 
     if (loading) {
         return (
@@ -66,7 +70,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         );
     }
 
-    if (!user && pathname !== "/login" && pathname !== "/llms.txt" && pathname !== "/") {
+    if (!user && !isPublicPath) {
         return null; // Redirecting
     }
 

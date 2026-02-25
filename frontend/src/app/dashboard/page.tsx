@@ -87,7 +87,14 @@ export default function AUMContextFoundry() {
             </button>
           )}
           <button
-            onClick={() => auth.signOut()}
+            onClick={() => {
+              if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+                localStorage.removeItem("mock_auth_user");
+                window.dispatchEvent(new Event("mock_auth_change"));
+              } else {
+                auth.signOut();
+              }
+            }}
             className="flex items-center tracking-wide text-sm px-3 py-2 w-full rounded-md text-slate-500 dark:text-slate-400 hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
           >
             <LogOut className="w-4 h-4 mr-3" /> Disconnect

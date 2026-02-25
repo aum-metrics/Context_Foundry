@@ -31,19 +31,32 @@ async def chat_with_manifest(request: ChatRequest, current_user: dict = Depends(
     RAG-enabled Support Chatbot Endpoint.
     Uses Semantic Chunk Retrieval to provide Zero-Amnesia support for massive docs.
     """
+    from core.config import settings
+    is_dev = settings.ENV == "development"
+
     if not db:
-        raise HTTPException(status_code=503, detail="Firestore not available")
+        if not is_dev:
+            raise HTTPException(status_code=503, detail="Firestore not available")
+        else:
+            logger.info("🧪 Dev-mode: Firestore not available, using mock responses.")
 
     # 1. Fetch Organization API Key
-    org_ref = db.collection("organizations").document(request.orgId).get()
-    if not org_ref.exists:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    org_data = org_ref.to_dict() or {}
-    api_keys = org_data.get("apiKeys", {})
-    openai_key = api_keys.get("openai") or os.getenv("OPENAI_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if db:
+        try:
+            org_ref = db.collection("organizations").document(request.orgId).get()
+            if org_ref.exists:
+                org_data = org_ref.to_dict() or {}
+                api_keys = org_data.get("apiKeys", {})
+                if api_keys.get("openai"):
+                    openai_key = api_keys.get("openai")
+        except Exception as e:
+            logger.error(f"Firestore org lookup failed: {e}")
 
     if not openai_key:
+        if is_dev:
+            logger.info("🧪 Dev-mode: Providing mock chatbot response")
+            return {"response": f"I am the AUM Support Bot (Simulated). I've analyzed your query: '{request.query}'. This is a mock response because no OpenAI API key is configured in development mode."}
         raise HTTPException(status_code=503, detail="OpenAI API key missing")
 
     client = OpenAI(api_key=openai_key)

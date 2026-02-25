@@ -52,14 +52,16 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
             if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
                 // Mock organization for local demo without Firebase
+                const emailDomain = user.email?.split('@')[1]?.split('.')[0] || 'My Company';
+                const orgName = emailDomain.charAt(0).toUpperCase() + emailDomain.slice(1);
                 setOrganization({
                     id: "mock_org_123",
-                    name: "Acme Corp",
+                    name: orgName,
                     activeSeats: 1,
                     subscriptionTier: "enterprise",
                     apiKeys: {
-                        openai: "sk-mock-acme-openai-key",
-                        gemini: "g-mock-acme-gemini-key"
+                        openai: "sk-mock-openai-key",
+                        gemini: "g-mock-gemini-key"
                     }
                 });
                 setOrgUser({
