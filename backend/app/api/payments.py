@@ -290,8 +290,8 @@ async def razorpay_webhook(request: Request):
     """
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
     if not secret:
-        logger.warning("RAZORPAY_WEBHOOK_SECRET not set. Webhook verification skipped (UNSAFE).")
-        # In a real enterprise app, we would block here.
+        logger.error("RAZORPAY_WEBHOOK_SECRET not set. Rejecting webhook (fail-closed).")
+        raise HTTPException(status_code=503, detail="Webhook verification not configured")
 
     try:
         raw_body = await request.body()

@@ -59,8 +59,8 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
         except Exception as e:
             logger.error(f"Firestore org lookup failed: {e}")
 
-    # MASTER FALLBACK: Use environment key if org key is missing
-    if not openai_key:
+    # MASTER FALLBACK: Resolve sentinel or use environment key
+    if openai_key == "internal_platform_managed" or not openai_key:
         openai_key = os.getenv("OPENAI_API_KEY")
 
     if not openai_key:

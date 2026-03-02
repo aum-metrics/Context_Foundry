@@ -218,7 +218,11 @@ export default function AdminDashboard() {
         try {
             const resp = await fetch('/api/payments/payment-link', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cookie': document.cookie,
+                },
+                credentials: 'include',
                 body: JSON.stringify({ orgId, customerEmail: email, description: "AUM Context Foundry - Subscription Renewal" })
             });
             if (resp.ok) {

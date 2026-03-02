@@ -14,7 +14,7 @@ import secrets
 
 from core.config import settings
 from core.firebase_config import db
-from core.security import get_auth_context, get_current_user
+from core.security import get_auth_context, get_current_user, verify_user_org_access
 from api.audit import log_audit_event
 
 router = APIRouter()
@@ -240,6 +240,23 @@ async def list_workspaces(current_user: dict = Depends(get_auth_context)):
         "success": True,
         "workspaces": user_workspaces,
         "total_count": len(user_workspaces)
+    }
+
+@router.get("/health")
+async def workspaces_health():
+    """Health check for workspaces service"""
+    return {
+        "status": "healthy",
+        "service": "workspaces",
+        "active_workspaces": "db_managed",
+        "total_members": "db_managed",
+        "features": [
+            "workspace_management",
+            "team_collaboration",
+            "member_invitations",
+            "role_based_access",
+            "activity_tracking"
+        ]
     }
 
 @router.get("/{workspace_id}")
@@ -641,22 +658,7 @@ async def get_workspace_activity(
         "total_count": len(activities)
     }
 
-@router.get("/health")
-async def workspaces_health():
-    """Health check for workspaces service"""
-    return {
-        "status": "healthy",
-        "service": "workspaces",
-        "active_workspaces": "db_managed",
-        "total_members": "db_managed",
-        "features": [
-            "workspace_management",
-            "team_collaboration",
-            "member_invitations",
-            "role_based_access",
-            "activity_tracking"
-        ]
-    }
+# NOTE: /health is now defined BEFORE /{workspace_id} to avoid route shadowing
 
 @router.get("/{org_id}/manifest")
 async def get_public_manifest(org_id: str):

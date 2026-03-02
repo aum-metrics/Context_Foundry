@@ -82,11 +82,13 @@ The **Low-Latency Claim-based Reliability Scoring** engine produces deterministi
 
 ### Environment Setup
 ```bash
-# Backend (copy and fill values)
-cp backend/.env.example backend/.env
+# Backend — create .env with required variables (see Admin_Support_Handbook.md)
+touch backend/.env
+# Required: OPENAI_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, RAZORPAY_KEY_ID, etc.
 
-# Frontend (copy and fill values)
-cp frontend/.env.example frontend/.env.local
+# Frontend — create .env.local with required variables
+touch frontend/.env.local
+# Required: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_API_BASE_URL, etc.
 ```
 
 ### Run Locally
@@ -169,12 +171,16 @@ AUM/
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/workspaces/provision` | Firebase JWT | Auto-provision org + B2B key |
+| GET | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | List org members |
+| POST | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | Invite org member |
 | POST | `/api/simulation/run` | Firebase JWT | LCRS simulation |
 | POST | `/v1/run` | `aum_` API Key | B2B simulation gateway |
 | POST | `/api/ingestion/parse` | Firebase JWT | Zero-retention PDF ingestion |
-| GET | `/api/competitor/displacement/{orgId}` | Firebase JWT | Competitor analysis |
-| GET | `/api/seo/audit` | Firebase JWT | Async SEO audit |
+| GET | `/api/competitor/displacement/{orgId}` | Firebase JWT + org-verify | Competitor analysis |
+| POST | `/api/seo/audit` | Firebase JWT | Async SEO audit |
+| GET | `/api/batch/batch/status/{orgId}/{jobId}` | Firebase JWT + org-verify | Batch job status |
 | POST | `/api/payments/create-order` | Firebase JWT + org-verify | Razorpay order |
+| POST | `/api/payments/verify` | Firebase JWT + org-verify | Payment verification |
 | POST | `/api/sso/configure` | Firebase JWT + org-verify | Enterprise SSO config |
 | GET | `/llms.txt` | Public | Tenant-aware AI manifesto |
 

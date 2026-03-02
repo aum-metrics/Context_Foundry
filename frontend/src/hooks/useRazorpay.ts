@@ -103,7 +103,10 @@ export function useRazorpay() {
                             // 3. Verify payment on backend
                             const verifyResponse = await fetch("/api/payments/verify", {
                                 method: "POST",
-                                headers: { "Content-Type": "application/json" },
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": `Bearer ${token}`
+                                },
                                 body: JSON.stringify({
                                     razorpay_order_id: response.razorpay_order_id,
                                     razorpay_payment_id: response.razorpay_payment_id,

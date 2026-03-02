@@ -107,6 +107,11 @@ async def get_batch_status(
     current_user: dict = Depends(get_auth_context)
 ):
     """Returns the status of a scheduled background batch job."""
+    # Tenant authorization check
+    uid = current_user.get("uid")
+    if not verify_user_org_access(uid, org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+
     if not db:
         raise HTTPException(status_code=503, detail="Firestore not available")
     

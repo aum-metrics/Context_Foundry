@@ -60,6 +60,10 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
         except Exception as e:
             logger.error(f"Failed to fetch org data: {e}")
 
+    # Resolve platform-managed sentinel to environment key
+    if api_key == "internal_platform_managed":
+        api_key = os.getenv("OPENAI_API_KEY")
+
     if not api_key:
         if is_dev:
             return {"competitors": [
