@@ -10,7 +10,7 @@ async function getAdminToken(): Promise<string | null> {
 
 export async function GET(request: NextRequest) {
     const adminToken = await getAdminToken();
-    if (!adminToken || adminToken !== "admin_authenticated_v1") {
+    if (!adminToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

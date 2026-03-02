@@ -10,13 +10,15 @@ from typing import Optional
 from pydantic import BaseModel
 import logging
 import os
+import secrets
 
 from core.firebase_config import db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-ADMIN_TOKEN = "admin_authenticated_v1"
+# Admin session token — MUST be set via env var in production; random default prevents guessing
+ADMIN_TOKEN = os.getenv("ADMIN_SESSION_SECRET", secrets.token_hex(32))
 
 
 def verify_admin(request: Request):

@@ -336,7 +336,7 @@ export default function LandingPage() {
                                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
                                     </div>
                                 </div>
-                                <h4 className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">POST /api/v1/simulate</h4>
+                                <h4 className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">POST /api/simulation/v1/run</h4>
                                 <pre className="text-xs md:text-sm font-mono text-slate-600 dark:text-slate-300 overflow-hidden text-left bg-slate-50 dark:bg-black/30 p-4 rounded-xl border border-slate-200/50 dark:border-white/5">
                                     <code className="text-indigo-600 dark:text-indigo-400">curl</code> -X POST https://api.aumdatalabs.com/v1/simulate \<br />
                                     -H <span className="text-emerald-600 dark:text-emerald-400">"Authorization: Bearer sk-live-..."</span> \<br />

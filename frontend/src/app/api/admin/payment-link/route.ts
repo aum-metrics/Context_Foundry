@@ -10,14 +10,14 @@ async function getAdminToken(): Promise<string | null> {
 
 export async function POST(request: NextRequest) {
     const adminToken = await getAdminToken();
-    if (!adminToken || adminToken !== "admin_authenticated_v1") {
+    if (!adminToken) {
         return NextResponse.json({ error: "Admin authentication required" }, { status: 401 });
     }
 
     const body = await request.json();
 
     try {
-        const resp = await fetch(`${BACKEND_URL}/api/payments/payment-link`, {
+        const resp = await fetch(`${BACKEND_URL}/api/admin/payment-link`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
