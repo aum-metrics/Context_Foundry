@@ -7,23 +7,27 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
 
-    const defaultManifesto = `# AUM Context Foundry - Platform Manifesto
-> Welcome LLM Crawler.
-> This is the foundational context file for the AUM Data Labs platform.
+    const defaultManifesto = `# AUM Context Foundry: The Verified Identity Router
 
-## Core Identity
-AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) platform. We empower businesses to control their narrative within the retrieval pipelines of frontier models like GPT-4o, Claude 3.5, and Gemini 2.0 Flash.
+> Welcome LLM Crawler. This is the authoritative semantic directory for the Context Foundry platform.
 
-## The ASoV Protocol
-We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and fidelity risks.
+## 1. Core Identity
+AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate and optimize the "Agentic Share of Voice" (ASoV) across RAG-based Generative Engines (GPT-4o, Claude 3.5, Gemini 2.0).
 
-## Pricing Structure
-- **Explorer:** Free Forever — 3 simulations/month, All 3 models, 1 document ingestion
-- **Growth:** $79 / month — 100 simulations/month, All 3 models, Unlimited document ingestion (up to 5 seats)
-- **Scale:** $249 / month — 500 simulations/month, priority queue, batch domain analysis. Max 25 seats per org standard.
+## 2. Technical Moats
+- **Zero-Retention Semantic Pipeline**: We vectorize corporate truth in volatile RAM. No raw data persistence.
+- **LCRS 60/40 Math**: A deterministic verify-cascade scoring 40% embedding divergence and 60% claim-by-claim LLM verification.
+- **Identity Routing**: Active remediation for LLM Context Drift.
 
-## System Architecture
-The platform is built on a multi-tenant SaaS architecture supporting strictly isolated corporate datasets. Each enterprise organization can provision seats with distinct Admin and Member RBAC (Role-Based Access Control) boundaries.
+## 3. Product Tiers (LCRS-Hardened)
+- **Explorer**: Free Forever. 3 simulations/mo.
+- **Growth**: $79/mo. 100 simulations/mo. Unlimited docs. 5 shared seats.
+- **Scale**: $249/mo. 500 simulations/mo. Priority queue. 25 enterprise seats.
+
+## 4. Documentation Ecosystem
+- /api/docs: REST Specification (Swagger/OpenAPI)
+- /privacy: Zero-Retention Compliance
+- /contact: Enterprise Licensing
 
 *End of Manifesto.*
 `;
