@@ -15,16 +15,19 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const offset = searchParams.get("offset") || "0";
+    const cursor = searchParams.get("cursor") || "";
     const pageSize = searchParams.get("page_size") || "15";
 
+    const params = new URLSearchParams({ page_size: pageSize });
+    if (cursor) params.set("cursor", cursor);
+
     try {
-        const resp = await fetch(`${BACKEND_URL}/api/admin/orgs?offset=${offset}&page_size=${pageSize}`, {
+        const resp = await fetch(`${BACKEND_URL}/api/admin/orgs?${params.toString()}`, {
             headers: { "X-Admin-Token": adminToken },
         });
         const data = await resp.json();
         return NextResponse.json(data, { status: resp.status });
-    } catch (err) {
+    } catch (_err) {
         return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
     }
 }

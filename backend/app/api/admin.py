@@ -36,49 +36,76 @@ def verify_admin(request: Request):
 async def list_organizations(
     request: Request,
     page_size: int = 15,
-    offset: int = 0
+    cursor: Optional[str] = None,
 ):
     """
-    List all organizations with member counts and simulation counts.
-    Uses Admin SDK — bypasses client Firestore rules.
+    List organizations with Firestore cursor-based pagination.
+    Uses order_by + start_after for efficient page-level queries.
+    Member/sim counts are fetched only for the current page (not all orgs).
     """
     verify_admin(request)
     
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
+    if page_size < 1 or page_size > 50:
+        page_size = 15
+
     try:
-        orgs_ref = db.collection("organizations")
-        all_orgs = orgs_ref.stream()
-        
+        from google.cloud.firestore_v1 import FieldFilter
+
+        orgs_query = db.collection("organizations").order_by("__name__")
+
+        # Cursor-based pagination: start_after the last doc ID from previous page
+        if cursor:
+            cursor_doc = db.collection("organizations").document(cursor).get()
+            if cursor_doc.exists:
+                orgs_query = orgs_query.start_after(cursor_doc)
+
+        # Fetch page_size + 1 to determine if there are more pages
+        docs = list(orgs_query.limit(page_size + 1).stream())
+        has_more = len(docs) > page_size
+        page_docs = docs[:page_size]
+
         org_list = []
-        for doc in all_orgs:
-            data = doc.to_dict() or {}
-            org_id = doc.id
-            
-            # Count members via Admin SDK
+        for org_doc in page_docs:
+            data = org_doc.to_dict() or {}
+            org_id = org_doc.id
+
+            # Fetch member count & admin email (only for this page)
             member_count = 0
             admin_email = ""
             try:
-                users_stream = db.collection("users").where("orgId", "==", org_id).stream()
-                for user_doc in users_stream:
-                    member_count += 1
-                    user_data = user_doc.to_dict() or {}
-                    if user_data.get("role") == "admin" or not admin_email:
-                        admin_email = user_data.get("email", "")
+                users_docs = list(
+                    db.collection("users")
+                    .where(filter=FieldFilter("orgId", "==", org_id))
+                    .select(["email", "role"])
+                    .stream()
+                )
+                member_count = len(users_docs)
+                for u in users_docs:
+                    ud = u.to_dict() or {}
+                    if ud.get("role") == "admin" or not admin_email:
+                        admin_email = ud.get("email", "")
             except Exception as e:
                 logger.warning(f"Member count failed for {org_id}: {e}")
                 member_count = 1
-            
-            # Count simulations
+
+            # Simulation count: use select() to fetch only doc IDs (lightweight)
             sim_count = 0
             try:
-                scoring_ref = db.collection("organizations").document(org_id).collection("scoringHistory").stream()
-                sim_count = sum(1 for _ in scoring_ref)
+                sim_docs = list(
+                    db.collection("organizations").document(org_id)
+                    .collection("scoringHistory")
+                    .select([])
+                    .limit(1000)
+                    .stream()
+                )
+                sim_count = len(sim_docs)
             except Exception:
                 sim_count = 0
 
-            # Get last payment date
+            # Last payment date
             last_payment = "N/A"
             activated_at = data.get("subscription", {}).get("activatedAt")
             if activated_at:
@@ -106,14 +133,13 @@ async def list_organizations(
                 "lastPayment": last_payment,
             })
 
-        # Simple offset pagination
-        total = len(org_list)
-        page = org_list[offset:offset + page_size]
-        
+        # Return cursor for next page (last doc ID of current page)
+        next_cursor = page_docs[-1].id if page_docs and has_more else None
+
         return {
-            "orgs": page,
-            "total": total,
-            "hasMore": (offset + page_size) < total,
+            "orgs": org_list,
+            "hasMore": has_more,
+            "nextCursor": next_cursor,
         }
     except Exception as e:
         logger.error(f"Admin org list failed: {e}")
@@ -188,8 +214,8 @@ async def admin_create_payment_link(
         amount = body.amount
         if not amount:
             PLANS = {
-                "growth": 499900,
-                "scale": 1499900,
+                "growth": 660000,   # ~$79/mo — matches payments.py
+                "scale": 2080000,   # ~$249/mo — matches payments.py
             }
             try:
                 org_doc = db.collection("organizations").document(body.orgId).get()

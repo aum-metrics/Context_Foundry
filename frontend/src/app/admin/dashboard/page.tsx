@@ -41,7 +41,7 @@ export default function AdminDashboard() {
     const [orgs, setOrgs] = useState<OrgData[]>([]);
     const [loadingOrgs, setLoadingOrgs] = useState(true);
     const [newKeyValue, setNewKeyValue] = useState<Record<string, string>>({});
-    const [pageOffset, setPageOffset] = useState(0);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [healthStatus, setHealthStatus] = useState<any[]>([]);
@@ -56,19 +56,19 @@ export default function AdminDashboard() {
             .catch(() => { router.push("/admin"); });
     }, [router]);
 
-    // Fetch orgs via backend Admin SDK API (bypasses Firestore client rules)
+    // Fetch orgs via backend Admin SDK API (cursor-based pagination)
     const fetchOrgs = useCallback(async (isLoadMore = false) => {
         if (isLoadMore) {
             setLoadingMore(true);
         } else {
             setLoadingOrgs(true);
-            setPageOffset(0);
+            setNextCursor(null);
             setHasMore(true);
         }
 
         try {
-            const currentOffset = isLoadMore ? pageOffset : 0;
-            const resp = await fetch(`/api/admin/orgs?offset=${currentOffset}&page_size=15`, {
+            const cursorParam = isLoadMore && nextCursor ? `&cursor=${nextCursor}` : '';
+            const resp = await fetch(`/api/admin/orgs?page_size=15${cursorParam}`, {
                 credentials: 'include',
             });
 
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
             }));
 
             setHasMore(data.hasMore ?? false);
-            setPageOffset(currentOffset + orgList.length);
+            setNextCursor(data.nextCursor ?? null);
 
             if (isLoadMore) {
                 setOrgs(prev => [...prev, ...orgList]);
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
         }
         setLoadingOrgs(false);
         setLoadingMore(false);
-    }, [pageOffset]);
+    }, [nextCursor]);
 
     useEffect(() => { fetchOrgs(false); }, [fetchOrgs]);
 

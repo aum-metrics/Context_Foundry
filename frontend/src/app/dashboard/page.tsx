@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Logo } from "@/components/Logo";
-import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
 import SemanticIngestion from "@/components/SemanticIngestion";
 import AgentManifest from "@/components/AgentManifest";
@@ -11,6 +11,7 @@ import CoIntelligenceSimulator from "@/components/CoIntelligenceSimulator";
 import { useTheme } from "@/components/ThemeProvider";
 import { useOrganization } from "@/components/OrganizationContext";
 import TeamSettings from "@/components/TeamSettings";
+import SSOSettings from "@/components/SSOSettings";
 import { auth } from "@/lib/firebase";
 
 export default function AUMContextFoundry() {
@@ -86,6 +87,14 @@ export default function AUMContextFoundry() {
               <Settings className="w-4 h-4 mr-3" /> Team Settings
             </button>
           )}
+          {orgUser?.role === "admin" && (
+            <button
+              onClick={() => setActiveView("sso")}
+              className={`flex items-center tracking-wide text-sm px-3 py-2 w-full rounded-md transition-colors ${activeView === "sso" ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium" : "text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"}`}
+            >
+              <Shield className="w-4 h-4 mr-3" /> Enterprise SSO
+            </button>
+          )}
           <button
             onClick={async () => {
               if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
@@ -114,6 +123,7 @@ export default function AUMContextFoundry() {
         {activeView === "manifest" && <AgentManifest />}
         {activeView === "simulator" && <CoIntelligenceSimulator />}
         {activeView === "team" && <TeamSettings />}
+        {activeView === "sso" && <SSOSettings />}
       </main>
 
     </div>

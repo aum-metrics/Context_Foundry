@@ -259,6 +259,18 @@ async def on_startup():
     
     logger.info("\n✅ API Ready on http://0.0.0.0:8000")
     logger.info("📖 Docs on http://0.0.0.0:8000/api/docs")
+    
+    # Run task queue recovery sweep (catches stalled jobs from crashes)
+    try:
+        from utils.task_queue_recovery import TaskQueueRecovery
+        stats = await TaskQueueRecovery.sweep_stalled_jobs()
+        if stats.get("stalled", 0) > 0:
+            logger.warning(f"♻️ Task recovery found {stats['stalled']} stalled jobs: {stats}")
+        else:
+            logger.info("✅ Task queue recovery: no stalled jobs found")
+    except Exception as e:
+        logger.warning(f"⚠️ Task queue recovery sweep failed (non-fatal): {e}")
+    
     logger.info("="*60 + "\n")
 
 

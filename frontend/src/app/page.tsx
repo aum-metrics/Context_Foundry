@@ -338,7 +338,7 @@ export default function LandingPage() {
                                 </div>
                                 <h4 className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">POST /api/simulation/v1/run</h4>
                                 <pre className="text-xs md:text-sm font-mono text-slate-600 dark:text-slate-300 overflow-hidden text-left bg-slate-50 dark:bg-black/30 p-4 rounded-xl border border-slate-200/50 dark:border-white/5">
-                                    <code className="text-indigo-600 dark:text-indigo-400">curl</code> -X POST https://api.aumdatalabs.com/v1/simulate \<br />
+                                    <code className="text-indigo-600 dark:text-indigo-400">curl</code> -X POST https://api.aumdatalabs.com/api/simulation/v1/run \<br />
                                     -H <span className="text-emerald-600 dark:text-emerald-400">"Authorization: Bearer sk-live-..."</span> \<br />
                                     -d <span className="text-amber-600 dark:text-amber-400">{'{'}</span><br />
                                     &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"brandId"</span>: <span className="text-emerald-600 dark:text-emerald-400">"org_2F3a..."</span>,<br />
@@ -349,7 +349,7 @@ export default function LandingPage() {
 
                                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5">
                                     <pre className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 overflow-hidden text-left">
-                                        <span className="text-slate-400 dark:text-slate-600">// Response snippet (LCRS 60/40 logic)</span><br />
+                                        {/* Response snippet (LCRS 60/40 logic) */}<br />
                                         {'{'}<br />
                                         &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"contextDrift"</span>: <span className="text-rose-500">32.4</span>,<br />
                                         &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"claimVerification"</span>: <span className="text-emerald-600 dark:text-emerald-400">"0.89"</span>,<br />
