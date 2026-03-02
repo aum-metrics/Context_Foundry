@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firestorePaths';
 import { doc, getDoc } from 'firebase/firestore';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -17,9 +18,9 @@ AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) 
 We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and fidelity risks.
 
 ## Pricing Structure
-- **Starter:** ₹15,000 (~$180) / month — 1 org (up to 25 seats), Gemini 2.0 Flash scoring, 50 simulations/mo
-- **Growth:** ₹25,000 (~$300) / month — All 3 models, 500 simulations/mo (up to 25 seats)
-- **Enterprise:** ₹75,000 (~$900) / month — Unlimited sims, Weekly Cron runs, SSO (coming soon). Max 25 seats per org standard.
+- **Explorer:** Free Forever — 3 simulations/month, All 3 models, 1 document ingestion
+- **Growth:** $79 / month — 100 simulations/month, All 3 models, Unlimited document ingestion (up to 5 seats)
+- **Scale:** $249 / month — 500 simulations/month, priority queue, batch domain analysis. Max 25 seats per org standard.
 
 ## System Architecture
 The platform is built on a multi-tenant SaaS architecture supporting strictly isolated corporate datasets. Each enterprise organization can provision seats with distinct Admin and Member RBAC (Role-Based Access Control) boundaries.
@@ -29,6 +30,7 @@ The platform is built on a multi-tenant SaaS architecture supporting strictly is
 
     if (orgId) {
         try {
+            const { db } = await import('@/lib/firestorePaths');
             const manifestDoc = await getDoc(doc(db, "organizations", orgId, "manifests", "default"));
             if (manifestDoc.exists()) {
                 const data = manifestDoc.data();
