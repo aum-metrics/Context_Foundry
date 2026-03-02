@@ -1,42 +1,39 @@
-# AUM Context Foundry: Operational User Guide
+# AUM Context Foundry: Operator Guide
 
-## 1. Authentication & Workspace Setup
-- **Access Control**: Users sign in via Firebase Auth. 
-- **Organizational Isolation**: You are strictly confined to your `orgId`. 
-- **Seats & Pricing**: 
-    - **Explorer**: (1 seat) 3 simulations/mo.
-    - **Growth**: (5 seats) 100 simulations/mo.
-    - **Scale**: (25 seats) 500 simulations/mo.
-- **Invitations**: Admins can invite team members via the "Team Settings" dashboard.
+This guide covers the core operational workflows for AUM Context Foundry, from brand setup to proactive remediation.
 
-## 2. Ingesting Your Ground Truth
-1. Navigate to **"Ingestion Control"**.
-2. Upload your authoritative knowledge base (PDF format).
-3. **Zero-Retention Processing**: The raw PDF is flushed immediately. What remains is a 1536-dimensional vector representation and a Schema.org JSON-LD extraction.
-4. **Manifest State**: The most recent successful ingestion becomes your active "Ground Truth" for all future simulations.
+## 1. Ground Truth Setup (Ingestion)
+1.  Navigate to the **Ingestion Control** panel.
+2.  Upload your authoritative source documents (PDF format).
+3.  **Security Note**: Your files are processed in real-time and deleted from memory. Only the semantic vectors persist.
+4.  Once ingestion is complete, your **Manifest State** is updated. This becomes the "Truth" anchor for all AI evaluations.
 
-## 3. The Co-Intelligence Simulator (LCRS Analysis)
-1. Enter a high-priority customer prompt or search query.
-2. Select **"Generate Analysis"**.
-3. **Multi-Model Compare**: GPT-4o Mini, Gemini 2.0 Flash, and Claude 3.5 Haiku execute the query concurrently using your Ground Truth as injected context.
-4. **Reading the LCRS Score**:
-    - **Green (>85%)**: High Fidelity. The AI is accurately citing your truth.
-    - **Yellow (55%-85%)**: Drift Alert. The AI is paraphrasing with significant semantic divergence.
-    - **Red (<55% or Contradicted)**: Hallucination. The AI has stated a fact that directly contradicts your Ground Truth.
+## 2. Running Simulations (LCRS Audit)
+1.  Open the **Simulator**.
+2.  Input a customer query, prompt, or competitor claim.
+3.  The system will execute a tri-model audit (GPT, Gemini, Claude).
+4.  **Interpreting the Score**:
+    *   **90-100% (High)**: Accurate citation. SAFE.
+    *   **60-90% (Low)**: Semantic Drift. The AI is paraphrasing inaccurately. CAUTION.
+    *   **<60% (Hallucination)**: Factual contradiction. HIGH RISK.
 
-## 4. Share of Model (SoM) Command Center
-- **ASoV Radar Chart**: Visualizes brand presence across the agentic engine ecosystem.
-- **Historical Fidelity**: Track how model updates (e.g., GPT-4o vs 4o-mini) affect your brand accuracy over time.
-- **Competitor Displacement**: Identifies queries where competitors are being cited more frequently than your own ground truth.
+## 3. Brand Monitoring (Command Center)
+-   **ASoV Radar**: Track your "Agentic Share of Voice" across different models.
+-   **Historical Fidelity**: Monitor how model updates (e.g., GPT 4.0 to 4.5) affect your brand consistency.
+-   **Competitor Displacement**: Identify queries where AI agents favor competitor truth over yours.
 
-## 5. Proactive Remediation (Agent Manifests)
-1. Go to **"Identity Router"**.
-2. Copy the generated `/llms.txt` configuration.
-3. Deploy to your site's root directory (`https://yourdomain.com/llms.txt`).
-4. This forces Generative Engines (SearchGPT, Perplexity) to prioritize your verified semantic structure over legacy web scrapes.
+## 4. Remediation (Identity Router)
+1.  Go to the **Identity Router** tab.
+2.  Your dynamic `/llms.txt` manifesto is automatically updated based on your last ingestion.
+3.  Copy the URL or download the configuration and deploy it to your root domain (`yourbrand.com/llms.txt`).
+4.  This signals to crawlers (SearchGPT, Perplexity) that your verified ground truth must take precedence over scraped data.
 
-## 6. Enterprise Exports
-- **Brand Health Certificate**: Download a high-design verifiable report (PNG/PDF) of your current ASoV scores for stakeholders and investors.
+## 5. Stakeholder Reporting
+-   **Brand Health Certificate**: Generate a tamper-evident PNG/PDF report of your current fidelity scores directly from the dashboard for board-level reporting.
+
+## 6. Admin & Team Management
+-   **Seat Management**: Invite team members based on your tier (Explorer/Growth/Scale).
+-   **API Keys**: Generate and revoke secure keys for external dashboard integrations (HubSpot, Semrush, etc.).
 
 ---
 © 2026 AUM Data Labs.

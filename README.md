@@ -1,37 +1,44 @@
-# AUM Context Foundry
+# AUM Context Foundry (v4.0.0-PROD)
 
-**Verified Identity Router for the Agentic Era**
+**The Verified Identity Router for the Agentic Era**
 
-AUM Context Foundry is a production-grade infrastructure platform designed to evaluate and optimize how multi-modal Large Language Models (LLMs) ingest, process, and cite enterprise data. It bridges the gap between passive search monitoring and active retrieval augmentation.
+AUM Context Foundry is a production-hardened infrastructure layer designed to evaluate, optimize, and enforce how multi-modal Large Language Models (LLMs) ingest and cite enterprise data. It provides the "Smoke Detector" and "Identity Router" for brands navigating the shift from traditional search to retrieval-augmented agents.
 
 ---
 
-## 🏗 Architecture & Core Moats
+## 🏗 Core Technical Moats
 
-AUM is not a "dashboard wrapper." It is fundamentally architected as an **API-First Data Infrastructure** supporting multi-tenant enterprise isolation.
+AUM is architected as an **API-First Data Infrastructure** for the enterprise, moving beyond simple dashboard wrappers.
 
-*   **Backend Array:** FastAPI (Python 3.12+). Evaluates deterministic RAG drift utilizing a 60/40 mathematical scoring engine (40% cosine similarity embedding divergence, 60% claim-by-claim LLM verification).
-*   **Zero-Retention Semantic Pipeline:** Proprietary ingestion (`backend/app/api/ingestion.py`). Files are held in volatile RAM, vectorized into 1536-dimensional namespaces, committed to Firestore, and instantaneously deleted. *No AWS bucket persistence.*
-*   **The Edge Client:** Next.js 15 (App Router). Operates as an API consumer of the FastAPI backend, protected by strict Firebase JWT authentication, offering the CMO/CISO an interpretable view of the underlying vector database.
-*   **Dynamic Identity Routing:** Generates live, crawler-optimized `/llms.txt` and `JSON-LD` schemas per organization, forcing RAG engines (SearchGPT, Perplexity) to index ground-truth.
+*   **LCRS Evaluation Engine**: A deterministic 60/40 mathematical scoring model (`backend/app/api/simulation.py`).
+    *   **60% Logical Claim Verification**: Concurrent LLM cross-checking (GPT, Gemini, Claude) to detect factual contradictions.
+    *   **40% Semantic Fidelity**: Cosine similarity divergence analysis within specialized 1536-dimensional namespaces.
+*   **Zero-Retention Semantic Pipeline**: Secure ingestion (`backend/app/api/ingestion.py`) that processes documents in volatile memory. Embeddings are persisted to Firestore; raw files are flushed immediately. **Zero AWS/S3 storage footprint.**
+*   **Identity Syndication**: Dynamically serves crawler-optimized `/llms.txt` and `JSON-LD` schemas per organization (`frontend/src/app/llms.txt/route.ts`), forcing RAG agents (SearchGPT, Perplexity) to prioritize ground-truth.
+*   **Hardened Multi-Tenancy**: Strict organizational isolation powered by Firebase ID tokens and verified Firestore security rules.
 
-## 🛡 Security & Hardening (v2.2.0)
+## 🛡 Security & Compliance (Audit-Ready)
 
-The platform has successfully cleared comprehensive "Brutal Hardening" criteria for Seed/Series A diligence:
+Cleared "Mechanical Hardening" for enterprise-scale deployment and Series A technical diligence:
 
-*   **Firebase Standardized Auth:** Decentralized JWT session management seamlessly maps to FastAPI dependencies (`core/api_auth.py`). 
-*   **Atomic Transactions:** Concurrency in billing cycles and simulation quotas (Explorer/Growth/Scale) are protected by strict NoSQL transaction blocks.
-*   **Air-Gapped SOC2 Auditing:** Critical `create/update/delete` schema mutations write async logs to a protected `systemLogs` collective.
-*   **Graceful Degradation:** Multi-provider API routing natively handles `503` timeouts from OpenAI/Anthropic/Google via exponential backoffs without crushing the client socket.
+*   **Standardized Auth**: Backend protected by `firebase-admin` ID token verification. Legacy JWT paths consolidated.
+*   **Atomic Transactions**: Billing quotas and simulation limits enforced by Firestore atomic transaction blocks to prevent race-condition abuse.
+*   **SOC2 Audit Trail**: Sensitive operations (Ingestion/Deletion/API Key Revocation) generate append-only logs in a protected `systemLogs` collective.
+*   **Fail-Closed Logic**: Critical endpoints (Auth, Ingestion, Payments) are architected to fail closed on upstream dependency timeouts.
 
-## 🚀 Execution & Automation
+## 🚀 Quick Start (Local Development)
 
-### 1. The Local B2B Stack
+### 1. Requirements
+- Python 3.12+
+- Node.js 22+
+- Firebase Project (Firestore + Auth enabled)
+
+### 2. Service Orchestration
 ```bash
-# 1. Start the API Gateway (Port 8000)
+# 1. Start the FastAPI Gateway (Port 8000)
 cd backend
-python3 -m pip install -r requirements.txt
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+pip install -r requirements.txt
+python -m uvicorn app.main:app --port 8000 --reload
 
 # 2. Start the Edge Client (Port 3000)
 cd frontend
@@ -39,28 +46,24 @@ npm install
 npm run dev
 ```
 
-### 2. "No Mocking" Test Suites
-AUM features a robust dual-layer testing matrix. We do not mock security.
+## 📊 Verification Matrix
 
-**Backend Integrity (PyTest):**
-Validates the mathematical scoring constraints and zero-retention memory flushing.
+AUM enforces a "Zero-Mock" philosophy for mission-critical security and math.
+
+### 1. Backend Integrity (Pytest)
+Validates the mathematical engine and zero-retention memory lifecycle.
 ```bash
 cd backend
-python3 -m pytest tests/ --verbose
+python -m pytest tests/ --verbose
 ```
 
-**Frontend E2E (Playwright):**
-Verifies the Next.js visual layer, Auth routing, and PDF Export pipelines.
+### 2. Frontend E2E (Playwright)
+Validates auth boundaries, dashboard state, and PDF export integrity.
 ```bash
 cd frontend
 npx playwright test
 ```
 
-## 📊 Live Observability
-
-*   **Health:** `/api/health` API heartbeat.
-*   **Log Streams:** Unstructured request tracing routed through `logging.getLogger`.
-*   **ASoV Radar Insights:** Real-time Aggregated Share of Voice tracking.
-
 ---
+
 © 2026 AUM Data Labs. All rights reserved.
