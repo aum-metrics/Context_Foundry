@@ -8,7 +8,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles, Globe } from "lucide-react";
+import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles, Globe, Webhook, Code2, Terminal } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Logo } from "@/components/Logo";
@@ -318,6 +318,79 @@ export default function LandingPage() {
                         <span className="flex items-center"><Cpu className="w-3.5 h-3.5 mr-1.5" /> Claim-Level Fact Checking</span>
                         <span>·</span>
                         <span className="flex items-center"><Scale className="w-3.5 h-3.5 mr-1.5" /> RBAC Access Control</span>
+                    </div>
+                </section>
+
+                {/* API & Developer Platform Section */}
+                <section id="api" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
+                    <div className="grid md:grid-cols-2 gap-16 items-center">
+                        <div>
+                            <div className="inline-flex items-center space-x-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
+                                <Code2 className="w-3.5 h-3.5" />
+                                <span>API-First Architecture</span>
+                            </div>
+                            <h2 className="text-3xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white mb-6">
+                                The Verified Identity Router
+                            </h2>
+                            <p className="text-slate-600 dark:text-slate-400 text-lg font-light leading-relaxed mb-8">
+                                AUM is not just a dashboard; it is core B2B data infrastructure. We provide the <strong className="font-medium text-slate-800 dark:text-slate-200">REST API layer</strong> that enterprise SEO and PR platforms license to bring Agentic Search insights directly into their native workflows.
+                            </p>
+
+                            <ul className="space-y-6">
+                                <li className="flex items-start">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mr-4">
+                                        <Webhook className="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-slate-900 dark:text-white font-medium mb-1">Zero-Retention Ingestion Webhooks</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Programmatically send proprietary corporate PDFs to our secure API. We flush from memory instantly and return perfectly structured semantic vectors.</p>
+                                    </div>
+                                </li>
+                                <li className="flex items-start">
+                                    <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 mr-4">
+                                        <Terminal className="w-5 h-5 text-cyan-500" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-slate-900 dark:text-white font-medium mb-1">ASoV & Context Drift Endpoints</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Pull real-time mathematical scores (60/40 blend) for brand fidelity across GPT-4o, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 rounded-[2rem] blur-3xl opacity-50 dark:opacity-20 animate-pulse"></div>
+                            <div className="relative rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-xl p-8 shadow-2xl overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-50 transition-opacity">
+                                    <div className="flex space-x-2">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                                    </div>
+                                </div>
+                                <h4 className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">POST /api/v1/simulate</h4>
+                                <pre className="text-xs md:text-sm font-mono text-slate-600 dark:text-slate-300 overflow-hidden text-left bg-slate-50 dark:bg-black/30 p-4 rounded-xl border border-slate-200/50 dark:border-white/5">
+                                    <code className="text-indigo-600 dark:text-indigo-400">curl</code> -X POST https://api.aumdatalabs.com/v1/simulate \<br />
+                                    -H <span className="text-emerald-600 dark:text-emerald-400">"Authorization: Bearer sk-live-..."</span> \<br />
+                                    -d <span className="text-amber-600 dark:text-amber-400">{'{'}</span><br />
+                                    &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"brandId"</span>: <span className="text-emerald-600 dark:text-emerald-400">"org_2F3a..."</span>,<br />
+                                    &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"engines"</span>: [<span className="text-emerald-600 dark:text-emerald-400">"gpt-4o"</span>, <span className="text-emerald-600 dark:text-emerald-400">"perplexity"</span>],<br />
+                                    &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"query"</span>: <span className="text-emerald-600 dark:text-emerald-400">"What is their current pricing?"</span><br />
+                                    <span className="text-amber-600 dark:text-amber-400">{'}'}</span>
+                                </pre>
+
+                                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5">
+                                    <pre className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 overflow-hidden text-left">
+                                        <span className="text-slate-400 dark:text-slate-600">// Response snippet (LCRS 60/40 logic)</span><br />
+                                        {'{'}<br />
+                                        &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"contextDrift"</span>: <span className="text-rose-500">32.4</span>,<br />
+                                        &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"claimVerification"</span>: <span className="text-emerald-600 dark:text-emerald-400">"0.89"</span>,<br />
+                                        &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"semanticDistance"</span>: <span className="text-emerald-600 dark:text-emerald-400">"0.92"</span><br />
+                                        {'}'}
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
