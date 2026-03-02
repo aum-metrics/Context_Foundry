@@ -92,7 +92,7 @@ export default function ProductDemoVideo() {
                         >
                             <div className="inline-flex items-center space-x-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-4 border border-indigo-500/30 backdrop-blur-md">
                                 {(() => {
-                                    const IconComponent = steps[currentStep].icon;
+                                    const IconComponent = steps[currentStep].icon as React.ElementType;
                                     return <IconComponent className="w-3.5 h-3.5" />;
                                 })()}
                                 <span>Platform View</span>
