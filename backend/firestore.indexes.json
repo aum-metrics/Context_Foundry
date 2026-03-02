@@ -1,27 +1,60 @@
 {
   "indexes": [
     {
-      "collectionGroup": "canvases",
+      "collectionGroup": "simulationCache",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "owner_uid", "order": "ASCENDING" },
-        { "fieldPath": "updated_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
-      "collectionGroup": "canvases",
+      "collectionGroup": "scoringHistory",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "workspace_id", "order": "ASCENDING" },
-        { "fieldPath": "updated_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
-      "collectionGroup": "canvas_cursors",
+      "collectionGroup": "manifests",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "canvas_id", "order": "ASCENDING" },
-        { "fieldPath": "last_active", "order": "DESCENDING" }
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "chunks",
+      "fieldPath": "embedding",
+      "indexes": [
+        {
+          "queryScope": "COLLECTION",
+          "vectorConfig": {
+            "dimension": 1536,
+            "flat": {}
+          }
+        }
       ]
     }
   ]

@@ -9,7 +9,7 @@ fastapi==0.110.0
 slowapi==0.1.9
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-pydantic[email]==2.5.2
+pydantic[email]>=2.5.2
 python-dotenv==1.0.0
 
 # Auth & Security
@@ -23,7 +23,7 @@ firebase-admin==6.4.0
 # Data Processing
 pandas==2.1.2
 numpy==1.26.2
-pymupdf4llm==0.0.17
+pymupdf4llm>=0.0.17
 pymupdf>=1.24.10
 
 # LLM Providers (Multi-Model Simulation)

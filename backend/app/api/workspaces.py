@@ -259,7 +259,7 @@ async def invite_member(
         "success": True,
         "message": f"Invitation sent to {request.email}",
         "workspace_id": workspace_id,
-        "member_count": workspace["member_count"]
+        "member_count": len(current_members)
     }
 
 @router.delete("/{workspace_id}/members/{email}")

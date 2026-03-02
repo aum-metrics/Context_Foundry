@@ -110,6 +110,9 @@ async def configure_sso(config: SSOConfig):
     Configure SSO for an organization
     ENTERPRISE FEATURE - Requires Professional/Enterprise tier
     """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+
     if config.provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO provider")
     
@@ -142,6 +145,9 @@ async def initiate_sso_login(request: SSOLoginRequest):
     Returns authorization URL for redirect
     """
     # Get SSO configuration from Firestore
+    if not db:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+        
     organization_id = request.organization_id
     config_doc = db.collection("sso_configs").document(organization_id).get()
     if not config_doc.exists:

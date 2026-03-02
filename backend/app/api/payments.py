@@ -169,6 +169,7 @@ async def verify_payment(request: VerifyPaymentRequest):
             raise HTTPException(status_code=400, detail="Invalid payment signature")
 
         # Update org subscription in Firestore
+        payments = None
         if db:
             plan_id = "growth"
             try:

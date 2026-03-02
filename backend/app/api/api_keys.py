@@ -86,8 +86,8 @@ def check_api_tier_subscription(user_email: str) -> bool:
         user = result.data[0]
         subscription_type = user.get("subscription_type", "free")
         
-        # ONLY professional tier gets API access
-        if subscription_type.lower() != "professional":
+        # ONLY growth and scale tiers get API access
+        if subscription_type.lower() not in ["growth", "scale"]:
             return False
         
         # Check expiry
