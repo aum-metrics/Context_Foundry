@@ -174,7 +174,7 @@ AUM/
 | GET | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | List org members |
 | POST | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | Invite org member |
 | POST | `/api/simulation/run` | Firebase JWT | LCRS simulation |
-| POST | `/v1/run` | `aum_` API Key | B2B simulation gateway |
+| POST | `/api/simulation/v1/run` | `aum_` API Key | B2B simulation gateway |
 | POST | `/api/ingestion/parse` | Firebase JWT | Zero-retention PDF ingestion |
 | GET | `/api/competitor/displacement/{orgId}` | Firebase JWT + org-verify | Competitor analysis |
 | POST | `/api/seo/audit` | Firebase JWT | Async SEO audit |

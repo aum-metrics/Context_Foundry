@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
       { source: "/api/workspaces/:path*", destination: `${API_BASE}/api/workspaces/:path*` },
       { source: "/api/methods/:path*", destination: `${API_BASE}/api/methods/:path*` },
       { source: "/api/auth/:path*", destination: `${API_BASE}/api/auth/:path*` },
+      { source: "/api/sso/:path*", destination: `${API_BASE}/api/sso/:path*` },
       { source: "/api/health", destination: `${API_BASE}/api/health` },
     ];
   },

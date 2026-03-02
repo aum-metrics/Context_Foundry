@@ -149,3 +149,86 @@ async def update_org_api_key(
     except Exception as e:
         logger.error(f"Admin key update failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class AdminPaymentLinkRequest(BaseModel):
+    orgId: str
+    customerEmail: str
+    description: str = "AUM Context Foundry - Subscription"
+    amount: Optional[int] = None
+
+
+@router.post("/payment-link")
+async def admin_create_payment_link(
+    request: Request,
+    body: AdminPaymentLinkRequest,
+):
+    """
+    Admin-only payment link creation.
+    Uses admin token auth instead of Firebase Bearer.
+    Proxies to Razorpay directly via Admin SDK.
+    """
+    verify_admin(request)
+
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    try:
+        import razorpay
+        key_id = os.getenv("RAZORPAY_KEY_ID")
+        key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+        if not key_id or not key_secret:
+            raise HTTPException(status_code=503, detail="Razorpay not configured")
+
+        client = razorpay.Client(auth=(key_id, key_secret))
+
+        # Determine amount from org plan if not specified
+        amount = body.amount
+        if not amount:
+            PLANS = {
+                "growth": 499900,
+                "scale": 1499900,
+            }
+            try:
+                org_doc = db.collection("organizations").document(body.orgId).get()
+                if org_doc.exists:
+                    plan_id = (org_doc.to_dict() or {}).get("subscription", {}).get("planId", "growth")
+                    amount = PLANS.get(plan_id, PLANS["growth"])
+            except Exception:
+                pass
+            if not amount:
+                amount = PLANS["growth"]
+
+        link = client.payment_link.create({
+            "amount": amount,
+            "currency": "INR",
+            "description": body.description,
+            "customer": {"email": body.customerEmail},
+            "notify": {"email": True},
+            "notes": {"orgId": body.orgId},
+            "callback_url": os.getenv("PAYMENT_CALLBACK_URL", ""),
+            "callback_method": "get",
+        })
+
+        # Store link record
+        db.collection("organizations").document(body.orgId).collection("payments").add({
+            "type": "payment_link",
+            "linkId": link.get("id"),
+            "shortUrl": link.get("short_url"),
+            "amount": amount,
+            "status": "sent",
+            "customerEmail": body.customerEmail,
+            "createdBy": "admin",
+        })
+
+        return {
+            "linkId": link.get("id"),
+            "shortUrl": link.get("short_url"),
+            "amount": amount,
+            "status": "created",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin payment link creation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

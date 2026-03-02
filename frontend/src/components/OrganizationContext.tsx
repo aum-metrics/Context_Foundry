@@ -103,6 +103,11 @@ export function OrganizationProvider({ children, user }: { children: React.React
                         }
                         const provisionData = await response.json();
 
+                        // Store provisioned B2B API key (shown once, user can retrieve from Settings)
+                        if (provisionData.apiKey && typeof window !== 'undefined') {
+                            localStorage.setItem('aum_b2b_api_key', provisionData.apiKey);
+                        }
+
                         currentOrgUser = {
                             uid: user.uid,
                             email: user.email || "",
