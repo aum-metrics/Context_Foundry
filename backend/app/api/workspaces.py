@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 # In-memory storage removed as per brutal audit hardening
 
 class ProvisionOrgRequest(BaseModel):
-    email: str
-    name: str
+    email: Optional[str] = None
+    name: Optional[str] = None
 
 class CreateWorkspaceRequest(BaseModel):
     name: str
@@ -363,6 +363,93 @@ async def invite_member(
         "workspace_id": workspace_id,
         "member_count": len(current_members)
     }
+
+@router.get("/{org_id}/members")
+async def list_org_members(
+    org_id: str,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    List all members of an organization.
+    Returns members from Firestore via Admin SDK (bypasses client security rules).
+    """
+    uid = current_user.get("uid")
+    if not verify_user_org_access(uid, org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    try:
+        users_stream = db.collection("users").where("orgId", "==", org_id).stream()
+        members = []
+        for doc in users_stream:
+            user_data = doc.to_dict() or {}
+            members.append({
+                "uid": user_data.get("uid", doc.id),
+                "email": user_data.get("email", ""),
+                "role": user_data.get("role", "member"),
+                "orgId": org_id
+            })
+        return {"members": members}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{org_id}/members")
+async def add_org_member(
+    org_id: str,
+    request: dict,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    Invite a member to an organization.
+    Frontend calls POST /api/workspaces/{orgId}/members.
+    Admin SDK write bypasses client Firestore security rules.
+    """
+    uid = current_user.get("uid")
+    if not verify_user_org_access(uid, org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    invite_email = request.get("email") if isinstance(request, dict) else None
+    role = (request.get("role") if isinstance(request, dict) else None) or "member"
+    if not invite_email:
+        raise HTTPException(status_code=400, detail="email is required")
+
+    # Enforce seat limits from org subscription
+    org_doc = db.collection("organizations").document(org_id).get()
+    if not org_doc.exists:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    org_data = org_doc.to_dict() or {}
+    plan = org_data.get("subscription", {}).get("planId", "explorer")
+    seat_limits = {"explorer": 1, "growth": 5, "scale": 25, "enterprise": 25}
+    max_seats = seat_limits.get(plan, 1)
+    current_seats = org_data.get("activeSeats", 0)
+    if current_seats >= max_seats:
+        raise HTTPException(status_code=403, detail=f"Seat limit reached for {plan} plan. Upgrade to add more members.")
+
+    # Create pending invite record in Firestore
+    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document()
+    invite_ref.set({
+        "email": invite_email,
+        "role": role,
+        "invitedBy": uid,
+        "invitedAt": datetime.utcnow().isoformat(),
+        "status": "pending"
+    })
+
+    # Increment seat count
+    db.collection("organizations").document(org_id).update({"activeSeats": current_seats + 1})
+
+    log_audit_event(
+        org_id=org_id,
+        actor_id=uid,
+        event_type="member_invited",
+        resource_id=invite_email,
+        metadata={"role": role}
+    )
+    return {"success": True, "message": f"Invitation created for {invite_email}"}
+
 
 @router.delete("/{workspace_id}/members/{email}")
 async def remove_member(

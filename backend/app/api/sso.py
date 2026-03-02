@@ -125,6 +125,12 @@ async def initiate_sso_login(request: SSOInitiateRequest, auth: dict = Depends(g
     if not db:
         raise HTTPException(status_code=503, detail="Database connection unavailable")
 
+    # Tenant ownership check
+    from core.security import verify_user_org_access
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, request.organization_id):
+        raise HTTPException(status_code=403, detail="Unauthorized to initiate SSO for this organization")
+
     try:
         doc = db.collection("sso_configs").document(request.organization_id).get()
         if not doc.exists:

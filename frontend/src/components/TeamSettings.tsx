@@ -32,14 +32,18 @@ export default function TeamSettings() {
             }
 
             try {
-                // Fetch Org Members
-                const q = query(collection(db, "users"), where("orgId", "==", organization.id));
-                const snapshot = await getDocs(q);
-                const mems: OrgUser[] = [];
-                snapshot.forEach(docSnap => mems.push(docSnap.data() as OrgUser));
-                setMembers(mems);
-
-
+                // Fetch Org Members via backend (Admin SDK bypasses Firestore client rules)
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) throw new Error("No auth session");
+                const res = await fetch(`/api/workspaces/${organization.id}/members`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setMembers(data.members || []);
+                } else {
+                    console.warn("Member listing failed:", res.status);
+                }
             } catch (err) {
                 console.error("Failed to fetch initial team data", err);
             }

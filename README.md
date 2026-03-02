@@ -1,92 +1,183 @@
-# AUM Context Foundry (v4.0.0-PROD)
+# AUM Context Foundry
 
-**The Verified Identity Router for the Agentic Era**
+> **The Verified Identity Router for the Agentic Era**
 
-AUM Context Foundry is a production-hardened infrastructure layer designed to evaluate, optimize, and enforce how multi-modal Large Language Models (LLMs) ingest and cite enterprise data. It provides the "Smoke Detector" and "Identity Router" for brands navigating the shift from traditional search to retrieval-augmented agents.
+AUM Context Foundry is a production-hardened, **API-First Data Infrastructure** that evaluates, optimizes, and enforces how multi-modal Large Language Models ingest and cite enterprise data. It provides quantified Agentic Share of Voice (ASoV) scoring across GPT-4o, Claude 3.5, and Gemini 2.0 — giving enterprises mathematical visibility into whether their brand is winning or losing in the AI-answer layer.
+
+[![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://python.org) [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org) [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com) [![Firebase](https://img.shields.io/badge/Firebase-Firestore+Auth-orange)](https://firebase.google.com)
 
 ---
 
-## 🏗 Core Technical Moats
+## 🏗 Architecture
 
-AUM is architected as an **API-First Data Infrastructure** for the enterprise, moving beyond simple dashboard wrappers.
+```
+┌────────────────────────────────────────────────────────────┐
+│  EDGE CLIENT (Next.js 15 + React 19)                       │
+│  Firebase Auth → Dashboard → Simulator → SoM Command Center│
+└──────────────────────────┬─────────────────────────────────┘
+                           │ HTTPS + Bearer Token
+┌──────────────────────────▼─────────────────────────────────┐
+│  LCRS GATEWAY (FastAPI 0.115)                              │
+│  /api/simulation  /api/ingestion  /api/seo  /api/competitor│
+│  /api/workspaces  /api/payments   /api/sso  /api/audit     │
+└──────────────────────────┬─────────────────────────────────┘
+                           │ firebase-admin + Service Account
+┌──────────────────────────▼─────────────────────────────────┐
+│  STATE (Firestore)                                          │
+│  organizations/{orgId}/manifests  users  api_keys          │
+│  auditLogs  simulationCache  sso_configs                   │
+└────────────────────────────────────────────────────────────┘
+```
 
-*   **LCRS Evaluation Engine**: A deterministic 60/40 mathematical scoring model (`backend/app/api/simulation.py`).
-    *   **60% Logical Claim Verification**: Concurrent LLM cross-checking (GPT, Gemini, Claude) to detect factual contradictions.
-    *   **40% Semantic Fidelity**: Cosine similarity divergence analysis within specialized 1536-dimensional namespaces.
-*   **Zero-Retention Semantic Pipeline**: Secure ingestion (`backend/app/api/ingestion.py`) that processes documents in volatile memory. Embeddings are persisted to Firestore; raw files are flushed immediately. **Zero AWS/S3 storage footprint.**
-*   **Identity Syndication**: Dynamically serves crawler-optimized `/llms.txt` and `JSON-LD` schemas per organization (`frontend/src/app/llms.txt/route.ts`), forcing RAG agents (SearchGPT, Perplexity) to prioritize ground-truth.
-*   **Hardened Multi-Tenancy**: Strict organizational isolation powered by Firebase ID tokens and verified Firestore security rules.
+---
 
-## 🛡 Security & Compliance (Audit-Ready)
+## 🔬 Core Technical Moats
 
-Cleared "Mechanical Hardening" for enterprise-scale deployment and Series A technical diligence:
+### 1. LCRS Engine (60/40 Mathematical Scoring)
+The **Low-Latency Claim-based Reliability Scoring** engine produces deterministic fidelity verdicts:
+- **60% Claim Accuracy**: Atomic factual claims are extracted from AI responses and cross-verified against the organization's ground-truth vector set.
+- **40% Semantic Fidelity**: Cosine similarity between embedded AI response and the Context Information Model (CIM) in 1536-dimensional space.
+- **Divide-by-zero protected**: Claims and total initialized before scoring, no undefined scoring states.
 
-*   **Standardized Auth**: Backend protected by `firebase-admin` ID token verification. Legacy JWT paths consolidated.
-*   **Atomic Transactions**: Billing quotas and simulation limits enforced by Firestore atomic transaction blocks to prevent race-condition abuse.
-*   **SOC2 Audit Trail**: Sensitive operations (Ingestion/Deletion/API Key Revocation) generate append-only logs in a protected `systemLogs` collective.
-*   **Fail-Closed Logic**: Critical endpoints (Auth, Ingestion, Payments) are architected to fail closed on upstream dependency timeouts.
-*   **Automatic Provider Provisioning**: No BYOK (Bring Your Own Key) required. Infrastructure API keys (OpenAI, Anthropic, Gemini) are automatically generated and securely assigned per-tenant during the onboarding lifecycle. This guarantees isolated billing transparency and instantaneous platform readiness.
+### 2. Zero-Retention Semantic Pipeline
+- Raw PDF uploaded → processed in volatile RAM via `PyMuPDF4LLM`.
+- Chunked, embedded (`text-embedding-3-small`), synthesized into JSON-LD CIM.
+- Raw bytes explicitly flushed (`del content; gc.collect()`).
+- **Zero S3/disk storage footprint.**
 
-## 🔄 Product Process Flow & Data Architecture
+### 3. Identity Syndication
+- Every tenant gets a dynamic `/llms.txt` manifesto served from the backend via admin-SDK-authenticated reads.
+- Forces RAG agents (SearchGPT, Perplexity) to prioritize ground-truth over hallucinated training data.
 
-AUM executes a strict, linear progression from unstructured ambiguity to mathematical certainty:
+### 4. Zero-Friction B2B Onboarding
+- New users provision via `POST /api/workspaces/provision` (no JSON body needed — inferred from Firebase JWT).
+- Auto-generates organization, user record, and B2B `aum_...` prefix API key in a single atomic operation.
+- Platform manages OpenAI/Gemini/Anthropic inference keys so users start immediately without BYOK.
 
-### 1. The Ingestion Workflow
-1.  **Transport**: User uploads raw PDF assets or enters a URL via the Semantic Ingestion dashboard.
-2.  **Volatile Memory Processing**: `PyMuPDF4LLM` extracts text and document structure entirely within RAM. Zero bytes are written to disk storage.
-3.  **Semantic Chunking & Embedding**: Content is recursively chunked and embedded via `text-embedding-3-small`.
-4.  **Transformation**: The chunks are synthesized into a verified Context Information Model (CIM) and stored as JSON-LD in Firestore. Raw buffers are instantly purged (`gc.collect()`).
+### 5. B2B API Licensing
+- External integrators use `aum_` prefix Bearer tokens for direct API access.
+- Rate limiting via `slowapi` (IP + Token layer).
+- All B2B key usage logged to SOC2 audit trail.
 
-### 2. The LCRS Simulation Workflow
-1.  **Trigger**: User initiates a prompt in the Co-Intelligence Simulator.
-2.  **Tri-Model Dispatch**: The Backend routes the prompt concurrently to GPT-4o, Claude 3.5 Sonnet, and Gemini 2.0 Flash using the organization's automatically provisioned execution keys.
-3.  **Cross-Examination**: Responses are parsed for atomic claims.
-4.  **Mathematical Adjudication**: Claims are verified against the organization's embedded CIM (Ground Truth Vector Set).
-5.  **Output**: A deterministic Fidelity Score (0-100%) and a Master Audit Verdict are generated to measure Context Drift.
+---
 
-### 3. The Edge Syndication Workflow
-1.  **Generation**: Validated ground truth is compiled into an optimizer-friendly `/llms.txt` manifesto.
-2.  **Routing**: Next.js App Router edge nodes dynamically serve the manifesto specific to the requesting tenant's configuration.
-3.  **Consumption**: External AI Agents (SearchGPT, Perplexity) ingest the manifesto, ensuring the brand's verified context overrides hallucinated training data.
+## 🛡 Security & Compliance
 
-## 🚀 Quick Start (Local Development)
+| Mechanism | Implementation |
+|-----------|---------------|
+| Auth | `firebase-admin` ID token verification; `aum_` prefix API keys with SHA-256 hash |
+| Multi-tenancy | `verify_user_org_access` enforced on every org-scoped endpoint |
+| Payments | All Razorpay endpoints require auth + org ownership (`/create-order`, `/verify`, `/payment-link`) |
+| SSO | `/configure` and `/status` require org membership; Fernet encryption for client secrets |
+| Audit | SOC2-compliant append-only logs in `organizations/{orgId}/auditLogs` |
+| Rate Limiting | `slowapi` + Firestore atomic transaction-based simulation quotas |
+| Webhook Security | `hmac.compare_digest` for Razorpay webhook verification |
 
-### 1. Requirements
-- Python 3.12+
-- Node.js 22+
-- Firebase Project (Firestore + Auth enabled)
+---
 
-### 2. Service Orchestration
+## 🚀 Quick Start
+
+### Requirements
+- Python 3.12+, Node.js 22+, Firebase project (Firestore + Auth enabled)
+
+### Environment Setup
 ```bash
-# 1. Start the FastAPI Gateway (Port 8000)
+# Backend (copy and fill values)
+cp backend/.env.example backend/.env
+
+# Frontend (copy and fill values)
+cp frontend/.env.example frontend/.env.local
+```
+
+### Run Locally
+```bash
+# Terminal 1 — FastAPI Gateway (Port 8000)
 cd backend
 pip install -r requirements.txt
-python -m uvicorn app.main:app --port 8000 --reload
+PYTHONPATH=app python3 app/main.py
+# or: uvicorn app.main:app --port 8000 --reload
 
-# 2. Start the Edge Client (Port 3000)
+# Terminal 2 — Next.js Edge Client (Port 3000)
 cd frontend
 npm install
 npm run dev
 ```
 
-## 📊 Verification Matrix
-
-AUM enforces a "Zero-Mock" philosophy for mission-critical security and math.
-
-### 1. Backend Integrity (Pytest)
-Validates the mathematical engine and zero-retention memory lifecycle.
+### Run Tests
 ```bash
 cd backend
-python -m pytest tests/ --verbose
-```
-
-### 2. Frontend E2E (Playwright)
-Validates auth boundaries, dashboard state, and PDF export integrity.
-```bash
-cd frontend
-npx playwright test
+PYTHONPATH=app pytest tests -v
 ```
 
 ---
 
-© 2026 AUM Data Labs. All rights reserved.
+## 📊 Subscription Tiers
+
+| Tier | Seats | Simulations/mo | Batch Analysis | Price |
+|------|-------|----------------|----------------|-------|
+| Explorer | 1 | 3 | ✗ | Free |
+| Growth | 5 | 100 | ✓ | ₹4,999/mo |
+| Scale | 25 | 500 | ✓ | ₹14,999/mo |
+
+---
+
+## 🗂 Project Structure
+
+```
+AUM/
+├── backend/
+│   ├── app/
+│   │   ├── api/              # Route modules
+│   │   │   ├── simulation.py    # LCRS engine + B2B API gateway
+│   │   │   ├── ingestion.py     # Zero-retention PDF pipeline
+│   │   │   ├── workspaces.py    # Org provisioning + manifest
+│   │   │   ├── payments.py      # Razorpay integration
+│   │   │   ├── sso.py           # Enterprise SSO
+│   │   │   ├── competitor.py    # Competitive displacement
+│   │   │   ├── seo.py           # SEO audit (async job)
+│   │   │   ├── api_keys.py      # B2B key lifecycle
+│   │   │   └── audit.py         # SOC2 audit logs
+│   │   ├── core/
+│   │   │   ├── security.py      # Auth + org access verification
+│   │   │   ├── config.py        # Settings (Pydantic)
+│   │   │   └── firebase_config.py
+│   │   └── main.py             # FastAPI app + router mounts
+│   └── tests/
+│       ├── conftest.py          # Firestore mock + cleanup fixtures
+│       ├── test_simulation.py
+│       ├── test_ingestion.py
+│       ├── test_competitor.py
+│       ├── test_audit.py
+│       └── test_rag_logic.py
+├── frontend/
+│   └── src/
+│       ├── app/                 # Next.js App Router pages
+│       ├── components/          # React UI components
+│       └── lib/                 # Firebase config + utils
+├── README.md
+├── AUM_Enterprise_Technical_Specification.md
+├── Admin_Support_Handbook.md
+├── User_Guide.md
+├── FAQ.md
+└── CMO_Marketing_Guide.md
+```
+
+---
+
+## 🔗 Key Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/workspaces/provision` | Firebase JWT | Auto-provision org + B2B key |
+| POST | `/api/simulation/run` | Firebase JWT | LCRS simulation |
+| POST | `/v1/run` | `aum_` API Key | B2B simulation gateway |
+| POST | `/api/ingestion/parse` | Firebase JWT | Zero-retention PDF ingestion |
+| GET | `/api/competitor/displacement/{orgId}` | Firebase JWT | Competitor analysis |
+| GET | `/api/seo/audit` | Firebase JWT | Async SEO audit |
+| POST | `/api/payments/create-order` | Firebase JWT + org-verify | Razorpay order |
+| POST | `/api/sso/configure` | Firebase JWT + org-verify | Enterprise SSO config |
+| GET | `/llms.txt` | Public | Tenant-aware AI manifesto |
+
+---
+
+*Built by AUM Data Labs — Context Foundry v4.1.0*

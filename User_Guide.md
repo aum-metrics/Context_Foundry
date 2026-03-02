@@ -1,43 +1,202 @@
-# AUM Context Foundry: Operator Guide
-
-This guide covers the core operational workflows for AUM Context Foundry, from brand setup to proactive remediation.
-
-## 1. Onboarding & Enterprise Provisioning
-1.  **Automated Setup**: When your organization is created, AUM automatically provisions, encrypts, and assigns dedicated API keys (OpenAI, Anthropic, Gemini) to your workspace.
-2.  **No BYOK Required**: You do not need to bring your own keys. This zero-friction setup ensures you can immediately use the Simulator while AUM isolates infrastructure inference costs for granular billing transparency.
- 
-## 2. Ground Truth Setup (Ingestion)
-1.  Navigate to the **Ingestion Control** panel.
-2.  Upload your authoritative source documents (PDF format).
-3.  **Security Note**: Your files are processed in real-time and deleted from memory. Only the semantic vectors persist.
-4.  Once ingestion is complete, your **Manifest State** is updated. This becomes the "Truth" anchor for all AI evaluations.
-
-## 3. Running Simulations (LCRS Audit)
-1.  Open the **Simulator**.
-2.  Input a customer query, prompt, or competitor claim.
-3.  The system will execute a tri-model audit (GPT, Gemini, Claude) using your automatically provisioned sandbox keys.
-4.  **Interpreting the Score**:
-    *   **90-100% (High)**: Accurate citation. SAFE.
-    *   **60-90% (Low)**: Semantic Drift. The AI is paraphrasing inaccurately. CAUTION.
-    *   **<60% (Hallucination)**: Factual contradiction. HIGH RISK.
-
-## 4. Brand Monitoring (Command Center)
--   **ASoV Radar**: Track your "Agentic Share of Voice" across different models.
--   **Historical Fidelity**: Monitor how model updates (e.g., GPT 4.0 to 4.5) affect your brand consistency.
--   **Competitor Displacement**: Identify queries where AI agents favor competitor truth over yours.
-
-## 5. Remediation (Identity Router)
-1.  Go to the **Identity Router** tab.
-2.  Your dynamic `/llms.txt` manifesto is automatically updated based on your last ingestion.
-3.  Copy the URL or download the configuration and deploy it to your root domain (`yourbrand.com/llms.txt`).
-4.  This signals to crawlers (SearchGPT, Perplexity) that your verified ground truth must take precedence over scraped data.
-
-## 6. Stakeholder Reporting
--   **Brand Health Certificate**: Generate a tamper-evident PNG/PDF report of your current fidelity scores directly from the dashboard for board-level reporting.
-
-## 7. Admin & Team Management
--   **Seat Management**: Invite team members based on your tier (Explorer/Growth/Scale).
--   **Billing Transparency**: View your aggregated simulation limits, active seats, and transparent infrastructure usage metrics natively in the Admin Dashboard.
+# AUM Context Foundry — User Guide
+**v4.1.0 | March 2026**
 
 ---
-© 2026 AUM Data Labs.
+
+## Welcome to AUM Context Foundry
+
+AUM Context Foundry answers a critical question every brand now faces:
+**"When someone asks an AI about your product, does the AI answer correctly?"**
+
+This guide covers everything you need to get started — from uploading your first document to reading your simulation results.
+
+---
+
+## 1. Getting Started
+
+### 1.1 Creating Your Account
+1. Go to [app.aumdatalabs.com](https://app.aumdatalabs.com).
+2. Click **Sign Up** and use your business email.
+3. Verify your email address.
+4. Your workspace is automatically created — **no credit card required** to start on the Explorer plan.
+
+### 1.2 Your Workspace
+When you first log in, AUM automatically:
+- Creates an **Organization** for your company.
+- Provisions a **B2B API Key** for direct API access.
+- Sets you up on the **Explorer plan** (3 simulations/month, free).
+
+You'll be taken straight to the Dashboard.
+
+---
+
+## 2. Setting Up Your Context (Ingestion)
+
+> **What is a Context Information Model (CIM)?**
+> It's the mathematical "ground truth" AUM uses to evaluate AI responses. Think of it as your brand's verified knowledge base — the source all AI answers should match.
+
+### 2.1 Uploading Your First Document
+1. Navigate to **Semantic Ingestion** in the sidebar.
+2. Click **Upload Document** and select a PDF.
+   - Accepted files: PDFs (< 10MB).
+   - Example documents: Product specs, FAQs, company overviews, technical data sheets.
+3. Click **Process Document**.
+4. AUM processes your document entirely in-memory (zero-retention) and builds your CIM.
+5. You'll see a success confirmation when embedding is complete.
+
+> **Explorer Plan**: You can upload 1 document. Upgrade to Growth or Scale for unlimited documents.
+
+### 2.2 What Happens to My Document?
+- The raw PDF is **never stored**. It is processed in volatile memory and immediately purged.
+- Only the mathematical embeddings and structured JSON-LD schema are persisted.
+- This is AUM's Zero-Retention guarantee — compliance-friendly for regulated industries.
+
+---
+
+## 3. Running Your First Simulation
+
+### 3.1 The Co-Intelligence Simulator
+
+1. Navigate to **Co-Intelligence Simulator** in the sidebar.
+2. Enter a question a customer might ask an AI about your brand:
+   - Example: *"What is Acme Corp's data retention policy?"*
+   - Example: *"Does TechBrand support integration with Salesforce?"*
+3. Click **Run Simulation**.
+
+### 3.2 Reading Your Results
+
+AUM runs your question through **GPT-4o, Claude 3.5, and Gemini 2.0** simultaneously and scores each response:
+
+```
+LCRS Score = (60% × Factual Accuracy) + (40% × Semantic Alignment)
+```
+
+| Score Range | Grade | What It Means |
+|-------------|-------|---------------|
+| 85–100 | 🟢 High Fidelity | AI is accurately representing your brand |
+| 60–84 | 🟡 Minor Drift | Some narrative deviation — worth monitoring |
+| 0–59 | 🔴 Critical Drift | AI is actively misrepresenting your brand |
+
+**Per-Model Breakdown**: See which AI model represents you best (and which is the worst offender).
+
+**Claim Analysis**: See exactly which factual claims each model got right or wrong.
+
+> **Explorer Plan**: 3 simulations per month. Upgrade for more.
+
+---
+
+## 4. The SoM (Share of Mind) Command Center
+
+Access via **SoM Command Center** in the sidebar. This is your proactive monitoring dashboard.
+
+### 4.1 Batch Stability Check
+Runs your key customer questions across all three AI models in one click. Identifies which questions produce inconsistent answers across AI models. (Growth/Scale plans only.)
+
+### 4.2 SEO & LLM Audit
+Analyzes your website for:
+- JSON-LD structured data completeness.
+- LLM-readability of your key pages.
+- Core Web Vitals (Lighthouse score).
+
+> This is an async process — results appear within 30–60 seconds.
+
+### 4.3 Competitor Displacement Analysis
+Answers: *"Is AI recommending my competitors instead of me?"*
+Shows displacement rate and competitive positioning across AI models.
+
+---
+
+## 5. The Agent Manifest (`/llms.txt`)
+
+Every AUM account gets a dynamic **Agent Manifesto** — a machine-readable file at:
+```
+https://app.aumdatalabs.com/llms.txt?orgId=your_org_id
+```
+
+This is automatically indexed by AI crawlers (SearchGPT, Perplexity, Claude). It tells them:
+- Who you are.
+- What you offer.
+- Your canonical ground-truth URLs.
+
+No configuration needed — it updates automatically as you update your CIM.
+
+You can also view and copy your manifesto from the **Agent Manifest** page in the dashboard.
+
+---
+
+## 6. Managing Your Team
+
+Navigate to **Settings → Team** to:
+- Invite team members by email.
+- Set roles: **Admin** (full access) or **Member** (read + simulate).
+- View active seats.
+
+> **Seat Limits**: Explorer: 1 seat. Growth: 5 seats. Scale: 25 seats.
+
+---
+
+## 7. API Access (Developer Mode)
+
+Your **B2B API Key** (format: `aum_...`) is shown on the **API Keys** page. Use it to:
+
+### Run a Simulation via API
+```bash
+curl -X POST https://api.aumdatalabs.com/v1/run \
+  -H "Authorization: Bearer aum_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orgId": "your_org_id",
+    "prompt": "What is your data retention policy?",
+    "manifestVersion": "latest"
+  }'
+```
+
+### Response
+```json
+{
+  "results": [
+    {
+      "model": "gpt-4o",
+      "response": "...",
+      "lcrsScore": 91.5,
+      "grade": "high_fidelity",
+      "claimsSupported": 4,
+      "claimsTotal": 4
+    }
+    ...
+  ],
+  "lowestScore": 74.2,
+  "highestScore": 91.5
+}
+```
+
+---
+
+## 8. Upgrading Your Plan
+
+1. Go to **Settings → Billing**.
+2. Choose **Growth** (5 seats, 100 sims/mo) or **Scale** (25 seats, 500 sims/mo).
+3. Complete checkout via Razorpay (cards, UPI, Net Banking accepted).
+4. Your plan upgrades instantly after payment confirmation.
+
+---
+
+## 9. Frequently Asked Questions
+
+See `FAQ.md` for a full list. Quick answers:
+
+**Q: Do you store my documents?**
+A: No. Raw documents are processed in memory and immediately deleted. Only embeddings are stored.
+
+**Q: Which AI models are tested?**
+A: GPT-4o (OpenAI), Claude 3.5 Sonnet (Anthropic), Gemini 2.0 Flash (Google).
+
+**Q: Do I need to provide my own API keys?**
+A: No. AUM provides platform-managed inference keys for all plans. BYOK is supported for enterprise customers.
+
+**Q: What happens when I hit my simulation limit?**
+A: You'll see a clear "Limit Reached" message. You can upgrade immediately to continue.
+
+---
+
+*AUM Data Labs — User Guide v4.1.0*

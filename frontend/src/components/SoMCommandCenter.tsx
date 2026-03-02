@@ -194,7 +194,7 @@ export default function SoMCommandCenter() {
                     try {
                         let currentToken = await auth.currentUser?.getIdToken();
                         if (!currentToken && process.env.NODE_ENV === "development") currentToken = "mock-dev-token";
-                        const statusRes = await fetch(`/api/batch/status/${organization.id}/${data.jobId}`, {
+                        const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${data.jobId}`, {
                             headers: { 'Authorization': `Bearer ${currentToken}` }
                         });
                         if (statusRes.ok) {
