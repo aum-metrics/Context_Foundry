@@ -11,7 +11,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function PrivacyPage() {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#030303] text-slate-900 dark:text-slate-100 p-8 sm:p-24 font-sans leading-relaxed">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 p-8 sm:p-24 font-sans leading-relaxed">
             <Link href="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 mb-12 transition-colors">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Link>

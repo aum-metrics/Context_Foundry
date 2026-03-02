@@ -41,7 +41,7 @@ export default function ContactPage() {
         setLoading(false);
     };
     return (
-        <div className="min-h-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans selection:bg-indigo-500/30">
             <nav className="p-8">
                 <Link href="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home

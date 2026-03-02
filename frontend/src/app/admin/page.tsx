@@ -54,27 +54,21 @@ export default function AdminLoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md"
-            >
-                <div className="text-center mb-8">
-                    <div className="flex items-center justify-center mx-auto mb-4">
-                        <Logo size={64} showText={false} />
-                    </div>
-                    <h1 className="text-2xl font-light text-white">Product Admin</h1>
-                    <p className="text-sm text-slate-500 mt-1">AUM Context Foundry — Internal Operations</p>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 text-slate-900 dark:text-slate-200">
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-xl border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-center mb-6">
+                    <Logo size={64} showText={false} />
                 </div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 text-center">Admin Access</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center">Sign in to manage the platform</p>
 
-                <form onSubmit={handleLogin} className="bg-slate-900 border border-white/5 rounded-2xl p-8 shadow-2xl space-y-5">
-                    {error && (
-                        <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm px-4 py-3 rounded-xl">
-                            {error}
-                        </div>
-                    )}
+                {error && (
+                    <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center">
+                        {error}
+                    </div>
+                )}
 
+                <form onSubmit={handleLogin} className="space-y-5">
                     <div>
                         <label className="text-xs text-slate-400 uppercase tracking-wider font-medium block mb-2">Email</label>
                         <input
@@ -82,7 +76,7 @@ export default function AdminLoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="admin@aumdatalabs.com"
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors"
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                             required
                         />
                     </div>
@@ -95,7 +89,7 @@ export default function AdminLoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors pr-12"
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                                 required
                             />
                             <button
@@ -111,7 +105,7 @@ export default function AdminLoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg shadow-rose-500/20 disabled:opacity-50"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50 mt-6"
                     >
                         {loading ? "Authenticating..." : "Access Admin Panel"}
                     </button>
@@ -120,7 +114,7 @@ export default function AdminLoginPage() {
                 <p className="text-center text-xs text-slate-600 mt-6">
                     This panel is for AUM product administrators only.
                 </p>
-            </motion.div>
+            </div>
         </div>
     );
 }

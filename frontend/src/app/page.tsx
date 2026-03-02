@@ -27,7 +27,7 @@ export default function LandingPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-slate-100 font-sans overflow-x-hidden selection:bg-indigo-500/30 transition-colors duration-300">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans overflow-x-hidden selection:bg-indigo-500/30 transition-colors duration-300">
 
             {/* Premium Background Gradients */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">

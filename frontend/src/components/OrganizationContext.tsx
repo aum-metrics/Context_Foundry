@@ -35,6 +35,7 @@ const OrganizationContext = createContext<OrganizationContextType>({
     organization: null,
     orgUser: null,
     loadingOrg: true,
+    error: null
 });
 
 export function OrganizationProvider({ children, user }: { children: React.ReactNode, user: User | null }) {
