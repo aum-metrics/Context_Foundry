@@ -416,9 +416,9 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     if is_dev and auth.get("type") == "session":
         logger.info(f"🧪 Dev-mode: Access granted to {request.orgId} for {auth['uid']}")
 
-    # ----- 0. MD5 HASH CACHE CHECK (Zero-Burn Optimization) -----
+    # ----- 0. SHA-256 HASH CACHE CHECK (Zero-Burn Optimization) -----
     cache_input = f"{request.orgId}_{request.prompt}_{request.manifestVersion}".encode('utf-8')
-    cache_key = hashlib.md5(cache_input).hexdigest()
+    cache_key = hashlib.sha256(cache_input).hexdigest()
     
     if db:
         try:

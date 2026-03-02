@@ -68,13 +68,10 @@ export default function SoMCommandCenter() {
 
     useEffect(() => {
         if (!organization) return;
-
-        // Fetch competitor data
-        fetch(`/api/competitor/displacement/${organization.id}`)
-            .then(res => res.json())
-            .then(data => setCompetitors(data))
-            .catch(err => console.error("Failed to fetch competitors", err));
-
+        // Mock data since /api/competitor/displacement is not implemented yet
+        setCompetitors([
+            { name: "Legacy GenAI", displacementRate: 42, strengths: ["Speed"], weaknesses: ["Hallucinations"] }
+        ]);
     }, [organization]);
 
     const fetchHistory = async (orgId: string) => {
@@ -304,7 +301,7 @@ export default function SoMCommandCenter() {
 
     const chartData = useMemo(() => {
         if (loading) return [];
-        if (!historyEntries && !error) return fallbackData[activeTab === "GPT-4o Mini" ? "gpt4" : activeTab === "Claude 3.5 Haiku" ? "claude" : "gemini"] || [];
+        if (!historyEntries && !error) return [];
         if (historyEntries && historyEntries.length === 0) return [];
 
         const targetModel = activeTab;
@@ -319,7 +316,7 @@ export default function SoMCommandCenter() {
             }
         }
 
-        return dataPoints.length > 0 ? dataPoints : (fallbackData[activeTab === "GPT-4o Mini" ? "gpt4" : activeTab === "Claude 3.5 Haiku" ? "claude" : "gemini"] || []);
+        return dataPoints;
     }, [historyEntries, activeTab, loading, error]);
 
     const fidelityRisks = useMemo(() => {

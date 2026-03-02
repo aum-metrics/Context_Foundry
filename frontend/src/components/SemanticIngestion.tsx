@@ -240,10 +240,11 @@ export default function SemanticIngestion() {
                                 <div className="mt-8 w-full max-w-md relative">
                                     <input
                                         type="text"
-                                        placeholder={`https://${organization?.name?.toLowerCase().replace(/\s+/g, '') || 'yourcompany'}.com/products`}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-cyan-500 dark:focus:border-cyan-500/50 rounded-lg py-3 px-4 text-sm text-slate-900 dark:text-slate-200 outline-none transition-colors shadow-sm dark:shadow-none"
+                                        disabled
+                                        placeholder={`URL Ingestion (Coming in v1.1)`}
+                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg py-3 px-4 text-sm text-slate-400 dark:text-slate-500 outline-none cursor-not-allowed shadow-sm dark:shadow-none"
                                     />
-                                    <button className="absolute right-2 top-2 bg-slate-100 dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 text-slate-500 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 p-1.5 rounded-md transition-colors">
+                                    <button disabled className="absolute right-2 top-2 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 p-1.5 rounded-md cursor-not-allowed">
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>

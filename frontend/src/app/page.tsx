@@ -8,7 +8,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles, Globe, Webhook, Code2, Terminal } from "lucide-react";
+import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Sparkles, Globe, Webhook, Code2, Terminal, Activity, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Logo } from "@/components/Logo";
@@ -515,26 +515,4 @@ export default function LandingPage() {
     );
 }
 
-// Icon helpers
-function Sparkle(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-        </svg>
-    )
-}
-function Activity(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-        </svg>
-    )
-}
-function CheckCircle2(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <circle cx="12" cy="12" r="10" />
-            <path d="m9 12 2 2 4-4" />
-        </svg>
-    )
-}
+

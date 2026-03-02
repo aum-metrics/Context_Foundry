@@ -61,12 +61,11 @@ export default function ProductDemoVideo() {
                         transition={{ duration: 0.8, ease: "easeOut" }}
                         className="absolute inset-0"
                     >
-                        <Image
-                            src={steps[currentStep].image}
-                            alt={steps[currentStep].title}
-                            fill
-                            className="object-cover object-top opacity-90 transition-transform duration-[10s] group-hover:scale-105"
-                            priority
+                        <div
+                            className={`absolute inset-0 bg-gradient-to-br transition-opacity duration-[10s] opacity-90 group-hover:opacity-100 ${currentStep === 0 ? 'from-indigo-900/40 via-purple-900/20 to-black' :
+                                    currentStep === 1 ? 'from-emerald-900/40 via-teal-900/20 to-black' :
+                                        'from-amber-900/40 via-orange-900/20 to-black'
+                                }`}
                         />
                     </motion.div>
                 </AnimatePresence>

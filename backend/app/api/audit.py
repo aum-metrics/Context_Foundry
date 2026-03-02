@@ -47,6 +47,11 @@ async def get_org_audit_logs(org_id: str, current_user: dict = Depends(get_curre
     if not db:
         raise HTTPException(status_code=503, detail="Audit service unavailable")
 
+    uid = current_user.get("uid")
+    from core.security import verify_user_org_access
+    if not verify_user_org_access(uid, org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized access to audit logs")
+
     try:
         logs = db.collection("organizations").document(org_id)\
                  .collection("auditLogs")\

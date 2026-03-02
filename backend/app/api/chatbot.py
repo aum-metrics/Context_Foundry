@@ -112,10 +112,15 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
             logger.warning(f"Semantic search failed: {e}")
 
     # Fallback to general content summary if semantic search yielded nothing
-    if not context_text:
-        latest_doc = latest_manifest_ref.get()
-        if latest_doc.exists:
-            context_text = latest_doc.to_dict().get("content", "")[:10000]
+    if not context_text and db:
+        try:
+            org_ref = db.collection("organizations").document(request.orgId)
+            manifests = org_ref.collection("manifests").order_by("createdAt", direction="DESCENDING").limit(1).stream()
+            latest_doc = next(manifests, None)
+            if latest_doc:
+                context_text = latest_doc.to_dict().get("content", "")[:10000]
+        except Exception as e:
+            logger.warning(f"Fallback manifest retrieval failed: {e}")
 
     if not context_text:
         context_text = "The organization has not uploaded a Context Document yet. Tell the user to navigate to Organization Settings."

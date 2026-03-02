@@ -3,7 +3,21 @@ import { doc, getDoc } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
+const rateLimit = new Map<string, { count: number, resetAt: number }>();
+
 export async function GET(request: Request) {
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const now = Date.now();
+
+    let limitData = rateLimit.get(ip);
+    if (!limitData || limitData.resetAt < now) {
+        limitData = { count: 1, resetAt: now + 15 * 60 * 1000 };
+    } else {
+        limitData.count++;
+        if (limitData.count > 100) return new NextResponse("Rate limit exceeded.", { status: 429 });
+    }
+    rateLimit.set(ip, limitData);
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
 

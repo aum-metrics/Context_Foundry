@@ -5,7 +5,8 @@ Org: " Start-up/AUM Data Labs"
 Product: "Context Foundry"
 Description: Razorpay Subscription & Payment Management Router
 """
-from fastapi import APIRouter, HTTPException, Request
+from core.security import get_current_user, verify_user_org_access
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -165,7 +166,7 @@ async def verify_payment(request: VerifyPaymentRequest):
             key_secret.encode(), message.encode(), hashlib.sha256
         ).hexdigest()
 
-        if expected_signature != request.razorpay_signature:
+        if not hmac.compare_digest(expected_signature, request.razorpay_signature):
             raise HTTPException(status_code=400, detail="Invalid payment signature")
 
         # Update org subscription in Firestore
@@ -325,10 +326,14 @@ async def razorpay_webhook(request: Request):
 
 
 @router.get("/status/{org_id}")
-async def get_payment_status(org_id: str):
+async def get_payment_status(org_id: str, current_user: dict = Depends(get_current_user)):
     """Gets the subscription status for an organization."""
     if not db:
         return {"status": "unknown", "detail": "Firestore not available"}
+
+    uid = current_user.get("uid")
+    if not verify_user_org_access(uid, org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized access")
 
     try:
         org_doc = db.collection("organizations").document(org_id).get()

@@ -50,8 +50,12 @@ export default function AdminDashboard() {
     const [checkingHealth, setCheckingHealth] = useState(false);
 
     useEffect(() => {
-        const token = sessionStorage.getItem("aum_admin_token");
-        if (!token) router.push("/admin");
+        fetch("/api/admin/verify")
+            .then(res => res.json())
+            .then(data => {
+                if (!data.verified) router.push("/admin");
+            })
+            .catch(() => { router.push("/admin"); });
     }, [router]);
 
     // Fetch orgs from Firestore
@@ -113,7 +117,11 @@ export default function AdminDashboard() {
                     status: data.subscription?.status || "active",
                     members: memberCount || 1,
                     simulations: simCount,
-                    apiKeys: data.apiKeys || { openai: "", gemini: "", anthropic: "" },
+                    apiKeys: {
+                        openai: data.apiKeys?.openai ? "true" : "",
+                        gemini: data.apiKeys?.gemini ? "true" : "",
+                        anthropic: data.apiKeys?.anthropic ? "true" : ""
+                    },
                     email: data.email || data.adminEmail || `admin@${docSnap.id}.com`,
                     lastPayment: data.subscription?.activatedAt ? new Date(data.subscription.activatedAt.seconds * 1000).toLocaleDateString() : "N/A",
                 });
@@ -129,13 +137,12 @@ export default function AdminDashboard() {
         }
         setLoadingOrgs(false);
         setLoadingMore(false);
-    }, [lastDoc]);
+    }, [lastDoc, router]);
 
-    useEffect(() => { fetchOrgs(false); }, []);
+    useEffect(() => { fetchOrgs(false); }, [fetchOrgs]);
 
-    const handleLogout = () => {
-        sessionStorage.removeItem("aum_admin_token");
-        sessionStorage.removeItem("aum_admin_email");
+    const handleLogout = async () => {
+        await fetch("/api/admin/logout", { method: "POST" });
         router.push("/admin");
     };
 
@@ -379,17 +386,7 @@ export default function AdminDashboard() {
                                                 </div>
                                                 <div className="flex items-center space-x-3 mb-3">
                                                     <div className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 font-mono text-sm text-slate-400 flex items-center justify-between">
-                                                        <span>{key ? (showKeys[keyId] ? key : "••••••••••••••••") : "No key set"}</span>
-                                                        {key && (
-                                                            <div className="flex items-center space-x-2">
-                                                                <button onClick={() => setShowKeys(s => ({ ...s, [keyId]: !s[keyId] }))} className="text-slate-500 hover:text-slate-300">
-                                                                    {showKeys[keyId] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                                </button>
-                                                                <button onClick={() => copyToClipboard(key, keyId)} className="text-slate-500 hover:text-amber-400">
-                                                                    {copiedKey === keyId ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                        <span>{key ? "••••••••••••••••" : "No key set"}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex space-x-3">

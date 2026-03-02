@@ -183,14 +183,14 @@ async def parse_document(
             transaction = db.transaction()
             
             @firestore.transactional
-            def update_manifest(txn, m_ref, l_ref, data, vector, id_val, chunk_list, vec_list):
+            def update_manifest(txn, m_ref, l_ref, data, vector, id_val, total_chunks):
                 # 1. Write Manifest
                 txn.set(m_ref, {
                     "content": json.dumps(data),
                     "embedding": vector,
                     "createdAt": datetime.datetime.utcnow(),
                     "version": id_val,
-                    "totalChunks": len(chunk_list)
+                    "totalChunks": total_chunks
                 })
                 # 2. Write Latest
                 txn.set(l_ref, {
@@ -198,28 +198,19 @@ async def parse_document(
                     "embedding": vector,
                     "createdAt": datetime.datetime.utcnow(),
                     "version": id_val,
-                    "totalChunks": len(chunk_list)
+                    "totalChunks": total_chunks
                 })
-                # 3. Small chunks (up to 400 total operations per transaction usually safe)
-                # If too many chunks, we fall back to manual batching
-                if len(chunk_list) < 400:
-                    for i, (txt, vec) in enumerate(zip(chunk_list, vec_list)):
-                        c_ref = m_ref.collection("chunks").document(str(i))
-                        txn.set(c_ref, {"text": txt, "embedding": vec, "index": i})
-                    return True
-                return False
+                return True
 
-            success = update_manifest(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, chunks, chunk_vectors)
+            success = update_manifest(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, len(chunks))
             
-            if not success:
-                # Manual Batching for large docs
+            # Explicit batching for chunks to bypass 500-op limit on transactions
+            if success:
                 batch = db.batch()
-                batch.set(manifest_ref, {"content": json.dumps(schema_data), "embedding": schema_vector, "createdAt": datetime.datetime.utcnow(), "version": manifest_id, "totalChunks": len(chunks)})
-                batch.set(latest_ref, {"content": json.dumps(schema_data), "embedding": schema_vector, "createdAt": datetime.datetime.utcnow(), "version": manifest_id, "totalChunks": len(chunks)})
                 for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
                     c_ref = manifest_ref.collection("chunks").document(str(i))
                     batch.set(c_ref, {"text": txt, "embedding": vec, "index": i})
-                    if (i + 1) % 450 == 0:
+                    if (i + 1) % 400 == 0:
                         batch.commit()
                         batch = db.batch()
                 batch.commit()

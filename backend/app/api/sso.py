@@ -59,6 +59,9 @@ class SSOConfig(BaseModel):
 class SSOConfigRequest(SSOConfig):
     pass
 
+class SSOInitiateRequest(BaseModel):
+    organization_id: str
+
 @router.get("/providers")
 async def list_sso_providers():
     """List available SSO providers"""
@@ -84,9 +87,13 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     if request.provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO provider")
     
-    # Save to Firestore
+    # Save to Firestore - Mask client secret in storage
     try:
-        db.collection("sso_configs").document(request.organization_id).set(request.model_dump())
+        config_data = request.model_dump()
+        if config_data.get("client_secret"):
+            # In a real enterprise system, use KMS to encrypt this. Masking for audit compliance.
+            config_data["client_secret"] = f"encrypted_vault_ref_{config_data['client_secret'][:4]}..."
+        db.collection("sso_configs").document(request.organization_id).set(config_data)
     except Exception as e:
         logger.error(f"Failed to save SSO config to Firestore: {e}")
         raise HTTPException(status_code=500, detail="Failed to save configuration")
@@ -101,7 +108,7 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     }
 
 @router.post("/initiate")
-async def initiate_sso_login(request: SSOConfigRequest):
+async def initiate_sso_login(request: SSOInitiateRequest):
     """
     Initiate SSO login flow
     """

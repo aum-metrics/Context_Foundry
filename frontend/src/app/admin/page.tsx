@@ -14,10 +14,14 @@ export default function AdminLoginPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Check if already authenticated
+    // Check if already authenticated via server cookie
     useEffect(() => {
-        const token = sessionStorage.getItem("aum_admin_token");
-        if (token) router.push("/admin/dashboard");
+        fetch("/api/admin/verify")
+            .then(res => res.json())
+            .then(data => {
+                if (data.verified) router.push("/admin/dashboard");
+            })
+            .catch(() => { });
     }, [router]);
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -35,8 +39,6 @@ export default function AdminLoginPage() {
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
-                    sessionStorage.setItem("aum_admin_token", data.token);
-                    sessionStorage.setItem("aum_admin_email", email);
                     router.push("/admin/dashboard");
                 } else {
                     setError(data.error || "Invalid credentials. Product admin access only.");

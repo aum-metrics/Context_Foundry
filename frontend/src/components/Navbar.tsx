@@ -11,14 +11,14 @@ export default function Navbar() {
 
     useEffect(() => {
         setMounted(true);
-        const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' || 'dark';
+        const savedTheme = localStorage.getItem('aum_theme') as 'dark' | 'light' || 'dark';
         setTheme(savedTheme);
     }, []);
 
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
+        localStorage.setItem('aum_theme', newTheme);
         document.documentElement.classList.toggle('dark');
     };
 

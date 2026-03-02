@@ -48,15 +48,14 @@ export default function StatusPage() {
                         setAvgLatency(`${pingLatency + 15}ms`);
                     } else {
                         // Backend might be missing a /api/health route, but frontend is up
-                        // For demonstration without an actual health endpoint backing it up:
-                        setGlobalStatus("Operational");
+                        setGlobalStatus("Degraded");
                         setServices([
-                            { name: "LCRS Math Engine", status: "Operational", latency: `${pingLatency + 25}ms` },
-                            { name: "Semantic Ingestion Engine", status: "Operational", latency: "1.1s" },
-                            { name: "Multi-Tenant Auth", status: "Operational", latency: "18ms" },
-                            { name: "Edge Manifest Delivery", status: "Operational", latency: "9ms" },
+                            { name: "LCRS Math Engine", status: "Degraded", latency: "Timeout" },
+                            { name: "Semantic Ingestion Engine", status: "Degraded", latency: "Timeout" },
+                            { name: "Multi-Tenant Auth", status: "Operational", latency: "25ms" },
+                            { name: "Edge Manifest Delivery", status: "Operational", latency: "10ms" },
                         ]);
-                        setAvgLatency(`${pingLatency + 12}ms`);
+                        setAvgLatency(`--`);
                     }
                 }
             } catch (err) {

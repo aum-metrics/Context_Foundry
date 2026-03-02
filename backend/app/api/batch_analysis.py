@@ -16,8 +16,11 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 
 logger = logging.getLogger(__name__)
+from api.simulation import run_simulation, SimulationRequest
+from fastapi import BackgroundTasks
 
-from api.simulation import evaluate_simulation, SimulationRequest
+async def evaluate_simulation(req: SimulationRequest):
+    return await run_simulation(req, BackgroundTasks(), {"uid": "batch_worker", "orgId": req.orgId, "email": "batch@aumdatalabs.com"})
 from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
 
@@ -145,7 +148,10 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
     This runs standard audit prompts for every org (or a specific org)
     and stores the results in Firestore scoringHistory.
     """
-    cron_secret = os.getenv("CRON_SECRET", "aum-cron-2025")
+    cron_secret = os.getenv("CRON_SECRET", None)
+    if not cron_secret:
+        raise HTTPException(status_code=500, detail="CRON_SECRET environment variable is missing.")
+    
     if request.secret != cron_secret:
         raise HTTPException(status_code=403, detail="Invalid cron secret")
 

@@ -9,6 +9,7 @@ from openai import OpenAI
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List
+import asyncio
 
 logger = logging.getLogger(__name__)
 

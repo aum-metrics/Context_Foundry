@@ -48,6 +48,7 @@ export default function CoIntelligenceSimulator() {
     const [adjudication, setAdjudication] = useState<{ master_verdict: string, winner: string, audit_notes: string } | null>(null);
     const [lockedModels, setLockedModels] = useState<string[]>([]);
     const [lastPrompt, setLastPrompt] = useState("");
+    const [byokError, setByokError] = useState(false);
 
     useEffect(() => {
         if (!organization) return;
@@ -82,6 +83,7 @@ export default function CoIntelligenceSimulator() {
         setModelResults([]);
         setAdjudication(null);
         setLastPrompt(promptText);
+        setByokError(false);
         setLoading(true);
 
         try {
@@ -118,6 +120,9 @@ export default function CoIntelligenceSimulator() {
             setLockedModels(data.lockedModels || []);
         } catch (error) {
             console.error('Simulation Failed:', error);
+            if (error instanceof Error && error.message.toLowerCase().includes("api key")) {
+                setByokError(true);
+            }
             setModelResults([{
                 model: "Error",
                 answer: error instanceof Error ? error.message : "Unknown error",
@@ -240,8 +245,21 @@ export default function CoIntelligenceSimulator() {
                             </motion.div>
                         )}
 
+                        {/* API Error / Quota Exhausted */}
+                        {byokError && !loading && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-500/30 p-8 rounded-2xl flex flex-col items-center text-center shadow-lg my-6">
+                                <div className="w-16 h-16 bg-rose-100 dark:bg-rose-500/20 rounded-full flex items-center justify-center mb-4">
+                                    <AlertTriangle className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+                                </div>
+                                <h4 className="text-xl font-medium text-rose-900 dark:text-rose-100 mb-2">Simulation Engine Unavailable</h4>
+                                <p className="text-sm text-rose-700 dark:text-rose-300 max-w-md leading-relaxed">
+                                    Your organization's simulation engine credentials have not been automatically provisioned, or you have exceeded your demo allowance. Please contact support.
+                                </p>
+                            </motion.div>
+                        )}
+
                         {/* Prompt Display */}
-                        {lastPrompt && modelResults.length > 0 && (
+                        {lastPrompt && modelResults.length > 0 && !byokError && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -254,7 +272,7 @@ export default function CoIntelligenceSimulator() {
                         )}
 
                         {/* Score Summary Bar */}
-                        {modelResults.length > 0 && !loading && (
+                        {modelResults.length > 0 && !loading && !byokError && (
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -306,7 +324,7 @@ export default function CoIntelligenceSimulator() {
 
                         {/* Detailed Responses */}
                         <AnimatePresence>
-                            {modelResults.filter(r => !r.error).map((result, i) => (
+                            {!byokError && modelResults.filter(r => !r.error).map((result, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, y: 10 }}
@@ -369,7 +387,7 @@ export default function CoIntelligenceSimulator() {
                         </AnimatePresence>
 
                         {/* Master Adjudication Verdict */}
-                        {adjudication && !loading && (
+                        {adjudication && !loading && !byokError && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}

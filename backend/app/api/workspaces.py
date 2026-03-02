@@ -14,7 +14,7 @@ import secrets
 
 from core.config import settings
 from core.firebase_config import db
-from core.security import get_auth_context
+from core.security import get_auth_context, get_current_user
 from api.audit import log_audit_event
 
 router = APIRouter()

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
     try {
@@ -15,6 +16,13 @@ export async function POST(request: Request) {
         }
 
         if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
+            const cookieStore = await cookies();
+            cookieStore.set("aum_admin_session", "admin_authenticated_v1", {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
+                path: "/"
+            });
             return NextResponse.json({ success: true, token: "admin_authenticated" });
         }
 

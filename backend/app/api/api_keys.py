@@ -135,9 +135,6 @@ async def generate_api_key_endpoint(
                 }
             )
         
-        if not supabase:
-            raise HTTPException(status_code=503, detail="Service unavailable")
-        
         # Generate key
         api_key, key_hash = generate_api_key()
         key_prefix = api_key[:12] + "..."
