@@ -65,7 +65,10 @@ async def _execute_batch_calculation(request: BatchSimulationRequest):
     total_checks = sum(len(v) for v in model_scores.values())
     avg_accuracy = total_accuracy / total_checks if total_checks else 0
 
+    has_errors = any(isinstance(r, Exception) for r in results)
+    
     return {
+        "status": "completed_with_errors" if has_errors else "completed",
         "domainStability": round(avg_accuracy, 1),
         "hallucinationRate": round((drift_count / total_checks * 100) if total_checks else 0, 1),
         "modelAverages": {m: round(sum(s)/len(s), 1) for m, s in model_scores.items()},

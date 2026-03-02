@@ -1,22 +1,34 @@
 import { NextResponse } from 'next/server';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
-
-const rateLimit = new Map<string, { count: number, resetAt: number }>();
 
 export async function GET(request: Request) {
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const now = Date.now();
 
-    let limitData = rateLimit.get(ip);
-    if (!limitData || limitData.resetAt < now) {
-        limitData = { count: 1, resetAt: now + 15 * 60 * 1000 };
-    } else {
-        limitData.count++;
-        if (limitData.count > 100) return new NextResponse("Rate limit exceeded.", { status: 429 });
+    try {
+        const { db } = await import('@/lib/firestorePaths');
+        if (ip !== "unknown") {
+            const rlRef = doc(db, "rate_limits", `llms_txt_${ip.replace(/\./g, '_')}`);
+            const rlDoc = await getDoc(rlRef);
+            if (rlDoc.exists()) {
+                const data = rlDoc.data();
+                if (data.resetAt > now && data.count > 100) {
+                    return new NextResponse("Rate limit exceeded.", { status: 429 });
+                } else if (data.resetAt <= now) {
+                    await setDoc(rlRef, { count: 1, resetAt: now + 15 * 60 * 1000 });
+                } else {
+                    await setDoc(rlRef, { count: data.count + 1, resetAt: data.resetAt }, { merge: true });
+                }
+            } else {
+                await setDoc(rlRef, { count: 1, resetAt: now + 15 * 60 * 1000 });
+            }
+        }
+    } catch (e) {
+        console.error("Rate limiting error:", e);
+        // Fail-open if Firestore is unreachable to avoid breaking the endpoint
     }
-    rateLimit.set(ip, limitData);
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');

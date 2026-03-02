@@ -14,6 +14,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
@@ -22,6 +24,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download the SentenceTransformer model to bake it into the image (saves startup time)
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+# Install playwright browser
+RUN npx playwright install chromium --with-deps
 
 # Copy the rest of the application
 COPY . .

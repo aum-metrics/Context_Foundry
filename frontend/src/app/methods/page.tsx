@@ -8,7 +8,7 @@ export default function MethodsPage() {
     const [methodology, setMethodology] = useState<any>(null);
 
     useEffect(() => {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/methods`)
+        fetch('/api/methods')
             .then(res => res.json())
             .then(data => setMethodology(data))
             .catch(err => console.error("Failed to load methodology:", err));

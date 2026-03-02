@@ -91,8 +91,12 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     try:
         config_data = request.model_dump()
         if config_data.get("client_secret"):
-            # In a real enterprise system, use KMS to encrypt this. Masking for audit compliance.
-            config_data["client_secret"] = f"encrypted_vault_ref_{config_data['client_secret'][:4]}..."
+            from cryptography.fernet import Fernet
+            import base64
+            import os
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-context-foundry-secure-key-32!").decode())
+            f = Fernet(key)
+            config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
     except Exception as e:
         logger.error(f"Failed to save SSO config to Firestore: {e}")

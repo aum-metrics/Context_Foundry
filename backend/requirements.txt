@@ -17,7 +17,6 @@ PyJWT==2.8.0
 passlib[bcrypt]==1.7.4
 
 # Database & Storage
-supabase
 firebase-admin==6.4.0
 
 # Data Processing

@@ -252,9 +252,19 @@ export default function CoIntelligenceSimulator() {
                                     <AlertTriangle className="w-8 h-8 text-rose-600 dark:text-rose-400" />
                                 </div>
                                 <h4 className="text-xl font-medium text-rose-900 dark:text-rose-100 mb-2">Simulation Engine Unavailable</h4>
-                                <p className="text-sm text-rose-700 dark:text-rose-300 max-w-md leading-relaxed">
-                                    Your organization's simulation engine credentials have not been automatically provisioned, or you have exceeded your demo allowance. Please contact support.
+                                <p className="text-sm text-rose-700 dark:text-rose-300 max-w-md leading-relaxed mb-4">
+                                    {organization?.subscriptionTier === 'explorer'
+                                        ? "Explorer plans do not include automated API key provisioning for enterprise simulations. Please upgrade to unlock Tri-Model Arbitration."
+                                        : "Your organization's simulation engine credentials have not been automatically provisioned, or you have exceeded your demo allowance. Please contact support."}
                                 </p>
+                                {organization?.subscriptionTier === 'explorer' && (
+                                    <button
+                                        onClick={() => setIsUpgradeModalOpen(true)}
+                                        className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20"
+                                    >
+                                        Upgrade to Growth
+                                    </button>
+                                )}
                             </motion.div>
                         )}
 

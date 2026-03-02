@@ -28,6 +28,7 @@ export interface OrganizationContextType {
     organization: Organization | null;
     orgUser: OrgUser | null;
     loadingOrg: boolean;
+    error: string | null;
 }
 
 const OrganizationContext = createContext<OrganizationContextType>({
@@ -40,6 +41,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [orgUser, setOrgUser] = useState<OrgUser | null>(null);
     const [loadingOrg, setLoadingOrg] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOrProvisionOrg = async () => {
@@ -122,6 +124,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 }
             } catch (error) {
                 console.error("Error fetching/provisioning org:", error);
+                setError("Failed to initialize workspace. Please contact support.");
             }
 
             setLoadingOrg(false);
@@ -131,7 +134,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
     }, [user]);
 
     return (
-        <OrganizationContext.Provider value={{ organization, orgUser, loadingOrg }}>
+        <OrganizationContext.Provider value={{ organization, orgUser, loadingOrg, error }}>
             {children}
         </OrganizationContext.Provider>
     );

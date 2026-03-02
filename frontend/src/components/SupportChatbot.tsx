@@ -107,7 +107,7 @@ export default function SupportChatbot() {
                     body: JSON.stringify({
                         orgId: organization.id,
                         query: query,
-                        chatHistory: messages.map(m => ({
+                        chatHistory: messages.slice(-10).map(m => ({
                             id: m.id,
                             text: m.text,
                             sender: m.role,

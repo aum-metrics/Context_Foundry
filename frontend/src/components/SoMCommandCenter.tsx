@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from "recharts";
@@ -65,13 +65,35 @@ export default function SoMCommandCenter() {
     const [isCertificateOpen, setIsCertificateOpen] = useState(false);
     const [historicalData, setHistoricalData] = useState<{ date: string; score: number }[]>([]);
     const [competitors, setCompetitors] = useState<{ name: string, displacementRate: number, strengths: string[], weaknesses: string[] }[]>([]);
+    const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (batchIntervalRef.current) clearInterval(batchIntervalRef.current);
+        };
+    }, []);
 
     useEffect(() => {
         if (!organization) return;
-        // Mock data since /api/competitor/displacement is not implemented yet
-        setCompetitors([
-            { name: "Legacy GenAI", displacementRate: 42, strengths: ["Speed"], weaknesses: ["Hallucinations"] }
-        ]);
+        const fetchCompetitors = async () => {
+            try {
+                let token = await auth.currentUser?.getIdToken();
+                if (!token && (process.env.NODE_ENV === "development" || window.location.search.includes("mock=true"))) {
+                    token = "mock-dev-token";
+                }
+                if (!token) return;
+                const res = await fetch(`/api/competitor/displacement/${organization.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setCompetitors(data.competitors || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch competitors", err);
+            }
+        };
+        fetchCompetitors();
     }, [organization]);
 
     const fetchHistory = async (orgId: string) => {
@@ -146,7 +168,7 @@ export default function SoMCommandCenter() {
 
             if (!token) throw new Error("Authentication required.");
 
-            const response = await fetch('/api/batch', {
+            const response = await fetch('/api/batch/batch', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -168,6 +190,7 @@ export default function SoMCommandCenter() {
             if (data.status === "processing" || data.status === "queued" && data.jobId) {
                 // Poll for completion
                 const pollInterval = setInterval(async () => {
+                    batchIntervalRef.current = pollInterval;
                     try {
                         let currentToken = await auth.currentUser?.getIdToken();
                         if (!currentToken && process.env.NODE_ENV === "development") currentToken = "mock-dev-token";
@@ -225,36 +248,19 @@ export default function SoMCommandCenter() {
             });
             const data = await response.json();
 
-            if (data.jobId) {
-                // Poll for completion to avoid 504 timeouts on heavy Playwright rendering
-                const pollInterval = setInterval(async () => {
-                    try {
-                        let currentToken = await auth.currentUser?.getIdToken();
-                        if (!currentToken && process.env.NODE_ENV === "development") currentToken = "mock-dev-token";
-                        const statusRes = await fetch(`/api/seo/audit/status/${organization.id}/${data.jobId}`, {
-                            headers: { 'Authorization': `Bearer ${currentToken}` }
-                        });
-                        const statusData = await statusRes.json();
-
-                        if (statusData.status === "completed") {
-                            clearInterval(pollInterval);
-                            setSeoResult(statusData.result);
-                            setSeoLoading(false);
-                        } else if (statusData.status === "failed") {
-                            clearInterval(pollInterval);
-                            console.error("SEO Audit Failed:", statusData.error);
-                            setSeoLoading(false);
-                        }
-                    } catch (pollErr) {
-                        console.error("SEO Polling error:", pollErr);
-                    }
-                }, 3000);
-            } else {
+            if (data.seoScore !== undefined) {
+                // Audit completed synchronously
                 setSeoResult(data);
                 setSeoLoading(false);
+            } else if (data.jobId) {
+                // Async fallback if backend ever re-implements it, though highly unlikely
+                setSeoLoading(false);
+            } else {
+                setSeoLoading(false);
+                console.error("SEO Audit Failed:", data);
             }
         } catch (err) {
-            console.error("SEO Audit Error:", err);
+            console.error("SEO Error:", err);
             setSeoLoading(false);
         }
     };
@@ -368,10 +374,10 @@ export default function SoMCommandCenter() {
                     )}
                     <button
                         onClick={runBatchStabilityCheck}
-                        disabled={batchLoading || organization?.subscriptionTier !== "scale"}
-                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${organization?.subscriptionTier === "scale" ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
+                        disabled={batchLoading || !["scale", "enterprise"].includes(organization?.subscriptionTier || "")}
+                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
                     >
-                        {organization?.subscriptionTier === "scale" ? (
+                        {["scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
                             <>
                                 <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
                                 {batchLoading ? 'Analyzing...' : 'Run Batch Analysis'}

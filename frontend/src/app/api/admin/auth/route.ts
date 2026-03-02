@@ -21,7 +21,8 @@ export async function POST(request: Request) {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
                 sameSite: "strict",
-                path: "/"
+                path: "/",
+                maxAge: 60 * 60 * 8
             });
             return NextResponse.json({ success: true, token: "admin_authenticated" });
         }

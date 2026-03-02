@@ -99,13 +99,13 @@ class VerifyPaymentRequest(BaseModel):
 # ============================================================================
 
 @router.get("/plans")
-async def get_plans():
+async def get_plans(auth: dict = Depends(get_current_user)):
     """Returns available subscription plans."""
     return {"plans": PLANS}
 
 
 @router.post("/create-order")
-async def create_subscription_order(request: CreateSubscriptionRequest):
+async def create_subscription_order(request: CreateSubscriptionRequest, auth: dict = Depends(get_current_user)):
     """Creates a Razorpay order for a subscription payment."""
     client = get_razorpay_client()
     if not client:
@@ -163,7 +163,7 @@ async def verify_payment(request: VerifyPaymentRequest):
         key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
         message = f"{request.razorpay_order_id}|{request.razorpay_payment_id}"
         expected_signature = hmac.new(
-            key_secret.encode(), message.encode(), hashlib.sha256
+            key_secret.encode(), message.encode(), digestmod=hashlib.sha256
         ).hexdigest()
 
         if not hmac.compare_digest(expected_signature, request.razorpay_signature):
@@ -286,7 +286,7 @@ async def razorpay_webhook(request: Request):
         # 1. Verify Webhook Signature
         if secret:
             expected_signature = hmac.new(
-                secret.encode(), raw_body, hashlib.sha256
+                secret.encode(), raw_body, digestmod=hashlib.sha256
             ).hexdigest()
             if not hmac.compare_digest(expected_signature, signature):
                 logger.error("Invalid Webhook Signature detected.")

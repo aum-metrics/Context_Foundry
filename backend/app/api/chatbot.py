@@ -123,7 +123,7 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
             logger.warning(f"Fallback manifest retrieval failed: {e}")
 
     if not context_text:
-        context_text = "The organization has not uploaded a Context Document yet. Tell the user to navigate to Organization Settings."
+        return {"response": "I cannot answer that because no verified Context Document exists for your organization yet. Please upload your company data in the Ingestion tab first."}
 
     # 4. Construct the RAG prompt
     system_prompt = f"""You are the AUM Context Engine Support Assistant. 

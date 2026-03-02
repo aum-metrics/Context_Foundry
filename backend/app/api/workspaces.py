@@ -423,27 +423,21 @@ async def get_workspace_activity(
     if user_email not in members:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    # Mock activity data (should come from database)
-    activities = [
-        {
-            "id": "act_1",
-            "type": "analysis_created",
-            "user": "john@example.com",
-            "message": "Created new analysis: Revenue Q4",
-            "timestamp": datetime.utcnow().isoformat()
-        },
-        {
-            "id": "act_2",
-            "type": "member_joined",
-            "user": "sarah@example.com",
-            "message": "Joined the workspace",
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    ]
+    # Fetch activity from Firestore
+    activities = []
+    try:
+        activity_ref = doc_ref.collection("activity").order_by("timestamp", direction="DESCENDING").limit(limit)
+        docs = activity_ref.stream()
+        for d in docs:
+            act_data = d.to_dict()
+            act_data["id"] = d.id
+            activities.append(act_data)
+    except Exception as e:
+        logger.error(f"Failed to fetch workspace activity: {e}")
     
     return {
         "success": True,
-        "activities": activities[:limit],
+        "activities": activities,
         "total_count": len(activities)
     }
 

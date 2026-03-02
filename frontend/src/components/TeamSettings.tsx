@@ -118,7 +118,7 @@ export default function TeamSettings() {
                     <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Active Seats</p>
                     <div className="flex items-baseline space-x-1">
                         <span className="text-3xl font-light text-indigo-500">{organization.activeSeats}</span>
-                        <span className="text-slate-500 text-lg">/ 25</span>
+                        <span className="text-slate-500 text-lg">/ {organization.subscriptionTier === 'scale' ? 25 : organization.subscriptionTier === 'growth' ? 5 : 1}</span>
                     </div>
                 </div>
             </header>
@@ -180,7 +180,7 @@ export default function TeamSettings() {
 
                                 <button
                                     type="submit"
-                                    disabled={inviting || inviteSuccess || organization.activeSeats >= 25}
+                                    disabled={inviting || inviteSuccess || organization.activeSeats >= (organization.subscriptionTier === 'scale' ? 25 : organization.subscriptionTier === 'growth' ? 5 : 1)}
                                     className={`w-full py-3 rounded-lg text-sm font-medium transition-colors flex justify-center items-center ${inviteSuccess ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/50' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 disabled:opacity-50'}`}
                                 >
                                     {inviting ? "Provisioning..." : inviteSuccess ? <><Check className="w-4 h-4 mr-2" /> Invitation Sent</> : "Send Invite Link"}

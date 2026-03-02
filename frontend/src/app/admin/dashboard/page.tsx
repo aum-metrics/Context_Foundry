@@ -187,14 +187,7 @@ export default function AdminDashboard() {
         setTimeout(() => setActionSuccess(null), 2000);
     };
 
-    const simulateAction = (actionId: string, duration = 1500) => {
-        setActionLoading(actionId);
-        setTimeout(() => {
-            setActionLoading(null);
-            setActionSuccess(actionId);
-            setTimeout(() => setActionSuccess(null), 2000);
-        }, duration);
-    };
+
 
     const saveApiKey = async (orgId: string, provider: string, value: string) => {
         const actionId = `save-${orgId}-${provider}`;

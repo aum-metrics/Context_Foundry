@@ -18,7 +18,7 @@ sys.modules["anthropic"] = MagicMock()
 
 # import pytest
 from api.ingestion import recursive_split
-from api.simulation import evaluate_simulation, SimulationRequest, extract_claims
+from api.simulation import SimulationRequest, extract_claims
 
 # --- TEST 1: RECURSIVE CHUNKING INTEGRITY ---
 def test_recursive_chunking_integrity():

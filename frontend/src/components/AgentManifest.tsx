@@ -110,7 +110,7 @@ For deep knowledge graph access, use /llms-full.txt.`;
                         </span>
                     ) : deployed ? (
                         <span className="flex items-center">
-                            <Check className="w-4 h-4 mr-2" /> Live at /llms.txt?orgId={organization?.id}
+                            <Check className="w-4 h-4 mr-2" /> Live at <a href={`/llms.txt?orgId=${organization?.id}`} target="_blank" rel="noopener noreferrer" className="ml-1 underline underline-offset-2 hover:text-emerald-300">/llms.txt</a>
                         </span>
                     ) : (
                         <span className="flex items-center">

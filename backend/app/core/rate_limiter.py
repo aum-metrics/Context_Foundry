@@ -1,159 +1,70 @@
 # backend/app/core/rate_limiter.py
 # Author: Sambath Kumar Natarajan
 # Company: AUM Data Labs
-# Purpose: Rate limiting for API endpoints to prevent abuse
+# Purpose: Rate limiting for API endpoints using Firestore
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 from datetime import datetime, timedelta
-from typing import Dict, Optional
 import logging
+from core.firebase_config import db
 
 logger = logging.getLogger(__name__)
 
-class RateLimiter:
+LIMITS = {
+    'scale': {
+        'requests_per_minute': 60,
+    },
+    'growth': {
+        'requests_per_minute': 20,
+    },
+    'explorer': {
+        'requests_per_minute': 10,
+    }
+}
+
+async def check_rate_limit(api_key: str, endpoint: str, tier: str = 'growth'):
     """
-    Simple in-memory rate limiter
-    For production, use Redis for distributed rate limiting
+    Check rate limits matching tier configuration using Firestore.
+    Raises HTTPException if limit exceeded.
     """
+    if tier not in LIMITS:
+        tier = 'growth'
+        
+    limits = LIMITS[tier]
     
-    def __init__(self):
-        # Store: {api_key: {endpoint: [(timestamp, count)]}}
-        self._requests: Dict[str, Dict[str, list]] = {}
+    if not db:
+        return True
         
-        # Rate limits for Scale and Growth
-        # Tiers: explorer, growth, scale (only growth and scale get API access)
-        self.LIMITS = {
-            'scale': {
-                'requests_per_hour': 1000,
-                'requests_per_minute': 60,
-                'requests_per_day': 10000
-            },
-            'growth': {
-                'requests_per_hour': 200,
-                'requests_per_minute': 20,
-                'requests_per_day': 1000
-            }
-        }
-    
-    def _clean_old_requests(self, api_key: str, endpoint: str, window_minutes: int = 60):
-        """Remove requests older than the time window"""
-        if api_key not in self._requests:
-            return
-        
-        if endpoint not in self._requests[api_key]:
-            return
-        
-        cutoff = datetime.utcnow() - timedelta(minutes=window_minutes)
-        self._requests[api_key][endpoint] = [
-            (ts, count) for ts, count in self._requests[api_key][endpoint]
-            if ts > cutoff
-        ]
-    
-    def check_rate_limit(
-        self,
-        api_key: str,
-        endpoint: str,
-        tier: str = 'growth'
-    ) -> tuple[bool, Optional[str]]:
-        """
-        Check if request is within rate limits
-        
-        Returns:
-            (allowed: bool, error_message: Optional[str])
-        """
-        if tier not in self.LIMITS:
-            tier = 'growth'
-        
-        limits = self.LIMITS[tier]
+    try:
         now = datetime.utcnow()
+        sanitized_endpoint = endpoint.replace("/", "_").replace(".", "_")
+        doc_id = f"rl_{api_key[:15]}_{sanitized_endpoint}"
         
-        # Initialize tracking
-        if api_key not in self._requests:
-            self._requests[api_key] = {}
-        if endpoint not in self._requests[api_key]:
-            self._requests[api_key][endpoint] = []
+        ref = db.collection("rateLimits").document(doc_id)
+        doc = ref.get()
         
-        # Clean old requests
-        self._clean_old_requests(api_key, endpoint, window_minutes=60)
+        if doc.exists:
+            data = doc.to_dict() or {}
+            reset_at = data.get("resetAt")
+            count = data.get("count", 0)
+            
+            if reset_at and reset_at.replace(tzinfo=None) > now:
+                if count >= limits["requests_per_minute"]:
+                    logger.warning(f"Rate limit exceeded for API key {api_key[:10]}... on {endpoint}")
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Rate limit exceeded: {limits['requests_per_minute']} requests per minute"
+                    )
+                ref.update({"count": count + 1})
+            else:
+                ref.set({"count": 1, "resetAt": now + timedelta(minutes=1)})
+        else:
+            ref.set({"count": 1, "resetAt": now + timedelta(minutes=1)})
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Firestore rate limiting failed (failing open): {e}")
         
-        # Count requests in different windows
-        requests = self._requests[api_key][endpoint]
-        
-        # Per minute check
-        minute_ago = now - timedelta(minutes=1)
-        requests_last_minute = sum(
-            count for ts, count in requests if ts > minute_ago
-        )
-        
-        if requests_last_minute >= limits['requests_per_minute']:
-            return False, f"Rate limit exceeded: {limits['requests_per_minute']} requests per minute"
-        
-        # Per hour check
-        hour_ago = now - timedelta(hours=1)
-        requests_last_hour = sum(
-            count for ts, count in requests if ts > hour_ago
-        )
-        
-        if requests_last_hour >= limits['requests_per_hour']:
-            return False, f"Rate limit exceeded: {limits['requests_per_hour']} requests per hour"
-        
-        # Per day check
-        day_ago = now - timedelta(days=1)
-        requests_last_day = sum(
-            count for ts, count in requests if ts > day_ago
-        )
-        
-        if requests_last_day >= limits['requests_per_day']:
-            return False, f"Rate limit exceeded: {limits['requests_per_day']} requests per day"
-        
-        # Record this request
-        self._requests[api_key][endpoint].append((now, 1))
-        
-        return True, None
-    
-    def get_usage_stats(self, api_key: str, endpoint: str) -> dict:
-        """Get current usage statistics"""
-        if api_key not in self._requests or endpoint not in self._requests[api_key]:
-            return {
-                'requests_last_minute': 0,
-                'requests_last_hour': 0,
-                'requests_last_day': 0
-            }
-        
-        now = datetime.utcnow()
-        requests = self._requests[api_key][endpoint]
-        
-        minute_ago = now - timedelta(minutes=1)
-        hour_ago = now - timedelta(hours=1)
-        day_ago = now - timedelta(days=1)
-        
-        return {
-            'requests_last_minute': sum(c for ts, c in requests if ts > minute_ago),
-            'requests_last_hour': sum(c for ts, c in requests if ts > hour_ago),
-            'requests_last_day': sum(c for ts, c in requests if ts > day_ago)
-        }
-
-# Global instance
-rate_limiter = RateLimiter()
-
-
-def check_rate_limit(api_key: str, endpoint: str, tier: str = 'growth'):
-    """
-    Dependency function to check rate limits
-    Raises HTTPException if limit exceeded
-    """
-    allowed, error_msg = rate_limiter.check_rate_limit(api_key, endpoint, tier)
-    
-    if not allowed:
-        logger.warning(f"Rate limit exceeded for API key {api_key[:10]}... on {endpoint}")
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "Rate limit exceeded",
-                "message": error_msg,
-                "tier": tier,
-                "limits": rate_limiter.LIMITS[tier]
-            }
-        )
-    
     return True
+

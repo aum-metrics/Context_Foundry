@@ -428,13 +428,17 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 # Return if not expired (e.g. 24h)
                 timestamp = cached_data.get("timestamp")
                 if timestamp and (datetime.utcnow() - timestamp.replace(tzinfo=None)) < timedelta(hours=24):
-                    logger.info(f"Cache HIT for simulation {cache_key}. Serving redundant request for $0.00.")
-                    return {
-                        "results": cached_data.get("results", []),
-                        "version": request.manifestVersion,
-                        "prompt": request.prompt,
-                        "cached": True
-                    }
+                    # Check subscription cache validity
+                    org_doc_cache = db.collection("organizations").document(request.orgId).get()
+                    org_plan_cache = org_doc_cache.to_dict().get("subscription", {}).get("planId", "explorer") if org_doc_cache.exists else "explorer"
+                    if org_plan_cache != "explorer" or request.prompt == cached_data.get("prompt"):
+                        logger.info(f"Cache HIT for simulation {cache_key}. Serving redundant request for $0.00.")
+                        return {
+                            "results": cached_data.get("results", []),
+                            "version": request.manifestVersion,
+                            "prompt": request.prompt,
+                            "cached": True
+                        }
         except Exception as e:
             logger.warning(f"Cache check failed: {e}")
 
@@ -504,7 +508,10 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         claude_key = claude_key or os.getenv("ANTHROPIC_API_KEY")
 
     if not any([openai_key, gemini_key, claude_key]) and not is_dev:
-        raise HTTPException(status_code=402, detail="No LLM API keys configured for this organization.")
+        if org_plan == "explorer":
+            # Explorer users without keys are locked out natively. Let UI handle this gracefully via 402.
+            raise HTTPException(status_code=402, detail="Explorer plans do not include automated API key provisioning. Please upgrade.")
+        raise HTTPException(status_code=503, detail="Simulation Engine Unavailable. Keys not provisioned.")
 
     # Override for dev mock mode
     if is_dev:
@@ -570,7 +577,8 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
     # Enforce Model Gating
     if org_plan == "explorer":
-        openai_key = None
+        # Explorer users only get one model (GPT-4o Mini)
+        gemini_key = None
         claude_key = None
 
     system_prompt = f"""You are a knowledgeable AI assistant. Use the following retrieved Context Document fragments to answer the user's question accurately.

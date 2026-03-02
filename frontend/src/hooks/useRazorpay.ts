@@ -64,10 +64,17 @@ export function useRazorpay() {
                     throw new Error("Razorpay SDK failed to load. Are you online?");
                 }
 
+                // Get Auth Token
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) throw new Error("User not authenticated.");
+
                 // 1. Create order on backend
                 const orderResponse = await fetch("/api/payments/create-order", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         orgId,
                         planId,

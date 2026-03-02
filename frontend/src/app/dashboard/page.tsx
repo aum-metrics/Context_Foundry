@@ -87,12 +87,16 @@ export default function AUMContextFoundry() {
             </button>
           )}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 localStorage.removeItem("mock_auth_user");
                 window.dispatchEvent(new Event("mock_auth_change"));
               } else {
-                auth.signOut();
+                try {
+                  await auth.signOut();
+                } catch (error) {
+                  console.error("Failed to sign out", error);
+                }
               }
             }}
             className="flex items-center tracking-wide text-sm px-3 py-2 w-full rounded-md text-slate-500 dark:text-slate-400 hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"

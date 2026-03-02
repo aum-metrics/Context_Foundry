@@ -143,9 +143,8 @@ def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(securit
     """
     token = credentials.credentials
     
-    # 1. Try API Key Validation (SHA-256 starts with a known length/format usually)
-    # Most API keys won't be valid Firebase JWTs.
-    if len(token) < 100: # Typical AUM keys are shorter than JWTs
+    # 1. Try API Key Validation (AUM Keys start with "aum_")
+    if token.startswith("aum_"):
         try:
             return validate_api_key(credentials)
         except HTTPException:
