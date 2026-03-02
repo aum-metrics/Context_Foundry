@@ -603,18 +603,46 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     if not tasks:
         raise HTTPException(status_code=503, detail="No AI providers configured.")
 
+    # --- PHASE 10: MULTI-MODEL ADJUDICATION ---
     results = await asyncio.gather(*tasks)
+    
+    adjudication_note = None
+    if len(results) > 1 and openai_key:
+        try:
+            # We only adjudicate if there's a >20% gap between top and bottom accuracy
+            accuracies = [r["accuracy"] for r in results if r.get("accuracy") is not None]
+            if accuracies and (max(accuracies) - min(accuracies) > 20):
+                logger.info("⚖️ Discrepancy detected. Initializing Multi-Model Adjudication...")
+                adjudication_prompt = f"""You are the AUM Master Auditor. 
+Three models have provided answers for the following prompt: "{request.prompt}"
+
+Retrieved Context from Manifest:
+{manifest_content[:3000]}
+
+Model Answers:
+{json.dumps([{r['model']: r['answer']} for r in results])}
+
+Task:
+1. Identify which model adheres closest to the Context Document.
+2. Flag any "hallucinations" (claims not in context).
+3. Provide a concise "Consensus Verdict".
+
+Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"""
+                
+                client = OpenAI(api_key=openai_key)
+                adj_resp = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "system", "content": adjudication_prompt}],
+                    response_format={"type": "json_object"},
+                    temperature=0
+                )
+                adjudication_note = json.loads(adj_resp.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"Adjudication failed: {e}")
 
     # ----- 5. ATOMIC BILLING & CACHE UPDATE (Background) -----
-    if background_tasks and db:
-        background_tasks.add_task(
-            _store_simulation_results, 
-            request.orgId, 
-            request.prompt, 
-            request.manifestVersion, 
-            results, 
-            cache_key
-        )
+    if db:
+        background_tasks.add_task(_store_simulation_results, request.orgId, request.prompt, request.manifestVersion, results, cache_key)
         import random
         if random.random() < 0.1:
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
@@ -625,6 +653,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
     return {
         "results": results,
+        "adjudication": adjudication_note,
         "lockedModels": locked_models,
         "version": request.manifestVersion,
         "prompt": request.prompt,

@@ -43,13 +43,11 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
     useEffect(() => {
         const fetchOrProvisionOrg = async () => {
-            const isMockMode = (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) ||
-                (typeof window !== "undefined" && window.location.search.includes("mock=true"));
+            const isMockMode = (typeof window !== "undefined" && window.location.search.includes("mock=true")) ||
+                (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash"));
 
             if (isMockMode) {
                 // Mock organization for local demo or explicit mock mode
-                const emailDomain = user?.email?.split('@')[1]?.split('.')[0] || 'AUM Context';
-                const orgName = emailDomain.charAt(0).toUpperCase() + emailDomain.slice(1);
                 setOrganization({
                     id: "dealersight", // Align with backend brutal fix
                     name: "Dealersight",

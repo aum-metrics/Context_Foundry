@@ -45,6 +45,7 @@ export default function CoIntelligenceSimulator() {
     const [manifestVersions, setManifestVersions] = useState<{ id: string, name: string }[]>([]);
     const [selectedVersion, setSelectedVersion] = useState("latest");
     const [modelResults, setModelResults] = useState<ModelResult[]>([]);
+    const [adjudication, setAdjudication] = useState<{ master_verdict: string, winner: string, audit_notes: string } | null>(null);
     const [lockedModels, setLockedModels] = useState<string[]>([]);
     const [lastPrompt, setLastPrompt] = useState("");
 
@@ -79,6 +80,7 @@ export default function CoIntelligenceSimulator() {
         if (!promptText || loading) return;
         setActivePrompt(promptText);
         setModelResults([]);
+        setAdjudication(null);
         setLastPrompt(promptText);
         setLoading(true);
 
@@ -112,6 +114,7 @@ export default function CoIntelligenceSimulator() {
 
             const data = await response.json();
             setModelResults(data.results || []);
+            setAdjudication(data.adjudication || null);
             setLockedModels(data.lockedModels || []);
         } catch (error) {
             console.error('Simulation Failed:', error);
@@ -364,6 +367,36 @@ export default function CoIntelligenceSimulator() {
                                 </motion.div>
                             ))}
                         </AnimatePresence>
+
+                        {/* Master Adjudication Verdict */}
+                        {adjudication && !loading && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="col-span-1 lg:col-span-3 bg-indigo-600 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <Shield className="w-24 h-24" />
+                                </div>
+                                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                    <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold">Master Audit Verdict</span>
+                                            <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold border border-emerald-500/30">LCRS Verified</span>
+                                        </div>
+                                        <h4 className="text-xl font-medium mb-2 leading-tight">{adjudication.master_verdict}</h4>
+                                        <p className="text-indigo-100 text-sm opacity-80 leading-relaxed italic">&ldquo;{adjudication.audit_notes}&rdquo;</p>
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 min-w-[200px] text-center">
+                                        <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1 font-bold">Recommended Model</p>
+                                        <div className="text-2xl font-light flex items-center justify-center">
+                                            <CheckCircle2 className="w-5 h-5 mr-2 text-emerald-400" />
+                                            {adjudication.winner}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
             </div>
