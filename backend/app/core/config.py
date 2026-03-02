@@ -31,8 +31,10 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
     
-    # Firebase
+    # Firebase & Supabase
     FIREBASE_SERVICE_ACCOUNT_PATH: Optional[str] = None
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env", 

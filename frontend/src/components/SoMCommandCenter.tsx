@@ -290,12 +290,13 @@ export default function SoMCommandCenter() {
         let riskId = 1;
         for (const entry of historyEntries) {
             for (const result of (entry.results || [])) {
-                if (result.hasHallucination) {
+                // Hardened: Only surface risks with high confidence of drift
+                if (result.hasHallucination || result.accuracy < 60) {
                     risks.push({
                         id: riskId++,
                         model: result.model,
-                        text: `Hallucination on: "${entry.prompt.slice(0, 60)}..."`,
-                        severity: result.accuracy < 30 ? "high" : "medium"
+                        text: `Context Drift on: "${entry.prompt.slice(0, 50)}..."`,
+                        severity: result.accuracy < 40 ? "high" : "medium"
                     });
                 }
             }
@@ -319,8 +320,8 @@ export default function SoMCommandCenter() {
                 <div className="flex items-center space-x-4">
                     <Logo size={48} showText={false} />
                     <div>
-                        <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">Agentic Media Monitoring</h1>
-                        <p className="text-slate-500 text-sm mt-1">Precision RAG evaluation across SearchGPT, Perplexity, and Gemini Grounding</p>
+                        <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">Platform Health Status</h1>
+                        <p className="text-slate-500 text-sm mt-1">Verified RAG Fidelity Across SearchGPT, Perplexity, and Gemini</p>
                     </div>
                 </div>
                 <div className="mt-4 md:mt-0 flex items-center space-x-6">

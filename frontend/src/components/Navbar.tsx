@@ -27,11 +27,8 @@ export default function Navbar() {
     return (
         <nav className="fixed top-0 left-0 right-0 z-[100] border-b border-white/5 bg-slate-950/50 backdrop-blur-xl">
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                <Link href="/" className="flex items-center space-x-3 group">
-                    <Logo size={32} />
-                    <span className="font-bold text-xl tracking-tighter text-white">
-                        AUM <span className="text-blue-500">CONTEXT</span>
-                    </span>
+                <Link href="/" className="flex items-center group">
+                    <Logo size={32} showText={true} theme="dark" />
                 </Link>
 
                 <div className="hidden md:flex items-center space-x-8">

@@ -446,7 +446,7 @@ export default function LandingPage() {
                         >
                             <div className="mb-8">
                                 <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">SCALE</h4>
-                                <p className="text-sm text-slate-500">High-volume teams and agencies.</p>
+                                <p className="text-sm text-slate-500">For agencies managing high-volume brands.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
                                 <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">$249</span>
@@ -456,17 +456,16 @@ export default function LandingPage() {
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">500</strong> weekly brand probes</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models + priority queue</strong></li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard + exports</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Fully white-labeled exports</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Competitor displacement tracking</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Weekly automated batch runs</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full scoring history</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 25 seats</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">Unlimited</strong> team seats</li>
                             </ul>
                             <Link href="/contact" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
                                 Start 7-Day Trial
                             </Link>
-                            <p className="text-center text-xs text-slate-400 mt-4">7-day trial. Invoicing available.</p>
+                            <p className="text-center text-xs text-slate-400 mt-4">7-day trial. Custom Agency SLA available.</p>
                         </motion.div>
                     </div>
                 </section>

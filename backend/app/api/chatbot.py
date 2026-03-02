@@ -48,26 +48,25 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
         else:
             logger.info("🧪 Dev-mode: Firestore not available, using mock responses.")
 
-    # 1. Fetch Organization API Key
+    # 1. Fetch Organization API Key (Hardened Fallback)
     openai_key = None
-    if is_dev:
-        openai_key = os.getenv("OPENAI_API_KEY")
-
     if db:
         try:
             org_ref = db.collection("organizations").document(request.orgId).get()
             if org_ref.exists:
                 org_data = org_ref.to_dict() or {}
-                api_keys = org_data.get("apiKeys", {})
-                if api_keys.get("openai"):
-                    openai_key = api_keys.get("openai")
+                openai_key = org_data.get("apiKeys", {}).get("openai")
         except Exception as e:
             logger.error(f"Firestore org lookup failed: {e}")
+
+    # MASTER FALLBACK: Use environment key if org key is missing
+    if not openai_key:
+        openai_key = os.getenv("OPENAI_API_KEY")
 
     if not openai_key:
         if is_dev:
             logger.info("🧪 Dev-mode: Providing mock chatbot response")
-            return {"response": f"I am the AUM Support Bot (Simulated). I've analyzed your query: '{request.query}'. This is a mock response because no OpenAI API key is configured in development mode."}
+            return {"response": f"I am the AUM Support Bot (Simulated). I've analyzed your query: '{request.query}'. This is a mock response because no OpenAI API key is configured."}
         raise HTTPException(status_code=402, detail="OpenAI API key missing for this organization")
 
     client = OpenAI(api_key=openai_key)
@@ -82,32 +81,35 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
 
     # 3. Retrieve Relevant Chunks (Semantic Top-K Search)
     context_text = ""
-    latest_manifest_ref = db.collection("organizations").document(request.orgId).collection("manifests").document("latest")
     
-    if query_vector:
+    if db and query_vector:
         try:
-            # We fetch all chunks and do memory-speed cosine similarity. 
-            # (Firestore native vector search is a safer upgrade later, but Top-K in Python is robust for <100 chunks)
-            chunks_ref = latest_manifest_ref.collection("chunks").get()
+            # BRUTAL FIX: Find the latest manifest ID first
+            org_ref = db.collection("organizations").document(request.orgId)
+            manifests = org_ref.collection("manifests").order_by("createdAt", direction="DESCENDING").limit(1).stream()
+            latest_manifest_doc = next(manifests, None)
             
-            import numpy as np
-            def cosine_sim(v1, v2):
-                return float(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+            if latest_manifest_doc:
+                chunks_ref = latest_manifest_doc.reference.collection("chunks").get()
+                
+                import numpy as np
+                def cosine_sim(v1, v2):
+                    norm_prod = (np.linalg.norm(v1) * np.linalg.norm(v2))
+                    return float(np.dot(v1, v2) / norm_prod) if norm_prod > 0 else 0.0
 
-            chunk_matches = []
-            for doc in chunks_ref:
-                data = doc.to_dict()
-                sim = cosine_sim(query_vector, data["embedding"])
-                chunk_matches.append((sim, data["text"]))
-            
-            # Sort by similarity descending and pick top 5
-            chunk_matches.sort(key=lambda x: x[0], reverse=True)
-            relevant_chunks = []
-            for m in chunk_matches[:5]:
-                relevant_chunks.append(m[1])
-            context_text = "\n\n---\n\n".join(relevant_chunks)
+                chunk_matches = []
+                for doc in chunks_ref:
+                    data = doc.to_dict()
+                    if "embedding" in data and "text" in data:
+                        sim = cosine_sim(query_vector, data["embedding"])
+                        chunk_matches.append((sim, data["text"]))
+                
+                # Sort by similarity descending and pick top 5
+                chunk_matches.sort(key=lambda x: x[0], reverse=True)
+                relevant_chunks = [m[1] for m in chunk_matches[:5]]
+                context_text = "\n\n---\n\n".join(relevant_chunks)
         except Exception as e:
-            logger.warning(f"Semantic search failed, falling back to summary: {e}")
+            logger.warning(f"Semantic search failed: {e}")
 
     # Fallback to general content summary if semantic search yielded nothing
     if not context_text:

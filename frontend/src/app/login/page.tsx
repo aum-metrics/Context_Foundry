@@ -61,7 +61,7 @@ export default function LoginPage() {
                 <h1 className="text-2xl font-light text-slate-900 dark:text-white text-center mb-2 tracking-tight">
                     {isSignUp ? "Create Account" : "Enterprise Access"}
                 </h1>
-                <p className="text-slate-500 text-sm text-center mb-8 uppercase tracking-widest">AUM Context Foundry</p>
+                <p className="text-slate-500 text-sm text-center mb-8 uppercase tracking-widest">AUM CONTEXT</p>
 
                 {error && (
                     <div className="mb-6 p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 flex items-center text-sm text-rose-600 dark:text-rose-400">

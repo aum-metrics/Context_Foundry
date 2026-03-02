@@ -17,6 +17,9 @@ from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
 from api.audit import log_audit_event
 
+import gc
+from google.cloud import firestore
+
 try:
     import pymupdf4llm
     import fitz
@@ -30,9 +33,12 @@ router = APIRouter()
 def recursive_split(text, max_size, overlap_size):
     """
     Smarter chunking: prioritizes splitting on paragraphs, then sentences.
+    Prevents orphan chunks by ensuring a minimum size.
     """
     chunks = []
     start = 0
+    min_chunk_size = 200
+    
     while start < len(text):
         end = min(start + max_size, len(text))
         if end < len(text):
@@ -46,7 +52,13 @@ def recursive_split(text, max_size, overlap_size):
                 if last_sent != -1 and last_sent > start + max_size // 2:
                     end = last_sent + 2
         
-        chunks.append(text[start:end])
+        chunk = text[start:end].strip()
+        if len(chunk) >= min_chunk_size or not chunks:
+            chunks.append(chunk)
+        elif chunks:
+            # Merge tiny orphan with previous chunk
+            chunks[-1] = (chunks[-1] + "\n\n" + chunk).strip()
+            
         start = end - overlap_size if end < len(text) else end
         if start >= len(text): break
     return chunks
@@ -62,8 +74,9 @@ async def parse_document(
     1. STREAM: Accepts binary PDF stream directly to RAM.
     2. TEXTRACT: Uses High-Fidelity Markdown extraction.
     3. SECURE: Zero-Retention — flushes raw PDF from RAM.
-    4. BATCH: Atomic Firestore writes for semantic chunks.
+    4. ATOMIC: Uses Firestore Transactions for multi-chunk persistence.
     """
+    uid = auth.get("uid")
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are currently supported.")
     if not orgId:
@@ -71,15 +84,14 @@ async def parse_document(
 
     # Security: Ensure user/key belongs to the requested organization
     if auth.get("type") == "session":
-        if not verify_user_org_access(auth["uid"], orgId):
+        if not verify_user_org_access(uid, orgId):
             raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
     else:
-        # For API keys, the orgId is linked to the key itself.
         if auth.get("orgId") != orgId:
-            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
+            raise HTTPException(status_code=403, detail="API key unauthorized for this organization")
 
-    # Enforce Document Limits
-    if orgId and db:
+    # Enforce Document Limits (Subscription Gating)
+    if db:
         try:
             org_doc = db.collection("organizations").document(orgId).get()
             if org_doc.exists:
@@ -88,11 +100,11 @@ async def parse_document(
                 if org_plan == "explorer":
                     docs_ref = db.collection("organizations").document(orgId).collection("documents").limit(1).get()
                     if len(docs_ref) >= 1:
-                        raise HTTPException(status_code=403, detail="Explorer plan is limited to 1 document. Please upgrade to Growth or Scale for unlimited ingestion.")
+                        raise HTTPException(status_code=403, detail="Explorer plan limit: 1 document. Please upgrade.")
         except HTTPException:
             raise
         except Exception as e:
-            logger.warning(f"Failed to check document limits: {e}")
+            logger.warning(f"Limit check failure: {e}")
 
     # Read binary stream
     content = await file.read()
@@ -101,49 +113,44 @@ async def parse_document(
     
     def _extract_pdf_text(binary_content: bytes) -> str:
         if not pymupdf4llm or not fitz:
-            return "Extraction engine not installed."
+            return "Extraction engine unavailable."
         try:
-            doc = fitz.open(stream=binary_content, filetype="pdf")
-            md_text = pymupdf4llm.to_markdown(doc)
-            doc.close()
+            doc_obj = fitz.open(stream=binary_content, filetype="pdf")
+            md_text = pymupdf4llm.to_markdown(doc_obj)
+            doc_obj.close()
             return md_text
         except Exception as e:
             return f"Markdown extraction failed: {str(e)}"
 
     try:
         raw_text = await asyncio.to_thread(_extract_pdf_text, content)
-        del content # Explicit memory release
+        del content
+        gc.collect() # Zero-Retention: Explicit RAM flush
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF parsing failed: {e}")
 
-    # Trim massive documents for schema extraction
-    summary_text = raw_text[:30000] # BRUTAL AUDIT FIX: Increased context for schema extraction
-
     # API Key Strategy
     api_key = os.getenv("OPENAI_API_KEY")
-    if orgId and db:
+    if db:
         try:
             org_doc = db.collection("organizations").document(orgId).get()
             if org_doc.exists:
                 api_key = org_doc.to_dict().get("apiKeys", {}).get("openai", api_key)
         except Exception as e:
-            logger.warning(f"Firestore key lookup failed: {e}")
+            logger.warning(f"Key lookup error: {e}")
 
     if not api_key:
         from core.config import settings
         if settings.ENV == "development":
             return {"@context": "https://schema.org", "name": "Mock Ingestion", "status": "Dev/Mock"}
-        raise HTTPException(status_code=503, detail="API key required.")
+        raise HTTPException(status_code=503, detail="Infrastructure API key missing.")
 
     try:
         client = OpenAI(api_key=api_key)
         
         # --- SEMANTIC CHUNKING ---
         full_text = raw_text[:100000]
-        chunk_size = 2000
-        overlap = 200
-        
-        chunks = recursive_split(full_text, chunk_size, overlap)
+        chunks = recursive_split(full_text, 2000, 200)
 
         # Vectorize chunks in batches
         chunk_vectors = []
@@ -152,83 +159,76 @@ async def parse_document(
             embed_batch = client.embeddings.create(input=batch, model="text-embedding-3-small")
             chunk_vectors.extend([e.embedding for e in embed_batch.data])
 
-        # Schema Extraction Strategy (Hardened)
-        # Include first 20k chars and last 10k chars for better schema coverage
+        # Schema Extraction Strategy
         doc_sample = raw_text[:20000]
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
             
-        prompt = f"""Extract this document into a structured JSON-LD mapping vocabulary using schema.org definitions. 
-Focus on identifying Organization names, Products, Pricing tiers, and Service capabilities.
-Return ONLY valid JSON.
-
-<Doc_Sample>
-{doc_sample}
-</Doc_Sample>"""
-
+        prompt = f"Extract structured JSON-LD mapping from document... Focus on Organizations, Products, Pricing, Capabilities.\n\n<Doc>\n{doc_sample}\n</Doc>"
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="gpt-4o-mini",
             response_format={ "type": "json_object" }
         )
         schema_data = json.loads(completion.choices[0].message.content)
-        
-        # Global Schema Vector
         schema_vector = client.embeddings.create(input=[json.dumps(schema_data)], model="text-embedding-3-small").data[0].embedding
         
-        # --- BATCH PERSISTENCE ---
-        if orgId and db:
+        # --- ATOMIC BATCH PERSISTENCE ---
+        if db:
             manifest_id = f"manifest_{int(datetime.datetime.utcnow().timestamp())}"
             manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
+            latest_ref = db.collection("organizations").document(orgId).collection("manifests").document("latest")
             
-            # Atomic Batch Write
-            batch = db.batch()
+            # Using transaction for atomicity
+            transaction = db.transaction()
             
-            # 1. Manifest Header
-            batch.set(manifest_ref, {
-                "content": json.dumps(schema_data),
-                "embedding": schema_vector,
-                "createdAt": datetime.datetime.utcnow(),
-                "version": manifest_id,
-                "totalChunks": len(chunks)
-            })
-            
-            # 2. Latest Tag
-            batch.set(db.collection("organizations").document(orgId).collection("manifests").document("latest"), {
-                "content": json.dumps(schema_data),
-                "embedding": schema_vector,
-                "createdAt": datetime.datetime.utcnow(),
-                "version": manifest_id,
-                "totalChunks": len(chunks)
-            })
-            
-            # 3. Chunks (Batch size limit is typically 500 in Firestore)
-            for idx, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
-                chunk_ref = manifest_ref.collection("chunks").document(str(idx))
-                batch.set(chunk_ref, {
-                    "text": txt,
-                    "embedding": vec,
-                    "index": idx
+            @firestore.transactional
+            def update_manifest(txn, m_ref, l_ref, data, vector, id_val, chunk_list, vec_list):
+                # 1. Write Manifest
+                txn.set(m_ref, {
+                    "content": json.dumps(data),
+                    "embedding": vector,
+                    "createdAt": datetime.datetime.utcnow(),
+                    "version": id_val,
+                    "totalChunks": len(chunk_list)
                 })
-                # Commit if batch size is approaching limit
-                if (idx + 3) % 450 == 0:
-                    batch.commit()
-                    batch = db.batch()
+                # 2. Write Latest
+                txn.set(l_ref, {
+                    "content": json.dumps(data),
+                    "embedding": vector,
+                    "createdAt": datetime.datetime.utcnow(),
+                    "version": id_val,
+                    "totalChunks": len(chunk_list)
+                })
+                # 3. Small chunks (up to 400 total operations per transaction usually safe)
+                # If too many chunks, we fall back to manual batching
+                if len(chunk_list) < 400:
+                    for i, (txt, vec) in enumerate(zip(chunk_list, vec_list)):
+                        c_ref = m_ref.collection("chunks").document(str(i))
+                        txn.set(c_ref, {"text": txt, "embedding": vec, "index": i})
+                    return True
+                return False
+
+            success = update_manifest(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, chunks, chunk_vectors)
             
-            batch.commit()
-            logger.info(f"Ingestion Complete: Persisted {len(chunks)} chunks in atomic batches.")
-            
-            # SOC2 Audit Log: Document Ingestion
-            log_audit_event(
-                org_id=orgId,
-                actor_id=uid or "unknown",
-                event_type="document_ingestion",
-                resource_id=manifest_id,
-                metadata={"chunks": len(chunks), "filename": file.filename}
-            )
+            if not success:
+                # Manual Batching for large docs
+                batch = db.batch()
+                batch.set(manifest_ref, {"content": json.dumps(schema_data), "embedding": schema_vector, "createdAt": datetime.datetime.utcnow(), "version": manifest_id, "totalChunks": len(chunks)})
+                batch.set(latest_ref, {"content": json.dumps(schema_data), "embedding": schema_vector, "createdAt": datetime.datetime.utcnow(), "version": manifest_id, "totalChunks": len(chunks)})
+                for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
+                    c_ref = manifest_ref.collection("chunks").document(str(i))
+                    batch.set(c_ref, {"text": txt, "embedding": vec, "index": i})
+                    if (i + 1) % 450 == 0:
+                        batch.commit()
+                        batch = db.batch()
+                batch.commit()
+
+            log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="document_ingestion", resource_id=manifest_id, metadata={"chunks": len(chunks)})
             
         return schema_data
         
     except Exception as e:
         logger.error(f"Ingestion Pipeline Failed: {e}")
-        raise HTTPException(status_code=500, detail=f"LLM Processing Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

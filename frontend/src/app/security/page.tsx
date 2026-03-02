@@ -19,36 +19,58 @@ export default function SecurityPage() {
                 </div>
 
                 <section className="mb-20">
-                    <h2 className="text-2xl font-bold mb-8 text-blue-400">The Data Lifecycle</h2>
-                    <div className="p-8 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
-                        <div className="space-y-8 relative z-10">
+                    <h2 className="text-2xl font-bold mb-8 text-blue-400">Auditable Data Flow</h2>
+                    <div className="p-8 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden mb-10">
+                        {/* CSS Data Flow Diagram Wrapper */}
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-12 py-8 px-4 bg-black/40 rounded-xl border border-white/5">
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-[10px] font-bold text-blue-400 text-center px-2 uppercase">Source PDF</div>
+                                <div className="text-[10px] text-gray-500 font-mono">Input Stream</div>
+                            </div>
+                            <div className="h-0.5 w-8 bg-blue-500/20 md:block hidden animate-pulse"></div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border-2 border-dashed border-indigo-500/30 flex items-center justify-center text-[10px] font-bold text-indigo-400 text-center px-2 uppercase animate-pulse">Volatile RAM Buffer</div>
+                                <div className="text-[10px] text-gray-500 font-mono">Zero Disk</div>
+                            </div>
+                            <div className="h-0.5 w-8 bg-indigo-500/20 md:block hidden animate-pulse"></div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold text-emerald-400 text-center px-2 uppercase">JSON-LD Extracted</div>
+                                <div className="text-[10px] text-gray-500 font-mono">Factual Logic</div>
+                            </div>
+                            <div className="h-0.5 w-8 bg-emerald-500/20 md:block hidden animate-pulse"></div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-[10px] font-bold text-rose-400 text-center px-2 uppercase">Buffer Purged</div>
+                                <div className="text-[10px] text-gray-500 font-mono">GC.Collect()</div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono">1</div>
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono text-sm">01</div>
                                 <div>
                                     <h3 className="font-bold">Volatile Ingestion</h3>
-                                    <p className="text-sm text-gray-400">PDF/Docs are loaded into volatile RAM. No binary data is ever written to persistent disk storage.</p>
+                                    <p className="text-sm text-gray-400">PDFs are read as a byte-stream directly into volatile RAM. We bypass the OS temp filesystem entirely.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono">2</div>
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono text-sm">02</div>
                                 <div>
-                                    <h3 className="font-bold">Semantic Extraction</h3>
-                                    <p className="text-sm text-gray-400">Markdown text is extracted and converted into multi-dimensional vectors using organization-specific keys.</p>
+                                    <h3 className="font-bold">Immediate Memory Flush</h3>
+                                    <p className="text-sm text-gray-400">Upon extraction of semantic JSON-LD, an explicit garbage collection (GC) trigger purges the RAM buffer.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono">3</div>
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono text-sm">03</div>
                                 <div>
-                                    <h3 className="font-bold">Immediate Flush</h3>
-                                    <p className="text-sm text-gray-400">Memory buffers containing raw source data are purged immediately after the vector transformation is complete.</p>
+                                    <h3 className="font-bold">PII Scrubbing</h3>
+                                    <p className="text-sm text-gray-400">Metadata is scrubbed of corporate signatures and PII before JSON-LD manifestation storage.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono">4</div>
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-mono text-sm">04</div>
                                 <div>
-                                    <h3 className="font-bold">Isolated Storage</h3>
-                                    <p className="text-sm text-gray-400">Vectors are stored in multi-tenant isolated Firestore collections, encrypted at rest with organization-level isolation.</p>
+                                    <h3 className="font-bold">Per-Tenant Isolation</h3>
+                                    <p className="text-sm text-gray-400">All data assets are physically separated at the Firestore collection level with unique SHA-256 access keys.</p>
                                 </div>
                             </div>
                         </div>

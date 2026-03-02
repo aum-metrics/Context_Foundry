@@ -72,6 +72,12 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     Verifies that the Firebase user belongs to the requested organization.
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
+    # Dev-mode bypass: Let the mock user through
+    from core.config import settings
+    if settings.ENV == "development" and uid == "mock_uid_dev":
+        logger.info(f"🔓 Dev-mode: Bypassing org check for mock user on {target_org_id}")
+        return True
+
     if not db:
         logger.error("🛑 Security Failure: Database connection missing. Access denied.")
         return False 
@@ -149,8 +155,16 @@ def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(securit
     try:
         user_info = get_current_user(credentials)
         # Fetch the orgId for this user
-        user_doc = db.collection("users").document(user_info["uid"]).get()
-        org_id = user_doc.to_dict().get("orgId") if user_doc.exists else None
+        org_id = None
+        if db:
+            user_doc = db.collection("users").document(user_info["uid"]).get()
+            if user_doc.exists:
+                org_id = user_doc.to_dict().get("orgId")
+        
+        # BRUTAL FIX: If it's a mock token and no org found, default to 'dealersight' for demo stability
+        if not org_id and user_info["uid"] == "mock_uid_dev":
+            org_id = "dealersight"
+            logger.info("🔓 Dev-mode: Defaulting mock user to 'dealersight' org")
         
         return {
             "uid": user_info["uid"],
@@ -158,7 +172,8 @@ def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(securit
             "type": "session",
             "email": user_info.get("email")
         }
-    except Exception:
+    except Exception as e:
+        logger.error(f"Auth Context Failure: {e}")
         raise HTTPException(status_code=401, detail="Invalid authentication (Token or API Key)")
 
 import hashlib

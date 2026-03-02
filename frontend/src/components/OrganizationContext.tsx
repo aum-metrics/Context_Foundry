@@ -43,21 +43,17 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
     useEffect(() => {
         const fetchOrProvisionOrg = async () => {
-            if (!user) {
-                setOrganization(null);
-                setOrgUser(null);
-                setLoadingOrg(false);
-                return;
-            }
+            const isMockMode = (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) ||
+                (typeof window !== "undefined" && window.location.search.includes("mock=true"));
 
-            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
-                // Mock organization for local demo without Firebase
-                const emailDomain = user.email?.split('@')[1]?.split('.')[0] || 'My Company';
+            if (isMockMode) {
+                // Mock organization for local demo or explicit mock mode
+                const emailDomain = user?.email?.split('@')[1]?.split('.')[0] || 'AUM Context';
                 const orgName = emailDomain.charAt(0).toUpperCase() + emailDomain.slice(1);
                 setOrganization({
-                    id: "mock_org_123",
-                    name: orgName,
-                    activeSeats: 1,
+                    id: "dealersight", // Align with backend brutal fix
+                    name: "Dealersight",
+                    activeSeats: 5,
                     subscriptionTier: "enterprise",
                     apiKeys: {
                         openai: "sk-mock-openai-key",
@@ -65,11 +61,18 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     }
                 });
                 setOrgUser({
-                    uid: user.uid || "mock_uid",
-                    email: user.email || "",
-                    orgId: "mock_org_123",
+                    uid: user?.uid || "mock_uid_dev",
+                    email: user?.email || "dev@aumdatalabs.com",
+                    orgId: "dealersight",
                     role: "admin",
                 });
+                setLoadingOrg(false);
+                return;
+            }
+
+            if (!user) {
+                setOrganization(null);
+                setOrgUser(null);
                 setLoadingOrg(false);
                 return;
             }

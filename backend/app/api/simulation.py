@@ -251,34 +251,34 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
                 org_data = org_doc.to_dict() or {}
                 api_keys = org_data.get("apiKeys", {})
 
+            # FETCH MANIFEST (Latest or Versioned)
+            doc_data = None
             if request.manifestVersion == "latest":
                 manifests = org_ref.collection("manifests").order_by("createdAt", direction="DESCENDING").limit(1).stream()
                 latest = next(manifests, None)
-                if latest is not None:
+                if latest:
                     doc_data = latest.to_dict()
-                    if doc_data:
-                        manifest_content = doc_data.get("content", "")
-                        manifest_embedding = doc_data.get("embedding", [])
             else:
                 version_doc = org_ref.collection("manifests").document(request.manifestVersion).get()
                 if version_doc.exists:
                     doc_data = version_doc.to_dict()
-                    if doc_data:
-                        manifest_content = doc_data.get("content", "")
-                        manifest_embedding = doc_data.get("embedding", [])
+
+            if doc_data:
+                manifest_content = doc_data.get("content", "")
+                manifest_embedding = doc_data.get("embedding", [])
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Firestore error: {e}")
+            logger.error(f"Firestore manifest retrieval error: {e}")
 
+    # Fallback for dev mode or missing content
     if not manifest_content:
         if is_dev:
             logger.info("🧪 Dev-mode: Providing mock manifest content")
-            manifest_content = f"Mock manifest content for {request.orgId}. This is a simulated corporate strategy document."
-            # A dummy 1536-dim embedding
+            manifest_content = f"Mock manifest content for {request.orgId}. Simulated corporate Ground Truth."
             manifest_embedding = [0.1] * 1536
         else:
-            manifest_content = f"Default context for organization {request.orgId}. Contact AUM support to upload your Context Document."
+            manifest_content = "Default context placeholder. Please upload a Context Document."
 
     return manifest_content, manifest_embedding, api_keys
 
@@ -321,28 +321,36 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             total = len(claim_results)
             claim_score = f"{supported}/{total} claims supported"
 
-            # LCRS Blend (Spec Section 10.F): 40% embedding, 60% claim accuracy
-            if total > 0:
-                claim_accuracy = supported / total
-                semantic_accuracy = (1.0 - divergence)
-                blended = (0.4 * semantic_accuracy) + (0.6 * claim_accuracy)
-                accuracy = round(blended * 100, 1)
-                # Hallucination flag: OR condition (Spec v2.2.0)
-                has_drift = accuracy < 55 or any(c.get("verdict") == "contradicted" for c in claim_results)
-            else:
-                accuracy = round((1.0 - divergence) * 100, 1)
-                has_drift = divergence > eps_div
+        # LCRS Blend (Spec Section 10.F): 40% semantic, 60% claim accuracy
+        if claims and total > 0:
+            claim_accuracy = supported / total
+            semantic_accuracy = max(0.0, 1.0 - divergence)
+            blended = (0.4 * semantic_accuracy) + (0.6 * claim_accuracy)
+            accuracy = round(blended * 100, 1)
+            
+            # Fidelity Status Mapping
+            if accuracy > 85: status = "high_fidelity"
+            elif accuracy > 60: status = "minor_drift"
+            else: status = "critical_drift"
+            
+            has_drift = accuracy < 60 or any(c.get("verdict") == "contradicted" for c in claim_results)
         else:
-            accuracy = round((1.0 - divergence) * 100, 1)
-            has_drift = divergence > eps_div
+            accuracy = round(max(0.0, 1.0 - divergence) * 100, 1)
+            status = "high_fidelity" if accuracy > 75 else "critical_drift"
+            has_drift = accuracy < 55
 
         return {
             "model": model_name,
             "answer": answer,
             "accuracy": accuracy,
+            "status": status,
             "hasHallucination": has_drift,
             "claimResults": claim_results,
             "claimScore": claim_score,
+            "metrics": {
+                "semantic_divergence": round(divergence, 3),
+                "claim_recall": round(supported/total, 3) if total > 0 else 1.0
+            }
         }
     except Exception as e:
         return {

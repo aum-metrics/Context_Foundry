@@ -62,16 +62,10 @@ export const Logo = ({
             {showText && (
                 <div className="flex flex-col justify-center">
                     <div
-                        className={`font-semibold tracking-tight whitespace-nowrap ${isDark ? 'text-white' : 'text-slate-900'}`}
-                        style={{ fontSize: size * 0.72, lineHeight: 1.1 }}
+                        className={`font-black tracking-tighter whitespace-nowrap ${isDark ? 'text-white' : 'text-slate-900'}`}
+                        style={{ fontSize: size * 0.72, lineHeight: 1 }}
                     >
-                        AUM Context Foundry
-                    </div>
-                    <div
-                        className={`font-medium tracking-[0.2em] whitespace-nowrap opacity-60 ${isDark ? 'text-slate-300' : 'text-slate-500'}`}
-                        style={{ fontSize: size * 0.28, marginTop: size * 0.08, textTransform: 'uppercase' }}
-                    >
-                        BY AUM DATA LABS
+                        AUM <span className="text-blue-500">CONTEXT</span>
                     </div>
                 </div>
             )}

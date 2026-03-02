@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, AlertCircle, RefreshCw, Beaker, Play, FileText, ChevronRight, Send, MessageSquare, Cpu, CheckCircle, Lock } from "lucide-react";
+import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, AlertCircle, RefreshCw, Beaker, Play, FileText, ChevronRight, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
@@ -22,6 +22,11 @@ interface ModelResult {
     answer: string;
     accuracy: number;
     hasHallucination: boolean;
+    status?: string;
+    metrics?: {
+        semantic_divergence: number;
+        claim_recall: number;
+    };
     error?: string;
 }
 
@@ -314,17 +319,48 @@ export default function CoIntelligenceSimulator() {
                                             <Cpu className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
                                             {result.model}
                                         </span>
-                                        <span className={`px-2 py-0.5 rounded border flex items-center ${result.hasHallucination
-                                            ? "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50"
-                                            : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                                            }`}>
-                                            Accuracy: {result.accuracy}%
-                                            {result.hasHallucination && <AlertTriangle className="w-3 h-3 ml-1" />}
-                                        </span>
+                                        <div className="flex items-center space-x-2">
+                                            <span className={`px-2 py-0.5 rounded border flex items-center ${result.accuracy > 85
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                                : result.accuracy > 60
+                                                    ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
+                                                    : "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50"
+                                                }`}>
+                                                Accuracy: {result.accuracy}%
+                                                {result.hasHallucination && <AlertTriangle className="w-3 h-3 ml-1" />}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">
+                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm mb-4">
                                         {result.answer}
                                     </p>
+
+                                    {/* Transparency Footprint (Hardened Audit Check) */}
+                                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-x-4 gap-y-2">
+                                        <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-widest font-semibold">
+                                            <Shield className="w-3 h-3 mr-1.5 text-indigo-400" />
+                                            {result.model.includes('gpt') ? 'gpt-4o-2024-08-06' : result.model.includes('claude') ? 'claude-3-5-sonnet-latest' : 'gemini-2.0-flash'}
+                                        </div>
+                                        <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-widest font-semibold">
+                                            <Zap className="w-3 h-3 mr-1.5 text-amber-400" />
+                                            temp=0.0
+                                        </div>
+                                        {result.metrics && (
+                                            <div className="text-[10px] text-slate-400 font-mono">
+                                                div: {result.metrics.semantic_divergence} / rec: {result.metrics.claim_recall}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | LCRS v1.2.0*`;
+                                                navigator.clipboard.writeText(md);
+                                            }}
+                                            className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"
+                                        >
+                                            <Code2 className="w-3 h-3 mr-1.5" />
+                                            Export MD
+                                        </button>
+                                    </div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>

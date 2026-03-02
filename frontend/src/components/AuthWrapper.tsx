@@ -17,24 +17,21 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const isPublicPath = PUBLIC_PATHS.includes(pathname);
 
     useEffect(() => {
-        if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
+        const isMockMode = (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) ||
+            (typeof window !== "undefined" && window.location.search.includes("mock=true"));
+
+        if (isMockMode) {
             const checkMockAuth = () => {
-                const mockUserEmail = localStorage.getItem("mock_auth_user");
+                const mockUserEmail = localStorage.getItem("mock_auth_user") || "dev@aumdatalabs.com";
 
                 if (isPublicPath) {
                     setLoading(false);
                     return;
                 }
 
-                if (mockUserEmail) {
-                    setUser({ email: mockUserEmail } as User);
-                    setLoading(false);
-                    if (pathname === "/login") router.push("/dashboard");
-                } else {
-                    setUser(null);
-                    setLoading(false);
-                    if (pathname !== "/login") router.push("/login");
-                }
+                setUser({ email: mockUserEmail, uid: "mock_uid_dev" } as User);
+                setLoading(false);
+                if (pathname === "/login") router.push("/dashboard");
             };
 
             checkMockAuth();

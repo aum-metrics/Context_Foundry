@@ -120,7 +120,10 @@ export default function SupportChatbot() {
                     const data = await res.json();
                     response = data.response;
                 } else {
-                    response = "I encountered an error querying your Context Engine. Please check your API keys.";
+                    const errorData = await res.json().catch(() => ({}));
+                    const detail = errorData.detail || "Unknown Engine Error";
+                    response = `I encountered an error querying your Context Engine: "${detail}". Please verify your organization settings and API keys.`;
+                    console.error("Chatbot Error:", detail);
                 }
             }
         } catch {

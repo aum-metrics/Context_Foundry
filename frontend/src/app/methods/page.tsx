@@ -36,78 +36,90 @@ export default function MethodsPage() {
                             The LCRS Formula
                         </h2>
                         <div className="bg-black/50 p-6 rounded-xl border border-white/5 font-mono text-xl mb-6 text-center text-purple-300">
-                            LCRS = (0.4 × (1 - D<sub>c</sub>)) + (0.6 × (C<sub>s</sub> / C<sub>t</sub>))
+                            LCRS = (0.4 × S<sub>acc</sub>) + (0.6 × C<sub>acc</sub>)
                         </div>
-                        <p className="text-gray-400 text-sm italic text-center">
+                        <p className="text-gray-400 text-sm italic text-center mb-6">
                             Formal Latent Contextual Rigor Score (v{methodology?.version || '1.2.0'})
                         </p>
+                        <div className="grid grid-cols-2 gap-4 text-xs font-mono text-gray-500">
+                            <div className="p-3 rounded-lg bg-black/30 border border-white/5 leading-relaxed">
+                                <span className="text-blue-400 block mb-1">S_acc (40%)</span>
+                                1.0 - Cosine Distance (1536-dim)
+                            </div>
+                            <div className="p-3 rounded-lg bg-black/30 border border-white/5 leading-relaxed">
+                                <span className="text-green-400 block mb-1">C_acc (60%)</span>
+                                Supported Claims / Total Extracted
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex gap-4">
-                            <div className="text-blue-400 font-mono text-xl">D<sub>c</sub></div>
-                            <div>
-                                <h3 className="font-bold text-lg">Cosine Distance (40%)</h3>
-                                <p className="text-gray-400 text-sm">
-                                    Measures the geometric distance between your verified manifest vector and the AI response vector in multi-dimensional latent space.
-                                </p>
-                            </div>
+                        <div className="p-6 rounded-xl border border-white/5 bg-white/[0.02]">
+                            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                Multi-Model Adjudication
+                            </h3>
+                            <p className="text-gray-400 text-sm">
+                                We don't just "guess." LCRS uses a consensus model where GPT-4o acts as the primary auditor for claim verification, while your manifest serves as the absolute Ground Truth.
+                            </p>
                         </div>
-                        <div className="flex gap-4">
-                            <div className="text-green-400 font-mono text-xl">C<sub>s</sub></div>
-                            <div>
-                                <h3 className="font-bold text-lg">Supported Claims (60%)</h3>
-                                <p className="text-gray-400 text-sm">
-                                    Number of deterministic factual claims from the source manifest accurately reflected in the AI output.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <div className="text-purple-400 font-mono text-xl">C<sub>t</sub></div>
-                            <div>
-                                <h3 className="font-bold text-lg">Total Claims</h3>
-                                <p className="text-gray-400 text-sm">
-                                    Total verifiable claims extracted for the specific query context.
-                                </p>
-                            </div>
+                        <div className="p-6 rounded-xl border border-white/5 bg-white/[0.02]">
+                            <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                Zero-Temperature Inference
+                            </h3>
+                            <p className="text-gray-400 text-sm">
+                                All simulation probes are run at <code>temp=0.0</code> and <code>top_p=1.0</code> to ensure maximum reproducibility and factual stability during evaluation.
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 <section className="mb-20">
                     <h2 className="text-3xl font-bold mb-10 text-center">Science in Action: A Worked Example</h2>
-                    <div className="rounded-3xl border border-white/10 bg-white/5 p-10 overflow-hidden relative">
-                        <div className="absolute top-0 right-0 p-4 font-mono text-[10px] text-gray-600 uppercase">Case Study #A12</div>
+                    <div className="rounded-3xl border border-white/10 bg-white/5 overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-4 font-mono text-[10px] text-gray-600 uppercase tracking-widest bg-white/5 rounded-bl-xl border-l border-b border-white/5">Audit Case #A102</div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div className="p-8 border-b border-white/5 bg-white/[0.01]">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Ground Truth (Your Manifest)</h4>
+                            <p className="text-lg font-medium text-slate-200">"AUM Context Foundry provides a <strong>zero-retention</strong> pipeline for enterprise brand data."</p>
+                        </div>
+
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12 bg-black/20">
                             <div>
-                                <h4 className="text-sm font-bold uppercase tracking-widest text-purple-400 mb-4">1. The Manifest Fact</h4>
-                                <div className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-sm mb-6 text-gray-300">
-                                    "AUM Context Foundry uses a 60/40 claim verification engine and serves llms.txt at the edge."
-                                </div>
-                                <h4 className="text-sm font-bold uppercase tracking-widest text-blue-400 mb-4">2. The AI Response</h4>
-                                <div className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-sm text-gray-300">
-                                    "AUM is a RAG platform that uses 60/40 math and handles PDF files."
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                                    Model Response (Simulation)
+                                </h4>
+                                <div className="p-5 rounded-xl bg-slate-900 border border-white/5 font-mono text-sm mb-6 text-gray-400 leading-relaxed italic">
+                                    "AUM is a data tool that <strong>stores</strong> brand files and helps with SEO monitoring."
                                 </div>
                             </div>
 
                             <div className="space-y-6">
-                                <h4 className="text-sm font-bold uppercase tracking-widest text-emerald-400 mb-4">3. The Audit Result</h4>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                                        <span className="text-sm">Claim: "60/40 Engine"</span>
-                                        <span className="text-emerald-500 text-xs font-bold">MATCHED [+]</span>
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-rose-400 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
+                                    The Audit Matrix
+                                </h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                        <span className="text-sm">Claim: "Zero-Retention"</span>
+                                        <span className="text-rose-500 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10">CONTRADICTED [-]</span>
                                     </div>
-                                    <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                                        <span className="text-sm">Claim: "llms.txt at Edge"</span>
-                                        <span className="text-rose-500 text-xs font-bold">MISSING [-]</span>
+                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                        <span className="text-sm text-gray-400">Distance Score (S_acc)</span>
+                                        <span className="font-mono text-xs">0.68</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                        <span className="text-sm text-gray-400">Claim Accuracy (C_acc)</span>
+                                        <span className="font-mono text-xs">0.00</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-4">
-                                        <span className="font-bold">Resulting LCRS</span>
-                                        <span className="text-2xl font-black text-purple-400">0.74</span>
+                                        <span className="font-bold text-lg">Final LCRS Score</span>
+                                        <span className="text-3xl font-black text-rose-500">0.27</span>
                                     </div>
-                                    <p className="text-[10px] text-gray-500 leading-relaxed italic">
-                                        Calculation: (0.4 × 0.92 [Semantic Distance]) + (0.6 × 0.5 [1/2 Claims]) = 0.368 + 0.3 = 0.668 (Normalized to 0.74 based on context grouping).
+                                    <p className="text-[10px] text-gray-500 leading-relaxed mt-4 italic border-t border-white/5 pt-4">
+                                        Calculation: (0.4 × 0.68 [Distance]) + (0.6 × 0.00 [Claims]) = 0.272. Result: **Critical Narrative Drift.**
                                     </p>
                                 </div>
                             </div>
