@@ -1,46 +1,127 @@
-# AUM Context Foundry: User-Side Product Document
-
-## Introduction to the Platform
-Welcome to AUM Context Foundry. AUM is the enterprise standard for **Generative Engine Optimization (GEO)**. Our platform provides the infrastructure required to ensure your brand's data is accurately ingested, interpreted, and cited by the next generation of AI search agents (e.g., ChatGPT, Perplexity, Claude).
-
-We transform your unstructured marketing and technical documents into a mathematically verifiable "Ground Truth," allowing you to audit AI hallucinations and definitively correct them across the agentic web.
+# AUM Context Foundry — User-Facing Product Document
+**Product Overview for Prospects & New Users**
+**v4.1.0 | March 2026**
 
 ---
 
-## Key Modules & Interface Breakdown
+## The Problem We Solve
 
-### 1. The SoM Command Center (Dashboard)
-Your central nervous system for narrative control.
-*   **Global ASoV Radar:** A live visualization of your "Agentic Share of Voice," indicating which AI models favor your brand versus your competitors.
-*   **Historical Fidelity Graph:** Tracks your Latent Contextual Rigor Score (LCRS) over time, showing the impact of your remediation efforts.
-*   **Real-time Activity Feed:** An auditable log of simulations runs, document ingestions, and team activity.
+The AI revolution didn't just change how people search — it changed where purchase decisions are made. Today:
 
-### 2. Semantic Ingestion (The "Ground Truth" Engine)
-Where you feed the system facts.
-*   **Upload Portal:** Securely upload PDFs containing authoritative brand knowledge.
-*   **Zero-Retention Guarantee:** The UI clearly indicates when files have been processed and purged from memory. We do not store your raw files, ensuring compliance with strict enterprise data policies.
-*   **Manifest State Indicator:** A real-time toggle confirming when your new Context Information Model (CIM) is active and ready for simulations.
+- **30%+ of searches** are answered by AI assistants, not search engines.
+- **Buyers trust AI answers** as if they were human expert opinions.
+- **Your competitors are winning** in AI responses you can't even see.
 
-### 3. Co-Intelligence Simulator (The "Smoke Detector")
-Where you audit the AI engines.
-*   **Prompt Interface:** Enter the exact queries your customers are asking AI agents.
-*   **Tri-Model View:** Simultaneously view real-time responses from GPT-4o, Claude 3.5 Sonnet, and Gemini 2.0 Flash.
-*   **Automated Adjudication:** The system automatically extracts specific "claims" from the AI responses and mathematically scores them against your Ground Truth, flagging hallucinations in red and verified facts in green.
-*   **Transparency Footprint:** Expanding a result card reveals the exact Model IDs, temperature settings, and semantic similarity metrics used to calculate the score.
+The question isn't whether AI talks about your brand. It does. The question is: **What is it saying?**
 
-### 4. Agent Manifest / LLMs.txt (The "Remediation Router")
-Where you fix the internet.
-*   **Manifesto Generator:** AUM automatically compiles your Ground Truth into an `/llms.txt` file and a semantic JSON-LD block.
-*   **Deployment Hub:** Provides the exact URLs and code snippets required to deploy this manifesto to your corporate domain, ensuring AI web crawlers ingest your preferred narrative.
-
-### 5. Settings & Team Management
-Where you manage access and capacity.
-*   **Seamless Upgrades:** View your current subscription tier (Explorer, Growth, Scale) and monitor your simulation quotas via our real-time Firestore metering. Securely upgrade via Razorpay when needed.
-*   **Appearance:** Global Light/Dark mode toggles for comfortable viewing, natively synchronized across all platform interfaces.
+AUM Context Foundry gives you the answer — and the tools to fix it.
 
 ---
 
-## Security Promises to the User
-1.  **Your Keys are Managed:** You do not need to fight with OpenAI dashboards to get API keys. AUM securely provisions and encrypts backend infrastructure keys for your tenant automatically.
-2.  **Your Data is Volatile:** Highly classified documents uploaded for ingestion exist only in transient RAM buffers and are destroyed immediately upon vectorization.
-3.  **Your Billing is Transparent:** Hardened atomic rate limiters ensure you cannot accidentally incur unexpected overage charges for run-away simulations.
+## What AUM Does
+
+AUM Context Foundry is a **Brand Intelligence Platform** that:
+
+1. **Measures** how accurately GPT-4o, Claude, and Gemini represent your brand.
+2. **Injects** your verified ground truth directly into the AI ecosystem.
+3. **Monitors** your Agentic Share of Voice versus competitors.
+
+---
+
+## Key Features
+
+### 🔬 Co-Intelligence Simulator
+Run any customer question through GPT-4o, Claude 3.5, and Gemini 2.0 simultaneously. Get a mathematical LCRS score (0–100) for each model showing how accurately they represent your brand.
+
+**What you see:**
+- Per-model LCRS score
+- Which specific claims were supported vs. hallucinated
+- Semantic drift percentage
+- Grade: High Fidelity / Minor Drift / Critical Drift
+
+### 📄 Zero-Retention Ingestion
+Upload your brand's ground truth — product specs, FAQs, case studies — in seconds. AUM processes everything in memory, builds your mathematical knowledge base, and immediately deletes the raw file.
+
+**No documents stored. Ever. Full compliance.**
+
+### 🌐 Agent Manifesto (`/llms.txt`)
+Every organization gets a dynamic manifesto at their AUM URL. AI crawlers (SearchGPT, Perplexity, Claude web) ingest this file to learn the verified truth about your brand — directly from you.
+
+**Think of it as: SEO for the AI layer.**
+
+### 📊 SoM Command Center
+Your proactive monitoring hub:
+- **Batch Stability Check**: Test your top 10 customer questions across all models simultaneously.
+- **SEO & LLM Audit**: Is your website optimized for AI crawlers?
+- **Competitor Displacement**: Is AI recommending your competitors when customers ask about your category?
+
+### 🔑 Direct API Access (B2B)
+Every account includes a `aum_...` API key for direct programmatic access. Integrate LCRS scoring into your CI/CD pipeline, content QA workflow, or custom analytics stack.
+
+---
+
+## How It Works (The 3-Step Flow)
+
+```
+STEP 1: UPLOAD YOUR GROUND TRUTH
+   Upload a PDF or tech doc → AUM builds your verified knowledge base
+   (Zero-retention: raw file deleted immediately)
+          ↓
+STEP 2: RUN A SIMULATION  
+   Type a customer question → AUM tests all 3 major AI models
+   Get an LCRS score (0–100) per model
+          ↓
+STEP 3: FIX THE GAP
+   Your /llms.txt manifesto is automatically served to AI crawlers
+   As you add more content, accuracy improves over time
+```
+
+---
+
+## Plans at a Glance
+
+| | Explorer | Growth | Scale |
+|--|---------|--------|-------|
+| **Price** | Free | ₹4,999/mo | ₹14,999/mo |
+| **Seats** | 1 | 5 | 25 |
+| **Simulations/mo** | 3 | 100 | 500 |
+| **Batch Analysis** | — | ✓ | ✓ |
+| **API Access** | ✓ | ✓ | ✓ |
+| **Competitor Monitoring** | ✓ | ✓ | ✓ |
+| **Enterprise SSO** | — | — | ✓ |
+| **Priority Support** | — | ✓ | ✓ |
+
+---
+
+## Security & Compliance
+
+| Concern | How AUM Handles It |
+|---------|-------------------|
+| Document privacy | Zero-retention — raw files never stored |
+| Data isolation | Strict multi-tenant architecture; your data is never mixed with other organizations |
+| Access control | Firebase Auth + role-based (Admin/Member) per organization |
+| Audit trail | SOC2-compliant append-only logs for all sensitive operations |
+| Enterprise SSO | Okta, Azure AD, Google Workspace supported |
+| API key security | SHA-256 hashed; revocable at any time |
+
+---
+
+## Getting Started in 3 Minutes
+
+1. **Sign up** at [[YOUR_FRONTEND_URL]]([YOUR_FRONTEND_URL]) — no credit card required.
+2. **Upload** your product one-pager or FAQ (PDF, < 10MB).
+3. **Run your first simulation** — type a question a customer would ask an AI about you.
+
+Your LCRS score will tell you exactly how the AI ecosystem sees your brand right now.
+
+---
+
+## Support
+
+- **Help Center**: In progress — check back soon.
+- **Email**: [your-support-email]
+- **Enterprise**: [your-enterprise-email]
+
+---
+
+*AUM Data Labs — Context Foundry v4.1.0 | March 2026*

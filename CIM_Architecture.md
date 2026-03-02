@@ -1,44 +1,209 @@
-# Context Information Model (CIM) Architecture
+# AUM Context Foundry — CIM Architecture
+**Context Information Model — Technical Design**
+**v4.1.0 | March 2026**
 
-## Overview
-The **Context Information Model (CIM)** is AUM Context Foundry's proprietary data structure. It represents the "Ground Truth" of an enterprise organization, distilled from noisy, unstructured corporate assets (PDFs, URLs, internal wikis) into a mathematically verifiable, LLM-optimized format.
+---
 
-The primary goal of the CIM is to serve as an irrefutable anchor against which external AI hallucinatory drift can be measured and remediated.
+## What is the CIM?
 
-## The Transformation Workflow
+The **Context Information Model (CIM)** is the mathematical and semantic representation of an organization's verified ground truth. It is the core data structure that powers the LCRS evaluation engine — the authoritative source that AI responses are measured against.
 
-The generation and application of the CIM follows a strict, zero-retention data flow:
+Think of it as:
+> "A compressed, mathematically indexed copy of everything your brand wants to be known for — stored in a form that can be compared to anything an AI model says."
 
-### 1. Ingestion & Volatile Processing
-- **Input**: Enterprise artifacts (e.g., Marketing PDFs, Product Specs) are uploaded via the Semantic Ingestion dashboard.
-- **Volatile Parsing**: The payload is read into volatile RAM by `PyMuPDF4LLM`. Raw physical files are never written to disk, ensuring strict compliance with enterprise data policies.
-- **Extraction**: Text, metadata, and document hierarchies are parsed out.
+---
 
-### 2. Semantic Chunking & Vectorization
-- **Chunking**: The extracted text undergoes recursive character splitting to create overlapping semantic windows.
-- **Embedding**: Using `text-embedding-3-small`, these chunks are projected into a 1536-dimensional hyper-space.
+## CIM Anatomy
 
-### 3. CIM Synthesis & JSON-LD Generation
-- **Synthesis**: The unified metadata, hierarchical text, and dense vectors form the core CIM.
-- **Serialization**: The semantic structure is compiled into a standardized `JSON-LD` (JavaScript Object Notation for Linked Data) schema.
-- **Commit**: The vectors and the JSON-LD schema are transacted atomically into the organization's segregated Firebase NoSQL enclave. Raw memory buffers are immediately purged (`gc.collect()`).
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": "Product Specification v3.0",
+  "description": "AUM Context Foundry real-time evaluation platform features...",
+  "keywords": ["LCRS", "zero-retention", "agentic SEO", "context drift"],
+  "datePublished": "2026-03-02T00:00:00Z",
+  "version": "1.0.0",
+  "totalChunks": 42,
+  "embedding": [0.0021, -0.0411, 0.0093, ...],  // 1536-dimensional vector
+  "chunks": [...]  // Sub-collection of chunked embeddings
+}
+```
 
-## System Interactions
+Every CIM document has:
+1. **JSON-LD Schema** — structured, machine-readable identity (who, what, keywords).
+2. **Document-level Embedding** — 1536-dimensional vector (text-embedding-3-small) of the full document summary.
+3. **Chunk Embeddings** — individual embeddings for each semantic chunk, stored in the `chunks` sub-collection.
 
-### Forward-Facing (Crawler & Agent Ingestion)
-The CIM is automatically synthesized into the `/llms.txt` manifesto. When SearchGPT, Perplexity, or Anthropic crawlers index the organization's domain:
-1. They parse the `/llms.txt`.
-2. They pull the structured JSON-LD derived from the CIM.
-3. The brand's verified context overrides out-of-date or hallucinated training data residing in the model's weights.
+---
 
-### Backward-Facing (LCRS Evaluation)
-When running the Co-Intelligence Simulator:
-1. Prompts are dispatched concurrently to multiple frontier models using keys automatically provisioned per-tenant.
-2. The AI responses are converted into atomic claims.
-3. The claims are cross-referenced (via semantic cosine similarity) backward against the organization's CIM embeddings.
-4. If a claim deviates significantly from the CIM vectors, a "Context Drift" or "Hallucination" error is flagged.
+## CIM Build Pipeline
 
-## Billing & Infrastructure Note
-To ensure seamless orchestration of the CIM pipeline and LCRS audits, infrastructure credentials for inference (e.g., OpenAI, Gemini, Anthropic) are fully abstracted from the user. 
-- **No BYOK**: Organizations do not supply API keys to the frontend.
-- **Transparency**: Dedicated sub-keys and execution quotas are provisioned automatically during tenant creation, ensuring secure isolation and explicit billing transparency for enterprise deployments.
+```
+Raw PDF
+   │
+   ▼
+[PyMuPDF4LLM]
+   Extract markdown structure from PDF binary
+   Process entirely in volatile RAM
+   ──────────────────────────────────────────
+   del content; gc.collect()   ← Raw file purged here
+   │
+   ▼
+[recursive_split()]
+   max_size: 2000 characters
+   overlap_size: 200 characters
+   Priority split points: "\n\n" → ". " → " "
+   │
+   ├──[chunks] → parallel embedding (OpenAI text-embedding-3-small)
+   │             16 chunks per API call (batched)
+   │
+   └──[full doc summary] → GPT-4o-mini JSON-LD extraction
+                            Schema type: TechArticle / FAQPage / Product
+   │
+   ▼
+[Firestore Atomic Transaction]
+   organizations/{orgId}/manifests/latest  ← pointer
+   organizations/{orgId}/manifests/{id}    ← versioned CIM doc
+   organizations/{orgId}/manifests/{id}/chunks/{i}  ← chunk embeddings
+   │
+   ▼
+[Audit Log]
+   organizations/{orgId}/auditLogs/{auto_id}
+   { eventType: "document_ingestion", resourceId: manifestId }
+```
+
+---
+
+## Key Design Properties
+
+### Zero-Retention
+The raw document binary is **never written to disk or external storage**. It is:
+1. Received as a byte stream in memory.
+2. Processed by PyMuPDF4LLM in-memory.
+3. Explicitly deleted (`del content`).
+4. Python garbage collected (`gc.collect()`).
+
+Only the mathematical embeddings and JSON-LD schema are persisted.
+
+### Versioning
+Every ingestion creates a new versioned manifest document:
+- `organizations/{orgId}/manifests/{timestamp_hash}` — the full versioned CIM.
+- `organizations/{orgId}/manifests/latest` — a pointer document updated atomically.
+
+Simulations default to `manifestVersion: "latest"` but can target historic versions.
+
+### Chunking Strategy
+```
+recursive_split(text, max_size=2000, overlap_size=200)
+```
+Split hierarchy (in priority order):
+1. Double newline (`\n\n`) — paragraph boundaries.
+2. Period-space (`. `) — sentence boundaries.
+3. Space — word boundaries (last resort).
+
+Overlap ensures semantic continuity across chunk boundaries.
+
+### Plan Limits
+```
+Explorer:  1 manifest allowed
+Growth:    Unlimited
+Scale:     Unlimited
+```
+Limit check queries the `manifests` collection document count (not `documents`).
+
+---
+
+## How the LCRS Engine Uses the CIM
+
+### At Simulation Time
+
+```
+1. Fetch organizations/{orgId}/manifests/latest
+   → manifest_content (JSON-LD text)
+   → manifest_embedding (1536-dim vector)
+
+2. Run user prompt through all active LLM providers concurrently
+
+3. For each LLM response:
+   a. Extract atomic claims via GPT-4o-mini
+   b. Embed the response (text-embedding-3-small)
+   c. Compare claim embeddings against manifest_embedding (cosine similarity)
+   d. Verify claim support: does the CIM ground truth support this claim?
+
+4. Score:
+   claim_accuracy = supported_claims / total_claims      (0.0–1.0)
+   semantic_fidelity = 1.0 - cosine_divergence           (0.0–1.0)
+   lcrs_score = (claim_accuracy × 0.6 + semantic_fidelity × 0.4) × 100
+
+5. Grade:
+   > 85   → "high_fidelity"
+   60–85  → "minor_drift"  
+   < 60   → "critical_drift"
+```
+
+### Caching
+```
+cache_key = SHA-256(orgId + prompt + manifestVersion)
+cache_doc = organizations/{orgId}/simulationCache/{cache_key}
+TTL: 24 hours
+```
+Cache is checked after plan validation and before API calls. Explorer plan still respects the 24hr TTL.
+
+---
+
+## The `/llms.txt` Manifesto (Edge Syndication)
+
+The CIM is synthesized into an AI-crawler-friendly manifesto:
+
+```
+# [Organization Name] — AUM Context Foundry
+
+## Ground Truth
+[Synthesized description from JSON-LD CIM]
+
+## Verified Claims
+[Key facts extracted from manifests]
+
+## Links
+- /: Homepage
+- /privacy: Zero-Retention Compliance
+```
+
+Served at `/llms.txt?orgId=...` from the Next.js edge, fetched from the backend which uses Firebase Admin SDK (bypasses client Firestore auth rules). Cached for 1 hour at the CDN layer.
+
+---
+
+## Firestore Schema (Complete)
+
+```
+organizations/{orgId}/manifests/
+  latest/
+    content: string (JSON-LD)
+    embedding: number[] (1536)
+    version: string
+    createdAt: timestamp
+    totalChunks: number
+
+  {manifestId}/
+    content: string (JSON-LD)
+    embedding: number[] (1536)
+    version: string
+    createdAt: timestamp
+    totalChunks: number
+    chunks/
+      {i}/
+        text: string
+        embedding: number[] (1536)
+        index: number
+
+organizations/{orgId}/simulationCache/
+  {sha256_hash}/
+    prompt: string
+    results: object
+    timestamp: timestamp
+```
+
+---
+
+*AUM Data Labs — CIM Architecture v4.1.0*

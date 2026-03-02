@@ -17,7 +17,7 @@
 | `RAZORPAY_KEY_ID` | YES (payments) | Razorpay API Key ID | `rzp_live_...` |
 | `RAZORPAY_KEY_SECRET` | YES (payments) | Razorpay API Key Secret | `...` |
 | `RAZORPAY_WEBHOOK_SECRET` | YES (payments) | HMAC webhook signing secret | `...` |
-| `PAYMENT_CALLBACK_URL` | YES (payments) | Frontend URL for payment redirect | `https://app.aumdatalabs.com/dashboard` |
+| `PAYMENT_CALLBACK_URL` | YES (payments) | Frontend URL for payment redirect | `[YOUR_FRONTEND_URL]/dashboard` |
 | `SSO_ENCRYPTION_KEY` | YES (SSO) | Fernet key for encrypting SSO client secrets | `base64url-encoded 32-byte key` |
 | `CRON_SECRET` | YES (cron) | Bearer token for authenticating the billing cron | random 32+ char string |
 | `ENV` | NO | `development` or `production` (default: `production`) | `production` |
@@ -44,7 +44,7 @@
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | YES | Firebase Storage Bucket | `your-project.appspot.com` |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | YES | Firebase Sender ID | `...` |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | YES | Firebase App ID | `1:...:web:...` |
-| `NEXT_PUBLIC_API_BASE_URL` | **YES** | Backend URL (no trailing slash) | `https://api.aumdatalabs.com` |
+| `NEXT_PUBLIC_API_BASE_URL` | **YES** | Backend URL (no trailing slash) | `[YOUR_BACKEND_URL]` |
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | YES (payments) | Razorpay Key ID (public) | `rzp_live_...` |
 
 ---
@@ -165,7 +165,7 @@ If a payment succeeded but the plan wasn't updated (e.g., webhook failure):
 - Google Workspace
 
 ### 5.2 Customer Setup Guide
-1. Customer configures their IdP (Okta/Azure/Google) with redirect URI: `https://api.aumdatalabs.com/api/sso/callback`.
+1. Customer configures their IdP (Okta/Azure/Google) with redirect URI: `[YOUR_BACKEND_URL]/api/sso/callback`.
 2. Customer provides: Client ID, Client Secret, domain.
 3. Admin calls `POST /api/sso/configure` with org membership to store config (client secret is Fernet-encrypted in Firestore).
 4. Customer signs in via `GET /api/sso/initiate?org_id={orgId}`.

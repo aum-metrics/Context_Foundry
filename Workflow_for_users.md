@@ -1,42 +1,210 @@
-# AUM Context Foundry: User Workflow Guidelines
+# AUM Context Foundry — Workflow Guide
+**Step-by-step user workflows**
+**v4.1.0 | March 2026**
 
-This document outlines the standard operational workflows for a user navigating the AUM Context Foundry platform.
+---
 
-## Workflow 1: Initial Onboarding & Brand Anchor Setup
-**Goal:** Establish the verified "Ground Truth" for your organization.
-1. **Log In:** Access the platform using corporate credentials. You are automatically routed to your isolated Organizational tenant.
-2. **Navigate to Ingestion:** Click on the "Semantic Ingestion" tab in the left-hand navigation.
-3. **Upload Assets:** Drag and drop your most accurate, up-to-date corporate documents (e.g., Product Specifications, Corporate Fact Sheets, Pricing Matrices in PDF format).
-4. **Processing:** The system will process these files through the Zero-Retention pipeline. 
-5. **Verification:** Check the "Manifest State" panel. Once it reads "Active", your Context Information Model (CIM) is live and ready to anchor simulations.
+## Workflow 1: First-Time Setup (New Organization)
 
-## Workflow 2: Running a Competitive Fidelity Simulation
-**Goal:** Audit how frontier AI models currently perceive your brand versus a competitor.
-1. **Navigate to Simulator:** Click on the "Co-Intelligence Simulator" tab.
-2. **Draft a Prompt:** Enter a query a potential customer might ask an AI (e.g., *"Compare [Our Brand] vs [Competitor] for enterprise security features."*).
-3. **Execute Audit:** Click "Run Tri-Model Audit".
-4. **Review Adjudication:** The system will dispatch the prompt to GPT, Claude, and Gemini. 
-5. **Analyze LCRS Score:** 
-   - Wait for the Master Adjudicator to return the final Latent Contextual Rigor Score (LCRS).
-   - Review the specific atomic claims extracted by the engine to identify exactly where the AI hallucinated or drifted from your Ground Truth.
+**Who**: First user at a company, signing up for the first time.
+**Result**: Organization provisioned, first simulation ready to run.
 
-## Workflow 3: Dashboard Monitoring & Batch Analysis
-**Goal:** Review historical trends and team-wide AI audit metrics.
-1. **Navigate to Command Center:** Click on the "SoM Command Center" tab.
-2. **Review ASoV:** Check the Agentic Share of Voice (ASoV) radar chart to see aggregated model bias over the last 7 days.
-3. **Review Error Logs:** Identify recurring "Factual Drift" patterns in the historical charts.
-4. **Batch Execution (Scale Tier):** If on the Scale tier, submit a CSV of top customer queries to the Batch Analysis engine to run bulk LCRS audits overnight. The UI will clearly display error states if any simulation fails.
+```
+1. Navigate to [YOUR_FRONTEND_URL]
+2. Click "Sign Up" → Enter business email + password
+3. Verify email (check inbox)
+4. First login triggers auto-provisioning:
+   - Organization created
+   - B2B API key generated
+   - Explorer plan active
+5. Land on Dashboard ✓
+```
 
-## Workflow 4: Remediation via Identity Routing
-**Goal:** Deploy corrected data to the Agentic Web to fix hallucinations.
-1. **Navigate to Agent Manifest:** Click on the "Agent Manifest (/llms.txt)" tab.
-2. **Review JSON-LD:** Inspect the synthesized schema representing your brand.
-3. **Deploy to Edge:** Copy the provided `https://[your-brand].com/llms.txt` deployment snippet.
-4. **Implementation:** Provide this snippet to your IT/Web team to place at the root of your corporate domain.
-5. **Monitor:** Run Workflow 2 again in 7 days to verify that crawlers have ingested the new manifesto and corrected their outputs.
+**Expected time**: < 60 seconds from sign-up to first dashboard view.
 
-## Workflow 5: Reporting & Team Management
-**Goal:** Export audit proofs for leadership and manage platform access.
-1. **Generate Certificate:** From the Simulator or Dashboard, click "Generate Brand Health Certificate" to export a tamper-evident PNG of your current LCRS standing.
-2. **Manage Seats (Admin Only):** Click on settings. Depending on your tier (Explorer, Growth, Scale), you can invite additional team members.
-3. **Manage Upgrades:** If you hit your monthly simulation limit, gracefully upgrade your subscription tier via the integrated Razorpay secure checkout flow to unlock higher Firestore Token Bucket limits.
+---
+
+## Workflow 2: Uploading Your First Document (Building the CIM)
+
+**Who**: Admin or Member.
+**Result**: Brand's ground truth indexed and ready for simulation.
+
+```
+1. Navigate to "Semantic Ingestion" in the sidebar
+2. Click "Upload Document"
+3. Select a PDF (< 10MB)
+   Good candidates: Product spec, FAQ, Company overview, Data sheet
+4. Click "Process Document"
+5. Wait 15–45 seconds for processing
+6. See success confirmation: "CIM Updated — Version 1.0.0"
+```
+
+**What happens behind the scenes**:
+- PDF read into memory → extracted → chunked → embedded → JSON-LD synthesized → written to Firestore → raw file deleted.
+- Your `/llms.txt` manifesto is automatically updated.
+
+**Explorer Plan**: 1 document maximum. Upgrade for unlimited.
+
+---
+
+## Workflow 3: Running a Simulation
+
+**Who**: Admin or Member.
+**Prerequisites**: At least one document ingested (CIM built).
+**Result**: LCRS scores for GPT-4o, Claude 3.5, Gemini 2.0 on your question.
+
+```
+1. Navigate to "Co-Intelligence Simulator"
+2. Enter a customer question in the prompt box
+   Example: "What is Acme Corp's return policy?"
+   Example: "Does TechCo integrate with Salesforce?"
+3. Click "Run Simulation"
+4. Wait 8–15 seconds for tri-model evaluation
+5. Review results:
+   ├── LCRS Score per model (0–100)
+   ├── Grade: High Fidelity / Minor Drift / Critical Drift
+   ├── Per-model response text
+   └── Which claims were supported vs. hallucinated
+```
+
+**If you see a 402 error**: You've hit your simulation limit. Upgrade your plan.
+**If you see a 503 error**: API keys are being provisioned. Wait 30 seconds and retry.
+
+---
+
+## Workflow 4: Viewing & Sharing Your Agent Manifesto
+
+**Who**: Admin or Member.
+**Result**: Live `/llms.txt` URL ready to share with AI crawlers and partners.
+
+```
+1. Navigate to "Agent Manifest" in the sidebar
+2. View the auto-generated manifesto content
+3. Copy the shareable URL:
+   [YOUR_FRONTEND_URL]/llms.txt?orgId=your_org_id
+4. (Optional) Submit to AI crawler indexing services
+```
+
+Your manifesto updates automatically whenever you upload a new document.
+
+---
+
+## Workflow 5: Inviting Team Members
+
+**Who**: Admin only.
+**Result**: New member added to organization, seat count updated.
+
+```
+1. Navigate to "Settings → Team"
+2. View current member list
+3. Enter colleague's email in the invite field
+4. Click "Send Invite"
+5. Member receives email (or you share the signup link)
+6. When they sign up, they are linked to your organization
+```
+
+**Seat Limits**: Explorer: 1 • Growth: 5 • Scale: 25
+
+---
+
+## Workflow 6: Running a Batch Stability Check
+
+**Who**: Admin or Member (Growth/Scale plan).
+**Result**: Stability report across your top customer questions.
+
+```
+1. Navigate to "SoM Command Center"
+2. Click "Run Batch Stability Check"
+3. Wait for background processing (30–120 seconds)
+4. Review batch results:
+   ├── Per-question LCRS scores
+   ├── Model consistency (which model is most reliable)
+   └── Lowest-scoring questions to focus improvement on
+```
+
+---
+
+## Workflow 7: Running an SEO & LLM Audit
+
+**Who**: Admin.
+**Result**: Audit of your website's AI-crawler readiness.
+
+```
+1. Navigate to "SoM Command Center"
+2. Click "Run SEO Audit"
+3. Wait for async job completion (30–60 seconds)
+4. Review results:
+   ├── Core Web Vitals
+   ├── JSON-LD structured data gaps
+   ├── LLM readability score
+   └── Recommended improvements
+```
+
+---
+
+## Workflow 8: B2B API Integration
+
+**Who**: Developer.
+**Result**: LCRS scoring integrated into your own system.
+
+```
+1. Navigate to "Settings → API Keys"
+2. Copy your aum_... key (shown once at provision time; regenerate if lost)
+3. Make API calls:
+
+   POST [YOUR_BACKEND_URL]/v1/run
+   Authorization: Bearer aum_your_key
+   Content-Type: application/json
+
+   {
+     "orgId": "your_org_id",
+     "prompt": "Customer question here",
+     "manifestVersion": "latest"
+   }
+
+4. Parse the response:
+   {
+     "results": [
+       { "model": "gpt-4o", "lcrsScore": 92.1, "grade": "high_fidelity" },
+       { "model": "claude-3-5-sonnet", "lcrsScore": 78.3, "grade": "minor_drift" },
+       { "model": "gemini-2-0-flash", "lcrsScore": 65.7, "grade": "minor_drift" }
+     ]
+   }
+```
+
+---
+
+## Workflow 9: Upgrading Your Plan
+
+**Who**: Admin.
+**Result**: Plan upgraded, additional simulations and seats unlocked.
+
+```
+1. Navigate to "Settings → Billing"
+2. Click "Upgrade Plan"
+3. Select Growth or Scale
+4. Enter payment details (Razorpay — card / UPI / Net Banking)
+5. Confirm payment
+6. Plan upgrades instantly — no restart needed
+```
+
+---
+
+## Workflow 10: Revoking an API Key
+
+**Who**: Admin.
+**Result**: Old API key deactivated, breach risk eliminated.
+
+```
+1. Navigate to "Settings → API Keys"
+2. Find the key to revoke
+3. Click "Revoke Key"
+4. Key is immediately deactivated
+5. Generate a new key if needed
+```
+
+All revocations are logged in the SOC2 audit trail.
+
+---
+
+*AUM Data Labs — Workflow Guide v4.1.0*
