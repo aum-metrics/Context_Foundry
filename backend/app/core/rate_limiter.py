@@ -20,13 +20,18 @@ class RateLimiter:
         # Store: {api_key: {endpoint: [(timestamp, count)]}}
         self._requests: Dict[str, Dict[str, list]] = {}
         
-        # Rate limits for Professional tier only
-        # Tiers: free, starter, professional (only professional gets API access)
+        # Rate limits for Scale and Growth
+        # Tiers: explorer, growth, scale (only growth and scale get API access)
         self.LIMITS = {
-            'professional': {
+            'scale': {
                 'requests_per_hour': 1000,
                 'requests_per_minute': 60,
                 'requests_per_day': 10000
+            },
+            'growth': {
+                'requests_per_hour': 200,
+                'requests_per_minute': 20,
+                'requests_per_day': 1000
             }
         }
     
@@ -48,7 +53,7 @@ class RateLimiter:
         self,
         api_key: str,
         endpoint: str,
-        tier: str = 'professional'
+        tier: str = 'growth'
     ) -> tuple[bool, Optional[str]]:
         """
         Check if request is within rate limits
@@ -57,7 +62,7 @@ class RateLimiter:
             (allowed: bool, error_message: Optional[str])
         """
         if tier not in self.LIMITS:
-            tier = 'professional'
+            tier = 'growth'
         
         limits = self.LIMITS[tier]
         now = datetime.utcnow()
@@ -132,7 +137,7 @@ class RateLimiter:
 rate_limiter = RateLimiter()
 
 
-def check_rate_limit(api_key: str, endpoint: str, tier: str = 'professional'):
+def check_rate_limit(api_key: str, endpoint: str, tier: str = 'growth'):
     """
     Dependency function to check rate limits
     Raises HTTPException if limit exceeded

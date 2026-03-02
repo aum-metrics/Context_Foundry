@@ -2,7 +2,7 @@
 # Author: Sambath Kumar Natarajan
 # Company: AUM Data Labs
 # Purpose: API Key Management - Professional tier ONLY
-# Tiers: free, starter, professional (ONLY professional gets API access)
+# Tiers: explorer, growth, scale (only growth and scale get API access)
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
@@ -66,7 +66,7 @@ def generate_api_key() -> tuple[str, str]:
     
     return api_key, key_hash
 
-def check_professional_subscription(user_email: str) -> bool:
+def check_api_tier_subscription(user_email: str) -> bool:
     """
     Check if user has PROFESSIONAL subscription.
     Tiers: free, starter, professional
@@ -117,8 +117,8 @@ async def generate_api_key_endpoint(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Generate a new API key (Professional tier ONLY).
-    Tiers: free, starter, professional
+    Generate a new API key (Growth/Scale tier ONLY).
+    Tiers: explorer, growth, scale
     The key is shown only once - store it securely!
     """
     try:
@@ -128,13 +128,13 @@ async def generate_api_key_endpoint(
         if not user_email or not user_id:
             raise HTTPException(status_code=401, detail="Invalid user session")
         
-        # Check if user has Professional subscription
-        if not check_professional_subscription(user_email):
+        # Check if user has an eligible subscription
+        if not check_api_tier_subscription(user_email):
             raise HTTPException(
                 status_code=403,
                 detail={
-                    "error": "API keys are only available for Professional subscribers",
-                    "message": "Upgrade to Professional plan to generate API keys. Available tiers: free, starter, professional",
+                    "error": "API keys are only available for Growth and Scale subscribers",
+                    "message": "Upgrade to the Growth or Scale plan to generate API keys. Available tiers: explorer, growth, scale",
                     "upgrade_url": "https://aumdatalabs.com/pricing"
                 }
             )

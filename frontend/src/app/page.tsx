@@ -403,7 +403,7 @@ export default function LandingPage() {
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                        {/* STARTER */}
+                        {/* EXPLORER */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -412,23 +412,24 @@ export default function LandingPage() {
                             className="rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl p-8 shadow-xl dark:shadow-none flex flex-col"
                         >
                             <div className="mb-8">
-                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">Starter</h4>
-                                <p className="text-sm text-slate-500">For teams exploring GEO</p>
+                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">EXPLORER</h4>
+                                <p className="text-sm text-slate-500">Try it. No card required.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
-                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">₹15K</span>
-                                <span className="text-slate-500 font-medium ml-2">/mo (~$180)</span>
+                                <span className="text-4xl font-light tracking-tighter text-slate-900 dark:text-white">Free Forever</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 organization</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Gemini 2.0 Flash scoring only</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 50 simulations / month</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Semantic document ingestion</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> /llms.txt manifest deployment</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-slate-300 dark:text-slate-700 mr-2.5 mt-0.5 shrink-0" /><span className="text-slate-400 dark:text-slate-600">Multi-model comparison</span></li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 3 simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (GPT-4o, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic ASoV score</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> preview</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Multi-model comparison</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic scoring history</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 Team seat</li>
                             </ul>
                             <Link href="/login" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
-                                Get Started
+                                Start Free
                             </Link>
                         </motion.div>
 
@@ -441,30 +442,33 @@ export default function LandingPage() {
                             className="rounded-[2rem] iridescent-border bg-white dark:bg-[#0a0a0a]/90 backdrop-blur-2xl p-8 shadow-2xl shadow-indigo-500/10 flex flex-col relative"
                         >
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-indigo-600 text-white text-xs font-semibold uppercase tracking-widest shadow-lg">
-                                Recommended
+                                Most Popular
                             </div>
                             <div className="mb-8">
-                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">Growth</h4>
-                                <p className="text-sm text-slate-500">Full multi-model GEO suite</p>
+                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">GROWTH</h4>
+                                <p className="text-sm text-slate-500">For teams serious about AI visibility.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
-                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">₹25K</span>
-                                <span className="text-slate-500 font-medium ml-2">/mo (~$300)</span>
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">$79</span>
+                                <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 organization, <strong>up to 25 seats</strong></li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /><strong className="text-slate-900 dark:text-white">All 3 models</strong>&nbsp;(GPT-4o, Claude, Gemini)</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /><strong>500</strong>&nbsp;simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong>100</strong> simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (GPT-4o, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> SEO + GEO readiness audit</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Real-time ASoV scoring dashboard</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Fine-grained fact-check reports</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 90-day scoring history</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
                             <Link href="/login" className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm">
-                                Start Growth Plan
+                                Start 7-Day Trial
                             </Link>
+                            <p className="text-center text-xs text-slate-400 mt-4">7-day trial, then $79/mo. Cancel anytime.</p>
                         </motion.div>
 
-                        {/* ENTERPRISE */}
+                        {/* SCALE */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -473,26 +477,68 @@ export default function LandingPage() {
                             className="rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl p-8 shadow-xl dark:shadow-none flex flex-col"
                         >
                             <div className="mb-8">
-                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">Enterprise</h4>
-                                <p className="text-sm text-slate-500">For organizations at scale</p>
+                                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">SCALE</h4>
+                                <p className="text-sm text-slate-500">High-volume teams and agencies.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
-                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">₹75K</span>
-                                <span className="text-slate-500 font-medium ml-2">/mo (~$900)</span>
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">$249</span>
+                                <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /><strong className="text-slate-900 dark:text-white">Unlimited</strong>&nbsp;organizations &amp; simulations</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 25 seats per organization</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Batch domain analysis + Weekly Cron</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> SSO / SAML integration (Coming Soon)</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Dedicated API keys per org</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Dedicated Solutions Architect</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Priority support &amp; SLA</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong>500</strong> simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models + priority queue</strong></li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard + exports</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Competitor displacement tracking</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Weekly automated batch runs</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full scoring history</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 25 seats</li>
                             </ul>
                             <Link href="/contact" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
-                                Contact Sales
+                                Start 7-Day Trial
                             </Link>
+                            <p className="text-center text-xs text-slate-400 mt-4">7-day trial. Invoicing available.</p>
                         </motion.div>
+                    </div>
+                </section>
+
+                {/* FAQs */}
+                <section id="faq" className="max-w-4xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl md:text-4xl font-light tracking-tight text-slate-900 dark:text-white">Questions we actually get asked</h2>
+                    </div>
+                    <div className="space-y-6 text-left">
+                        <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What counts as one simulation?</h4>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                One prompt tested across your chosen models = 1 simulation. Running &quot;What does [your brand] cost?&quot; across GPT-4o, Claude, and Gemini simultaneously counts as 1 — not 3. We batch the model calls.
+                            </p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Why does the free tier include all 3 models?</h4>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                Because a single-model score isn&apos;t the insight. The insight is when GPT-4o rates your brand at 91% accuracy and Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
+                            </p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What happens when I hit my simulation limit?</h4>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                Simulations pause — no surprise overage charges. You&apos;ll get a dashboard warning at 80% usage. The counter resets on your billing date.
+                            </p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Is my uploaded data actually deleted?</h4>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                Yes. PDFs are read into volatile memory buffers, chunked, embedded into vectors, then purged from memory. We store the resulting JSON-LD schema, not your source document. Nothing proprietary touches persistent disk.
+                            </p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What&apos;s the difference between /llms.txt preview (Explorer) and deploy to edge (Growth+)?</h4>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                Preview shows you the generated manifest file. Deploy actually serves it at your verified endpoint so LLM crawlers can discover it. The preview is proof-of-concept; the deploy is the product working.
+                            </p>
+                        </div>
                     </div>
                 </section>
 

@@ -433,24 +433,24 @@ async def evaluate_simulation(
             logger.warning(f"Cache check failed: {e}")
 
     # ----- 1. FETCH SUBSCRIPTION & ENFORCE LIMITS -----
-    org_plan = "growth" # default fallback
+    org_plan = "explorer" # default fallback
     org_data = {}
     if db:
         try:
             org_doc = db.collection("organizations").document(request.orgId).get()
             if org_doc.exists:
                 org_data = org_doc.to_dict() or {}
-                org_plan = org_data.get("subscription", {}).get("planId", "starter")
+                org_plan = org_data.get("subscription", {}).get("planId", "explorer")
         except Exception as e:
             logger.error(f"Failed to fetch org plan: {e}")
 
     # Enforce Dynamic Limits with Firestore Transaction (Race Condition Fix)
     limits = {
-        "starter": 50,
-        "growth": 500,
-        "enterprise": 5000
+        "explorer": 3,
+        "growth": 100,
+        "scale": 500
     }
-    plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 50))
+    plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 3))
 
     if db and not is_dev:
         from google.cloud import firestore
@@ -551,7 +551,7 @@ async def evaluate_simulation(
             logger.warning(f"Simulation semantic retrieval failed: {e}")
 
     # Enforce Model Gating
-    if org_plan == "starter":
+    if org_plan == "explorer":
         openai_key = None
         claude_key = None
 
@@ -602,7 +602,7 @@ async def evaluate_simulation(
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
 
     locked_models = []
-    if org_plan == "starter":
+    if org_plan == "explorer":
         locked_models = ["GPT-4o Mini", "Claude 3.5 Haiku"]
 
     return {

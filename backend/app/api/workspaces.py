@@ -13,10 +13,9 @@ import logging
 import secrets
 
 try:
-    
-    
-except:
-    
+    from supabase import Client, create_client
+except ImportError:
+    Client = Any
 
 from core.config import settings
 from core.firebase_config import db
@@ -209,11 +208,21 @@ async def invite_member(
     if user_email != workspace["owner_email"]:
         raise HTTPException(status_code=403, detail="Only workspace owner can invite members")
     
-    # Enforce Hard Limit: Max 25 seats per organization
-    current_members = workspace.get("members", [])
-    if len(current_members) >= 25:
-        raise HTTPException(status_code=403, detail="Maximum limit of 25 seats per organization reached. Contact support to negotiate an Enterprise custom limit.")
+    # Enforce Seat Limits based on plan
+    org_plan = workspace.get("subscription", {}).get("planId", "explorer")
+    seat_limits = {
+        "explorer": 1,
+        "growth": 5,
+        "scale": 25,
+        "enterprise": 25,
+        "professional": 5,
+        "starter": 1
+    }
+    max_seats = seat_limits.get(org_plan, 1)
 
+    current_members = workspace.get("members", [])
+    if len(current_members) >= max_seats:
+        raise HTTPException(status_code=403, detail=f"Maximum limit of {max_seats} seats for the {org_plan.capitalize()} plan reached. Please upgrade to add more users.")
     if request.email in current_members:
         raise HTTPException(status_code=400, detail="User is already a member")
         

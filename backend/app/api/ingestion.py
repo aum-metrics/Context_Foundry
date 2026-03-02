@@ -71,6 +71,22 @@ async def parse_document(
     if orgId and not verify_user_org_access(uid, orgId):
         raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
 
+    # Enforce Document Limits
+    if orgId and db:
+        try:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                org_data = org_doc.to_dict() or {}
+                org_plan = org_data.get("subscription", {}).get("planId", "explorer")
+                if org_plan == "explorer":
+                    docs_ref = db.collection("organizations").document(orgId).collection("documents").limit(1).get()
+                    if len(docs_ref) >= 1:
+                        raise HTTPException(status_code=403, detail="Explorer plan is limited to 1 document. Please upgrade to Growth or Scale for unlimited ingestion.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Failed to check document limits: {e}")
+
     # Read binary stream
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:

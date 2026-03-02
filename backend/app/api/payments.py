@@ -46,26 +46,26 @@ def get_razorpay_client():
 # ============================================================================
 
 PLANS = {
-    "starter": {
-        "name": "Starter",
-        "amount": 1500000,  # ₹15,000 (~$180)
+    "explorer": {
+        "name": "Explorer",
+        "amount": 0,
         "currency": "INR",
         "period": "monthly",
-        "description": "1 org, Gemini 2.0 Flash scoring only, 50 simulations/mo",
+        "description": "3 simulations/mo, 1 document ingestion, basic ASoV score",
     },
     "growth": {
         "name": "Growth",
-        "amount": 2500000,  # ₹25,000 (~$300)
+        "amount": 660000,  # ~$79/mo
         "currency": "INR",
         "period": "monthly",
-        "description": "1 org, all 3 models, 500 simulations/mo",
+        "description": "All 3 models, 100 simulations/mo, /llms.txt deploy",
     },
-    "enterprise": {
-        "name": "Enterprise",
-        "amount": 7500000,  # ₹75,000 (~$900)
+    "scale": {
+        "name": "Scale",
+        "amount": 2080000,  # ~$249/mo
         "currency": "INR",
         "period": "monthly",
-        "description": "Unlimited orgs, SSO (coming soon), dedicated keys, weekly cron",
+        "description": "500 simulations/mo, priority queue, batch domain analysis",
     },
 }
 
@@ -76,7 +76,7 @@ PLANS = {
 
 class CreateSubscriptionRequest(BaseModel):
     orgId: str
-    planId: str  # starter, growth, enterprise
+    planId: str  # explorer, growth, scale
     customerEmail: str
     customerName: Optional[str] = None
 

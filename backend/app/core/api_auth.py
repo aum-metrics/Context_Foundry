@@ -1,7 +1,7 @@
 # backend/app/core/api_auth.py
 # Author: Sambath Kumar Natarajan
 # Company: AUM Data Labs
-# Purpose: API Key authentication and Professional-tier access control
+# Purpose: API Key authentication and Growth/Scale-tier access control
 
 from fastapi import HTTPException, Security, Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -116,33 +116,31 @@ async def require_api_key(
     return await verify_api_key(api_key)
 
 # ============================================
-# DEPENDENCY: REQUIRE PRO TIER
+# DEPENDENCY: REQUIRE API TIER
 # ============================================
 
-async def require_professional_tier(
+async def require_api_tier(
     user_info: dict = Depends(require_api_key)
 ) -> dict:
     """
-    Dependency that requires Professional tier subscription.
-    ONLY Professional tier users can access the API.
-    Tiers: free, starter, professional
+    Dependency that requires Growth or Scale tier subscription.
+    ONLY these tier users can access the API.
+    Tiers: explorer, growth, scale
     
-    Note: Temporarily accepts 'enterprise' for backwards compatibility
+    Note: Temporarily accepts 'professional' and 'enterprise' for backwards compatibility
     during migration period. Will be removed in future version.
     """
-    subscription_type = user_info.get("subscription_type", "free")
+    subscription_type = user_info.get("subscription_type", "explorer")
     
-    # Accept both 'professional' and 'enterprise' (enterprise is legacy)
-    # This ensures users who paid for "Professional" plan (stored as "enterprise" in DB)
-    # can still access the API during migration
-    if subscription_type not in ["professional", "enterprise"]:
+    # Accept 'growth', 'scale', and legacy ones
+    if subscription_type not in ["growth", "scale", "professional", "enterprise"]:
         raise HTTPException(
             status_code=403,
             detail={
-                "error": "API access requires Professional subscription",
+                "error": "API access requires Growth or Scale subscription",
                 "current_plan": subscription_type,
-                "required_plan": "professional",
-                "message": "Upgrade to Professional plan to access the API. Available tiers: free, starter, professional",
+                "required_plan": "growth",
+                "message": "Upgrade to Growth or Scale plan to access the API. Available tiers: explorer, growth, scale",
                 "upgrade_url": "https://aumdatalabs.com/pricing"
             }
         )
@@ -156,9 +154,9 @@ async def require_professional_tier(
                 raise HTTPException(
                     status_code=403,
                     detail={
-                        "error": "Professional subscription expired",
+                        "error": "Subscription expired",
                         "expired_on": subscription_expiry,
-                        "message": "Please renew your Professional subscription to continue using the API",
+                        "message": "Please renew your subscription to continue using the API",
                         "upgrade_url": "https://aumdatalabs.com/pricing"
                     }
                 )
