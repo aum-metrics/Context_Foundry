@@ -84,6 +84,12 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     if not db:
         raise HTTPException(status_code=503, detail="Database connection unavailable")
 
+    # Tenant ownership check: only members of the org can configure its SSO
+    from core.security import verify_user_org_access
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, request.organization_id):
+        raise HTTPException(status_code=403, detail="Unauthorized: you don't belong to this organization")
+
     if request.provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO provider")
     
@@ -138,12 +144,19 @@ async def initiate_sso_login(request: SSOInitiateRequest, auth: dict = Depends(g
         raise HTTPException(status_code=500, detail="SSO initiation failed")
 
 @router.get("/status/{organization_id}")
-async def get_sso_status(organization_id: str):
+async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_context)):
     """
-    Check if SSO is enabled for an organization
+    Check if SSO is enabled for an organization.
+    Restricted to members of the organization to prevent cross-tenant information disclosure.
     """
     if not db:
         return {"enabled": False, "error": "Database unavailable"}
+
+    # Tenant ownership check
+    from core.security import verify_user_org_access
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, organization_id):
+        raise HTTPException(status_code=403, detail="Unauthorized to view SSO config for this organization")
 
     doc = db.collection("sso_configs").document(organization_id).get()
     if not doc.exists:

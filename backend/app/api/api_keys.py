@@ -228,7 +228,7 @@ async def revoke_api_key(
 ):
     """Revoke (deactivate) an API key"""
     try:
-        user_id = current_user.get("id")
+        uid = current_user.get("uid") or current_user.get("id")
         
         if not db:
             raise HTTPException(status_code=503, detail="Database unavailable")

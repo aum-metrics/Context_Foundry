@@ -61,7 +61,7 @@ AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate
     if (orgId) {
         try {
             // Proxy the request to the hardened AUM backend to bypass client Firestore rules
-            const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+            const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
             const response = await fetch(`${backendUrl}/api/workspaces/${orgId}/manifest`, {
                 method: "GET",
                 cache: "no-store", // Ensure we always get the latest manifest

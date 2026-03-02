@@ -47,17 +47,22 @@ class UpdateWorkspaceRequest(BaseModel):
 
 @router.post("/provision")
 async def provision_organization(
-    request: ProvisionOrgRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    request: Optional[ProvisionOrgRequest] = None,
 ):
     """
     Called by the frontend immediately after Firebase authenticates a new user.
     Creates the Organization, User record, and automatically provisions 
     infrastructure API keys to achieve Zero-Friction onboarding (No BYOK required).
+    Accepts an empty body — email and name are inferred from the Firebase token.
     """
     uid = current_user.get("uid")
     if not uid:
         raise HTTPException(status_code=401, detail="Invalid session")
+
+    # Infer identity from token if not provided in body
+    email = (request.email if request else None) or current_user.get("email", f"{uid}@unknown.com")
+    name = (request.name if request else None) or current_user.get("name", email.split("@")[0])
         
     if not db:
         raise HTTPException(status_code=500, detail="Database unconfigured")
@@ -87,7 +92,7 @@ async def provision_organization(
         # so the user can immediately use the Simulator without bringing their own keys.
         org_payload = {
             "id": new_org_id,
-            "name": request.name,
+            "name": name,
             "activeSeats": 1,
             "subscription": {
                 "planId": "explorer",
@@ -113,7 +118,7 @@ async def provision_organization(
         # 2. Register User
         user_payload = {
             "uid": uid,
-            "email": request.email,
+            "email": email,
             "orgId": new_org_id,
             "role": "admin"
         }
