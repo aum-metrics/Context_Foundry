@@ -1,6 +1,6 @@
 # AUM Context Foundry — CIM Architecture
 **Context Information Model — Technical Design**
-**v4.1.0 | March 2026**
+**v5.0.0 | March 2026**
 
 ---
 
@@ -206,4 +206,4 @@ organizations/{orgId}/simulationCache/
 
 ---
 
-*AUM Data Labs — CIM Architecture v4.1.0*
+*AUM Data Labs — CIM Architecture v5.0.0*

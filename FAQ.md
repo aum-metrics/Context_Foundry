@@ -119,4 +119,9 @@ Contact [your-enterprise-email] for OEM and white-label licensing.
 
 ---
 
-*AUM Data Labs — FAQ v4.1.0*
+**Q: How reliable are the background simulations?**
+A: High. AUM features a persistent task queue with an automated recovery worker that restarts jobs in case of worker process interruptions.
+
+---
+
+*AUM Data Labs — FAQ v5.0.0*

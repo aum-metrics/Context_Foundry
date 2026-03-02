@@ -1,5 +1,5 @@
 # AUM Context Foundry — Enterprise Technical Specification
-**v4.1.0 | March 2026**
+**v5.0.0 | March 2026**
 
 ---
 
@@ -31,6 +31,11 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 2. Frontend attaches it as `Authorization: Bearer <token>`.
 3. Backend calls `firebase_admin.auth.verify_id_token(token)` to decode.
 4. `verify_user_org_access(uid, orgId)` queries `users/{uid}.orgId` in Firestore and compares — **fail-closed** on DB errors.
+
+### Admin Panel Auth
+1. Uses `aum_admin_session` cookie signed via `ADMIN_SESSION_SECRET`.
+2. Backend validates `X-Admin-Token` against environment secret.
+3. In-memory session verification for proxy routes.
 
 ### API Key Auth (B2B)
 1. Provisioning generates `aum_<32-byte-urlsafe-token>`.
@@ -238,9 +243,21 @@ Async job pattern:
 
 Supported providers: Okta, Azure AD, Google Workspace.
 
-- `POST /api/sso/configure` — org membership required, client secret encrypted with Fernet (32-byte key from `SSO_ENCRYPTION_KEY` env).
+- `POST /api/sso/configure` — org membership required, client secret encrypted with Fernet (32-byte key from `SSO_ENCRYPTION_KEY` env). Managed via `SSOSettings.tsx` UI.
 - `GET /api/sso/status/{orgId}` — org membership required.
 - `POST /api/sso/initiate` — auth required.
+
+---
+
+## 11. Task Queue & Recovery Worker
+
+A distributed-safe background job recovery system:
+
+- **Collection Architecture**: Jobs stored in `organizations/{orgId}/batch_jobs` and `organizations/{orgId}/seo_jobs`.
+- **States**: `queued` → `processing` → `complete`/`failed`.
+- **Recovery Worker**: `TaskQueueRecovery.sweep_stalled_jobs()` runs at startup and scans for jobs in `processing` state for >30 mins.
+- **Retry Logic**: Automatic retry up to 3 times before setting to `failed_permanent`.
+- **Performance**: Uses `select()` projections to scan large job sets with minimal memory overhead.
 
 ---
 
@@ -297,4 +314,4 @@ See `Admin_Support_Handbook.md` for the complete variable reference.
 
 ---
 
-*AUM Data Labs — Context Foundry Enterprise Technical Specification v4.1.0*
+*AUM Data Labs — Context Foundry Enterprise Technical Specification v5.0.0*

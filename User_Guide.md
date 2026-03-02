@@ -1,5 +1,5 @@
 # AUM Context Foundry — User Guide
-**v4.1.0 | March 2026**
+**v5.0.0 | March 2026**
 
 ---
 
@@ -133,6 +133,13 @@ Navigate to **Settings → Team** to:
 
 > **Seat Limits**: Explorer: 1 seat. Growth: 5 seats. Scale: 25 seats.
 
+### 6.2 Enterprise SSO
+Organizations on the **Scale** plan can configure Single Sign-On (Okta, Azure AD, Google) via **Settings → Enterprise SSO**.
+1. Select your provider.
+2. Enter your Domain, Client ID, and Client Secret.
+3. Click **Configure SSO**.
+4. Once active, your team can sign in via your company's IdP.
+
 ---
 
 ## 7. API Access (Developer Mode)
@@ -199,4 +206,4 @@ A: You'll see a clear "Limit Reached" message. You can upgrade immediately to co
 
 ---
 
-*AUM Data Labs — User Guide v4.1.0*
+*AUM Data Labs — User Guide v5.0.0*

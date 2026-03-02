@@ -1,6 +1,6 @@
 # AUM Context Foundry — Workflow Guide
 **Step-by-step user workflows**
-**v4.1.0 | March 2026**
+**v5.0.0 | March 2026**
 
 ---
 
@@ -203,8 +203,19 @@ Your manifesto updates automatically whenever you upload a new document.
 5. Generate a new key if needed
 ```
 
-All revocations are logged in the SOC2 audit trail.
+## Workflow 11: Configuring Enterprise SSO
+
+**Who**: Admin (Scale plan).
+**Result**: Organization-wide SSO enabled.
+
+```
+1. Navigate to "Settings → Enterprise SSO"
+2. Choose your provider (Okta / Azure AD / Google)
+3. Input Client ID, Client Secret, and Domain
+4. Click "Configure SSO"
+5. Verify status shows "Active"
+```
 
 ---
 
-*AUM Data Labs — Workflow Guide v4.1.0*
+*AUM Data Labs — Workflow Guide v5.0.0*

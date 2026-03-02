@@ -1,6 +1,6 @@
 # AUM Context Foundry — User-Facing Product Document
 **Product Overview for Prospects & New Users**
-**v4.1.0 | March 2026**
+**v5.0.0 | March 2026**
 
 ---
 
@@ -82,7 +82,7 @@ STEP 3: FIX THE GAP
 
 | | Explorer | Growth | Scale |
 |--|---------|--------|-------|
-| **Price** | Free | ₹4,999/mo | ₹14,999/mo |
+| **Price** | Free | $79/mo | $249/mo |
 | **Seats** | 1 | 5 | 25 |
 | **Simulations/mo** | 3 | 100 | 500 |
 | **Batch Analysis** | — | ✓ | ✓ |
@@ -124,4 +124,4 @@ Your LCRS score will tell you exactly how the AI ecosystem sees your brand right
 
 ---
 
-*AUM Data Labs — Context Foundry v4.1.0 | March 2026*
+*AUM Data Labs — Context Foundry v5.0.0 | March 2026*

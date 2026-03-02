@@ -1,5 +1,5 @@
 # AUM Context Foundry — CMO & Marketing Guide
-**v4.1.0 | March 2026**
+**v5.0.0 | March 2026**
 
 ---
 
@@ -147,7 +147,7 @@ AUM's three-layer story:
 3. **Simulate** (4 min): Run 3 real customer questions. Show the LCRS scores per model.
 4. **Manifesto** (2 min): Show their auto-generated `/llms.txt`. Explain how it gets into AI crawlers.
 5. **Batch & Competitor** (3 min): Show SoM Command Center — competitor displacement, batch stability.
-6. **Close** (2 min): Pricing. Explorer is free. Most teams need Growth at ₹4,999/mo.
+6. **Close** (2 min): Pricing. Explorer is free. Most teams need Growth at $79/mo.
 
 ---
 
@@ -160,4 +160,4 @@ AUM's three-layer story:
 
 ---
 
-*AUM Data Labs — CMO & Marketing Guide v4.1.0*
+*AUM Data Labs — CMO & Marketing Guide v5.0.0*

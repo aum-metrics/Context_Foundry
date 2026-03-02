@@ -1,5 +1,5 @@
 # AUM Context Foundry — Admin Support Handbook
-**v4.1.0 | March 2026 | CONFIDENTIAL — Internal Operations Only**
+**v5.0.0 | March 2026 | CONFIDENTIAL — Internal Operations Only**
 
 ---
 
@@ -21,6 +21,7 @@
 | `SSO_ENCRYPTION_KEY` | YES (SSO) | Fernet key for encrypting SSO client secrets | `base64url-encoded 32-byte key` |
 | `CRON_SECRET` | YES (cron) | Bearer token for authenticating the billing cron | random 32+ char string |
 | `ENV` | NO | `development` or `production` (default: `production`) | `production` |
+| `ADMIN_SESSION_SECRET` | **YES** | Secret for signing admin session cookies | `random-string` |
 | `ALLOW_MOCK_AUTH` | NO | `true` to allow `mock-dev-token` in dev | `true` |
 | `RATE_LIMIT_PER_SECOND` | NO | IP-level rate limit for B2B API (default: 5) | `10` |
 
@@ -134,6 +135,24 @@ In `backend/app/core/rate_limiter.py`, adjust the `@limiter.limit()` decorator s
 
 ---
 
+## 4. Task Queue & Job Reliability
+
+The platform uses a persistent task queue with a recovery worker.
+
+### 4.1 Monitoring Job Health
+Check backend logs for `♻️ Task recovery` or `TaskQueueRecovery sweep complete`.
+- **Stalled Jobs**: Jobs in `processing` for >30m are automatically detected.
+- **Failures**: Jobs that fail 3 times are marked `failed_permanent`.
+
+### 4.2 Manual Recovery
+If the automated worker is disabled, you can trigger a sweep via:
+```bash
+# Example if exposed via CLI or admin route
+# curl -X POST /api/admin/tasks/recover -H "X-Admin-Token: $SECRET"
+```
+
+---
+
 ## 4. Subscription & Billing Administration
 
 ### 4.1 Razorpay Dashboard
@@ -221,4 +240,4 @@ git push origin v4.1.0
 
 ---
 
-*AUM Data Labs — Admin Support Handbook v4.1.0 | CONFIDENTIAL*
+*AUM Data Labs — Admin Support Handbook v5.0.0 | CONFIDENTIAL*

@@ -1,10 +1,4 @@
-# AUM Context Foundry
-
-> **The Verified Identity Router for the Agentic Era**
-
-AUM Context Foundry is a production-hardened, **API-First Data Infrastructure** that evaluates, optimizes, and enforces how multi-modal Large Language Models ingest and cite enterprise data. It provides quantified Agentic Share of Voice (ASoV) scoring across GPT-4o, Claude 3.5, and Gemini 2.0 — giving enterprises mathematical visibility into whether their brand is winning or losing in the AI-answer layer.
-
-[![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://python.org) [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org) [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com) [![Firebase](https://img.shields.io/badge/Firebase-Firestore+Auth-orange)](https://firebase.google.com)
+*Built by AUM Data Labs — Context Foundry v5.0.0*
 
 ---
 
@@ -19,7 +13,7 @@ AUM Context Foundry is a production-hardened, **API-First Data Infrastructure** 
 ┌──────────────────────────▼─────────────────────────────────┐
 │  LCRS GATEWAY (FastAPI 0.115)                              │
 │  /api/simulation  /api/ingestion  /api/seo  /api/competitor│
-│  /api/workspaces  /api/payments   /api/sso  /api/audit     │
+│  /api/workspaces  /api/payments   /api/sso  /api/admin     │
 └──────────────────────────┬─────────────────────────────────┘
                            │ firebase-admin + Service Account
 ┌──────────────────────────▼─────────────────────────────────┐
@@ -54,10 +48,9 @@ The **Low-Latency Claim-based Reliability Scoring** engine produces deterministi
 - Auto-generates organization, user record, and B2B `aum_...` prefix API key in a single atomic operation.
 - Platform manages OpenAI/Gemini/Anthropic inference keys so users start immediately without BYOK.
 
-### 5. B2B API Licensing
-- External integrators use `aum_` prefix Bearer tokens for direct API access.
-- Rate limiting via `slowapi` (IP + Token layer).
-- All B2B key usage logged to SOC2 audit trail.
+### 6. Fault-Tolerant Reliability
+- **Persistent Task Queue Recovery**: A dedicated background sweep detects and restarts stalled or crashed simulations/SEO audits.
+- **Fail-Safe Retries**: Automatic 3-strike retry logic for all async background operations.
 
 ---
 
@@ -68,8 +61,8 @@ The **Low-Latency Claim-based Reliability Scoring** engine produces deterministi
 | Auth | `firebase-admin` ID token verification; `aum_` prefix API keys with SHA-256 hash |
 | Multi-tenancy | `verify_user_org_access` enforced on every org-scoped endpoint |
 | Payments | All Razorpay endpoints require auth + org ownership (`/create-order`, `/verify`, `/payment-link`) |
-| SSO | `/configure` and `/status` require org membership; Fernet encryption for client secrets |
-| Audit | SOC2-compliant append-only logs in `organizations/{orgId}/auditLogs` |
+| SSO | `/configure` and `/status` require org membership; Fernet encryption for client secrets; Full UI management in /dashboard |
+| Reliability | `TaskQueueRecovery` worker runs at startup to handle crashed process jobs |
 | Rate Limiting | `slowapi` + Firestore atomic transaction-based simulation quotas |
 | Webhook Security | `hmac.compare_digest` for Razorpay webhook verification |
 
@@ -118,8 +111,8 @@ PYTHONPATH=app pytest tests -v
 | Tier | Seats | Simulations/mo | Batch Analysis | Price |
 |------|-------|----------------|----------------|-------|
 | Explorer | 1 | 3 | ✗ | Free |
-| Growth | 5 | 100 | ✓ | ₹4,999/mo |
-| Scale | 25 | 500 | ✓ | ₹14,999/mo |
+| Growth | 5 | 100 | ✓ | $79/mo |
+| Scale | 25 | 500 | ✓ | $249/mo |
 
 ---
 
@@ -186,4 +179,4 @@ AUM/
 
 ---
 
-*Built by AUM Data Labs — Context Foundry v4.1.0*
+*Built by AUM Data Labs — Context Foundry v5.0.0*
