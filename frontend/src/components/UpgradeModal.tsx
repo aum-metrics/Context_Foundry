@@ -108,7 +108,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                 <div>
                                     <p className="text-sm text-slate-500 font-medium mb-1">Growth Plan</p>
                                     <div className="flex items-baseline space-x-1">
-                                        <span className="text-2xl font-bold text-slate-900 dark:text-white">₹25,000</span>
+                                        <span className="text-2xl font-bold text-slate-900 dark:text-white">$79</span>
                                         <span className="text-slate-500 text-sm">/mo</span>
                                     </div>
                                 </div>

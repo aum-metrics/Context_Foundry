@@ -11,14 +11,34 @@ import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
+import { db } from "@/lib/firestorePaths";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function ContactPage() {
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 5000);
+        setLoading(true);
+        const formData = new FormData(e.currentTarget);
+        const data = {
+            fullName: formData.get("fullName"),
+            email: formData.get("email"),
+            goals: formData.get("goals"),
+            createdAt: serverTimestamp(),
+            status: "new"
+        };
+
+        try {
+            await addDoc(collection(db, "leads"), data);
+            setSubmitted(true);
+            setTimeout(() => setSubmitted(false), 5000);
+        } catch (err) {
+            console.error("Failed to submit lead:", err);
+            alert("Failed to send request. Please try again or email us directly.");
+        }
+        setLoading(false);
     };
     return (
         <div className="min-h-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500/30">
@@ -99,23 +119,26 @@ export default function ContactPage() {
                             <input
                                 type="text"
                                 required
+                                name="fullName"
                                 placeholder="Full Name"
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/40"
                             />
                             <input
                                 type="email"
                                 required
+                                name="email"
                                 placeholder="Business Email"
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/40"
                             />
                             <textarea
+                                name="goals"
                                 placeholder="Strategic Goals"
                                 required
                                 rows={4}
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/40"
                             ></textarea>
-                            <button type="submit" className="w-full bg-white text-indigo-600 font-semibold py-4 rounded-xl hover:bg-slate-100 transition-colors">
-                                {submitted ? "Request Dispatched ✓" : "Dispatch Request"}
+                            <button type="submit" disabled={loading} className="w-full bg-white text-indigo-600 font-semibold py-4 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50">
+                                {loading ? "Dispatching..." : submitted ? "Request Dispatched ✓" : "Dispatch Request"}
                             </button>
                         </form>
                     </motion.div>

@@ -332,10 +332,10 @@ export default function SoMCommandCenter() {
                     )}
                     <button
                         onClick={runBatchStabilityCheck}
-                        disabled={batchLoading || organization?.subscriptionTier !== "enterprise"}
-                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${organization?.subscriptionTier === "enterprise" ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
+                        disabled={batchLoading || organization?.subscriptionTier !== "scale"}
+                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${organization?.subscriptionTier === "scale" ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
                     >
-                        {organization?.subscriptionTier === "enterprise" ? (
+                        {organization?.subscriptionTier === "scale" ? (
                             <>
                                 <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
                                 {batchLoading ? 'Analyzing...' : 'Run Batch Analysis'}

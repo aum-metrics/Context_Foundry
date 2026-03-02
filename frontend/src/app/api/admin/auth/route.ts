@@ -5,9 +5,14 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { email, password } = body;
 
-        // Ensure environment variables are set strings, defaulting to prevent accidental match on empty
-        const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@aumdatalabs.com";
-        const ADMIN_PASS = process.env.ADMIN_PASS || "AUM@2025!Foundry"; // Fallback only if missing in env
+        // STRICT AUDIT FIX: No hardcoded fallbacks for admin credentials
+        const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+        const ADMIN_PASS = process.env.ADMIN_PASS;
+
+        if (!ADMIN_EMAIL || !ADMIN_PASS) {
+            console.error("❌ CRITICAL: ADMIN_EMAIL or ADMIN_PASS environment variables are missing.");
+            return NextResponse.json({ success: false, error: "System configuration error." }, { status: 500 });
+        }
 
         if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
             return NextResponse.json({ success: true, token: "admin_authenticated" });
