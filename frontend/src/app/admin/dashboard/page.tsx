@@ -9,8 +9,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
-import { db } from "@/lib/firestorePaths";
-import { collection, doc, getDocs, getDoc, updateDoc, query, where, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 
 interface OrgData {
     id: string;
@@ -43,7 +41,7 @@ export default function AdminDashboard() {
     const [orgs, setOrgs] = useState<OrgData[]>([]);
     const [loadingOrgs, setLoadingOrgs] = useState(true);
     const [newKeyValue, setNewKeyValue] = useState<Record<string, string>>({});
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    const [pageOffset, setPageOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [healthStatus, setHealthStatus] = useState<any[]>([]);
@@ -58,74 +56,42 @@ export default function AdminDashboard() {
             .catch(() => { router.push("/admin"); });
     }, [router]);
 
-    // Fetch orgs from Firestore
+    // Fetch orgs via backend Admin SDK API (bypasses Firestore client rules)
     const fetchOrgs = useCallback(async (isLoadMore = false) => {
         if (isLoadMore) {
             setLoadingMore(true);
         } else {
             setLoadingOrgs(true);
-            setLastDoc(null);
+            setPageOffset(0);
             setHasMore(true);
         }
 
         try {
-            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
-                setOrgs(FALLBACK_ORGS);
-                setLoadingOrgs(false);
-                setLoadingMore(false);
-                setHasMore(false);
-                return;
+            const currentOffset = isLoadMore ? pageOffset : 0;
+            const resp = await fetch(`/api/admin/orgs?offset=${currentOffset}&page_size=15`, {
+                credentials: 'include',
+            });
+
+            if (!resp.ok) {
+                throw new Error(`API returned ${resp.status}`);
             }
 
-            let q;
-            if (isLoadMore && lastDoc) {
-                q = query(collection(db, "organizations"), startAfter(lastDoc), limit(15));
-            } else {
-                q = query(collection(db, "organizations"), limit(15));
-            }
+            const data = await resp.json();
+            const orgList: OrgData[] = (data.orgs || []).map((o: any) => ({
+                id: o.id,
+                name: o.name,
+                plan: o.plan,
+                status: o.status,
+                members: o.members,
+                simulations: o.simulations,
+                apiKeys: o.apiKeys,
+                email: o.email,
+                lastPayment: o.lastPayment,
+            }));
 
-            const snapshot = await getDocs(q);
-            const orgList: OrgData[] = [];
+            setHasMore(data.hasMore ?? false);
+            setPageOffset(currentOffset + orgList.length);
 
-            if (snapshot.docs.length < 15) {
-                setHasMore(false);
-            }
-            if (snapshot.docs.length > 0) {
-                setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-            }
-
-            for (const docSnap of snapshot.docs) {
-                const data = docSnap.data();
-                // Count members
-                let memberCount = 0;
-                try {
-                    const usersSnap = await getDocs(query(collection(db, "users"), where("orgId", "==", docSnap.id)));
-                    memberCount = usersSnap.size;
-                } catch { memberCount = 1; }
-
-                // Count simulations
-                let simCount = 0;
-                try {
-                    const histSnap = await getDocs(collection(db, "organizations", docSnap.id, "scoringHistory"));
-                    simCount = histSnap.size;
-                } catch { simCount = 0; }
-
-                orgList.push({
-                    id: docSnap.id,
-                    name: data.name || docSnap.id,
-                    plan: data.subscription?.planId || "starter",
-                    status: data.subscription?.status || "active",
-                    members: memberCount || 1,
-                    simulations: simCount,
-                    apiKeys: {
-                        openai: data.apiKeys?.openai ? "true" : "",
-                        gemini: data.apiKeys?.gemini ? "true" : "",
-                        anthropic: data.apiKeys?.anthropic ? "true" : ""
-                    },
-                    email: data.email || data.adminEmail || `admin@${docSnap.id}.com`,
-                    lastPayment: data.subscription?.activatedAt ? new Date(data.subscription.activatedAt.seconds * 1000).toLocaleDateString() : "N/A",
-                });
-            }
             if (isLoadMore) {
                 setOrgs(prev => [...prev, ...orgList]);
             } else {
@@ -137,7 +103,7 @@ export default function AdminDashboard() {
         }
         setLoadingOrgs(false);
         setLoadingMore(false);
-    }, [lastDoc, router]);
+    }, [pageOffset]);
 
     useEffect(() => { fetchOrgs(false); }, [fetchOrgs]);
 
@@ -193,11 +159,13 @@ export default function AdminDashboard() {
         const actionId = `save-${orgId}-${provider}`;
         setActionLoading(actionId);
         try {
-            if ((process.env.NODE_ENV !== "development" || (process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== "mock-key-to-prevent-crash"))) {
-                await updateDoc(doc(db, "organizations", orgId), {
-                    [`apiKeys.${provider}`]: value
-                });
-            }
+            const resp = await fetch(`/api/admin/orgs/${orgId}/keys`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ provider, value }),
+            });
+            if (!resp.ok) throw new Error(`API returned ${resp.status}`);
             // Update local state
             setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, apiKeys: { ...o.apiKeys, [provider]: value } } : o));
             if (selectedOrg?.id === orgId) {

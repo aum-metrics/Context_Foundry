@@ -169,6 +169,11 @@ load_router("api.audit", "/api/audit", "SOC2 Audit Logs")
 load_router("api.competitor", "/api/competitor", "Competitor Monitoring")
 load_router("api.methods", "/api/methods", "Scoring Methodology")
 
+# ============================================================================
+# ADMIN DASHBOARD API (Admin SDK — bypasses Firestore client rules)
+# ============================================================================
+load_router("api.admin", "/api/admin", "Admin Dashboard")
+
 
 logger.info("📡 Route loading complete\n")
 
