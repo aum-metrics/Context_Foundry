@@ -9,29 +9,16 @@ from fastapi.responses import RedirectResponse
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
 import logging
-import secrets
-import jwt
 from datetime import datetime, timedelta
-
-try:
-    from supabase import create_client, Client
-    SUPABASE_AVAILABLE = True
-except:
-    SUPABASE_AVAILABLE = False
 
 from core.config import settings
 from core.firebase_config import db
+from core.security import get_auth_context
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize Supabase
-supabase: Optional[Client] = None
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    try:
-        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-    except Exception as e:
-        logger.error(f"Failed to initialize Supabase: {e}")
+# Supabase has been deprecated. SSO configurations are stored in the 'sso_configs' collection.
 
 # SSO Provider configurations
 SSO_PROVIDERS = {
@@ -49,44 +36,28 @@ SSO_PROVIDERS = {
         "userinfo_url": "https://graph.microsoft.com/v1.0/me",
         "scopes": ["openid", "profile", "email", "User.Read"]
     },
-    "google_workspace": {
+    "google": {
         "name": "Google Workspace",
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
-        "userinfo_url": "https://www.googleapis.com/oauth2/v2/userinfo",
+        "userinfo_url": "https://www.googleapis.com/oauth2/v3/userinfo",
         "scopes": ["openid", "profile", "email"]
-    },
-    "saml": {
-        "name": "Generic SAML 2.0",
-        "type": "saml"
     }
 }
 
 class SSOConfig(BaseModel):
     """SSO configuration for an organization"""
     organization_id: str
-    provider: str  # okta, azure_ad, google_workspace, saml
-    domain: Optional[str] = None  # For Okta
+    provider: str  # okta, azure_ad, google, saml
+    domain: Optional[str] = None
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
     tenant_id: Optional[str] = None  # For Azure AD
-    client_id: str
-    client_secret: str
-    redirect_uri: str
-    enabled: bool = True
-    auto_provision: bool = True  # Auto-create users on first login
-    default_role: str = "member"  # Default role for new users
+    metadata_url: Optional[str] = None  # For SAML
+    is_active: bool = True
 
-class SSOLoginRequest(BaseModel):
-    """SSO login initiation request"""
-    organization_id: str
-    provider: str
-    redirect_url: Optional[str] = None
-
-class SSOCallbackRequest(BaseModel):
-    """SSO callback data"""
-    code: str
-    state: str
-    organization_id: str
-
+class SSOConfigRequest(SSOConfig):
+    pass
 
 @router.get("/providers")
 async def list_sso_providers():
@@ -96,16 +67,13 @@ async def list_sso_providers():
         "providers": [
             {
                 "id": provider_id,
-                "name": config["name"],
-                "type": config.get("type", "oauth2"),
-                "enterprise": True
-            }
-            for provider_id, config in SSO_PROVIDERS.items()
+                "name": config["name"]
+            } for provider_id, config in SSO_PROVIDERS.items()
         ]
     }
 
-@router.post("/config")
-async def configure_sso(config: SSOConfig):
+@router.post("/configure")
+async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth_context)):
     """
     Configure SSO for an organization
     ENTERPRISE FEATURE - Requires Professional/Enterprise tier
@@ -113,114 +81,66 @@ async def configure_sso(config: SSOConfig):
     if not db:
         raise HTTPException(status_code=503, detail="Database connection unavailable")
 
-    if config.provider not in SSO_PROVIDERS:
+    if request.provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO provider")
-    
-    # Validate provider-specific requirements
-    if config.provider == "okta" and not config.domain:
-        raise HTTPException(status_code=400, detail="Okta domain is required")
-    
-    if config.provider == "azure_ad" and not config.tenant_id:
-        raise HTTPException(status_code=400, detail="Azure AD tenant ID is required")
     
     # Save to Firestore
     try:
-        db.collection("sso_configs").document(config.organization_id).set(config.model_dump())
+        db.collection("sso_configs").document(request.organization_id).set(request.model_dump())
     except Exception as e:
         logger.error(f"Failed to save SSO config to Firestore: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save configuration")
     
-    logger.info(f"✅ SSO configured for organization {config.organization_id}: {config.provider}")
+    logger.info(f"✅ SSO configured for organization {request.organization_id}: {request.provider}")
     
     return {
         "success": True,
-        "message": f"SSO configured successfully for {SSO_PROVIDERS[config.provider]['name']}",
-        "organization_id": config.organization_id,
-        "provider": config.provider
+        "message": f"SSO configured successfully for {SSO_PROVIDERS[request.provider]['name']}",
+        "organization_id": request.organization_id,
+        "provider": request.provider
     }
 
-@router.post("/login/initiate")
-async def initiate_sso_login(request: SSOLoginRequest):
+@router.post("/initiate")
+async def initiate_sso_login(request: SSOConfigRequest):
     """
     Initiate SSO login flow
-    Returns authorization URL for redirect
     """
-    # Get SSO configuration from Firestore
     if not db:
         raise HTTPException(status_code=503, detail="Database connection unavailable")
-        
-    organization_id = request.organization_id
-    config_doc = db.collection("sso_configs").document(organization_id).get()
-    if not config_doc.exists:
-        return {
-            "success": True,
-            "sso_enabled": False
-        }
-    
-    config = SSOConfig(**config_doc.to_dict())
-    
-    return {
-        "success": True,
-        "sso_enabled": config.enabled,
-        "provider": config.provider,
-        "provider_name": SSO_PROVIDERS[config.provider]["name"]
-    }
 
-@router.delete("/config/{organization_id}")
-async def disable_sso(organization_id: str):
-    """Disable SSO for an organization"""
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not configured")
-        
-    config_doc = db.collection("sso_configs").document(organization_id).get()
-    if not config_doc.exists:
-        raise HTTPException(status_code=404, detail="SSO not configured")
-    
-    # Update Firestore
     try:
-        db.collection("sso_configs").document(organization_id).update({
-            "enabled": False,
-            "updated_at": datetime.utcnow().isoformat()
-        })
+        doc = db.collection("sso_configs").document(request.organization_id).get()
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="SSO not configured for this organization")
+        
+        config = doc.to_dict() or {}
+        provider = config.get("provider")
+        
+        return {
+            "auth_url": f"https://auth.aumdatalabs.com/sso/{provider}/login?org={request.organization_id}",
+            "message": "Redirect user to this URL to complete SSO login"
+        }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to disable SSO in Firestore: {e}")
-        raise HTTPException(status_code=500, detail="Database update failed")
-    
-    logger.info(f"🔒 SSO disabled for organization {organization_id}")
-    
-    return {
-        "success": True,
-        "message": "SSO disabled successfully"
-    }
+        logger.error(f"SSO Initiation failed: {e}")
+        raise HTTPException(status_code=500, detail="SSO initiation failed")
 
-@router.post("/callback")
-async def sso_callback(request: SSOCallbackRequest):
+@router.get("/status/{organization_id}")
+async def get_sso_status(organization_id: str):
     """
-    SSO callback handler - Completes the OAuth flow
+    Check if SSO is enabled for an organization
     """
-    # This is a shell implementation for the audit fix
-    logger.info(f"OIDC Callback received for org {request.organization_id}")
-    
-    return {
-        "success": True,
-        "message": "SSO login successful",
-        "access_token": "mock-sso-token-pending-full-implementation",
-        "token_type": "bearer"
-    }
+    if not db:
+        return {"enabled": False, "error": "Database unavailable"}
 
-@router.get("/health")
-async def sso_health():
-    """Health check for SSO service"""
+    doc = db.collection("sso_configs").document(organization_id).get()
+    if not doc.exists:
+        return {"enabled": False}
+    
+    config = doc.to_dict() or {}
     return {
-        "status": "healthy",
-        "service": "sso",
-        "providers": list(SSO_PROVIDERS.keys()),
-        "active_configs": "dynamically_fetched",
-        "features": [
-            "okta_integration",
-            "azure_ad_integration",
-            "google_workspace_integration",
-            "saml_support",
-            "auto_provisioning",
-            "role_mapping"
-        ]
+        "enabled": config.get("is_active", False),
+        "provider": config.get("provider"),
+        "provider_name": SSO_PROVIDERS.get(config.get("provider"), {}).get("name", "Unknown")
     }

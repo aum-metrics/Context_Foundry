@@ -8,6 +8,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 import logging
+import hashlib
+from datetime import datetime
 from core.firebase_config import app as firebase_app
 from core.firebase_config import db
 
@@ -86,3 +88,78 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     except Exception as e:
         logger.error(f"❌ Security Critical: Org access verification failed: {e}")
         return False # Fail-Closed
+
+def validate_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """
+    Validates an AUM Platform API Key.
+    Keys are hashed and verified against the Firestore 'api_keys' collection.
+    """
+    api_key = credentials.credentials
+    if not api_key:
+        raise HTTPException(status_code=401, detail="API Key missing")
+
+    # Hash the key to look it up (O(1))
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+    if not db:
+        raise HTTPException(status_code=503, detail="Authentication service unavailable")
+
+    try:
+        key_doc = db.collection("api_keys").document(key_hash).get()
+        if not key_doc.exists:
+            # Fallback check: could it be a raw Firebase token? (The unified dependency handles this)
+            raise HTTPException(status_code=401, detail="Invalid API Key")
+
+        key_data = key_doc.to_dict() or {}
+        if not key_data.get("is_active", False):
+            raise HTTPException(status_code=403, detail="API Key has been revoked")
+
+        # Update last used timestamp (async fire-and-forget style)
+        key_doc.reference.update({"last_used_at": datetime.utcnow().isoformat()})
+
+        return {
+            "uid": key_data.get("user_id"),
+            "orgId": key_data.get("org_id"),
+            "type": "api_key",
+            "name": key_data.get("name")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API Key Validation Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal error during key validation")
+
+def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """
+    Unified Authentication Dependency.
+    Accepts EITHER a Firebase ID Token OR an AUM API Key.
+    Returns an 'AuthContext' dictionary.
+    """
+    token = credentials.credentials
+    
+    # 1. Try API Key Validation (SHA-256 starts with a known length/format usually)
+    # Most API keys won't be valid Firebase JWTs.
+    if len(token) < 100: # Typical AUM keys are shorter than JWTs
+        try:
+            return validate_api_key(credentials)
+        except HTTPException:
+            pass # Try Firebase next
+
+    # 2. Try Firebase ID Token
+    try:
+        user_info = get_current_user(credentials)
+        # Fetch the orgId for this user
+        user_doc = db.collection("users").document(user_info["uid"]).get()
+        org_id = user_doc.to_dict().get("orgId") if user_doc.exists else None
+        
+        return {
+            "uid": user_info["uid"],
+            "orgId": org_id,
+            "type": "session",
+            "email": user_info.get("email")
+        }
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid authentication (Token or API Key)")
+
+import hashlib
+from datetime import datetime

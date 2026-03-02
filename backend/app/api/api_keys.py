@@ -12,26 +12,17 @@ import hashlib
 from datetime import datetime, timezone
 import logging
 
-try:
-    from supabase import create_client, Client
-    SUPABASE_AVAILABLE = True
-except ImportError:
-    SUPABASE_AVAILABLE = False
-
 from core.config import settings
-from core.security import get_current_user
+from core.security import get_auth_context, verify_user_org_access
+from core.firebase_config import db
 from api.audit import log_audit_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize Supabase
-supabase: Optional[Client] = None
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    try:
-        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-    except Exception as e:
-        logger.error(f"Failed to initialize Supabase: {e}")
+# Supabase has been deprecated in favor of unified Firestore architecture.
+# All subscription data is now stored in the 'organizations' collection.
+# API keys are now stored in the 'api_keys' collection (keyed by hash) for O(1) validation.
 
 # ============================================
 # Models
@@ -66,45 +57,50 @@ def generate_api_key() -> tuple[str, str]:
     
     return api_key, key_hash
 
-def check_api_tier_subscription(user_email: str) -> bool:
+def check_api_tier_subscription(user_id: str) -> bool:
     """
-    Check if user has PROFESSIONAL subscription.
-    Tiers: free, starter, professional
-    ONLY professional tier gets API access
+    Check if user has a Growth or Scale subscription in Firestore.
+    ONLY growth and scale tiers get API access.
     """
-    if not supabase:
+    if not db:
         return False
     
     try:
-        result = supabase.table("user_profiles").select(
-            "subscription_type, subscription_expiry"
-        ).eq("email", user_email).execute()
-        
-        if not result.data or len(result.data) == 0:
+        # 1. Fetch user mapping
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
             return False
+            
+        user_data = user_doc.to_dict() or {}
+        org_id = user_data.get("orgId")
+        if not org_id:
+            return False
+            
+        # 2. Fetch organization subscription
+        org_doc = db.collection("organizations").document(org_id).get()
+        if not org_doc.exists:
+            return False
+            
+        org_data = org_doc.to_dict() or {}
+        subscription = org_data.get("subscription", {})
         
-        user = result.data[0]
-        subscription_type = user.get("subscription_type", "free")
+        plan_id = subscription.get("planId", "explorer").lower()
+        status = subscription.get("status", "inactive").lower()
         
         # ONLY growth and scale tiers get API access
-        if subscription_type.lower() not in ["growth", "scale"]:
+        if plan_id not in ["growth", "scale"] or status != "active":
             return False
         
-        # Check expiry
-        subscription_expiry = user.get("subscription_expiry")
-        if subscription_expiry:
-            try:
-                expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
-                # Ensure UTC comparison
-                if datetime.now(timezone.utc) > expiry_date:
-                    return False
-            except ValueError:
-                pass
+        # Check expiry if applicable
+        expiry = subscription.get("currentPeriodEnd")
+        if expiry:
+            # Firestore timestamps are returned as datetime objects
+            if datetime.now(timezone.utc) > expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') else expiry:
+                return False
         
         return True
-        
     except Exception as e:
-        logger.error(f"Failed to check subscription: {e}")
+        logger.error(f"Subscription check failed: {e}")
         return False
 
 # ============================================
@@ -114,7 +110,7 @@ def check_api_tier_subscription(user_email: str) -> bool:
 @router.post("/generate", response_model=APIKeyResponse)
 async def generate_api_key_endpoint(
     req: CreateAPIKeyRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Generate a new API key (Growth/Scale tier ONLY).
@@ -129,7 +125,7 @@ async def generate_api_key_endpoint(
             raise HTTPException(status_code=401, detail="Invalid user session")
         
         # Check if user has an eligible subscription
-        if not check_api_tier_subscription(user_email):
+        if not check_api_tier_subscription(user_id):
             raise HTTPException(
                 status_code=403,
                 detail={
@@ -149,6 +145,7 @@ async def generate_api_key_endpoint(
         # Store in database
         key_data = {
             "user_id": user_id,
+            "org_id": "user_level", # Default if org mapping fails
             "name": req.name,
             "key_hash": key_hash,
             "key_prefix": key_prefix,
@@ -157,32 +154,33 @@ async def generate_api_key_endpoint(
             "last_used_at": None
         }
         
-        result = supabase.table("api_keys").insert(key_data).execute()
+        # Try to get real orgId for audit/mapping
+        user_doc = db.collection("users").document(user_id).get()
+        if user_doc.exists:
+            key_data["org_id"] = user_doc.to_dict().get("orgId", "user_level")
+
+        # Save to Firestore
+        db.collection("api_keys").document(key_hash).set(key_data)
         
-        if not result.data or len(result.data) == 0:
-            raise HTTPException(status_code=500, detail="Failed to create API key")
-        
-        created_key = result.data[0]
-        
-        logger.info(f"✅ API key created for Professional user {user_email}: {key_prefix}")
+        logger.info(f"✅ API key created for Professional user {user_id}: {key_prefix}")
         
         # SOC2 Audit Log
         log_audit_event(
-            org_id="user_level",
+            org_id=key_data["org_id"],
             actor_id=user_email,
             event_type="api_key_generated",
-            resource_id=created_key["id"],
+            resource_id=key_hash,
             metadata={"key_name": req.name}
         )
         
         return APIKeyResponse(
-            id=created_key["id"],
-            name=created_key["name"],
+            id=key_hash, # Using hash as ID in Firestore
+            name=req.name,
             key=api_key,  # Only shown once!
             key_prefix=key_prefix,
-            created_at=created_key["created_at"],
-            last_used_at=created_key.get("last_used_at"),
-            is_active=created_key["is_active"]
+            created_at=key_data["created_at"],
+            last_used_at=None,
+            is_active=True
         )
         
     except HTTPException:
@@ -192,22 +190,22 @@ async def generate_api_key_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/list", response_model=List[APIKeyResponse])
-async def list_api_keys(current_user: dict = Depends(get_current_user)):
+async def list_api_keys(current_user: dict = Depends(get_auth_context)):
     """List all API keys for the current user"""
     try:
         user_id = current_user.get("id")
         
-        if not supabase:
-            raise HTTPException(status_code=503, detail="Service unavailable")
+        if not db:
+            raise HTTPException(status_code=503, detail="Database unavailable")
         
-        result = supabase.table("api_keys").select(
-            "id, name, key_prefix, created_at, last_used_at, is_active"
-        ).eq("user_id", user_id).order("created_at", desc=True).execute()
+        # Query Firestore
+        query = db.collection("api_keys").where("user_id", "==", user_id).stream()
         
         keys = []
-        for key in result.data:
+        for doc in query:
+            key = doc.to_dict()
             keys.append(APIKeyResponse(
-                id=key["id"],
+                id=doc.id,
                 name=key["name"],
                 key=None,  # Never return the actual key
                 key_prefix=key["key_prefix"],
@@ -216,6 +214,8 @@ async def list_api_keys(current_user: dict = Depends(get_current_user)):
                 is_active=key["is_active"]
             ))
         
+        # Sort by creation date descending
+        keys.sort(key=lambda x: x.created_at, reverse=True)
         return keys
         
     except HTTPException:
@@ -227,27 +227,26 @@ async def list_api_keys(current_user: dict = Depends(get_current_user)):
 @router.delete("/{key_id}")
 async def revoke_api_key(
     key_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """Revoke (deactivate) an API key"""
     try:
         user_id = current_user.get("id")
         
-        if not supabase:
-            raise HTTPException(status_code=503, detail="Service unavailable")
+        if not db:
+            raise HTTPException(status_code=503, detail="Database unavailable")
         
         # Verify ownership
-        result = supabase.table("api_keys").select("id").eq(
-            "id", key_id
-        ).eq("user_id", user_id).execute()
+        doc_ref = db.collection("api_keys").document(key_id)
+        doc = doc_ref.get()
         
-        if not result.data or len(result.data) == 0:
+        if not doc.exists or doc.to_dict().get("user_id") != user_id:
             raise HTTPException(status_code=404, detail="API key not found")
         
         # Deactivate
-        supabase.table("api_keys").update({
+        doc_ref.update({
             "is_active": False
-        }).eq("id", key_id).execute()
+        })
         
         logger.info(f"✅ API key revoked: {key_id}")
         
@@ -272,6 +271,6 @@ async def health():
     return {
         "status": "ok",
         "service": "api_keys",
-        "supabase_connected": supabase is not None,
-        "tier_requirement": "professional"
+        "database_connected": db is not None,
+        "tier_requirement": ["growth", "scale"]
     }

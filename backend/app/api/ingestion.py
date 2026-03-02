@@ -14,7 +14,7 @@ from fastapi import Depends
 import asyncio
 from openai import OpenAI
 from core.firebase_config import db
-from core.security import get_current_user, verify_user_org_access
+from core.security import get_auth_context, verify_user_org_access
 from api.audit import log_audit_event
 
 try:
@@ -55,7 +55,7 @@ def recursive_split(text, max_size, overlap_size):
 async def parse_document(
     file: UploadFile = File(...), 
     orgId: str = Form(None),
-    current_user: dict = Depends(get_current_user)
+    auth: dict = Depends(get_auth_context)
 ):
     """
     Semantic Ingestion & Structuring Pipeline (Hardened):
@@ -66,10 +66,17 @@ async def parse_document(
     """
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are currently supported.")
+    if not orgId:
+        raise HTTPException(status_code=400, detail="orgId is required")
 
-    uid = current_user.get("uid")
-    if orgId and not verify_user_org_access(uid, orgId):
-        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    # Security: Ensure user/key belongs to the requested organization
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    else:
+        # For API keys, the orgId is linked to the key itself.
+        if auth.get("orgId") != orgId:
+            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
     # Enforce Document Limits
     if orgId and db:

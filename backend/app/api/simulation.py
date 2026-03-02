@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-from core.security import get_current_user, verify_user_org_access
+from core.security import get_auth_context, verify_user_org_access
 from openai import OpenAI
 from core.firebase_config import db
 
@@ -385,33 +385,31 @@ async def _store_simulation_results(org_id: str, prompt: str, manifest_version: 
         logger.error(f"Failed to store background simulation data: {e}")
 
 
-@router.post("/run", response_model=None)
-async def evaluate_simulation(
-    request: SimulationRequest, 
-    background_tasks: BackgroundTasks = None,
-    current_user: Optional[dict] = Depends(get_current_user)
-):
+@router.post("/run")
+async def run_simulation(request: SimulationRequest, background_tasks: BackgroundTasks, auth: dict = Depends(get_auth_context)):
     """
-    Evaluates a user prompt against the Organization's context manifest using multi-model checks.
-    BRUTAL AUDIT FIX: Parallelized Inference & Optimized Context Retrieval.
+    Main LCRS Simulation Entry Point.
+    Orchestrates Claim Extraction, Multi-Model Verification, and Divergence Scoring.
     """
-    from core.config import settings
-    is_dev = settings.ENV == "development"
+    is_dev = os.getenv("ENV") == "development"
 
     if not request.prompt or not request.orgId:
         raise HTTPException(status_code=400, detail="Prompt and orgId required")
 
-    if current_user:
-        uid = current_user.get("uid")
-        if not verify_user_org_access(uid, request.orgId):
+    # Security: Ensure user/key belongs to the requested organization
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], request.orgId):
             raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
-    elif not is_dev:
-        raise HTTPException(status_code=401, detail="Authentication required")
     else:
-        logger.info(f"🧪 Dev-mode: Skipping org access check for {request.orgId} (Internal Call)")
+        # For API keys, the orgId is linked to the key itself.
+        if auth.get("orgId") != request.orgId:
+            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
+
+    if is_dev and auth.get("type") == "session":
+        logger.info(f"🧪 Dev-mode: Access granted to {request.orgId} for {auth['uid']}")
 
     # ----- 0. MD5 HASH CACHE CHECK (Zero-Burn Optimization) -----
-    cache_input = f"{request.prompt}_{request.manifestVersion}".encode('utf-8')
+    cache_input = f"{request.orgId}_{request.prompt}_{request.manifestVersion}".encode('utf-8')
     cache_key = hashlib.md5(cache_input).hexdigest()
     
     if db:
@@ -487,9 +485,18 @@ async def evaluate_simulation(
     # ----- 2. FETCH CONTEXT & KEYS -----
     manifest_content, manifest_embedding, api_keys = _fetch_manifest_and_keys(request)
 
-    openai_key = api_keys.get("openai") or os.getenv("OPENAI_API_KEY")
-    gemini_key = api_keys.get("gemini") or os.getenv("GEMINI_API_KEY")
-    claude_key = api_keys.get("anthropic") or os.getenv("ANTHROPIC_API_KEY")
+    openai_key = api_keys.get("openai")
+    gemini_key = api_keys.get("gemini")
+    claude_key = api_keys.get("anthropic")
+
+    # In production, fallbacks to system keys are disabled to prevent cost leakage.
+    if is_dev:
+        openai_key = openai_key or os.getenv("OPENAI_API_KEY")
+        gemini_key = gemini_key or os.getenv("GEMINI_API_KEY")
+        claude_key = claude_key or os.getenv("ANTHROPIC_API_KEY")
+
+    if not any([openai_key, gemini_key, claude_key]) and not is_dev:
+        raise HTTPException(status_code=402, detail="No LLM API keys configured for this organization.")
 
     # Override for dev mock mode
     if is_dev:
@@ -532,19 +539,22 @@ async def evaluate_simulation(
                     manifest_content = "\n\n---\n\n".join(top_chunks)
                     logger.info(f"Simulation Retrieval: Native Vector Search pulled {len(top_chunks)} chunks.")
             except Exception as e:
-                logger.warning(f"Native Vector Search failed (falling back to legacy): {e}")
-                # Legacy Fallback (O(N))
-                chunks_ref = db.collection("organizations").document(request.orgId) \
-                               .collection("manifests").document(manifest_version) \
-                               .collection("chunks").get()
-                
-                matches = []
-                for doc in chunks_ref:
-                    c_data = doc.to_dict()
-                    matches.append((cosine_sim(q_embed, c_data["embedding"]), c_data["text"]))
-                
-                matches.sort(key=lambda x: x[0], reverse=True)
-                top_chunks = [m[1] for m in matches[:5]]
+                logger.warning(f"Native Vector Search failed: {e}")
+                # O(N) Legacy Fallback disabled in production for performance/scale safety.
+                if is_dev:
+                    chunks_ref = db.collection("organizations").document(request.orgId) \
+                                   .collection("manifests").document(manifest_version) \
+                                   .collection("chunks").get()
+                    
+                    matches = []
+                    for doc in chunks_ref:
+                        c_data = doc.to_dict()
+                        matches.append((cosine_sim(q_embed, c_data["embedding"]), c_data["text"]))
+                    
+                    matches.sort(key=lambda x: x[0], reverse=True)
+                    top_chunks = [m[1] for m in matches[:5]]
+                else:
+                    raise HTTPException(status_code=500, detail="Vector search unavailable. Please ensure indexes are built.")
                 if top_chunks:
                     manifest_content = "\n\n---\n\n".join(top_chunks)
         except Exception as e:

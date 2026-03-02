@@ -8,7 +8,7 @@ Description: Live Competitor Displacement Monitoring Engine.
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict
 from pydantic import BaseModel
-from core.security import get_current_user
+from core.security import get_auth_context, verify_user_org_access
 from core.firebase_config import db
 from openai import OpenAI
 import os
@@ -26,15 +26,27 @@ class CompetitorProfile(BaseModel):
     weaknesses: List[str]
 
 @router.get("/displacement/{org_id}", response_model=List[CompetitorProfile])
-async def get_competitor_displacement(org_id: str, current_user: dict = Depends(get_current_user)):
+async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth_context)):
     """
     Live Agentic Competitor Analysis:
     Runs a parallel LLM simulation to determine which competitors are most likely 
     to be recommended by AI over the tenant's brand.
     """
+    # Security Check
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], org_id):
+            raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    else:
+        if auth.get("orgId") != org_id:
+            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
+
     org_name = "the company"
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = None
+    is_dev = os.getenv("ENV") == "development"
     
+    if is_dev:
+        api_key = os.getenv("OPENAI_API_KEY")
+
     if db:
         try:
             org_doc = db.collection("organizations").document(org_id).get()
@@ -46,11 +58,13 @@ async def get_competitor_displacement(org_id: str, current_user: dict = Depends(
             logger.error(f"Failed to fetch org data: {e}")
 
     if not api_key:
-        return [
-            {"name": "Competitor Alpha", "displacementRate": 12.4, "strengths": ["Pricing", "API Docs"], "weaknesses": ["Security Claims"]},
-            {"name": "Competitor Beta", "displacementRate": 8.2, "strengths": ["Market Presence"], "weaknesses": ["Technical Accuracy"]},
-            {"name": "Competitor Gamma", "displacementRate": 4.1, "strengths": ["Legacy Reputation"], "weaknesses": ["Agentic Readiness"]}
-        ]
+        if is_dev:
+            return [
+                {"name": "Competitor Alpha (Simulated)", "displacementRate": 12.4, "strengths": ["Pricing", "API Docs"], "weaknesses": ["Security Claims"]},
+                {"name": "Competitor Beta (Simulated)", "displacementRate": 8.2, "strengths": ["Market Presence"], "weaknesses": ["Technical Accuracy"]},
+                {"name": "Competitor Gamma (Simulated)", "displacementRate": 4.1, "strengths": ["Legacy Reputation"], "weaknesses": ["Agentic Readiness"]}
+            ]
+        raise HTTPException(status_code=402, detail="OpenAI API key missing for this organization")
         
     try:
         client = OpenAI(api_key=api_key)

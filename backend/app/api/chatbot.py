@@ -9,7 +9,7 @@ from typing import List, Dict
 import numpy as np
 
 from core.firebase_config import db
-from core.security import get_current_user
+from core.security import get_auth_context, verify_user_org_access
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,13 +26,21 @@ class ChatRequest(BaseModel):
     chatHistory: List[ChatMessage] = []
 
 @router.post("/ask")
-async def chat_with_manifest(request: ChatRequest, current_user: dict = Depends(get_current_user)):
+async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth_context)):
     """
     RAG-enabled Support Chatbot Endpoint.
     Uses Semantic Chunk Retrieval to provide Zero-Amnesia support for massive docs.
     """
     from core.config import settings
     is_dev = settings.ENV == "development"
+
+    # Security Check
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], request.orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    else:
+        if auth.get("orgId") != request.orgId:
+            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
     if not db:
         if not is_dev:
@@ -41,7 +49,10 @@ async def chat_with_manifest(request: ChatRequest, current_user: dict = Depends(
             logger.info("🧪 Dev-mode: Firestore not available, using mock responses.")
 
     # 1. Fetch Organization API Key
-    openai_key = os.getenv("OPENAI_API_KEY")
+    openai_key = None
+    if is_dev:
+        openai_key = os.getenv("OPENAI_API_KEY")
+
     if db:
         try:
             org_ref = db.collection("organizations").document(request.orgId).get()
@@ -57,7 +68,7 @@ async def chat_with_manifest(request: ChatRequest, current_user: dict = Depends(
         if is_dev:
             logger.info("🧪 Dev-mode: Providing mock chatbot response")
             return {"response": f"I am the AUM Support Bot (Simulated). I've analyzed your query: '{request.query}'. This is a mock response because no OpenAI API key is configured in development mode."}
-        raise HTTPException(status_code=503, detail="OpenAI API key missing")
+        raise HTTPException(status_code=402, detail="OpenAI API key missing for this organization")
 
     client = OpenAI(api_key=openai_key)
 

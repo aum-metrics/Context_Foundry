@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 from api.simulation import evaluate_simulation, SimulationRequest
 from core.firebase_config import db
-from core.security import get_current_user, verify_user_org_access
+from core.security import get_auth_context, verify_user_org_access
 
 
 router = APIRouter()
@@ -81,7 +81,7 @@ async def _process_batch_background(request: BatchSimulationRequest, job_id: str
 async def run_batch_simulation(
     request: BatchSimulationRequest, 
     background_tasks: BackgroundTasks,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     uid = current_user.get("uid")
     if not verify_user_org_access(uid, request.orgId):
@@ -98,7 +98,7 @@ async def run_batch_simulation(
 async def get_batch_status(
     org_id: str, 
     job_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """Returns the status of a scheduled background batch job."""
     if not db:

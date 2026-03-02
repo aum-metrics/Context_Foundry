@@ -12,26 +12,15 @@ from datetime import datetime
 import logging
 import secrets
 
-try:
-    from supabase import Client, create_client
-except ImportError:
-    Client = Any
-
 from core.config import settings
 from core.firebase_config import db
-from core.security import get_current_user
+from core.security import get_auth_context
 from api.audit import log_audit_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize Supabase
-supabase: Optional[Client] = None
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    try:
-        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-    except Exception as e:
-        logger.error(f"Failed to initialize Supabase: {e}")
+# Supabase has been deprecated. All workspace and member data is stored in Firestore.
 
 # Database-only storage (Firestore)
 # In-memory storage removed as per brutal audit hardening
@@ -117,7 +106,7 @@ async def create_workspace(
     }
 
 @router.get("/list")
-async def list_workspaces(current_user: dict = Depends(get_current_user)):
+async def list_workspaces(current_user: dict = Depends(get_auth_context)):
     """
     List all workspaces the user has access to
     """
@@ -143,7 +132,7 @@ async def list_workspaces(current_user: dict = Depends(get_current_user)):
 @router.get("/{workspace_id}")
 async def get_workspace(
     workspace_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Get workspace details
@@ -186,7 +175,7 @@ async def get_workspace(
 @router.post("/invite")
 async def invite_member(
     request: InviteMemberRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Invite a user to a workspace
@@ -266,7 +255,7 @@ async def invite_member(
 async def remove_member(
     workspace_id: str,
     email: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Remove a member from workspace
@@ -326,7 +315,7 @@ async def remove_member(
 async def update_workspace(
     workspace_id: str,
     request: UpdateWorkspaceRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Update workspace details
@@ -373,7 +362,7 @@ async def update_workspace(
 @router.delete("/{workspace_id}")
 async def delete_workspace(
     workspace_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Delete a workspace (owner only)
@@ -418,7 +407,7 @@ async def delete_workspace(
 async def get_workspace_activity(
     workspace_id: str,
     limit: int = 50,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_auth_context)
 ):
     """
     Get recent activity in workspace
