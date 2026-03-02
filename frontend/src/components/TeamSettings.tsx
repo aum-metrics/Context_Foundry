@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useOrganization, OrgUser } from "./OrganizationContext";
 import { Users, UserPlus, Shield, ShieldAlert, Check } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { db } from "@/lib/firestorePaths";
-import { collection, doc, getDoc, getDocs, increment, query, setDoc, updateDoc, where } from "firebase/firestore";
 
 export default function TeamSettings() {
     const { organization, orgUser, loadingOrg } = useOrganization();
