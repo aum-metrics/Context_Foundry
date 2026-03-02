@@ -14,7 +14,7 @@ export default function ProductDemoVideo() {
         {
             id: 0,
             title: "Global ASoV Dashboard",
-            subtitle: "Track your latent space penetration against frontier models.",
+            subtitle: "Track your brand penetration against frontier models.",
             icon: Logo,
             image: "/mockups/dashboard.png"
         },

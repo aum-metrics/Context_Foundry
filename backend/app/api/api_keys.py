@@ -20,6 +20,7 @@ except ImportError:
 
 from core.config import settings
 from core.dependencies import get_current_user
+from api.audit import log_audit_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -165,6 +166,15 @@ async def generate_api_key_endpoint(
         
         logger.info(f"✅ API key created for Professional user {user_email}: {key_prefix}")
         
+        # SOC2 Audit Log
+        log_audit_event(
+            org_id="user_level",
+            actor_id=user_email,
+            event_type="api_key_generated",
+            resource_id=created_key["id"],
+            metadata={"key_name": req.name}
+        )
+        
         return APIKeyResponse(
             id=created_key["id"],
             name=created_key["name"],
@@ -240,6 +250,14 @@ async def revoke_api_key(
         }).eq("id", key_id).execute()
         
         logger.info(f"✅ API key revoked: {key_id}")
+        
+        # SOC2 Audit Log
+        log_audit_event(
+            org_id="user_level",
+            actor_id=current_user.get("email", "unknown"),
+            event_type="api_key_revoked",
+            resource_id=key_id,
+        )
         
         return {"success": True, "message": "API key revoked"}
         

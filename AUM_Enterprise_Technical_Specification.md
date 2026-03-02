@@ -44,9 +44,9 @@ As Large Language Models (LLMs) such as GPT-4, Claude 3.5, and Gemini 2.0 become
 
 ### AUM Context Foundry: The "Smoke Detector" for the Agentic Era
 
-AUM Context Foundry is the world's first **"Media Monitoring for the Agentic Era."** Think of it as a smoke detector for your brand's AI presence. It provides enterprises with the mathematical rigor of a developer tool (Ragas), but tailored for CMOs and PR teams.
+AUM Context Foundry is the world's first **"Media Monitoring for the Agentic Era."** Think of it as a smoke detector for your brand's AI presence. While standard monitoring is a race to the bottom, AUM secures a unique wedge: **"Ragas for Marketers."** It provides enterprises with the mathematical rigor of a developer evaluation harness, but tailored for CMOs and PR teams to test external agents like Perplexity.
 
-AUM allows enterprises to proactively monitor, analyze, and optimize how RAG engines ingest and represent their corporate identity. By utilizing a zero-retention semantic pipeline, AUM allows CISOs and CMOs to audit their AI presence without compromising data privacy.
+AUM allows enterprises to proactively monitor, analyze, and optimize how RAG engines ingest and represent their corporate identity. By utilizing a zero-retention semantic pipeline that flushes PDFs from RAM instantly, AUM allows CISOs to audit their AI presence without the massive vulnerability of uploading proprietary data to generic competitor AWS buckets.
 
 ### The Strategic Rationale: Why Now?
 
@@ -72,7 +72,7 @@ Enterprises currently lose revenue and brand trust due to AI Context Drift. For 
 |----|-------------|-------------|--------|
 | **FR-101** | **Multi-Model Evaluation** | Concurrent execution of queries across GPT-4o Mini, Gemini 2.0 Flash, and Claude 3.5 Haiku. | Competitive Benchmarking |
 | **FR-102** | **LCRS Scoring Engine** | A blended scoring system (40% embedding divergence + 60% claim verification). | Quantitative Auditing |
-| **FR-103** | **Zero-Retention Ingestion** | PDF ingestion that extracts JSON-LD schemas and vectors with zero disk persistence. | CISO/Compliance Approval |
+| **FR-103** | **Zero-Retention Ingestion** | Flushes proprietary PDF binaries from RAM after extraction; no AWS bucket persistence. | CISO/Compliance Approval |
 | **FR-104** | **GEO SEO Audit** | Playwright-backed headless scraping to verify publicly rendered brand signals. | External Fact-Checking |
 | **FR-105** | **Agent Manifest (/llms.txt)** | Automated generation of robot-readable manifests for AI crawlers. | Inbound GEO Optimization |
 | **FR-106** | **Batch Stability Metrics** | Longitudinal tracking of model drift and domain stability. | Strategic Planning |

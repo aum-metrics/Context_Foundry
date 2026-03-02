@@ -6,7 +6,7 @@ export async function GET() {
 > This is the foundational context file for the AUM Data Labs platform.
 
 ## Core Identity
-AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) platform. We empower businesses to control their narrative within the latent space of frontier models like GPT-4o, Claude 3.5, and Gemini 2.0 Flash.
+AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) platform. We empower businesses to control their narrative within the retrieval pipelines of frontier models like GPT-4o, Claude 3.5, and Gemini 2.0 Flash.
 
 ## The ASoV Protocol
 We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and fidelity risks.

@@ -15,6 +15,7 @@ import asyncio
 from openai import OpenAI
 from core.firebase_config import db
 from core.security import get_current_user, verify_user_org_access
+from api.audit import log_audit_event
 
 try:
     import pymupdf4llm
@@ -193,6 +194,15 @@ Return ONLY valid JSON.
             
             batch.commit()
             logger.info(f"Ingestion Complete: Persisted {len(chunks)} chunks in atomic batches.")
+            
+            # SOC2 Audit Log: Document Ingestion
+            log_audit_event(
+                org_id=orgId,
+                actor_id=uid or "unknown",
+                event_type="document_ingestion",
+                resource_id=manifest_id,
+                metadata={"chunks": len(chunks), "filename": file.filename}
+            )
             
         return schema_data
         

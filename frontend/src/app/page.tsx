@@ -105,7 +105,7 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="text-xl md:text-2xl text-slate-600 dark:text-slate-400/80 mb-12 max-w-3xl leading-relaxed font-light"
                     >
-                        AUM Context Foundry is the "Smoke Detector" for your brand. We optimize how SearchGPT, Perplexity, and Gemini ingest your identity. Precision RAG evaluation for the modern CMO.
+                        AUM Context Foundry is the "Smoke Detector" for your brand. We optimize how SearchGPT, Perplexity, and Gemini ingest your identity using a zero-retention semantic pipeline and a 60/40 claim verification engine. Precision RAG evaluation for the modern CMO.
                     </motion.p>
 
                     <motion.div
@@ -274,7 +274,7 @@ export default function LandingPage() {
                 <section id="demo" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4">See the Foundry in Action</h2>
-                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Watch how leading enterprises deploy their semantic facts directly to the latent space.</p>
+                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Watch how leading enterprises deploy their semantic facts directly to Agentic Search engines.</p>
                     </div>
 
                     <div className="relative max-w-5xl mx-auto">
@@ -432,7 +432,7 @@ export default function LandingPage() {
                             </div>
                             <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-8">
                                 Strategic Generative Engine Optimization (GEO) for the agentic era.
-                                Secure your narrative in the latent space with vector-verified facts.
+                                Secure your narrative in AI Agents with vector-verified facts.
                             </p>
                             <div className="flex space-x-4">
                                 <Link href="/contact" className="px-4 py-2 bg-indigo-500/10 text-indigo-500 rounded-full text-xs font-semibold hover:bg-indigo-500/20 transition-all">

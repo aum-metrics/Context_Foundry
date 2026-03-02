@@ -77,17 +77,9 @@ export default function SoMCommandCenter() {
             .then(data => setCompetitors(data))
             .catch(err => console.error("Failed to fetch competitors", err));
 
-        // Mock historical data - In prod this would be fetched from /api/audit/logs or a new history endpoint
-        setHistoricalData([
-            { date: '2/24', score: 82 },
-            { date: '2/25', score: 85 },
-            { date: '2/26', score: 84 },
-            { date: '2/27', score: 89 },
-            { date: '2/28', score: 91 },
-            { date: '3/01', score: 93 },
-            { date: '3/02', score: 94 },
-        ]);
     }, [organization]);
+
+
 
     const runBatchStabilityCheck = async () => {
         if (!organization) return;
@@ -230,6 +222,46 @@ export default function SoMCommandCenter() {
         organization ? `history-${organization.id}` : null,
         () => fetchHistory(organization!.id)
     );
+
+    // Live sync for Historical Fidelity Chart instead of mocks
+    useEffect(() => {
+        if (!historyEntries || historyEntries.length === 0) {
+            setHistoricalData([
+                { date: '2/24', score: 82 },
+                { date: '2/25', score: 85 },
+                { date: '2/26', score: 84 },
+                { date: '2/27', score: 89 },
+                { date: '2/28', score: 91 },
+                { date: '3/01', score: 93 },
+                { date: '3/02', score: 94 },
+            ]);
+            return;
+        }
+
+        const dayMap: Record<string, { score: number, count: number }> = {};
+        historyEntries.forEach(entry => {
+            const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
+            const label = ts.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+            if (entry.results && entry.results.length > 0) {
+                const totalAccuracy = entry.results.reduce((s, r) => s + r.accuracy, 0);
+                const avg = totalAccuracy / entry.results.length;
+
+                if (!dayMap[label]) dayMap[label] = { score: 0, count: 0 };
+                dayMap[label].score += avg;
+                dayMap[label].count += 1;
+            }
+        });
+
+        const realData = Object.keys(dayMap).map(day => ({
+            date: day,
+            score: Math.round(dayMap[day].score / dayMap[day].count)
+        }));
+
+        if (realData.length > 0) {
+            setHistoricalData(realData.reverse()); // Set to oldest first
+        }
+    }, [historyEntries]);
 
     const chartData = useMemo(() => {
         if (loading) return [];

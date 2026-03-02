@@ -20,6 +20,7 @@ except:
 
 from core.config import settings
 from core.dependencies import get_current_user
+from api.audit import log_audit_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -105,6 +106,15 @@ async def create_workspace(
             logger.error(f"Failed to save workspace: {e}")
     
     logger.info(f"✅ Workspace created: {workspace_id} by {user_email}")
+    
+    # SOC2 Audit Log
+    log_audit_event(
+        org_id=request.organization_id or "user_level",
+        actor_id=user_email,
+        event_type="workspace_created",
+        resource_id=workspace_id,
+        metadata={"name": request.name, "is_public": request.is_public}
+    )
     
     return {
         "success": True,
@@ -233,6 +243,15 @@ async def invite_member(
     
     logger.info(f"✅ User invited to workspace: {request.email} -> {workspace_id}")
     
+    # SOC2 Audit Log
+    log_audit_event(
+        org_id=workspace.get("organization_id", "user_level"),
+        actor_id=user_email,
+        event_type="workspace_member_invited",
+        resource_id=workspace_id,
+        metadata={"invited_email": request.email, "role": request.role}
+    )
+    
     return {
         "success": True,
         "message": f"Invitation sent to {request.email}",
@@ -285,6 +304,15 @@ async def remove_member(
                 logger.error(f"Failed to remove member: {e}")
         
         logger.info(f"✅ Member removed from workspace: {email} <- {workspace_id}")
+        
+        # SOC2 Audit Log
+        log_audit_event(
+            org_id=workspace.get("organization_id", "user_level"),
+            actor_id=user_email,
+            event_type="workspace_member_removed",
+            resource_id=workspace_id,
+            metadata={"removed_email": email}
+        )
         
         return {
             "success": True,
@@ -383,6 +411,15 @@ async def delete_workspace(
             logger.error(f"Failed to delete workspace: {e}")
     
     logger.info(f"✅ Workspace deleted: {workspace_id}")
+    
+    # SOC2 Audit Log
+    log_audit_event(
+        org_id=workspace.get("organization_id", "user_level"),
+        actor_id=user_email,
+        event_type="workspace_deleted",
+        resource_id=workspace_id,
+        metadata={"name": workspace.get("name")}
+    )
     
     return {
         "success": True,
