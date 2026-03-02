@@ -15,6 +15,8 @@ import { Logo } from "@/components/Logo";
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import ProductDemoVideo from "@/components/ProductDemoVideo";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
@@ -34,44 +36,8 @@ export default function LandingPage() {
                 <div className="absolute top-[30%] left-[30%] w-[40%] h-[40%] bg-cyan-500/10 dark:bg-cyan-900/10 blur-[150px] rounded-full"></div>
             </div>
 
-            {/* Navigation */}
-            <nav className="fixed w-full z-50 bg-white/50 dark:bg-[#030303]/60 backdrop-blur-2xl border-b border-slate-200/50 dark:border-white/5 transition-colors duration-300">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center space-x-3 group cursor-pointer">
-                        <Logo size={40} showText={true} theme="auto" />
-                    </div>
+            <Navbar />
 
-                    <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-600 dark:text-slate-400">
-                        <a href="#moat" className="hover:text-indigo-600 dark:hover:text-white transition-colors">The Moat</a>
-                        <a href="#features" className="hover:text-cyan-600 dark:hover:text-white transition-colors">Platform</a>
-                        <a href="#pricing" className="hover:text-fuchsia-600 dark:hover:text-white transition-colors">Pricing</a>
-                        <a href="#demo" className="hover:text-fuchsia-600 dark:hover:text-white transition-colors">Demo</a>
-                        <Link href="/contact" className="hover:text-emerald-600 dark:hover:text-white transition-colors">Contact</Link>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                        {mounted && (
-                            <button
-                                onClick={toggleTheme}
-                                className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-amber-300 transition-colors"
-                                aria-label="Toggle dark mode"
-                            >
-                                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                            </button>
-                        )}
-                        <Link href="/login" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors">
-                            Sign In
-                        </Link>
-                        {/* Premium CTA Button */}
-                        <div className="relative group">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-full blur opacity-30 group-hover:opacity-70 transition duration-500"></div>
-                            <Link href="/login" className="relative text-sm font-medium bg-slate-900 dark:bg-[#0a0a0a] border border-slate-700/50 dark:border-white/10 text-white px-6 py-2.5 rounded-full flex items-center transition-all">
-                                Request Audit
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
 
             <main className="relative z-10 pt-32 pb-20">
 
@@ -91,11 +57,11 @@ export default function LandingPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className="text-6xl md:text-8xl font-light tracking-tighter mb-8 leading-[1.05] max-w-5xl text-slate-900 dark:text-white"
+                        className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl text-slate-900 dark:text-white uppercase"
                     >
-                        Media Monitoring for <br className="hidden md:block" />
-                        <span className="font-medium text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-cyan-500 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-cyan-300">
-                            The Agentic Era.
+                        Your Brand, <br className="hidden md:block" />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-cyan-500 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-cyan-300">
+                            Correctly Cited by AI.
                         </span>
                     </motion.h1>
 
@@ -105,7 +71,9 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="text-xl md:text-2xl text-slate-600 dark:text-slate-400/80 mb-12 max-w-3xl leading-relaxed font-light"
                     >
-                        AUM Context Foundry is the "Smoke Detector" for your brand. We optimize how SearchGPT, Perplexity, and Gemini ingest your identity using a zero-retention semantic pipeline and a 60/40 claim verification engine. Precision RAG evaluation for the modern CMO.
+                        Trusting AI with your brand shouldn't be a leap of faith.
+                        AUM is the <span className="text-indigo-600 dark:text-indigo-400 font-medium">"Smoke Detector"</span> for narrative drift and the
+                        <span className="text-slate-900 dark:text-white font-medium"> Identity Router</span> for active remediation across SearchGPT, Perplexity, and Gemini.
                     </motion.p>
 
                     <motion.div
@@ -131,7 +99,7 @@ export default function LandingPage() {
                                 The <span className="font-semibold text-indigo-600 dark:text-indigo-400">AUM Context</span> Moat
                             </h2>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                Traditional SEO is dead. Tomorrow&apos;s buyers won&apos;t search Google — their AI agents will synthesize options and make purchasing decisions for them.
+                                <strong>Monitor. Fix. Prove.</strong> Run multi-model simulations, fix factual drift with a zero-retention ingestion pipeline, and publish a machine-readable brand manifest for the agentic era.
                             </p>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
                                 Our platform ensures your enterprise data is the <strong>most heavily weighted</strong> and <strong>least hallucinated</strong> entity across GPT-4o, Claude, and Gemini.
@@ -419,7 +387,7 @@ export default function LandingPage() {
                                 <span className="text-4xl font-light tracking-tighter text-slate-900 dark:text-white">Free Forever</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 3 simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">3</strong> weekly brand probes</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (GPT-4o, Claude, Gemini)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic ASoV score</li>
@@ -453,13 +421,13 @@ export default function LandingPage() {
                                 <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong>100</strong> simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">125</strong> weekly brand probes</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (GPT-4o, Claude, Gemini)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> SEO + GEO readiness audit</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 90-day scoring history</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Automated monitoring rhythm</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
                             <Link href="/login" className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm">
@@ -485,7 +453,7 @@ export default function LandingPage() {
                                 <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong>500</strong> simulations / month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">500</strong> weekly brand probes</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models + priority queue</strong></li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard + exports</li>
@@ -510,9 +478,9 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-6 text-left">
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
-                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What counts as one simulation?</h4>
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Brand Probe&quot;?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                One prompt tested across your chosen models = 1 simulation. Running &quot;What does [your brand] cost?&quot; across GPT-4o, Claude, and Gemini simultaneously counts as 1 — not 3. We batch the model calls.
+                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against GPT-4o, Claude, and Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
@@ -542,56 +510,8 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* Footer Section */}
-                <footer className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                        <div className="col-span-1 md:col-span-2">
-                            <div className="mb-6">
-                                <Logo size={32} showText={true} theme="auto" />
-                            </div>
-                            <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-8">
-                                Strategic Generative Engine Optimization (GEO) for the agentic era.
-                                Secure your narrative in AI Agents with vector-verified facts.
-                            </p>
-                            <div className="flex space-x-4">
-                                <Link href="/contact" className="px-4 py-2 bg-indigo-500/10 text-indigo-500 rounded-full text-xs font-semibold hover:bg-indigo-500/20 transition-all">
-                                    hello@AUMDataLabs.com
-                                </Link>
-                                <a href="tel:+919080735297" className="px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-full text-xs font-semibold hover:bg-emerald-500/20 transition-all">
-                                    +91 9080735297
-                                </a>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-400 mb-6">Foundry</h4>
-                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                                <li><a href="#moat" className="hover:text-indigo-600 transition-colors">The Moat</a></li>
-                                <li><a href="#features" className="hover:text-indigo-600 transition-colors">LCRS Math</a></li>
-                                <li><Link href="/dashboard" className="hover:text-indigo-600 transition-colors">Dashboard</Link></li>
-                                <li><Link href="/status" className="hover:text-indigo-600 transition-colors">System Status</Link></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-400 mb-6">Legal</h4>
-                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                                <li><Link href="/privacy" className="hover:text-indigo-600 transition-colors">Privacy Policy</Link></li>
-                                <li><Link href="/terms" className="hover:text-indigo-600 transition-colors">Terms of Service</Link></li>
-                                <li><Link href="/contact" className="hover:text-indigo-600 transition-colors">CISO Audits</Link></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500 gap-4">
-                        <p>&copy; 2025–2026 AUM Data Labs. All rights reserved.</p>
-                        <div className="flex space-x-8">
-                            <span>Author: Sambath Kumar Natarajan</span>
-                            <span className="flex items-center"><Globe className="w-3 h-3 mr-1" /> Global Edge Distribution</span>
-                        </div>
-                    </div>
-                </footer>
             </main>
+            <Footer />
         </div>
     );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, FileCode, Server, RadioReceiver } from "lucide-react";
+import { Copy, Check, FileCode, Server, RadioReceiver, FileDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firestorePaths";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -138,12 +138,30 @@ For deep knowledge graph access, use /llms-full.txt.`;
                         ))}
                     </div>
 
-                    <button
-                        onClick={handleCopy}
-                        className="p-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors"
-                    >
-                        {copied ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={handleCopy}
+                            className="p-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors"
+                            title="Copy to Clipboard"
+                        >
+                            {copied ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                        <button
+                            onClick={() => {
+                                const blob = new Blob([content], { type: 'text/markdown' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = activeTab;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                            }}
+                            className="p-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors"
+                            title="Export to Markdown"
+                        >
+                            <FileDown className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 p-6 overflow-y-auto">

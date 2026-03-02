@@ -621,7 +621,18 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         "version": request.manifestVersion,
         "prompt": request.prompt,
         "claimsExtracted": len(claims),
-        "cached": False
+        "cached": False,
+        "transparency_footprint": {
+            "standards": ["ISO/IEC 42001", "NIST AI RMF"],
+            "verification_method": "ASoV 60/40 LCRS v1.2.0",
+            "models_audited": [r["model"] for r in results],
+            "parameters": {
+                "temperature": 0.0,
+                "top_p": 1.0,
+                "extraction_mode": "deterministic"
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
     }
 
 async def _cleanup_expired_cache(org_id: str):

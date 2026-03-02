@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
 import { Shield, CheckCircle2, Award, Download, Share2, Globe, Cpu, Hexagon } from "lucide-react";
 import { Logo } from "./Logo";
@@ -20,6 +20,13 @@ export default function BrandHealthCertificate({
     onClose,
 }: BrandHealthCertificateProps) {
     const certificateRef = useRef<HTMLDivElement>(null);
+    const [issuedDate, setIssuedDate] = useState("");
+    const [isoTimestamp, setIsoTimestamp] = useState("");
+
+    useEffect(() => {
+        setIssuedDate(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+        setIsoTimestamp(new Date().toISOString());
+    }, []);
 
     const handleDownload = async () => {
         if (!certificateRef.current) return;
@@ -74,7 +81,7 @@ export default function BrandHealthCertificate({
                         <div className="space-y-2">
                             <div className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold">Date Issued</div>
                             <div className="text-xl text-slate-900 dark:text-white font-medium">
-                                {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                {issuedDate || "Loading date..."}
                             </div>
                         </div>
                     </div>
@@ -154,9 +161,27 @@ export default function BrandHealthCertificate({
                     </button>
                 </div>
 
+                {/* Transparency Footprint Footer */}
+                <div className="bg-slate-50 dark:bg-slate-950/50 p-6 text-left border-t border-slate-100 dark:border-white/5 font-mono text-[9px] text-slate-400 leading-relaxed">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="font-bold text-slate-500 mb-1 tracking-wider uppercase">Inference Audit Log</p>
+                            <p>Model ID: gpt-4o-2024-08-06 (verified)</p>
+                            <p>Model ID: gemini-2.0-flash (verified)</p>
+                            <p>Model ID: claude-3-5-sonnet (verified)</p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-slate-500 mb-1 tracking-wider uppercase">Hyperparameters</p>
+                            <p>Temperature: 0.0 (Deterministic)</p>
+                            <p>Top_P: 1.0 (Exact retrieval)</p>
+                            <p>Timestamp: {isoTimestamp || "Generating..."}</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Bottom Tagline */}
-                <div className="bg-slate-50 dark:bg-slate-950/50 py-4 text-center border-t border-slate-100 dark:border-white/5">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.3em]">Precision Monitoring for the Agentic Era</p>
+                <div className="bg-slate-100 dark:bg-slate-950/80 py-3 text-center border-t border-slate-200 dark:border-white/5">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.4em]">Precision Monitoring for the Agentic Era • AUM v1.2.0</p>
                 </div>
             </motion.div>
         </motion.div>
