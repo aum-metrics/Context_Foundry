@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useOrganization } from "./OrganizationContext";
 import { useRazorpay } from "@/hooks/useRazorpay";
-import { X, CheckCircle, Zap, ShieldCheck, Cpu } from "lucide-react";
+import { X, CheckCircle, ShieldCheck, Cpu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
 

@@ -73,12 +73,8 @@ async def send_otp_email(email: str, otp: str) -> bool:
     For production, integrate with a transactional email service (e.g., SendGrid, SES).
     """
     try:
-        logger.info(f"[DEV MODE] OTP for {email}: {otp}")
-        print(f"\n{'='*50}")
-        print(f"🔐 LOGIN CODE FOR {email}")
-        print(f"{'='*50}")
-        print(f"   {otp}")
-        print(f"{'='*50}\n")
+        logger.info(f"OTP verification email logic initialized for {email}")
+        # In production, integrate with a real provider here
         return True
     except Exception as e:
         logger.error(f"❌ OTP delivery failed: {e}")

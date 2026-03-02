@@ -83,10 +83,9 @@ export default function TeamSettings() {
         try {
             if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 await new Promise(r => setTimeout(r, 1000));
-                setMembers([...members, { uid: `mock_${Date.now()}`, email: inviteEmail, role: "member", orgId: organization.id }]);
-                organization.activeSeats += 1;
+                setMembers([...members, { uid: `mock_${String(new Date().getTime())}`, email: inviteEmail, role: "member", orgId: organization.id }]);
             } else {
-                const newUserId = `invited_${Date.now()}`;
+                const newUserId = `invited_${String(new Date().getTime())}`;
                 await setDoc(doc(db, "users", newUserId), {
                     uid: newUserId,
                     email: inviteEmail,
@@ -98,7 +97,6 @@ export default function TeamSettings() {
                     activeSeats: increment(1)
                 });
 
-                organization.activeSeats += 1; // local reactive update
                 setMembers([...members, { uid: newUserId, email: inviteEmail, role: "member", orgId: organization.id }]);
             }
 

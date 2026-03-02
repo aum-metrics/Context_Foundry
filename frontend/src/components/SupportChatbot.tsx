@@ -68,7 +68,7 @@ export default function SupportChatbot() {
         if (!input.trim()) return;
 
         const userMsg: Message = {
-            id: Date.now().toString(),
+            id: String(new Date().getTime()),
             role: "user",
             text: input,
             timestamp: new Date()
@@ -84,7 +84,6 @@ export default function SupportChatbot() {
 
     const generateBotResponse = async (query: string) => {
         let response = "";
-        const orgName = (organization && orgContext?.orgUser) ? organization.name : "your enterprise";
 
         try {
             let token = await auth.currentUser?.getIdToken();
@@ -124,14 +123,14 @@ export default function SupportChatbot() {
                     response = "I encountered an error querying your Context Engine. Please check your API keys.";
                 }
             }
-        } catch (error) {
+        } catch {
             response = "Network error communicating with AUM Foundry.";
         }
 
         setMessages(prev => {
             const clean = prev.filter(m => m.id !== "loading");
             return [...clean, {
-                id: Date.now().toString() + "-bot",
+                id: String(new Date().getTime()) + "-bot",
                 role: "bot",
                 text: response,
                 timestamp: new Date()

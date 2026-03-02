@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import Image from "next/image";
+import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from "recharts";
-import { CheckCircle2, AlertTriangle, Shield, TrendingUp, Search, FileText, XCircle, Rocket, Globe, Activity, ShieldAlert, ArrowUpRight, Lock } from "lucide-react";
+import { TrendingUp, Search, Globe, Activity, ShieldAlert, ArrowUpRight, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { db } from "@/lib/firestorePaths";
 import { auth } from "../lib/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useOrganization } from "./OrganizationContext";
-import { useRazorpay } from "@/hooks/useRazorpay";
 import { UpgradeModal } from "./UpgradeModal";
 import { Hexagon, Award } from "lucide-react";
 import BrandHealthCertificate from "./BrandHealthCertificate";
@@ -39,8 +38,7 @@ interface SEOResult {
 }
 
 export default function SoMCommandCenter() {
-    const { organization, orgUser } = useOrganization();
-    const { checkout, isScriptLoading } = useRazorpay();
+    const { organization } = useOrganization();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ domainStability: number, driftRate: number } | null>(null);
@@ -49,7 +47,7 @@ export default function SoMCommandCenter() {
         "Claude 3.5 Haiku": 75,
         "Gemini 2.0 Flash": 70
     });
-    const [radarData, setRadarData] = useState([
+    const [radarData] = useState([
         { subject: 'Consistency', A: 90, B: 70, C: 65, fullMark: 100 },
         { subject: 'Factuality', A: 95, B: 80, C: 75, fullMark: 100 },
         { subject: 'Sentiment', A: 85, B: 75, C: 80, fullMark: 100 },
@@ -65,8 +63,8 @@ export default function SoMCommandCenter() {
     const [seoLoading, setSeoLoading] = useState(false);
     const [seoResult, setSeoResult] = useState<SEOResult | null>(null);
     const [isCertificateOpen, setIsCertificateOpen] = useState(false);
-    const [historicalData, setHistoricalData] = useState<any[]>([]);
-    const [competitors, setCompetitors] = useState<any[]>([]);
+    const [historicalData, setHistoricalData] = useState<{ date: string; score: number }[]>([]);
+    const [competitors, setCompetitors] = useState<{ name: string, displacementRate: number, strengths: string[], weaknesses: string[] }[]>([]);
 
     useEffect(() => {
         if (!organization) return;
@@ -402,7 +400,7 @@ export default function SoMCommandCenter() {
                                 </div>
                                 <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No Simulations Yet</h3>
                                 <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">Run your first comparison in the Simulator to unlock multi-model accuracy tracking over time.</p>
-                                <a href="/" className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors shadow-lg shadow-indigo-500/20">Go to Simulator</a>
+                                <Link href="/" className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors shadow-lg shadow-indigo-500/20">Go to Simulator</Link>
                             </motion.div>
                         ) : (
                             <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-[250px] sm:h-[300px] lg:h-[350px] w-full">
@@ -606,7 +604,7 @@ export default function SoMCommandCenter() {
                                     <div key={i} className="animate-pulse bg-slate-800/40 h-16 rounded-lg w-full"></div>
                                 ))
                             ) : fidelityRisks.length > 0 ? (
-                                fidelityRisks.map((risk: any) => (
+                                fidelityRisks.map((risk: { id: number, model: string, text: string }) => (
                                     <div key={risk.id} className="p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 hover:border-rose-500/30 transition-colors">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">{risk.model}</span>
