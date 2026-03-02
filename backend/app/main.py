@@ -165,6 +165,8 @@ load_router("api.sso", "/api/sso", "Enterprise SSO")
 load_router("api.payments", "/api/payments", "Razorpay Payments")
 load_router("api.chatbot", "/api/chatbot", "RAG Support Chatbot")
 load_router("api.seo", "/api/seo", "SEO/GEO Audit")
+load_router("api.audit", "/api/audit", "SOC2 Audit Logs")
+load_router("api.competitor", "/api/competitor", "Competitor Monitoring")
 
 
 logger.info("📡 Route loading complete\n")

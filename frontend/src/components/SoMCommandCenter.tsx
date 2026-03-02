@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { Logo } from "@/components/Logo";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from "recharts";
 import { CheckCircle2, AlertTriangle, Shield, TrendingUp, Search, FileText, XCircle, Rocket, Globe, Activity, ShieldAlert, ArrowUpRight, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
@@ -65,6 +65,29 @@ export default function SoMCommandCenter() {
     const [seoLoading, setSeoLoading] = useState(false);
     const [seoResult, setSeoResult] = useState<SEOResult | null>(null);
     const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+    const [historicalData, setHistoricalData] = useState<any[]>([]);
+    const [competitors, setCompetitors] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!organization) return;
+
+        // Fetch competitor data
+        fetch(`/api/competitor/displacement/${organization.id}`)
+            .then(res => res.json())
+            .then(data => setCompetitors(data))
+            .catch(err => console.error("Failed to fetch competitors", err));
+
+        // Mock historical data - In prod this would be fetched from /api/audit/logs or a new history endpoint
+        setHistoricalData([
+            { date: '2/24', score: 82 },
+            { date: '2/25', score: 85 },
+            { date: '2/26', score: 84 },
+            { date: '2/27', score: 89 },
+            { date: '2/28', score: 91 },
+            { date: '3/01', score: 93 },
+            { date: '3/02', score: 94 },
+        ]);
+    }, [organization]);
 
     const runBatchStabilityCheck = async () => {
         if (!organization) return;
@@ -396,6 +419,25 @@ export default function SoMCommandCenter() {
                         <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions.</p>
                     </div>
 
+                    {/* NEW: Historical Fidelity Trend Chart */}
+                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl">
+                        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
+                            <TrendingUp className="w-4 h-4 mr-2 text-indigo-500" />
+                            Historical Narrative Fidelity
+                        </h2>
+                        <div className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={historicalData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                    <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} domain={[70, 100]} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} />
+                                    <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6, fill: '#818cf8', stroke: '#fff', strokeWidth: 2 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
                     {/* SEO/GEO Audit Panel */}
                     <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-none">
                         <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-4">
@@ -465,6 +507,34 @@ export default function SoMCommandCenter() {
                                 <p className="text-xs text-slate-500 italic">{seoResult.recommendation}</p>
                             </motion.div>
                         )}
+                    </div>
+
+                    {/* NEW: Competitor Displacement Card */}
+                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl">
+                        <h3 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
+                            <ArrowUpRight className="w-4 h-4 mr-2 text-indigo-500" />
+                            Competitor Displacement
+                        </h3>
+                        <div className="space-y-4">
+                            {competitors.length > 0 ? competitors.map((comp, i) => (
+                                <div key={i} className="flex flex-col space-y-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-white/5">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium text-slate-700 dark:text-slate-300">{comp.name}</span>
+                                        <span className="text-rose-500 font-bold">{comp.displacementRate}%</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${comp.displacementRate * 4}%` }}
+                                            className="h-full bg-rose-500"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-500">Key Displacement: {comp.strengths[0]}</p>
+                                </div>
+                            )) : (
+                                <p className="text-xs text-slate-500 text-center py-4">Analyzing market presence...</p>
+                            )}
+                        </div>
                     </div>
                 </div >
 

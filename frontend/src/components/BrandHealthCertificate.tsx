@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRef } from "react";
+import html2canvas from "html2canvas";
 import { Shield, CheckCircle2, Award, Download, Share2, Globe, Cpu, Hexagon } from "lucide-react";
 import { Logo } from "./Logo";
 
@@ -17,6 +19,25 @@ export default function BrandHealthCertificate({
     driftRate,
     onClose,
 }: BrandHealthCertificateProps) {
+    const certificateRef = useRef<HTMLDivElement>(null);
+
+    const handleDownload = async () => {
+        if (!certificateRef.current) return;
+
+        try {
+            const canvas = await html2canvas(certificateRef.current, {
+                backgroundColor: null,
+                scale: 2,
+                useCORS: true
+            });
+            const link = document.createElement('a');
+            link.download = `AUM-Brand-Health-${organizationName.replace(/\s+/g, '-')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (err) {
+            console.error("Failed to generate certificate image", err);
+        }
+    };
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -25,6 +46,7 @@ export default function BrandHealthCertificate({
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl"
         >
             <motion.div
+                ref={certificateRef}
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/10 shadow-2xl shadow-indigo-500/10"
@@ -113,7 +135,10 @@ export default function BrandHealthCertificate({
                     </div>
 
                     <div className="flex space-x-4 w-full">
-                        <button className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-medium flex items-center justify-center group hover:scale-[1.02] transition-transform">
+                        <button
+                            onClick={handleDownload}
+                            className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-medium flex items-center justify-center group hover:scale-[1.02] transition-transform"
+                        >
                             <Download className="w-4 h-4 mr-2 group-hover:animate-bounce" /> Download PNG
                         </button>
                         <button className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-medium flex items-center justify-center group hover:scale-[1.02] transition-transform shadow-lg shadow-indigo-500/25">
