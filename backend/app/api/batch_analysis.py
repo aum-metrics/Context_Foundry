@@ -33,43 +33,47 @@ class BatchSimulationRequest(BaseModel):
 
 from utils.task_queue import FirestoreTaskQueue
 
+async def _execute_batch_calculation(request: BatchSimulationRequest):
+    """Core logic to run multiple simulations and calculate aggregate metrics."""
+    tasks = [evaluate_simulation(SimulationRequest(
+        prompt=p, orgId=request.orgId, manifestVersion=request.manifestVersion
+    )) for p in request.prompts]
+    
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    formatted_results = []
+    total_accuracy = 0
+    drift_count = 0
+    model_scores: Dict[str, List[float]] = {}
+
+    for i, res in enumerate(results):
+        if isinstance(res, Exception):
+            formatted_results.append({"prompt": request.prompts[i], "error": str(res)})
+        else:
+            formatted_results.append(res)
+            for model_result in res.get("results", []):
+                m_name = model_result.get("model", "unknown")
+                acc = model_result.get("accuracy", 0)
+                if m_name not in model_scores: model_scores[m_name] = []
+                model_scores[m_name].append(acc)
+                total_accuracy += acc
+                if model_result.get("hasHallucination"): drift_count += 1
+
+    total_checks = sum(len(v) for v in model_scores.values())
+    avg_accuracy = total_accuracy / total_checks if total_checks else 0
+
+    return {
+        "domainStability": round(avg_accuracy, 1),
+        "hallucinationRate": round((drift_count / total_checks * 100) if total_checks else 0, 1),
+        "modelAverages": {m: round(sum(s)/len(s), 1) for m, s in model_scores.items()},
+        "totalChecks": total_checks,
+        "results": formatted_results,
+    }
+
 async def _process_batch_background(request: BatchSimulationRequest, job_id: str):
     """Background worker to process the batch and write results to Firestore."""
     async def worker():
-        tasks = [evaluate_simulation(SimulationRequest(
-            prompt=p, orgId=request.orgId, manifestVersion=request.manifestVersion
-        )) for p in request.prompts]
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        formatted_results = []
-        total_accuracy = 0
-        drift_count = 0
-        model_scores: Dict[str, List[float]] = {}
-
-        for i, res in enumerate(results):
-            if isinstance(res, Exception):
-                formatted_results.append({"prompt": request.prompts[i], "error": str(res)})
-            else:
-                formatted_results.append(res)
-                for model_result in res.get("results", []):
-                    m_name = model_result.get("model", "unknown")
-                    acc = model_result.get("accuracy", 0)
-                    if m_name not in model_scores: model_scores[m_name] = []
-                    model_scores[m_name].append(acc)
-                    total_accuracy += acc
-                    if model_result.get("hasHallucination"): drift_count += 1
-
-        total_checks = sum(len(v) for v in model_scores.values())
-        avg_accuracy = total_accuracy / total_checks if total_checks else 0
-
-        return {
-            "domainStability": round(avg_accuracy, 1),
-            "hallucinationRate": round((drift_count / total_checks * 100) if total_checks else 0, 1),
-            "modelAverages": {m: round(sum(s)/len(s), 1) for m, s in model_scores.items()},
-            "totalChecks": total_checks,
-            "results": formatted_results,
-        }
+        return await _execute_batch_calculation(request)
 
     await FirestoreTaskQueue.run_persistent_task(request.orgId, "batchJobs", job_id, worker)
 
@@ -180,7 +184,7 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
                 orgId=org_id,
                 manifestVersion="latest"
             )
-            result = await run_batch_simulation(batch_req)
+            result = await _execute_batch_calculation(batch_req)
 
             # Store weekly snapshot
             db.collection("organizations").document(org_id).collection("weeklySnapshots").add({

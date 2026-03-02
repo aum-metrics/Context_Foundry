@@ -33,9 +33,8 @@ if settings.SUPABASE_URL and settings.SUPABASE_KEY:
     except Exception as e:
         logger.error(f"Failed to initialize Supabase: {e}")
 
-# In-memory storage (should be in database)
-workspaces: Dict[str, Dict[str, Any]] = {}
-workspace_members: Dict[str, List[str]] = {}  # workspace_id -> [user_emails]
+# Database-only storage (Firestore)
+# In-memory storage removed as per brutal audit hardening
 
 class CreateWorkspaceRequest(BaseModel):
     name: str
@@ -229,13 +228,14 @@ async def invite_member(
     current_members.append(request.email)
     
     try:
-        doc_ref.update({
+        doc_ref = db.collection("workspaces").document(workspace_id)
+        doc.reference.update({
             "members": current_members,
             "member_count": len(current_members),
             "updated_at": datetime.utcnow().isoformat()
         })
         
-        doc_ref.collection("members").document(request.email.replace("@", "_at_")).set({
+        doc.reference.collection("members").document(request.email.replace("@", "_at_")).set({
             "user_email": request.email,
             "role": request.role,
             "invited_by": user_email,
@@ -295,12 +295,12 @@ async def remove_member(
         current_members.remove(email)
         
         try:
-            doc_ref.update({
+            doc.reference.update({
                 "members": current_members,
                 "member_count": len(current_members),
                 "updated_at": datetime.utcnow().isoformat()
             })
-            doc_ref.collection("members").document(email.replace("@", "_at_")).delete()
+            doc.reference.collection("members").document(email.replace("@", "_at_")).delete()
         except Exception as e:
             logger.error(f"Remove member error: {e}")
         
@@ -358,7 +358,7 @@ async def update_workspace(
         workspace["is_public"] = request.is_public
         
     try:
-        doc_ref.update(update_data)
+        doc.reference.update(update_data)
     except Exception as e:
         logger.error(f"Workspace update failed: {e}")
     
@@ -394,7 +394,7 @@ async def delete_workspace(
         raise HTTPException(status_code=403, detail="Only workspace owner can delete")
     
     try:
-        doc_ref.delete()
+        doc.reference.delete()
     except Exception as e:
         logger.error(f"Delete workspace failed: {e}")
     

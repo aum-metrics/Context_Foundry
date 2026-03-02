@@ -143,7 +143,7 @@ def load_router(module_path: str, prefix: str, tag: str) -> bool:
 
 logger.info("\n📡 Loading API routes...")
 
-load_router("api.auth", "/api/auth", "Authentication")
+# load_router("api.auth", "/api/auth", "Authentication") - Deprecated in favor of Firebase Auth
 
 # ============================================================================
 # CORE CONTEXT FOUNDRY ENGINES
