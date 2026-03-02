@@ -121,7 +121,15 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     const orgDocRef = doc(db, "organizations", currentOrgUser.orgId);
                     const orgDocSnap = await getDoc(orgDocRef);
                     if (orgDocSnap.exists()) {
-                        setOrganization({ id: orgDocSnap.id, ...orgDocSnap.data() } as Organization);
+                        const rawOrg = orgDocSnap.data();
+                        setOrganization({
+                            id: orgDocSnap.id,
+                            name: rawOrg.name || "",
+                            activeSeats: rawOrg.activeSeats || 0,
+                            // Normalize nested subscription object → flat subscriptionTier
+                            subscriptionTier: rawOrg.subscriptionTier || rawOrg.subscription?.planId || "explorer",
+                            apiKeys: rawOrg.apiKeys,
+                        });
                     }
                 }
             } catch (error) {

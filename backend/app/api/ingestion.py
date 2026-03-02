@@ -135,7 +135,10 @@ async def parse_document(
         try:
             org_doc = db.collection("organizations").document(orgId).get()
             if org_doc.exists:
-                api_key = org_doc.to_dict().get("apiKeys", {}).get("openai", api_key)
+                org_openai_key = org_doc.to_dict().get("apiKeys", {}).get("openai", api_key)
+                # Handle sentinel: platform-managed orgs use master platform keys
+                if org_openai_key and org_openai_key != "internal_platform_managed":
+                    api_key = org_openai_key
         except Exception as e:
             logger.warning(f"Key lookup error: {e}")
 
