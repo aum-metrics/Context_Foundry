@@ -494,23 +494,30 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
             )
 
-    # ----- 2. FETCH CONTEXT & KEYS -----
+    # 2. FETCH CONTEXT & KEYS 
     manifest_content, manifest_embedding, api_keys = _fetch_manifest_and_keys(request)
 
     openai_key = api_keys.get("openai")
     gemini_key = api_keys.get("gemini")
     claude_key = api_keys.get("anthropic")
 
-    # In production, fallbacks to system keys are disabled to prevent cost leakage.
+    # In Dev Mode, always fallback to environment keys
     if is_dev:
         openai_key = openai_key or os.getenv("OPENAI_API_KEY")
         gemini_key = gemini_key or os.getenv("GEMINI_API_KEY")
         claude_key = claude_key or os.getenv("ANTHROPIC_API_KEY")
+        
+    # --- ENTERPRISE AUTO-PROVISIONING HOOK ---
+    # If the database explicitly states keys are internal_platform_managed, 
+    # we inject the master .env keys to achieve zero-friction onboarding natively at runtime.
+    if openai_key == "internal_platform_managed":
+        openai_key = os.getenv("OPENAI_API_KEY")
+    if gemini_key == "internal_platform_managed":
+        gemini_key = os.getenv("GEMINI_API_KEY")
+    if claude_key == "internal_platform_managed":
+        claude_key = os.getenv("ANTHROPIC_API_KEY")
 
     if not any([openai_key, gemini_key, claude_key]) and not is_dev:
-        if org_plan == "explorer":
-            # Explorer users without keys are locked out natively. Let UI handle this gracefully via 402.
-            raise HTTPException(status_code=402, detail="Explorer plans do not include automated API key provisioning. Please upgrade.")
         raise HTTPException(status_code=503, detail="Simulation Engine Unavailable. Keys not provisioned.")
 
     # Override for dev mock mode
@@ -701,3 +708,23 @@ async def _cleanup_expired_cache(org_id: str):
             logger.info(f"Cleanup: Purged {len(expired)} expired cache entries for {org_id}")
     except Exception as e:
         logger.error(f"Cache cleanup failed: {e}")
+
+# ============================================================================
+# B2B EXTERNAL API LICENSING PIPELINE
+# ============================================================================
+
+from fastapi import Request
+@router.post("/v1/run")
+@limiter.limit("100/minute") # Strict 100/min B2B API gateway limiting
+async def run_simulation_api_v1(request: Request, bg_tasks: BackgroundTasks, sim_request: SimulationRequest, auth: dict = Depends(get_auth_context)):
+    """
+    Public-facing B2B API. Identical to `/run` but enforces strict IP/Token rate limiting 
+    specifically designed to prevent DDOS overages for Enterprise API Integrators.
+    Requires an `aum_...` prefix Bearer token generated via the Provisioning Engine.
+    """
+    if auth.get("type") != "api_key":
+        raise HTTPException(status_code=403, detail="This endpoint is restricted to B2B API Key licensing only. Use /api/simulation/run for UI sessions.")
+    
+    # Pass execution directly to the master hardened simulation pipeline
+    # The LCRS engine naturally inherits the atomic billing transactional locking from `run_simulation`
+    return await run_simulation(sim_request, bg_tasks, auth)

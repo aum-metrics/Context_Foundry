@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 # Database-only storage (Firestore)
 # In-memory storage removed as per brutal audit hardening
 
+class ProvisionOrgRequest(BaseModel):
+    email: str
+    name: str
+
 class CreateWorkspaceRequest(BaseModel):
     name: str
     description: Optional[str] = None
@@ -40,6 +44,110 @@ class UpdateWorkspaceRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_public: Optional[bool] = None
+
+@router.post("/provision")
+async def provision_organization(
+    request: ProvisionOrgRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Called by the frontend immediately after Firebase authenticates a new user.
+    Creates the Organization, User record, and automatically provisions 
+    infrastructure API keys to achieve Zero-Friction onboarding (No BYOK required).
+    """
+    uid = current_user.get("uid")
+    if not uid:
+        raise HTTPException(status_code=401, detail="Invalid session")
+        
+    if not db:
+        raise HTTPException(status_code=500, detail="Database unconfigured")
+        
+    try:
+        # Check if user already exists
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        
+        if user_doc.exists:
+            user_data = user_doc.to_dict() or {}
+            org_id = user_data.get("orgId")
+            return {
+                "status": "existing",
+                "orgId": org_id,
+                "message": "User already provisioned."
+            }
+            
+        # Generates a new Organization ID
+        new_org_id = f"org_{int(datetime.utcnow().timestamp())}_{secrets.token_urlsafe(6)}"
+        
+        # Mints the B2B Gateway API Key for this new tenant
+        b2b_api_key = f"aum_{secrets.token_urlsafe(32)}"
+        hashed_key = __import__("hashlib").sha256(b2b_api_key.encode()).hexdigest()
+        
+        # We auto-provision the internal inference keys from the Master Environment
+        # so the user can immediately use the Simulator without bringing their own keys.
+        org_payload = {
+            "id": new_org_id,
+            "name": request.name,
+            "activeSeats": 1,
+            "subscription": {
+                "planId": "explorer",
+                "status": "active",
+                "simsThisCycle": 0,
+                "maxSimulations": 3, # Explorer default
+                "currentPeriodStart": datetime.utcnow(),
+                "currentPeriodEnd": datetime.utcnow()
+            },
+            "apiKeys": {
+                # These are NOT the user's B2B key. 
+                # These instruct the backend to use the Platform's Master Keys for this tenant.
+                "openai": "internal_platform_managed",
+                "gemini": "internal_platform_managed",
+                "claude": "internal_platform_managed"
+            },
+            "createdAt": datetime.utcnow()
+        }
+        
+        # 1. Create Organization
+        db.collection("organizations").document(new_org_id).set(org_payload)
+        
+        # 2. Register User
+        user_payload = {
+            "uid": uid,
+            "email": request.email,
+            "orgId": new_org_id,
+            "role": "admin"
+        }
+        user_ref.set(user_payload)
+        
+        # 3. Store the hashed B2B Gateway key for external API-based licensing
+        db.collection("api_keys").document(hashed_key).set({
+            "keyHash": hashed_key,
+            "orgId": new_org_id,
+            "name": "Default B2B Gateway Key",
+            "createdAt": datetime.utcnow(),
+            "lastUsedAt": None,
+            "status": "active"
+        })
+        
+        # Write SOC2 Audit Log
+        log_audit_event(
+            org_id=new_org_id,
+            actor_id=uid,
+            event_type="organization_provisioned",
+            resource_id=new_org_id,
+            metadata={"plan": "explorer"}
+        )
+        
+        return {
+            "status": "provisioned",
+            "orgId": new_org_id,
+            "apiKey": b2b_api_key, # Only returned ONCE
+            "message": "Zero-friction onboarding complete."
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to provision org for {uid}: {e}")
+        raise HTTPException(status_code=500, detail="Provisioning workflow failed.")
 
 @router.post("/create")
 async def create_workspace(
