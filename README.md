@@ -1,71 +1,66 @@
 # AUM Context Foundry
 
-Media Monitoring for the Agentic Era. Precision RAG Evaluation for the CMO.
+**Verified Identity Router for the Agentic Era**
 
-## 🏗 Architecture Overview
+AUM Context Foundry is a production-grade infrastructure platform designed to evaluate and optimize how multi-modal Large Language Models (LLMs) ingest, process, and cite enterprise data. It bridges the gap between passive search monitoring and active retrieval augmentation.
 
-- **Backend**: FastAPI (Python 3.12+) - Scalable, async-first RAG optimization engine.
-- **Frontend**: Next.js 14+ (App Router) - Premium, high-performance monitoring dashboard.
-- **Database**: Google Firestore - Multi-tenant, real-time data layer.
-- **Vector Search**: Native Firestore Vector Indexing (O(log N)) with legacy Python fallback.
-- **Job Queue**: FirestoreTaskQueue - Persistent, state-aware background job management.
-- **AI Engines**: Multi-provider (SearchGPT, Perplexity, Gemini, OpenAI) LCRS scoring logic with automatic provider-fallback.
+---
 
-## 🛡 Hardening & Enterprise Scalability (v2.2.0-hardened)
+## 🏗 Architecture & Core Moats
 
-The codebase has undergone a "Brutal Hardening" audit to ensure acquisition-readiness:
+AUM is not a "dashboard wrapper." It is fundamentally architected as an **API-First Data Infrastructure** supporting multi-tenant enterprise isolation.
 
-- **Logic Resilience**: 
-    - **Recursive Chunking**: Smart splitting on paragraph and sentence boundaries for high fact-integrity.
-    - **Retrieval Optimization**: Automatic failover to Gemini 2.0 Flash for claim verification if primary engines are unavailable.
-- **Performance at Scale**:
-    - **Native Vector Search**: Transitioned from $O(N)$ memory search to $O(\log N)$ native indexing.
-    - **Persistent Job Queueing**: Long-running SEO and Batch Analysis jobs are persisted to Firestore, surviving server restarts.
-- **Security & Multi-Tenancy**:
-    - **IDOR Prevention**: All requests validated against organizational membership via `verify_user_org_access`.
-    - **Dynamic Provisioning**: Plan-based simulation caps are read from the database, not hardcoded.
-    - **Zero-Retention Ingestion**: Raw binary data is flushed from RAM immediately after parsing – optimized for monitoring workflows.
+*   **Backend Array:** FastAPI (Python 3.12+). Evaluates deterministic RAG drift utilizing a 60/40 mathematical scoring engine (40% cosine similarity embedding divergence, 60% claim-by-claim LLM verification).
+*   **Zero-Retention Semantic Pipeline:** Proprietary ingestion (`backend/app/api/ingestion.py`). Files are held in volatile RAM, vectorized into 1536-dimensional namespaces, committed to Firestore, and instantaneously deleted. *No AWS bucket persistence.*
+*   **The Edge Client:** Next.js 15 (App Router). Operates as an API consumer of the FastAPI backend, protected by strict Firebase JWT authentication, offering the CMO/CISO an interpretable view of the underlying vector database.
+*   **Dynamic Identity Routing:** Generates live, crawler-optimized `/llms.txt` and `JSON-LD` schemas per organization, forcing RAG engines (SearchGPT, Perplexity) to index ground-truth.
 
-## 🚀 Getting Started (Production)
+## 🛡 Security & Hardening (v2.2.0)
 
-### 1. Project Configuration
-Ensure all required environment variables are set. Production mode is triggered via `ENV=production`.
+The platform has successfully cleared comprehensive "Brutal Hardening" criteria for Seed/Series A diligence:
 
+*   **Firebase Standardized Auth:** Decentralized JWT session management seamlessly maps to FastAPI dependencies (`core/api_auth.py`). 
+*   **Atomic Transactions:** Concurrency in billing cycles and simulation quotas (Explorer/Growth/Scale) are protected by strict NoSQL transaction blocks.
+*   **Air-Gapped SOC2 Auditing:** Critical `create/update/delete` schema mutations write async logs to a protected `systemLogs` collective.
+*   **Graceful Degradation:** Multi-provider API routing natively handles `503` timeouts from OpenAI/Anthropic/Google via exponential backoffs without crushing the client socket.
+
+## 🚀 Execution & Automation
+
+### 1. The Local B2B Stack
 ```bash
-# Example .env
-ENV=production
-JWT_SECRET=YOUR_SECURE_RANDOM_SECRET
-CORS_ORIGINS=https://aumdatalabs.com
-TRUSTED_HOSTS=aumdatalabs.com
-OPENAI_API_KEY=...
-GEMINI_API_KEY=...
-ANTHROPIC_API_KEY=...
-FIREBASE_SERVICE_ACCOUNT_PATH=/path/to/creds.json
-```
-
-### 2. Backend Deployment
-```bash
+# 1. Start the API Gateway (Port 8000)
 cd backend
 python3 -m pip install -r requirements.txt
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-*The app will critically fail at startup if `JWT_SECRET` is set to default or mission-critical keys are missing in production mode.*
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-### 3. Frontend Deployment
-```bash
+# 2. Start the Edge Client (Port 3000)
 cd frontend
 npm install
-npm run build
-npm run start
+npm run dev
 ```
 
-## 📊 Operations & Observability
+### 2. "No Mocking" Test Suites
+AUM features a robust dual-layer testing matrix. We do not mock security.
 
-- **Structured Logging**: Logs are formatted with environment tags and rotated.
-  - `app.log`: General application logs.
-  - `error.log`: (Prod only) Critical error tracking.
-- **Health Checks**: `/api/health` indicates simulation engine readiness.
-- **Audit Logs**: All LCRS scoring events are persisted to Firestore with organizational `orgId` metadata.
+**Backend Integrity (PyTest):**
+Validates the mathematical scoring constraints and zero-retention memory flushing.
+```bash
+cd backend
+python3 -m pytest tests/ --verbose
+```
+
+**Frontend E2E (Playwright):**
+Verifies the Next.js visual layer, Auth routing, and PDF Export pipelines.
+```bash
+cd frontend
+npx playwright test
+```
+
+## 📊 Live Observability
+
+*   **Health:** `/api/health` API heartbeat.
+*   **Log Streams:** Unstructured request tracing routed through `logging.getLogger`.
+*   **ASoV Radar Insights:** Real-time Aggregated Share of Voice tracking.
 
 ---
 © 2026 AUM Data Labs. All rights reserved.
