@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useOrganization, OrgUser } from "./OrganizationContext";
 import { Users, UserPlus, Shield, ShieldAlert, Check } from "lucide-react";
+import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firestorePaths";
 import { collection, doc, getDoc, getDocs, increment, query, setDoc, updateDoc, where } from "firebase/firestore";
 
@@ -78,18 +79,25 @@ export default function TeamSettings() {
                 await new Promise(r => setTimeout(r, 1000));
                 setMembers([...members, { uid: `mock_${String(new Date().getTime())}`, email: inviteEmail, role: "member", orgId: organization.id }]);
             } else {
+                if (!auth.currentUser) throw new Error("No active session");
+
+                const token = await auth.currentUser.getIdToken();
+                const response = await fetch(`/api/workspaces/${organization.id}/members`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email: inviteEmail, role: "member" })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.detail || "Failed to provision access");
+                }
+
+                // Add to local state (using temporary unique ID until properly synced)
                 const newUserId = `invited_${String(new Date().getTime())}`;
-                await setDoc(doc(db, "users", newUserId), {
-                    uid: newUserId,
-                    email: inviteEmail,
-                    orgId: organization.id,
-                    role: "member"
-                });
-
-                await updateDoc(doc(db, "organizations", organization.id), {
-                    activeSeats: increment(1)
-                });
-
                 setMembers([...members, { uid: newUserId, email: inviteEmail, role: "member", orgId: organization.id }]);
             }
 

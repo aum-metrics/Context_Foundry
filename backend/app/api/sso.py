@@ -94,7 +94,7 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
             from cryptography.fernet import Fernet
             import base64
             import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-context-foundry-secure-key-32!").decode())
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-context-foundry-secure-key32").decode())
             f = Fernet(key)
             config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
@@ -112,9 +112,9 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     }
 
 @router.post("/initiate")
-async def initiate_sso_login(request: SSOInitiateRequest):
+async def initiate_sso_login(request: SSOInitiateRequest, auth: dict = Depends(get_auth_context)):
     """
-    Initiate SSO login flow
+    Initiate SSO login flow (Admin Test)
     """
     if not db:
         raise HTTPException(status_code=503, detail="Database connection unavailable")

@@ -102,7 +102,7 @@ async def provision_organization(
                 # These instruct the backend to use the Platform's Master Keys for this tenant.
                 "openai": "internal_platform_managed",
                 "gemini": "internal_platform_managed",
-                "claude": "internal_platform_managed"
+                "anthropic": "internal_platform_managed"
             },
             "createdAt": datetime.utcnow()
         }
@@ -565,3 +565,28 @@ async def workspaces_health():
             "activity_tracking"
         ]
     }
+
+@router.get("/{org_id}/manifest")
+async def get_public_manifest(org_id: str):
+    """
+    Public endpoint for llms.txt generation.
+    Bypasses Firebase client rules to safely serve the organization's verified manifesto.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unconfigured")
+        
+    try:
+        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("default").get()
+        if manifest_doc.exists:
+            data = manifest_doc.to_dict() or {}
+            content = data.get("content")
+            if content:
+                from fastapi.responses import PlainTextResponse
+                return PlainTextResponse(content=content)
+                
+        raise HTTPException(status_code=404, detail="Manifest not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch public manifest for {org_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

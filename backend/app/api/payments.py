@@ -152,8 +152,12 @@ async def create_subscription_order(request: CreateSubscriptionRequest, auth: di
 
 
 @router.post("/verify")
-async def verify_payment(request: VerifyPaymentRequest):
+async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get_current_user)):
     """Verifies a Razorpay payment signature and activates the subscription."""
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, request.orgId):
+        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+
     client = get_razorpay_client()
     if not client:
         raise HTTPException(status_code=503, detail="Razorpay not configured")
@@ -207,8 +211,12 @@ async def verify_payment(request: VerifyPaymentRequest):
 
 
 @router.post("/payment-link")
-async def generate_payment_link(request: PaymentLinkRequest):
+async def generate_payment_link(request: PaymentLinkRequest, auth: dict = Depends(get_current_user)):
     """Generates a shareable Razorpay payment link (for admin to send reminders)."""
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, request.orgId):
+        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+
     client = get_razorpay_client()
     if not client:
         raise HTTPException(status_code=503, detail="Razorpay not configured")

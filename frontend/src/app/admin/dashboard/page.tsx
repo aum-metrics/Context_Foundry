@@ -10,7 +10,7 @@ import {
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
 import { db } from "@/lib/firestorePaths";
-import { collection, doc, getDocs, getDoc, updateDoc, query, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, doc, getDocs, getDoc, updateDoc, query, where, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 
 interface OrgData {
     id: string;
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
                 // Count members
                 let memberCount = 0;
                 try {
-                    const usersSnap = await getDocs(collection(db, "organizations", docSnap.id, "users"));
+                    const usersSnap = await getDocs(query(collection(db, "users"), where("orgId", "==", docSnap.id)));
                     memberCount = usersSnap.size;
                 } catch { memberCount = 1; }
 

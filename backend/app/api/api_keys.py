@@ -119,13 +119,13 @@ async def generate_api_key_endpoint(
     """
     try:
         user_email = current_user.get("email")
-        user_id = current_user.get("id")
+        uid = current_user.get("uid")
         
-        if not user_email or not user_id:
+        if not user_email or not uid:
             raise HTTPException(status_code=401, detail="Invalid user session")
         
         # Check if user has an eligible subscription
-        if not check_api_tier_subscription(user_id):
+        if not check_api_tier_subscription(uid):
             raise HTTPException(
                 status_code=403,
                 detail={
@@ -141,29 +141,29 @@ async def generate_api_key_endpoint(
         
         # Store in database
         key_data = {
-            "user_id": user_id,
-            "org_id": "user_level", # Default if org mapping fails
+            "userId": uid,
+            "orgId": "user_level", # Default if org mapping fails
             "name": req.name,
-            "key_hash": key_hash,
-            "key_prefix": key_prefix,
-            "is_active": True,
-            "created_at": datetime.utcnow().isoformat(),
-            "last_used_at": None
+            "keyHash": key_hash,
+            "keyPrefix": key_prefix,
+            "status": "active",
+            "createdAt": datetime.utcnow().isoformat(),
+            "lastUsedAt": None
         }
         
         # Try to get real orgId for audit/mapping
-        user_doc = db.collection("users").document(user_id).get()
+        user_doc = db.collection("users").document(uid).get()
         if user_doc.exists:
-            key_data["org_id"] = user_doc.to_dict().get("orgId", "user_level")
+            key_data["orgId"] = user_doc.to_dict().get("orgId", "user_level")
 
         # Save to Firestore
         db.collection("api_keys").document(key_hash).set(key_data)
         
-        logger.info(f"✅ API key created for Professional user {user_id}: {key_prefix}")
+        logger.info(f"✅ API key created for Professional user {uid}: {key_prefix}")
         
         # SOC2 Audit Log
         log_audit_event(
-            org_id=key_data["org_id"],
+            org_id=key_data["orgId"],
             actor_id=user_email,
             event_type="api_key_generated",
             resource_id=key_hash,
@@ -175,7 +175,7 @@ async def generate_api_key_endpoint(
             name=req.name,
             key=api_key,  # Only shown once!
             key_prefix=key_prefix,
-            created_at=key_data["created_at"],
+            created_at=key_data["createdAt"],
             last_used_at=None,
             is_active=True
         )
@@ -190,13 +190,13 @@ async def generate_api_key_endpoint(
 async def list_api_keys(current_user: dict = Depends(get_auth_context)):
     """List all API keys for the current user"""
     try:
-        user_id = current_user.get("id")
+        uid = current_user.get("uid")
         
         if not db:
             raise HTTPException(status_code=503, detail="Database unavailable")
         
         # Query Firestore
-        query = db.collection("api_keys").where("user_id", "==", user_id).stream()
+        query = db.collection("api_keys").where("userId", "==", uid).stream()
         
         keys = []
         for doc in query:
@@ -205,10 +205,10 @@ async def list_api_keys(current_user: dict = Depends(get_auth_context)):
                 id=doc.id,
                 name=key["name"],
                 key=None,  # Never return the actual key
-                key_prefix=key["key_prefix"],
-                created_at=key["created_at"],
-                last_used_at=key.get("last_used_at"),
-                is_active=key["is_active"]
+                key_prefix=key.get("keyPrefix", ""),
+                created_at=key.get("createdAt", ""),
+                last_used_at=key.get("lastUsedAt"),
+                is_active=(key.get("status") == "active" or key.get("is_active") == True)
             ))
         
         # Sort by creation date descending
@@ -237,12 +237,13 @@ async def revoke_api_key(
         doc_ref = db.collection("api_keys").document(key_id)
         doc = doc_ref.get()
         
-        if not doc.exists or doc.to_dict().get("user_id") != user_id:
+        if not doc.exists or doc.to_dict().get("userId") != uid:
             raise HTTPException(status_code=404, detail="API key not found")
         
         # Deactivate
         doc_ref.update({
-            "is_active": False
+            "status": "revoked",
+            "is_active": False # Legacy support
         })
         
         logger.info(f"✅ API key revoked: {key_id}")

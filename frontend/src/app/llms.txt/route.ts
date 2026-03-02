@@ -60,12 +60,17 @@ AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate
 
     if (orgId) {
         try {
-            const { db } = await import('@/lib/firestorePaths');
-            const manifestDoc = await getDoc(doc(db, "organizations", orgId, "manifests", "default"));
-            if (manifestDoc.exists()) {
-                const data = manifestDoc.data();
-                if (data.content) {
-                    return new NextResponse(data.content, {
+            // Proxy the request to the hardened AUM backend to bypass client Firestore rules
+            const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+            const response = await fetch(`${backendUrl}/api/workspaces/${orgId}/manifest`, {
+                method: "GET",
+                cache: "no-store", // Ensure we always get the latest manifest
+            });
+
+            if (response.ok) {
+                const content = await response.text();
+                if (content) {
+                    return new NextResponse(content, {
                         status: 200,
                         headers: {
                             'Content-Type': 'text/plain; charset=utf-8',
@@ -73,9 +78,11 @@ AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate
                         },
                     });
                 }
+            } else {
+                console.warn(`Manifest proxy failed with status ${response.status} for org ${orgId}`);
             }
         } catch (e) {
-            console.error("Error fetching manifest:", e);
+            console.error("Error fetching manifest via proxy:", e);
         }
     }
 

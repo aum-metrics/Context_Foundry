@@ -117,15 +117,15 @@ def validate_api_key(credentials: HTTPAuthorizationCredentials = Depends(securit
             raise HTTPException(status_code=401, detail="Invalid API Key")
 
         key_data = key_doc.to_dict() or {}
-        if not key_data.get("is_active", False):
+        if key_data.get("status") != "active":
             raise HTTPException(status_code=403, detail="API Key has been revoked")
 
         # Update last used timestamp (async fire-and-forget style)
-        key_doc.reference.update({"last_used_at": datetime.utcnow().isoformat()})
+        key_doc.reference.update({"lastUsedAt": datetime.utcnow().isoformat()})
 
         return {
-            "uid": key_data.get("user_id"),
-            "orgId": key_data.get("org_id"),
+            "uid": key_data.get("userId"),
+            "orgId": key_data.get("orgId"),
             "type": "api_key",
             "name": key_data.get("name")
         }

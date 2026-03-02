@@ -88,29 +88,30 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 if (userDocSnap.exists()) {
                     currentOrgUser = userDocSnap.data() as OrgUser;
                 } else {
-                    // Auto-provision an Organization and User for the first login
-                    const newOrgId = `org_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                    // Auto-provision via backend (handles B2B API keys, Org creation, and strict security)
+                    if (user && typeof window !== 'undefined') {
+                        const token = await user.getIdToken();
+                        const response = await fetch("/api/workspaces/provision", {
+                            method: "POST",
+                            headers: {
+                                "Authorization": `Bearer ${token}`
+                            }
+                        });
 
-                    const newOrg: Organization = {
-                        id: newOrgId,
-                        name: `${user.email?.split('@')[0]}'s Organization`,
-                        activeSeats: 1,
-                        subscriptionTier: "trial",
-                    };
+                        if (!response.ok) {
+                            throw new Error("Failed to provision organization");
+                        }
+                        const provisionData = await response.json();
 
-                    await setDoc(doc(db, "organizations", newOrgId), {
-                        ...newOrg,
-                        createdAt: serverTimestamp(),
-                    });
-
-                    currentOrgUser = {
-                        uid: user.uid,
-                        email: user.email || "",
-                        orgId: newOrgId,
-                        role: "admin",
-                    };
-
-                    await setDoc(userDocRef, currentOrgUser);
+                        currentOrgUser = {
+                            uid: user.uid,
+                            email: user.email || "",
+                            orgId: provisionData.orgId,
+                            role: "admin",
+                        };
+                    } else {
+                        throw new Error("Cannot provision without user session");
+                    }
                 }
 
                 setOrgUser(currentOrgUser);

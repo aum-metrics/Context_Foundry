@@ -23,7 +23,7 @@ def test_evaluate_query(mock_sim_db, mock_sec_db):
     mock_org_doc = MagicMock()
     mock_org_doc.exists = True
     mock_org_doc.to_dict.return_value = {
-        "apiKeys": {},
+        "apiKeys": {"openai": "sk-mock"},
         "subscription": {"maxSimulations": 50, "planId": "starter"}
     }
     

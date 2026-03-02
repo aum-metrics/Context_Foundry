@@ -315,6 +315,9 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
         # Fine-grained claim verification (Hardened with fallback)
         claim_results = []
         claim_score = None
+        supported = 0
+        total = 0
+        
         if claims:
             claim_results = verify_claims(claims, answer, api_keys)
             supported = sum(1 for c in claim_results if c.get("verdict") == "supported")
@@ -322,7 +325,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             claim_score = f"{supported}/{total} claims supported"
 
         # LCRS Blend (Spec Section 10.F): 40% semantic, 60% claim accuracy
-        if claims and total > 0:
+        if total > 0:
             claim_accuracy = supported / total
             semantic_accuracy = max(0.0, 1.0 - divergence)
             blended = (0.4 * semantic_accuracy) + (0.6 * claim_accuracy)
@@ -714,6 +717,8 @@ async def _cleanup_expired_cache(org_id: str):
 # ============================================================================
 
 from fastapi import Request
+from core.limiter import limiter
+
 @router.post("/v1/run")
 @limiter.limit("100/minute") # Strict 100/min B2B API gateway limiting
 async def run_simulation_api_v1(request: Request, bg_tasks: BackgroundTasks, sim_request: SimulationRequest, auth: dict = Depends(get_auth_context)):

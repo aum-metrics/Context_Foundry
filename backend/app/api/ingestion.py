@@ -98,7 +98,7 @@ async def parse_document(
                 org_data = org_doc.to_dict() or {}
                 org_plan = org_data.get("subscription", {}).get("planId", "explorer")
                 if org_plan == "explorer":
-                    docs_ref = db.collection("organizations").document(orgId).collection("documents").limit(1).get()
+                    docs_ref = db.collection("organizations").document(orgId).collection("manifests").limit(1).get()
                     if len(docs_ref) >= 1:
                         raise HTTPException(status_code=403, detail="Explorer plan limit: 1 document. Please upgrade.")
         except HTTPException:

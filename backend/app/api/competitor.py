@@ -25,7 +25,10 @@ class CompetitorProfile(BaseModel):
     strengths: List[str]
     weaknesses: List[str]
 
-@router.get("/displacement/{org_id}", response_model=List[CompetitorProfile])
+class CompetitorResponse(BaseModel):
+    competitors: List[CompetitorProfile]
+
+@router.get("/displacement/{org_id}", response_model=CompetitorResponse)
 async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth_context)):
     """
     Live Agentic Competitor Analysis:
@@ -59,11 +62,11 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
 
     if not api_key:
         if is_dev:
-            return [
+            return {"competitors": [
                 {"name": "Competitor Alpha (Simulated)", "displacementRate": 12.4, "strengths": ["Pricing", "API Docs"], "weaknesses": ["Security Claims"]},
                 {"name": "Competitor Beta (Simulated)", "displacementRate": 8.2, "strengths": ["Market Presence"], "weaknesses": ["Technical Accuracy"]},
                 {"name": "Competitor Gamma (Simulated)", "displacementRate": 4.1, "strengths": ["Legacy Reputation"], "weaknesses": ["Agentic Readiness"]}
-            ]
+            ]}
         raise HTTPException(status_code=402, detail="OpenAI API key missing for this organization")
         
     try:
@@ -87,10 +90,10 @@ Return ONLY valid JSON."""
         
         result = json.loads(completion.choices[0].message.content)
         competitors = result.get("competitors", [])
-        return competitors[:3]
+        return {"competitors": competitors[:3]}
         
     except Exception as e:
         logger.error(f"Competitor displacement generation failed: {e}")
-        return [
+        return {"competitors": [
             {"name": "Generation Failed", "displacementRate": 0.0, "strengths": ["API Error"], "weaknesses": [str(e)[:15]]}
-        ]
+        ]}

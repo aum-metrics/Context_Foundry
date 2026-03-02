@@ -253,8 +253,41 @@ export default function SoMCommandCenter() {
                 setSeoResult(data);
                 setSeoLoading(false);
             } else if (data.jobId) {
-                // Async fallback if backend ever re-implements it, though highly unlikely
-                setSeoLoading(false);
+                // Async polling fallback
+                let attempts = 0;
+                const pollInterval = setInterval(async () => {
+                    attempts++;
+                    if (attempts > 20) {
+                        clearInterval(pollInterval);
+                        setSeoLoading(false);
+                        console.error("SEO Audit timeout");
+                        return;
+                    }
+                    try {
+                        let currentToken = await auth.currentUser?.getIdToken();
+                        if (!currentToken && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
+                            currentToken = "mock-dev-token";
+                        }
+                        const statusRes = await fetch(`/api/seo/audit/status/${organization.id}/${data.jobId}`, {
+                            headers: { 'Authorization': `Bearer ${currentToken}` }
+                        });
+
+                        if (statusRes.ok) {
+                            const statusData = await statusRes.json();
+                            if (statusData.status === "completed" && statusData.result) {
+                                clearInterval(pollInterval);
+                                setSeoResult(statusData.result);
+                                setSeoLoading(false);
+                            } else if (statusData.status === "failed") {
+                                clearInterval(pollInterval);
+                                console.error("SEO Audit Failed:", statusData.error || statusData);
+                                setSeoLoading(false);
+                            }
+                        }
+                    } catch (pollErr) {
+                        console.error("SEO Polling error:", pollErr);
+                    }
+                }, 3000); // Poll every 3 seconds
             } else {
                 setSeoLoading(false);
                 console.error("SEO Audit Failed:", data);
