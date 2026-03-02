@@ -28,7 +28,7 @@ export default function ProductDemoVideo() {
         {
             id: 2,
             title: "Co-Intelligence Simulator",
-            subtitle: "Stress-test prompts for hallucination and divergence.",
+            subtitle: "Stress-test prompts for Context Drift and divergence.",
             icon: Search,
             image: "/mockups/simulator.png"
         }

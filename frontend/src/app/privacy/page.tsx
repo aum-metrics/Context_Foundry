@@ -34,7 +34,7 @@ export default function PrivacyPage() {
                     <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-400">
                         <li><strong>Account Information</strong>: Your email and organization profile for session management.</li>
                         <li><strong>Semantic Manifests</strong>: The generated <code>/llms.txt</code> results optimized for agentic discovery.</li>
-                        <li><strong>LCRS Logs</strong>: Metadata regarding hallucination divergence scores to improve your GEO performance.</li>
+                        <li><strong>LCRS Logs</strong>: Metadata regarding Context Drift divergence scores to improve your GEO performance.</li>
                     </ul>
                 </section>
 

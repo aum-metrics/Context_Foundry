@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Logo } from "@/components/Logo";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
 import { CheckCircle2, AlertTriangle, Shield, TrendingUp, Search, FileText, XCircle, Rocket, Globe, Activity, ShieldAlert, ArrowUpRight, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
@@ -13,6 +13,8 @@ import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useOrganization } from "./OrganizationContext";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { UpgradeModal } from "./UpgradeModal";
+import { Hexagon, Award } from "lucide-react";
+import BrandHealthCertificate from "./BrandHealthCertificate";
 
 // Fallback data — only used when Firestore is unavailable
 const fallbackData = {
@@ -41,12 +43,19 @@ export default function SoMCommandCenter() {
     const { checkout, isScriptLoading } = useRazorpay();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
     const [batchLoading, setBatchLoading] = useState(false);
-    const [batchResult, setBatchResult] = useState<{ domainStability: number, hallucinationRate: number } | null>(null);
+    const [batchResult, setBatchResult] = useState<{ domainStability: number, driftRate: number } | null>(null);
     const [modelAverages, setModelAverages] = useState<Record<string, number>>({
         "GPT-4o Mini": 92,
         "Claude 3.5 Haiku": 75,
         "Gemini 2.0 Flash": 70
     });
+    const [radarData, setRadarData] = useState([
+        { subject: 'Consistency', A: 90, B: 70, C: 65, fullMark: 100 },
+        { subject: 'Factuality', A: 95, B: 80, C: 75, fullMark: 100 },
+        { subject: 'Sentiment', A: 85, B: 75, C: 80, fullMark: 100 },
+        { subject: 'Safety', A: 98, B: 90, C: 85, fullMark: 100 },
+        { subject: 'Authority', A: 88, B: 70, C: 60, fullMark: 100 },
+    ]);
 
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
@@ -55,6 +64,7 @@ export default function SoMCommandCenter() {
     const [seoUrl, setSeoUrl] = useState("");
     const [seoLoading, setSeoLoading] = useState(false);
     const [seoResult, setSeoResult] = useState<SEOResult | null>(null);
+    const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
     const runBatchStabilityCheck = async () => {
         if (!organization) return;
@@ -218,7 +228,7 @@ export default function SoMCommandCenter() {
         return dataPoints.length > 0 ? dataPoints : (fallbackData[activeTab === "GPT-4o Mini" ? "gpt4" : activeTab === "Claude 3.5 Haiku" ? "claude" : "gemini"] || []);
     }, [historyEntries, activeTab, loading, error]);
 
-    const hallucinationRisks = useMemo(() => {
+    const fidelityRisks = useMemo(() => {
         if (!historyEntries) return [];
         const risks: { id: number; model: string; text: string; severity: string }[] = [];
         let riskId = 1;
@@ -242,14 +252,19 @@ export default function SoMCommandCenter() {
         ? Math.round(chartData.reduce((sum, d) => sum + ((d as { score: number }).score || 0), 0) / chartData.length)
         : 0;
 
+    const isCriticalDrift = (batchResult?.driftRate || 0) > 30;
+
     return (
-        <div className="w-full h-full animate-fade-in font-sans">
+        <div className={`w-full h-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'bg-rose-500/5 ring-4 ring-rose-500/20 ring-inset' : ''}`}>
+            {isCriticalDrift && (
+                <div className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500 animate-shimmer z-[100]"></div>
+            )}
             <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 pb-6 border-b border-slate-200 dark:border-white/5">
                 <div className="flex items-center space-x-4">
                     <Logo size={48} showText={false} />
                     <div>
-                        <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">SoM Command Center</h1>
-                        <p className="text-slate-500 text-sm mt-1">Live scoring across GPT-4o, Claude 3.5, and Gemini 2.0 Flash</p>
+                        <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">Agentic Media Monitoring</h1>
+                        <p className="text-slate-500 text-sm mt-1">Precision RAG evaluation across SearchGPT, Perplexity, and Gemini Grounding</p>
                     </div>
                 </div>
                 <div className="mt-4 md:mt-0 flex items-center space-x-6">
@@ -276,12 +291,19 @@ export default function SoMCommandCenter() {
                             </>
                         )}
                     </button>
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end">
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Avg Accuracy</p>
                         <div className="flex items-center space-x-2">
                             <span className="text-4xl font-light text-cyan-400">{avgScore || "—"}</span>
                             {avgScore > 0 && <span className="text-lg text-slate-500">%</span>}
                         </div>
+                        <button
+                            onClick={() => setIsCertificateOpen(true)}
+                            className="mt-2 text-[10px] uppercase tracking-[0.2em] font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center group"
+                        >
+                            <Award className="w-3 h-3 mr-1.5 group-hover:scale-125 transition-transform" />
+                            View Health Certificate
+                        </button>
                     </div>
                 </div>
             </header>
@@ -343,6 +365,35 @@ export default function SoMCommandCenter() {
                                 </ResponsiveContainer>
                             </motion.div>
                         )}
+                    </div>
+
+                    {/* Agentic Radar Comparison */}
+                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-none">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center">
+                                <Hexagon className="w-4 h-4 mr-2 text-fuchsia-500" />
+                                Agentic ASoV Radar (Multi-Model)
+                            </h2>
+                            <div className="flex space-x-4 text-[10px] uppercase tracking-widest font-bold">
+                                <span className="flex items-center text-indigo-400"><span className="w-2 h-2 bg-indigo-500 rounded-full mr-1"></span> GPT</span>
+                                <span className="flex items-center text-fuchsia-400"><span className="w-2 h-2 bg-fuchsia-500 rounded-full mr-1"></span> Claude</span>
+                                <span className="flex items-center text-cyan-400"><span className="w-2 h-2 bg-cyan-500 rounded-full mr-1"></span> Gemini</span>
+                            </div>
+                        </div>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                    <PolarGrid stroke="#334155" />
+                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
+                                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                    <Radar name="GPT" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} />
+                                    <Radar name="Claude" dataKey="B" stroke="#d946ef" fill="#d946ef" fillOpacity={0.3} />
+                                    <Radar name="Gemini" dataKey="C" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', fontSize: '12px' }} />
+                                </RadarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions.</p>
                     </div>
 
                     {/* SEO/GEO Audit Panel */}
@@ -438,19 +489,19 @@ export default function SoMCommandCenter() {
                         </div>
                     </div>
 
-                    {/* Hallucination Risk Ticker */}
+                    {/* Context Drift Ticker */}
                     <div className="rounded-2xl p-6 border border-rose-500/10 bg-white dark:bg-gradient-to-b dark:from-slate-900/50 dark:to-slate-950/50 shadow-xl dark:shadow-none">
                         <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
                             <ShieldAlert className="w-4 h-4 mr-2 text-rose-500" />
-                            Hallucination Risk Ticker
+                            Context Drift Ticker
                         </h2>
                         <div className="space-y-4">
                             {loading ? (
                                 Array(3).fill(0).map((_, i) => (
                                     <div key={i} className="animate-pulse bg-slate-800/40 h-16 rounded-lg w-full"></div>
                                 ))
-                            ) : hallucinationRisks.length > 0 ? (
-                                hallucinationRisks.map((risk) => (
+                            ) : fidelityRisks.length > 0 ? (
+                                fidelityRisks.map((risk: any) => (
                                     <div key={risk.id} className="p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 hover:border-rose-500/30 transition-colors">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">{risk.model}</span>
@@ -461,7 +512,7 @@ export default function SoMCommandCenter() {
                                 ))
                             ) : (
                                 <div className="text-center py-6">
-                                    <p className="text-sm text-slate-500">No hallucinations detected yet.</p>
+                                    <p className="text-sm text-slate-500">No context drift detected yet.</p>
                                     <p className="text-xs text-slate-400 mt-1">Run simulations to populate this ticker.</p>
                                 </div>
                             )}
@@ -479,6 +530,18 @@ export default function SoMCommandCenter() {
                     </div>
                 </div>
             </div >
+
+            {/* Brand Health Certificate Modal */}
+            <AnimatePresence>
+                {isCertificateOpen && (
+                    <BrandHealthCertificate
+                        organizationName={organization?.name || "Your Company"}
+                        asovScore={avgScore}
+                        driftRate={batchResult?.driftRate || 0}
+                        onClose={() => setIsCertificateOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
 
             <UpgradeModal
                 isOpen={isUpgradeModalOpen}

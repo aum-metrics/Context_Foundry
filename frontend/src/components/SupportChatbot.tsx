@@ -95,7 +95,7 @@ export default function SupportChatbot() {
             if (!token || !organization?.id) {
                 response = "Please authenticate and select an organization to use the AI Context Assistant.";
             } else {
-                setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your Context Moat...", timestamp: new Date() }]);
+                setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your Context Foundry...", timestamp: new Date() }]);
 
                 const res = await fetch("/api/chatbot/ask", {
                     method: "POST",
@@ -190,7 +190,7 @@ export default function SupportChatbot() {
                                 <BookOpen className="w-3 h-3 mr-1" /> Onboarding
                             </button>
                             <button onClick={() => generateBotResponse("lcrs")} className="flex items-center shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-                                <Shield className="w-3 h-3 mr-1" /> Hallucination
+                                <Shield className="w-3 h-3 mr-1" /> Context Drift
                             </button>
                         </div>
 

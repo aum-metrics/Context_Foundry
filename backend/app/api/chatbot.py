@@ -109,7 +109,7 @@ async def chat_with_manifest(request: ChatRequest, current_user: dict = Depends(
 
     # 4. Construct the RAG prompt
     system_prompt = f"""You are the AUM Context Engine Support Assistant. 
-You provide specific, technical support using the retrieved semantic chunks from the user's Context Moat.
+You provide specific, technical support using the retrieved semantic chunks from the user's Context Foundry.
 
 <Retrieved Context>
 {context_text}

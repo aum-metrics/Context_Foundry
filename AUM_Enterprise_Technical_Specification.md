@@ -40,17 +40,19 @@
 
 The global search paradigm is undergoing its most significant transition since 1998. Traditional Search Engine Optimization (SEO) — focused on keywords and backlinks — is being replaced by **Generative Engine Optimization (GEO)**.
 
-As Large Language Models (LLMs) such as GPT-4, Claude 3.5, and Gemini 2.0 become the primary interface for information retrieval, brands face a new existential threat: **Context Drift**.
+As Large Language Models (LLMs) such as GPT-4, Claude 3.5, and Gemini 2.0 become the primary interface for information retrieval through Retrieval-Augmented Generation (RAG) engines like SearchGPT, Perplexity, and Gemini with Google Search Grounding, brands face a new existential threat: **Context Drift**.
 
-### AUM Context Foundry: The Solution
+### AUM Context Foundry: The "Smoke Detector" for the Agentic Era
 
-AUM Context Foundry is the world's first "Brand accuracy firewall." It provides enterprises with a suite of tools to proactively monitor, analyze, and fix how AI models represent their corporate identity. By utilizing a zero-retention semantic pipeline, AUM allows CISOs and CMOs to audit their AI presence without compromising data privacy.
+AUM Context Foundry is the world's first **"Media Monitoring for the Agentic Era."** Think of it as a smoke detector for your brand's AI presence. It provides enterprises with the mathematical rigor of a developer tool (Ragas), but tailored for CMOs and PR teams.
+
+AUM allows enterprises to proactively monitor, analyze, and optimize how RAG engines ingest and represent their corporate identity. By utilizing a zero-retention semantic pipeline, AUM allows CISOs and CMOs to audit their AI presence without compromising data privacy.
 
 ### The Strategic Rationale: Why Now?
 
-1.  **Search Cannibalization**: AI models are projected to absorb 25% of traditional search traffic by 2026. Companies that only optimize for Google are invisible to GPT-4 and Claude.
-2.  **Latency of Truth**: Foundational models are snapshots. They rely on "stale" training data. AUM enables a **Ground Truth Injection** loop, forcing models to honor updated corporate context over outdated training data.
-3.  **The Rise of Agentic Commerce**: As AI agents start making purchasing decisions, a brand's "Latent Metadata" (JSON-LD and /llms.txt) becomes more important than their visual website.
+1.  **Retrieval Optimization**: Modern AI engines (SearchGPT, Perplexity) don't just rely on frozen weights; they perform live web crawls. AUM optimizes the **Retrieval step**, ensuring these engines ingest your high-fidelity "Ground Truth" rather than outdated third-party mentions.
+2.  **RAG Evaluation for Marketers**: While developers use LangSmith or Ragas for internal bots, Marketing and PR teams have zero tools to test how external AI engines view their brand. AUM is "Ragas for Marketers" — giving the CMO mathematical proof of brand fidelity.
+3.  **The Rise of Agentic Commerce**: As AI agents start making purchasing decisions based on real-time retrieval, a brand's "Latent Metadata" (JSON-LD and /llms.txt) becomes the primary lever for influence. AUM measures the "bleeding" and gives you the smoke detector needed to respond.
 
 ---
 
@@ -58,7 +60,7 @@ AUM Context Foundry is the world's first "Brand accuracy firewall." It provides 
 
 ### 2. Problem Statement: The Hallucination Crisis
 
-Enterprises currently lose revenue and brand trust due to AI hallucinations. For instance:
+Enterprises currently lose revenue and brand trust due to AI Context Drift. For instance:
 
 - **Price Fabrication**: An AI model incorrectly stating a discontinued pricing tier.
 - **Feature Delusion**: AI claiming a product has capabilities it does not yet possess.
@@ -94,16 +96,16 @@ Enterprises currently lose revenue and brand trust due to AI hallucinations. For
 ### 5. User Personas & Storyboards
 
 #### Persona A: The Guardian (CMO/Brand Manager)
-*   **Goal**: Ensure ChatGPT never misquotes the company's Q1 pricing.
-*   **User Story**: "As a Brand Manager, I want to upload our latest sales deck so the AI assistant for our customers always has the ground-truth context."
+*   **Goal**: Ensure SearchGPT and Perplexity never misquote the company's Q1 results.
+*   **User Story**: "As a Brand Manager, I want to optimize our /llms.txt and JSON-LD so that real-time AI crawlers always present our ground-truth context."
 
 #### Persona B: The Auditor (CISO/Security Lead)
-*   **Goal**: Enable AI experimentation without enterprise data leakage.
-*   **User Story**: "As an Auditor, I need to ensure that our internal docs are processed semantically but never stored on a third-party server's disk."
+*   **Goal**: Enable AI monitoring without enterprise data leakage.
+*   **User Story**: "As an Auditor, I need to ensure that our internal docs are processed semantically but never stored on a third-party server's disk during the monitoring phase."
 
-#### Persona C: The Optimizer (SEO Strategy Lead)
-*   **Goal**: Dominate the "AI Answer Box" in Perplexity and SearchGPT.
-*   **User Story**: "As an SEO Lead, I want a tool that tells me which specific sentences in our website are confusing GPT-4 so I can rewrite them for 'high accuracy' scores."
+#### Persona C: The Optimizer (SEO/PR Lead)
+*   **Goal**: Dominate the "AI Answer Box" in Perplexity and SearchGPT via technical RAG evaluation.
+*   **User Story**: "As a PR Lead, I want a tool like 'Ragas' but built for my workflow, so I can see exactly where AI engines are drifting from our brand narrative and fix it at the retrieval source."
 
 ---
 
@@ -207,7 +209,7 @@ Every LLM has a training data cutoff. GPT-4's training data may be 12–18 month
 - Your product features (which shipped last month)
 - Your support SLAs (which were revised in a new contract)
 
-Unless told explicitly, the AI will invent or extrapolate these facts — this is a hallucination.
+Unless told explicitly, the AI will invent or extrapolate these facts — this is known as Context Drift.
 
 #### The AUM Approach: Ground Truth Injection
 
@@ -351,7 +353,7 @@ except Exception:
 # simulation.py, lines 100-116 — claim verification
 # Each claim is classified as:
 # "supported"      — AI correctly stated this fact
-# "contradicted"   — AI stated a conflicting value (hallucination)
+# "contradicted"   — AI stated a conflicting value (Context Drift)
 # "not_mentioned"  — AI did not address this fact
 ```
 
@@ -371,12 +373,12 @@ blended = (0.4 * (1.0 - divergence)) + (0.6 * claim_accuracy)
 accuracy = round(blended * 100, 1)
 
 # Hallucination flag — OR condition is intentional
-has_hallucination = accuracy < 55 or any(c.get("verdict") == "contradicted" for c in claim_results)
+has_drift = accuracy < 55 or any(c.get("verdict") == "contradicted" for c in claim_results)
 ```
 
 **Why 60/40 weighting?** Claim verification is weighted higher because it catches specific factual contradictions. Embedding divergence is a broad semantic signal — useful for detecting topic drift but not precise enough to catch a wrong currency amount. A human CTO reviewing a 90%-accurate AI response that says the wrong price would flag it; so does AUM.
 
-**Why the OR condition on hallucination?** A response that is 90% accurate overall but contains a single directly contradicted claim (e.g., wrong phone number, wrong price) is still dangerous for brand integrity. The OR ensures that even a high-scoring response is flagged if any single fact is contradicted.
+**Why the OR condition on Context Drift?** A response that is 90% accurate overall but contains a single directly contradicted claim (e.g., wrong phone number, wrong price) is still dangerous for brand integrity. The OR ensures that even a high-scoring response is flagged if any single fact is contradicted.
 
 ---
 
@@ -535,7 +537,7 @@ Navigate to the **Data Ingestion** tab. Upload authoritative corporate documents
 #### 2. Model Baseline Simulation
 Go to the **Co-Intelligence Simulator**. Input a high-value customer query (e.g., "What is your refund policy for Enterprise users?").
 - **Simultaneous Testing**: Click "Generate Across All Models."
-- **Reviewing the LCRS**: Each model receives an accuracy score, a claim-by-claim verification table, and a hallucination flag if applicable.
+- **Reviewing the LCRS**: Each model receives an accuracy score, a claim-by-claim verification table, and a Context Drift flag if applicable.
 
 ### 18. The SoM Command Center
 

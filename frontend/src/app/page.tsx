@@ -93,9 +93,9 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.1 }}
                         className="text-6xl md:text-8xl font-light tracking-tighter mb-8 leading-[1.05] max-w-5xl text-slate-900 dark:text-white"
                     >
-                        Control Your Narrative in <br className="hidden md:block" />
+                        Media Monitoring for <br className="hidden md:block" />
                         <span className="font-medium text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-cyan-500 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-cyan-300">
-                            The Agentic Web.
+                            The Agentic Era.
                         </span>
                     </motion.h1>
 
@@ -105,7 +105,7 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="text-xl md:text-2xl text-slate-600 dark:text-slate-400/80 mb-12 max-w-3xl leading-relaxed font-light"
                     >
-                        AUM Context Foundry translates your unstructured data into verified JSON-LD schemas and <code className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded-md text-sm font-mono text-slate-800 dark:text-slate-300">/llms.txt</code> manifests. Win the LLM recommendation wars before they begin.
+                        AUM Context Foundry is the "Smoke Detector" for your brand. We optimize how SearchGPT, Perplexity, and Gemini ingest your identity. Precision RAG evaluation for the modern CMO.
                     </motion.p>
 
                     <motion.div
@@ -114,8 +114,8 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.3 }}
                         className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6"
                     >
-                        <Link href="/login" className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center transition-all shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 transform hover:-translate-y-1">
-                            Request Strategic Audit <ArrowRight className="ml-2 w-5 h-5" />
+                        <Link href="/login" className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center transition-all shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 transform hover:-translate-y-1 glow-indigo">
+                            Request Strategic Audit <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
                         <a href="#demo" className="w-full sm:w-auto px-8 py-4 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 font-medium flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                             <Play className="w-5 h-5 mr-2 text-indigo-500" /> Watch Demo
@@ -143,8 +143,8 @@ export default function LandingPage() {
                                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-medium text-slate-900 dark:text-white">Divergence Stress-Testing</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">We simulate thousands of prompts to ensure <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">d &gt; ε_div</span> remains below acceptable hallucination thresholds.</p>
+                                        <h4 className="font-medium text-slate-900 dark:text-white">RAG Fidelity Monitoring</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">We utilize technical rigor like 'Ragas' to ensure your brand's AI retrieval remains within 100% accuracy thresholds.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">
@@ -161,7 +161,7 @@ export default function LandingPage() {
 
                         <div className="relative group">
                             <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-500/10 to-fuchsia-500/10 rounded-3xl blur-2xl group-hover:from-indigo-500/20 group-hover:to-fuchsia-500/20 transition duration-700"></div>
-                            <div className="relative rounded-[2rem] border border-slate-200/50 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl p-8 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                            <div className="relative rounded-[2rem] glass-morphism p-8 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                                 <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-200/50 dark:border-white/10">
                                     <h3 className="font-medium text-slate-900 dark:text-white flex items-center">
                                         <Activity className="w-4 h-4 mr-2 text-indigo-500" />
@@ -365,7 +365,7 @@ export default function LandingPage() {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.1 }}
                             viewport={{ once: true }}
-                            className="rounded-[2rem] border-2 border-indigo-500/50 bg-white dark:bg-[#0a0a0a]/90 backdrop-blur-2xl p-8 shadow-2xl shadow-indigo-500/10 flex flex-col relative"
+                            className="rounded-[2rem] iridescent-border bg-white dark:bg-[#0a0a0a]/90 backdrop-blur-2xl p-8 shadow-2xl shadow-indigo-500/10 flex flex-col relative"
                         >
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-indigo-600 text-white text-xs font-semibold uppercase tracking-widest shadow-lg">
                                 Recommended

@@ -328,19 +328,19 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                 blended = (0.4 * semantic_accuracy) + (0.6 * claim_accuracy)
                 accuracy = round(blended * 100, 1)
                 # Hallucination flag: OR condition (Spec v2.2.0)
-                has_hallucination = accuracy < 55 or any(c.get("verdict") == "contradicted" for c in claim_results)
+                has_drift = accuracy < 55 or any(c.get("verdict") == "contradicted" for c in claim_results)
             else:
                 accuracy = round((1.0 - divergence) * 100, 1)
-                has_hallucination = divergence > eps_div
+                has_drift = divergence > eps_div
         else:
             accuracy = round((1.0 - divergence) * 100, 1)
-            has_hallucination = divergence > eps_div
+            has_drift = divergence > eps_div
 
         return {
             "model": model_name,
             "answer": answer,
             "accuracy": accuracy,
-            "hasHallucination": has_hallucination,
+            "hasHallucination": has_drift,
             "claimResults": claim_results,
             "claimScore": claim_score,
         }

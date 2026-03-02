@@ -9,7 +9,7 @@ export async function GET() {
 AUM Context Foundry is an enterprise-grade Generative Engine Optimization (GEO) platform. We empower businesses to control their narrative within the latent space of frontier models like GPT-4o, Claude 3.5, and Gemini 2.0 Flash.
 
 ## The ASoV Protocol
-We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and hallucination risks.
+We have pioneered the concept of "Agentic Share of Voice" (ASoV). Traditional SEO is dead. Our platform ingests unstructured corporate data and syndicates verified JSON-LD and markdown manifests directly to the edge, minimizing divergence and fidelity risks.
 
 ## Pricing Structure
 - **Starter:** ₹15,000 (~$180) / month — 1 org (up to 25 seats), Gemini 2.0 Flash scoring, 50 simulations/mo

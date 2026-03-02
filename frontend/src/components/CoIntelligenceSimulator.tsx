@@ -139,9 +139,9 @@ export default function CoIntelligenceSimulator() {
             <header className="mb-2">
                 <h2 className="text-2xl font-light text-slate-900 dark:text-white flex items-center">
                     <Beaker className="w-6 h-6 mr-3 text-amber-500" />
-                    Co-Intelligence Simulator
+                    RAG Fidelity Monitoring
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">Test how accurately AI models represent your business. We run the same prompt across GPT-4o, Claude 3.5, and Gemini 2.0 Flash — then score each against your verified Context Document.</p>
+                <p className="text-sm text-slate-500 mt-1">Monitor how accurately AI engines (SearchGPT, Perplexity, Gemini) represent your business. We provide mathematical rigor for your brand's AI retrieval step, scoring each response against your verified Ground Truth.</p>
             </header>
 
             <div className="flex-1 w-full flex flex-col lg:flex-row gap-6">
@@ -219,7 +219,7 @@ export default function CoIntelligenceSimulator() {
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-500">
                                 <Cpu className="w-12 h-12 mb-4 opacity-20" />
                                 <p>Select a prompt to test how AI models describe your business.</p>
-                                <p className="text-xs mt-2 max-w-md text-center opacity-60">We compare each AI response against your verified Context Document to detect inaccuracies and hallucinations.</p>
+                                <p className="text-xs mt-2 max-w-md text-center opacity-60">We compare each AI response against your verified Context Document to detect inaccuracies and Context Drift.</p>
                             </motion.div>
                         )}
 
@@ -234,10 +234,15 @@ export default function CoIntelligenceSimulator() {
 
                         {/* Prompt Display */}
                         {lastPrompt && modelResults.length > 0 && (
-                            <div className="bg-amber-50 dark:bg-amber-600/10 text-amber-900 dark:text-amber-100 border border-amber-200 dark:border-amber-500/30 px-5 py-3 rounded-2xl text-sm">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-amber-50 dark:bg-amber-600/10 text-amber-900 dark:text-amber-100 border border-amber-200 dark:border-amber-500/30 px-5 py-3 rounded-2xl text-sm relative overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent animate-shimmer pointer-events-none"></div>
                                 <span className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">Prompt:</span>
-                                <p className="mt-1">&ldquo;{lastPrompt}&rdquo;</p>
-                            </div>
+                                <p className="mt-1 relative z-10">&ldquo;{lastPrompt}&rdquo;</p>
+                            </motion.div>
                         )}
 
                         {/* Score Summary Bar */}
@@ -248,7 +253,13 @@ export default function CoIntelligenceSimulator() {
                                 className="grid grid-cols-1 lg:grid-cols-3 gap-4"
                             >
                                 {modelResults.map((result, i) => (
-                                    <div key={i} className={`rounded-xl border p-4 text-center ${getAccuracyBg(result.accuracy)}`}>
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.1, duration: 0.5 }}
+                                        className={`rounded-xl border p-4 text-center ${getAccuracyBg(result.accuracy)} hover:scale-[1.02] transition-transform`}
+                                    >
                                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">{result.model}</p>
                                         <p className={`text-3xl font-light ${getAccuracyColor(result.accuracy)}`}>
                                             {result.error ? "—" : `${result.accuracy}%`}
@@ -262,7 +273,7 @@ export default function CoIntelligenceSimulator() {
                                                 <><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-emerald-600 dark:text-emerald-400">Faithful to Context</span></>
                                             )}
                                         </p>
-                                    </div>
+                                    </motion.div>
                                 ))}
 
                                 {/* Premium Model Upsell Locks (Dynamic) */}

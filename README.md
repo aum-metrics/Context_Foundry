@@ -1,15 +1,15 @@
 # AUM Context Foundry
 
-Production-grade Generative Engine Optimization (GEO) Infrastructure for the Agentic Web.
+Media Monitoring for the Agentic Era. Precision RAG Evaluation for the CMO.
 
 ## 🏗 Architecture Overview
 
-- **Backend**: FastAPI (Python 3.12+) - Scalable, async-first GEO engine.
-- **Frontend**: Next.js 14+ (App Router) - Premium, high-performance UI.
+- **Backend**: FastAPI (Python 3.12+) - Scalable, async-first RAG optimization engine.
+- **Frontend**: Next.js 14+ (App Router) - Premium, high-performance monitoring dashboard.
 - **Database**: Google Firestore - Multi-tenant, real-time data layer.
 - **Vector Search**: Native Firestore Vector Indexing (O(log N)) with legacy Python fallback.
 - **Job Queue**: FirestoreTaskQueue - Persistent, state-aware background job management.
-- **AI Models**: Multi-provider (OpenAI, Gemini, Anthropic) LCRS scoring logic with automatic provider-fallback.
+- **AI Engines**: Multi-provider (SearchGPT, Perplexity, Gemini, OpenAI) LCRS scoring logic with automatic provider-fallback.
 
 ## 🛡 Hardening & Enterprise Scalability (v2.2.0-hardened)
 
@@ -17,14 +17,14 @@ The codebase has undergone a "Brutal Hardening" audit to ensure acquisition-read
 
 - **Logic Resilience**: 
     - **Recursive Chunking**: Smart splitting on paragraph and sentence boundaries for high fact-integrity.
-    - **Scoring Fallback**: Automatic failover to Gemini 2.0 Flash for claim verification if OpenAI is unavailable.
+    - **Retrieval Optimization**: Automatic failover to Gemini 2.0 Flash for claim verification if primary engines are unavailable.
 - **Performance at Scale**:
     - **Native Vector Search**: Transitioned from $O(N)$ memory search to $O(\log N)$ native indexing.
     - **Persistent Job Queueing**: Long-running SEO and Batch Analysis jobs are persisted to Firestore, surviving server restarts.
 - **Security & Multi-Tenancy**:
     - **IDOR Prevention**: All requests validated against organizational membership via `verify_user_org_access`.
     - **Dynamic Provisioning**: Plan-based simulation caps are read from the database, not hardcoded.
-    - **Zero-Retention Ingestion**: Raw binary data is flushed from RAM immediately after parsing.
+    - **Zero-Retention Ingestion**: Raw binary data is flushed from RAM immediately after parsing – optimized for monitoring workflows.
 
 ## 🚀 Getting Started (Production)
 

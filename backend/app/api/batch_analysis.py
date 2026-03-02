@@ -44,7 +44,7 @@ async def _process_batch_background(request: BatchSimulationRequest, job_id: str
         
         formatted_results = []
         total_accuracy = 0
-        hallucination_count = 0
+        drift_count = 0
         model_scores: Dict[str, List[float]] = {}
 
         for i, res in enumerate(results):
@@ -58,14 +58,14 @@ async def _process_batch_background(request: BatchSimulationRequest, job_id: str
                     if m_name not in model_scores: model_scores[m_name] = []
                     model_scores[m_name].append(acc)
                     total_accuracy += acc
-                    if model_result.get("hasHallucination"): hallucination_count += 1
+                    if model_result.get("hasHallucination"): drift_count += 1
 
         total_checks = sum(len(v) for v in model_scores.values())
         avg_accuracy = total_accuracy / total_checks if total_checks else 0
 
         return {
             "domainStability": round(avg_accuracy, 1),
-            "hallucinationRate": round((hallucination_count / total_checks * 100) if total_checks else 0, 1),
+            "hallucinationRate": round((drift_count / total_checks * 100) if total_checks else 0, 1),
             "modelAverages": {m: round(sum(s)/len(s), 1) for m, s in model_scores.items()},
             "totalChecks": total_checks,
             "results": formatted_results,

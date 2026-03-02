@@ -69,6 +69,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -79,15 +80,19 @@ body {
   from {
     transform: translateX(-100%);
   }
+
   to {
     transform: translateX(0);
   }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
   }
+
   50% {
     box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
   }
@@ -170,20 +175,76 @@ body {
 }
 
 /* ============================================ */
-/* PRINT STYLES */
+/* PREMIUM DESIGN SYSTEM (PHENOMENAL PHASE) */
 /* ============================================ */
 
-@media print {
-  .no-print {
-    display: none !important;
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
   }
-  
-  body {
-    background: white !important;
-    color: black !important;
+
+  100% {
+    transform: translateX(100%);
   }
-  
-  .print-only {
-    display: block !important;
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite linear;
+}
+
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.iridescent-border {
+  position: relative;
+  background-clip: padding-box;
+  -webkit-background-clip: padding-box;
+  border: 1px solid transparent;
+}
+
+.iridescent-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  margin: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #6366f1, #d946ef, #06b6d4, #6366f1);
+  background-size: 300% 300%;
+  animation: iridescent-flow 4s ease infinite;
+}
+
+@keyframes iridescent-flow {
+  0% {
+    background-position: 0% 50%;
   }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.text-gradient-premium {
+  background: linear-gradient(to right, #ffffff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glow-blue {
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+}
+
+.glow-indigo {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.15);
 }

@@ -15,6 +15,53 @@ import { auth } from "../lib/firebase";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
 
+const VectorCloud = () => {
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+            {Array.from({ length: 15 }).map((_, i) => (
+                <motion.div
+                    key={i}
+                    className="absolute w-1 h-1 bg-cyan-400 rounded-full"
+                    initial={{
+                        x: Math.random() * 100 + "%",
+                        y: Math.random() * 100 + "%",
+                        opacity: 0
+                    }}
+                    animate={{
+                        x: [null, Math.random() * 100 + "%"],
+                        y: [null, Math.random() * 100 + "%"],
+                        opacity: [0, 0.8, 0],
+                        scale: [0, 1.5, 0]
+                    }}
+                    transition={{
+                        duration: Math.random() * 3 + 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                />
+            ))}
+            <svg className="absolute inset-0 w-full h-full">
+                <motion.path
+                    d="M 50 50 Q 150 150 250 50 T 450 150"
+                    stroke="url(#grad1)"
+                    strokeWidth="0.5"
+                    fill="none"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: [0, 0.2, 0] }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                />
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#22d3ee" stopOpacity="0" />
+                        <stop offset="50%" stopColor="#22d3ee" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+    );
+};
+
 export default function SemanticIngestion() {
     const { organization } = useOrganization();
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
@@ -140,11 +187,11 @@ export default function SemanticIngestion() {
     const simulateExtraction = async (file: File) => {
         setStep("processing");
         const stages = [
-            "[SYS] Initializing Adversarial Logic Extraction...",
+            "[SYS] Initializing Fidelity Logic Extraction...",
             "[DATA] Parsing unstructured PDF data...",
             "[AI] Fetching via /api/ingest...",
             "[VERIFY] Cross-referencing claims against active product DB...",
-            "[SCHEMA] Generating SEO-optimized JSON-LD Schema (Organization, Product)..."
+            "[SCHEMA] Generating Agentic JSON-LD Schema (Organization, Product)..."
         ];
         let currentLog = 0;
         const interval = setInterval(() => {
@@ -279,7 +326,8 @@ export default function SemanticIngestion() {
                                         <div className="w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-700"></div>
                                     </div>
                                 </div>
-                                <div className="p-6 font-mono text-sm space-y-3 min-h-[300px]">
+                                <div className="relative p-6 font-mono text-sm space-y-3 min-h-[300px]">
+                                    <VectorCloud />
                                     {logs.map((log, i) => (
                                         <motion.div
                                             key={i}
