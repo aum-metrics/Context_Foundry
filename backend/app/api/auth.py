@@ -14,9 +14,6 @@ import logging
 from core.config import settings
 from core.jwt import create_access_token, TokenData
 
-# In-memory OTP store (fallback)
-_otp_store = {}
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -133,31 +130,22 @@ async def send_otp(request: OTPRequest):
         otp = generate_otp()
         expires_at = datetime.utcnow() + timedelta(minutes=5)
         
-        # Save OTP
-        saved_to_db = False
-        if supabase:
-            try:
-                data = {
-                    'email': email,
-                    'otp': otp,
-                    'expires_at': expires_at.isoformat(),
-                    'is_used': False,
-                    'attempts': 0
-                }
-                result = supabase.table('email_otps').insert(data).execute()
-                saved_to_db = True
-                logger.info(f"✅ OTP saved to Supabase for {email}")
-            except Exception as e:
-                logger.error(f"❌ Supabase OTP insert failed: {e}")
-                logger.info(f"⚠️ Falling back to memory store for {email}")
-        
-        if not saved_to_db:
-            _otp_store[email] = {
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Authentication database not configured")
+
+        try:
+            data = {
+                'email': email,
                 'otp': otp,
-                'expires_at': expires_at,
+                'expires_at': expires_at.isoformat(),
+                'is_used': False,
                 'attempts': 0
             }
-            logger.info(f"💾 OTP stored in memory for {email}")
+            result = supabase.table('email_otps').insert(data).execute()
+            logger.info(f"✅ OTP saved to Supabase for {email}")
+        except Exception as e:
+            logger.error(f"❌ Supabase OTP insert failed: {e}")
+            raise HTTPException(status_code=500, detail="Authentication database unavailable")
         
         # Send email
         await send_otp_email(email, otp)
@@ -167,9 +155,6 @@ async def send_otp(request: OTPRequest):
             "message": "OTP sent successfully",
             "expires_in": 300
         }
-        
-        if settings.DEBUG:
-            response["dev_otp"] = otp
         
         logger.info(f"✅ OTP process complete for {email}")
         return response
@@ -194,66 +179,55 @@ async def verify_otp(request: OTPVerify):
         
         verified = False
         
-        # Try Supabase first
-        if supabase:
-            try:
-                response = supabase.table('email_otps')\
-                    .select('*')\
-                    .eq('email', email)\
-                    .eq('is_used', False)\
-                    .order('created_at', desc=True)\
-                    .limit(1)\
-                    .execute()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Authentication database not configured")
+            
+        try:
+            response = supabase.table('email_otps')\
+                .select('*')\
+                .eq('email', email)\
+                .eq('is_used', False)\
+                .order('created_at', desc=True)\
+                .limit(1)\
+                .execute()
+            
+            if response.data:
+                otp_record = response.data[0]
+                expires_at = datetime.fromisoformat(
+                    otp_record['expires_at'].replace('Z', '+00:00')
+                )
                 
-                if response.data:
-                    otp_record = response.data[0]
-                    expires_at = datetime.fromisoformat(
-                        otp_record['expires_at'].replace('Z', '+00:00')
-                    )
-                    
-                    if datetime.utcnow().replace(tzinfo=expires_at.tzinfo) > expires_at:
-                        logger.warning(f"⏰ OTP expired for {email}")
-                        raise HTTPException(status_code=400, detail="OTP expired")
-                    
-                    if otp_record.get('attempts', 0) >= 3:
-                        logger.warning(f"🚫 Too many attempts for {email}")
-                        raise HTTPException(status_code=400, detail="Too many failed attempts")
-                    
-                    if otp_record['otp'] == otp:
-                        supabase.table('email_otps')\
-                            .update({'is_used': True})\
-                            .eq('id', otp_record['id'])\
-                            .execute()
-                        verified = True
-                        logger.info(f"✅ OTP verified from database for {email}")
-                    else:
-                        supabase.table('email_otps')\
-                            .update({'attempts': otp_record.get('attempts', 0) + 1})\
-                            .eq('id', otp_record['id'])\
-                            .execute()
-                        logger.warning(f"❌ Invalid OTP for {email}")
-                        raise HTTPException(status_code=400, detail="Invalid OTP")
-                        
-            except HTTPException:
-                raise
-            except Exception as e:
-                logger.error(f"Database verification failed: {e}")
-        
-        # Fallback to memory store
-        if not verified and email in _otp_store:
-            stored = _otp_store[email]
-            if stored['expires_at'] < datetime.utcnow():
-                logger.warning(f"⏰ Memory OTP expired for {email}")
-                raise HTTPException(status_code=400, detail="OTP expired")
-            if stored['otp'] == otp:
-                del _otp_store[email]
-                verified = True
-                logger.info(f"✅ OTP verified from memory for {email}")
+                if datetime.utcnow().replace(tzinfo=expires_at.tzinfo) > expires_at:
+                    logger.warning(f"⏰ OTP expired for {email}")
+                    raise HTTPException(status_code=400, detail="OTP expired")
+                
+                if otp_record.get('attempts', 0) >= 3:
+                    logger.warning(f"🚫 Too many attempts for {email}")
+                    raise HTTPException(status_code=400, detail="Too many failed attempts")
+                
+                if otp_record['otp'] == otp:
+                    supabase.table('email_otps')\
+                        .update({'is_used': True})\
+                        .eq('id', otp_record['id'])\
+                        .execute()
+                    verified = True
+                    logger.info(f"✅ OTP verified from database for {email}")
+                else:
+                    supabase.table('email_otps')\
+                        .update({'attempts': otp_record.get('attempts', 0) + 1})\
+                        .eq('id', otp_record['id'])\
+                        .execute()
+                    logger.warning(f"❌ Invalid OTP for {email}")
+                    raise HTTPException(status_code=400, detail="Invalid OTP")
             else:
-                logger.warning(f"❌ Invalid memory OTP for {email}")
-        
-        if not verified:
-            raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+                raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+                    
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Database verification failed: {e}")
+            raise HTTPException(status_code=500, detail="Authentication database unavailable")
+
         
         # Get or create user
         user = None

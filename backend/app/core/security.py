@@ -35,6 +35,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         logger.info("🔓 Dev-mode: accepting mock token (ALLOW_MOCK_AUTH is ON)")
         return {
             "uid": "mock_uid_dev",
+            "id": "mock_uid_dev",
             "email": "dev@localhost",
             "name": "Dev User",
         }
@@ -42,6 +43,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     try:
         # Verify the ID token using the Firebase Admin SDK.
         decoded_token = auth.verify_id_token(token, app=firebase_app)
+        if "uid" in decoded_token and "id" not in decoded_token:
+            decoded_token["id"] = decoded_token["uid"]
         return decoded_token
     except auth.ExpiredIdTokenError:
         raise HTTPException(

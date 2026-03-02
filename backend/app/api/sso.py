@@ -20,6 +20,7 @@ except:
     SUPABASE_AVAILABLE = False
 
 from core.config import settings
+from core.firebase_config import db
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -86,9 +87,6 @@ class SSOCallbackRequest(BaseModel):
     state: str
     organization_id: str
 
-# In-memory storage for SSO configs (should be in database)
-sso_configs: Dict[str, SSOConfig] = {}
-sso_states: Dict[str, Dict[str, Any]] = {}  # CSRF protection
 
 @router.get("/providers")
 async def list_sso_providers():
@@ -122,27 +120,11 @@ async def configure_sso(config: SSOConfig):
     if config.provider == "azure_ad" and not config.tenant_id:
         raise HTTPException(status_code=400, detail="Azure AD tenant ID is required")
     
-    # Store configuration
-    sso_configs[config.organization_id] = config
-    
-    # Save to database
-    if supabase:
-        try:
-            supabase.table("sso_configurations").upsert({
-                "organization_id": config.organization_id,
-                "provider": config.provider,
-                "domain": config.domain,
-                "tenant_id": config.tenant_id,
-                "client_id": config.client_id,
-                "client_secret": config.client_secret,  # Should be encrypted
-                "redirect_uri": config.redirect_uri,
-                "enabled": config.enabled,
-                "auto_provision": config.auto_provision,
-                "default_role": config.default_role,
-                "updated_at": datetime.utcnow().isoformat()
-            }).execute()
-        except Exception as e:
-            logger.error(f"Failed to save SSO config: {e}")
+    # Save to Firestore
+    try:
+        db.collection("sso_configs").document(config.organization_id).set(config.model_dump())
+    except Exception as e:
+        logger.error(f"Failed to save SSO config to Firestore: {e}")
     
     logger.info(f"✅ SSO configured for organization {config.organization_id}: {config.provider}")
     
@@ -159,165 +141,15 @@ async def initiate_sso_login(request: SSOLoginRequest):
     Initiate SSO login flow
     Returns authorization URL for redirect
     """
-    # Get SSO configuration
-    if request.organization_id not in sso_configs:
-        raise HTTPException(status_code=404, detail="SSO not configured for this organization")
-    
-    config = sso_configs[request.organization_id]
-    
-    if not config.enabled:
-        raise HTTPException(status_code=403, detail="SSO is disabled for this organization")
-    
-    provider_config = SSO_PROVIDERS[config.provider]
-    
-    # Generate state for CSRF protection
-    state = secrets.token_urlsafe(32)
-    sso_states[state] = {
-        "organization_id": request.organization_id,
-        "provider": config.provider,
-        "redirect_url": request.redirect_url,
-        "created_at": datetime.utcnow().isoformat()
-    }
-    
-    # Build authorization URL
-    if config.provider == "okta":
-        auth_url = provider_config["auth_url"].format(domain=config.domain)
-    elif config.provider == "azure_ad":
-        auth_url = provider_config["auth_url"].format(tenant=config.tenant_id)
-    else:
-        auth_url = provider_config["auth_url"]
-    
-    # Add query parameters
-    scopes = " ".join(provider_config["scopes"])
-    authorization_url = (
-        f"{auth_url}?"
-        f"client_id={config.client_id}&"
-        f"response_type=code&"
-        f"scope={scopes}&"
-        f"redirect_uri={config.redirect_uri}&"
-        f"state={state}"
-    )
-    
-    logger.info(f"🔐 SSO login initiated for {request.organization_id} via {config.provider}")
-    
-    return {
-        "success": True,
-        "authorization_url": authorization_url,
-        "state": state,
-        "provider": config.provider
-    }
-
-@router.post("/callback")
-async def handle_sso_callback(request: SSOCallbackRequest):
-    """
-    Handle SSO callback after user authorization
-    Exchange code for tokens and create/update user
-    """
-    # Validate state (CSRF protection)
-    if request.state not in sso_states:
-        raise HTTPException(status_code=400, detail="Invalid state parameter")
-    
-    state_data = sso_states[request.state]
-    organization_id = state_data["organization_id"]
-    
-    # Get SSO configuration
-    if organization_id not in sso_configs:
-        raise HTTPException(status_code=404, detail="SSO configuration not found")
-    
-    config = sso_configs[organization_id]
-    provider_config = SSO_PROVIDERS[config.provider]
-    
-    try:
-        # Exchange authorization code for tokens
-        # This is a simplified version - real implementation would use requests library
-        # to make HTTP calls to the token endpoint
-        
-        # For now, return mock user data
-        # In production, you would:
-        # 1. Exchange code for access token
-        # 2. Use access token to get user info
-        # 3. Create/update user in your database
-        # 4. Generate your own JWT token
-        
-        user_info = {
-            "email": "user@example.com",  # From SSO provider
-            "name": "John Doe",
-            "organization_id": organization_id,
-            "sso_provider": config.provider,
-            "role": config.default_role
-        }
-        
-        # Create or update user
-        if supabase and config.auto_provision:
-            try:
-                # Check if user exists
-                result = supabase.table("user_profiles").select("*").eq(
-                    "email", user_info["email"]
-                ).execute()
-                
-                if result.data and len(result.data) > 0:
-                    # Update existing user
-                    supabase.table("user_profiles").update({
-                        "last_login": datetime.utcnow().isoformat(),
-                        "sso_provider": config.provider,
-                        "organization_id": organization_id
-                    }).eq("email", user_info["email"]).execute()
-                else:
-                    # Create new user
-                    supabase.table("user_profiles").insert({
-                        "email": user_info["email"],
-                        "name": user_info["name"],
-                        "organization_id": organization_id,
-                        "sso_provider": config.provider,
-                        "role": config.default_role,
-                        "subscription_type": "professional",  # SSO users get professional
-                        "created_at": datetime.utcnow().isoformat(),
-                        "last_login": datetime.utcnow().isoformat()
-                    }).execute()
-                    
-                    logger.info(f"✅ Auto-provisioned user: {user_info['email']}")
-                    
-            except Exception as e:
-                logger.error(f"Failed to provision user: {e}")
-        
-        # Generate JWT token for your application
-        token_payload = {
-            "email": user_info["email"],
-            "name": user_info["name"],
-            "organization_id": organization_id,
-            "sso_provider": config.provider,
-            "exp": datetime.utcnow() + timedelta(days=7)
-        }
-        
-        # This should use your actual JWT secret
-        token = jwt.encode(token_payload, "your-secret-key", algorithm="HS256")
-        
-        # Clean up state
-        del sso_states[request.state]
-        
-        logger.info(f"✅ SSO login successful for {user_info['email']}")
-        
-        return {
-            "success": True,
-            "token": token,
-            "user": user_info,
-            "redirect_url": state_data.get("redirect_url", "/dashboard")
-        }
-        
-    except Exception as e:
-        logger.error(f"SSO callback failed: {e}")
-        raise HTTPException(status_code=500, detail=f"SSO authentication failed: {str(e)}")
-
-@router.get("/organizations/{organization_id}/config")
-async def get_sso_config(organization_id: str):
-    """Get SSO configuration for an organization (public info only)"""
-    if organization_id not in sso_configs:
+    # Get SSO configuration from Firestore
+    config_doc = db.collection("sso_configs").document(organization_id).get()
+    if not config_doc.exists:
         return {
             "success": True,
             "sso_enabled": False
         }
     
-    config = sso_configs[organization_id]
+    config = SSOConfig(**config_doc.to_dict())
     
     return {
         "success": True,
@@ -359,7 +191,7 @@ async def sso_health():
         "status": "healthy",
         "service": "sso",
         "providers": list(SSO_PROVIDERS.keys()),
-        "active_configs": len(sso_configs),
+        "active_configs": "dynamically_fetched",
         "features": [
             "okta_integration",
             "azure_ad_integration",

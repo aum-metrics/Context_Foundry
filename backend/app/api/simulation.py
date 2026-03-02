@@ -444,42 +444,45 @@ async def evaluate_simulation(
         except Exception as e:
             logger.error(f"Failed to fetch org plan: {e}")
 
-    # Count usage (this billing cycle)
-    sims_this_cycle = 0
-    if db:
-        try:
-            # Default to 1st of month calendar fallback
-            period_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            
-            sub_data = org_data.get("subscription", {})
-            start_ts = sub_data.get("currentPeriodStart")
-            if start_ts:
-                period_start = start_ts
-                
-            hist_query = db.collection("organizations").document(request.orgId)\
-                .collection("scoringHistory")\
-                .where("timestamp", ">=", period_start)
-            
-            count_query = hist_query.count()
-            count_result = count_query.get()
-            sims_this_cycle = count_result[0][0].value
-        except Exception as e:
-            logger.error(f"Failed to fetch usage: {e}")
-
-    # Enforce Dynamic Limits (Hardened)
+    # Enforce Dynamic Limits with Firestore Transaction (Race Condition Fix)
     limits = {
         "starter": 50,
         "growth": 500,
         "enterprise": 5000
     }
-    # Allow DB override for specific organizations
     plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 50))
-    
-    if sims_this_cycle >= plan_limit:
-        raise HTTPException(
-            status_code=402, 
-            detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
-        )
+
+    if db and not is_dev:
+        from google.cloud import firestore
+        org_ref = db.collection("organizations").document(request.orgId)
+        transaction = db.transaction()
+        
+        @firestore.transactional
+        def check_and_increment(txn, ref):
+            snap = ref.get(transaction=txn)
+            if not snap.exists:
+                return True
+            data = snap.to_dict() or {}
+            sub = data.get("subscription", {})
+            current = sub.get("simsThisCycle", 0)
+            if current >= plan_limit:
+                return False
+            txn.update(ref, {"subscription.simsThisCycle": current + 1})
+            return True
+            
+        success = False
+        try:
+            success = check_and_increment(transaction, org_ref)
+        except Exception as e:
+            logger.error(f"Transaction failed: {e}")
+            # Fail open or closed on DB error? We'll fail closed.
+            raise HTTPException(status_code=500, detail="Billing verification failed.")
+            
+        if not success:
+            raise HTTPException(
+                status_code=402, 
+                detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
+            )
 
     # ----- 2. FETCH CONTEXT & KEYS -----
     manifest_content, manifest_embedding, api_keys = _fetch_manifest_and_keys(request)

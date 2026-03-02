@@ -146,7 +146,7 @@ export default function SemanticIngestion() {
         }
 
         let token: string | undefined;
-        const isMock = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash";
+        const isMock = process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash");
         if (isMock) {
             token = "mock-dev-token";
         } else {
@@ -184,64 +184,7 @@ export default function SemanticIngestion() {
         setTimeout(() => setStep("editor"), 1500);
     };
 
-    const simulateExtraction = async (file: File) => {
-        setStep("processing");
-        const stages = [
-            "[SYS] Initializing Fidelity Logic Extraction...",
-            "[DATA] Parsing unstructured PDF data...",
-            "[AI] Fetching via /api/ingest...",
-            "[VERIFY] Cross-referencing claims against active product DB...",
-            "[SCHEMA] Generating Agentic JSON-LD Schema (Organization, Product)..."
-        ];
-        let currentLog = 0;
-        const interval = setInterval(() => {
-            if (currentLog < stages.length) {
-                setLogs((prev) => [...prev, stages[currentLog]]);
-                currentLog++;
-            }
-        }, 800);
 
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            if (organization?.id) {
-                formData.append("orgId", organization.id);
-            }
-
-            const isMockFallback = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash";
-            let token: string | undefined;
-            if (isMockFallback) {
-                token = "mock-dev-token";
-            } else {
-                token = await auth.currentUser?.getIdToken() || undefined;
-                if (!token) throw new Error("Authentication required for ingestion.");
-            }
-
-            const res = await fetch("/api/ingestion/parse", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            const schemaJson = await res.json();
-
-            clearInterval(interval);
-            setLogs((prev) => [...prev, "[SUCCESS] Extraction complete. Ready for Schema Editor."]);
-
-            if (res.ok) {
-                setSchemaData(JSON.stringify(schemaJson, null, 2));
-            } else {
-                setSchemaData(JSON.stringify({ error: schemaJson.detail || "Failed API" }, null, 2));
-            }
-
-            setTimeout(() => setStep("editor"), 1500);
-        } catch (err) {
-            clearInterval(interval);
-            setLogs((prev) => [...prev, "[ERROR] Extraction failed."]);
-        }
-    };
 
     return (
         <div className="w-full h-full flex flex-col space-y-6 animate-fade-in font-sans">

@@ -14,7 +14,7 @@ import TeamSettings from "@/components/TeamSettings";
 import { auth } from "@/lib/firebase";
 
 export default function AUMContextFoundry() {
-  const [activeView, setActiveView] = useState("asov");
+  const [activeView, setActiveView] = useState("som");
   const { theme, toggleTheme } = useTheme();
   const { orgUser } = useOrganization();
 
@@ -88,7 +88,7 @@ export default function AUMContextFoundry() {
           )}
           <button
             onClick={() => {
-              if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+              if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 localStorage.removeItem("mock_auth_user");
                 window.dispatchEvent(new Event("mock_auth_change"));
               } else {
@@ -105,7 +105,7 @@ export default function AUMContextFoundry() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none -translate-y-20"></div>
-        {activeView === "asov" && <SoMCommandCenter />}
+        {activeView === "som" && <SoMCommandCenter />}
         {activeView === "ingestion" && <SemanticIngestion />}
         {activeView === "manifest" && <AgentManifest />}
         {activeView === "simulator" && <CoIntelligenceSimulator />}

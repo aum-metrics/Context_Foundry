@@ -10,9 +10,16 @@
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 
 export default function ContactPage() {
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 5000);
+    };
     return (
         <div className="min-h-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500/30">
             <nav className="p-8">
@@ -88,24 +95,27 @@ export default function ContactPage() {
                         <p className="opacity-80 leading-relaxed mb-8">
                             We are helping global leaders secure their narrative in the agentic web. Request a personalized strategic audit today.
                         </p>
-                        <form className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <input
                                 type="text"
+                                required
                                 placeholder="Full Name"
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/40"
                             />
                             <input
                                 type="email"
+                                required
                                 placeholder="Business Email"
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/40"
                             />
                             <textarea
                                 placeholder="Strategic Goals"
+                                required
                                 rows={4}
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/40"
                             ></textarea>
-                            <button className="w-full bg-white text-indigo-600 font-semibold py-4 rounded-xl hover:bg-slate-100 transition-colors">
-                                Dispatch Request
+                            <button type="submit" className="w-full bg-white text-indigo-600 font-semibold py-4 rounded-xl hover:bg-slate-100 transition-colors">
+                                {submitted ? "Request Dispatched ✓" : "Dispatch Request"}
                             </button>
                         </form>
                     </motion.div>

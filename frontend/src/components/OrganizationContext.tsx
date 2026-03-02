@@ -50,7 +50,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 return;
             }
 
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 // Mock organization for local demo without Firebase
                 const emailDomain = user.email?.split('@')[1]?.split('.')[0] || 'My Company';
                 const orgName = emailDomain.charAt(0).toUpperCase() + emailDomain.slice(1);

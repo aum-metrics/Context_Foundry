@@ -24,7 +24,7 @@ export default function TeamSettings() {
         const fetchMembers = async () => {
             if (!organization || !orgUser) return;
 
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 setMembers([
                     orgUser,
                     { uid: "mock_user_2", email: `colleague@${organization.name.toLowerCase().replace(/\s+/g, '')}.com`, role: "member", orgId: organization.id }
@@ -81,7 +81,7 @@ export default function TeamSettings() {
 
         setInviting(true);
         try {
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 await new Promise(r => setTimeout(r, 1000));
                 setMembers([...members, { uid: `mock_${Date.now()}`, email: inviteEmail, role: "member", orgId: organization.id }]);
                 organization.activeSeats += 1;
@@ -116,7 +116,7 @@ export default function TeamSettings() {
         if (!organization) return;
         setSavingKeys(true);
         try {
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 await new Promise(r => setTimeout(r, 1000));
             } else {
                 await updateDoc(doc(db, "organizations", organization.id), {

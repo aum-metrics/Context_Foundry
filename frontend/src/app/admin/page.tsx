@@ -25,18 +25,30 @@ export default function AdminLoginPage() {
         setError("");
         setLoading(true);
 
-        // Product admin credentials — hardcoded for now, move to env/Firestore in production
-        const ADMIN_EMAIL = "admin@aumdatalabs.com";
-        const ADMIN_PASS = "AUM@2025!Foundry";
+        try {
+            const res = await fetch("/api/admin/auth", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-            sessionStorage.setItem("aum_admin_token", "admin_authenticated");
-            sessionStorage.setItem("aum_admin_email", email);
-            router.push("/admin/dashboard");
-        } else {
-            setError("Invalid credentials. Product admin access only.");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    sessionStorage.setItem("aum_admin_token", data.token);
+                    sessionStorage.setItem("aum_admin_email", email);
+                    router.push("/admin/dashboard");
+                } else {
+                    setError(data.error || "Invalid credentials. Product admin access only.");
+                }
+            } else {
+                setError("Invalid credentials. Product admin access only.");
+            }
+        } catch (err) {
+            setError("Authentication service unavailable.");
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

@@ -68,7 +68,7 @@ For deep knowledge graph access, use /llms-full.txt.`;
     const handleDeploy = async () => {
         setDeploying(true);
         try {
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 await new Promise(r => setTimeout(r, 1500));
             } else if (organization) {
                 await setDoc(doc(db, "organizations", organization.id, "manifests", "default"), {
@@ -110,7 +110,7 @@ For deep knowledge graph access, use /llms-full.txt.`;
                         </span>
                     ) : deployed ? (
                         <span className="flex items-center">
-                            <Check className="w-4 h-4 mr-2" /> Live at /llms.txt
+                            <Check className="w-4 h-4 mr-2" /> Live at /llms.txt?orgId={organization?.id}
                         </span>
                     ) : (
                         <span className="flex items-center">

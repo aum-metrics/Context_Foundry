@@ -19,7 +19,7 @@ except ImportError:
     SUPABASE_AVAILABLE = False
 
 from core.config import settings
-from core.dependencies import get_current_user
+from core.security import get_current_user
 from api.audit import log_audit_event
 
 router = APIRouter()

@@ -11,7 +11,17 @@ export const Logo = ({
     showText?: boolean;
     theme?: 'dark' | 'light' | 'auto';
 }) => {
-    const isDark = theme === 'dark' || (theme === 'auto' && typeof window !== 'undefined' && document.documentElement.classList.contains('dark'));
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const isDark = mounted ? (theme === 'dark' || (theme === 'auto' && document.documentElement.classList.contains('dark'))) : false;
+
+    // Prevent hydration mismatch by rendering a stable placeholder
+    if (!mounted) {
+        return <div style={{ width: size, height: size }} className={className} />;
+    }
 
     return (
         <div className={`flex items-center gap-4 ${className}`}>

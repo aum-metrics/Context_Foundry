@@ -17,7 +17,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const isPublicPath = PUBLIC_PATHS.includes(pathname);
 
     useEffect(() => {
-        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+        if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
             const checkMockAuth = () => {
                 const mockUserEmail = localStorage.getItem("mock_auth_user");
 

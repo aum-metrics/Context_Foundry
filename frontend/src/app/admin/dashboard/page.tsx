@@ -63,7 +63,7 @@ export default function AdminDashboard() {
         }
 
         try {
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 setOrgs(FALLBACK_ORGS);
                 setLoadingOrgs(false);
                 setLoadingMore(false);
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
         const actionId = `save-${orgId}-${provider}`;
         setActionLoading(actionId);
         try {
-            if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== "mock-key-to-prevent-crash") {
+            if ((process.env.NODE_ENV !== "development" || (process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== "mock-key-to-prevent-crash"))) {
                 await updateDoc(doc(db, "organizations", orgId), {
                     [`apiKeys.${provider}`]: value
                 });

@@ -117,8 +117,10 @@ export default function SoMCommandCenter() {
                 // Poll for completion
                 const pollInterval = setInterval(async () => {
                     try {
+                        let currentToken = await auth.currentUser?.getIdToken();
+                        if (!currentToken && process.env.NODE_ENV === "development") currentToken = "mock-dev-token";
                         const statusRes = await fetch(`/api/batch/status/${organization.id}/${data.jobId}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
+                            headers: { 'Authorization': `Bearer ${currentToken}` }
                         });
                         if (statusRes.ok) {
                             const statusData = await statusRes.json();
@@ -175,7 +177,8 @@ export default function SoMCommandCenter() {
                 // Poll for completion to avoid 504 timeouts on heavy Playwright rendering
                 const pollInterval = setInterval(async () => {
                     try {
-                        const currentToken = await auth.currentUser?.getIdToken();
+                        let currentToken = await auth.currentUser?.getIdToken();
+                        if (!currentToken && process.env.NODE_ENV === "development") currentToken = "mock-dev-token";
                         const statusRes = await fetch(`/api/seo/audit/status/${organization.id}/${data.jobId}`, {
                             headers: { 'Authorization': `Bearer ${currentToken}` }
                         });
@@ -205,7 +208,7 @@ export default function SoMCommandCenter() {
     };
 
     const fetchHistory = async (orgId: string) => {
-        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+        if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
             return null; // fallback signal
         }
         const historyRef = collection(db, "organizations", orgId, "scoringHistory");

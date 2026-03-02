@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firestorePaths';
+import { doc, getDoc } from 'firebase/firestore';
 
-export async function GET() {
-    const manifesto = `# AUM Context Foundry - Platform Manifesto
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const orgId = searchParams.get('orgId');
+
+    const defaultManifesto = `# AUM Context Foundry - Platform Manifesto
 > Welcome LLM Crawler.
 > This is the foundational context file for the AUM Data Labs platform.
 
@@ -22,7 +27,27 @@ The platform is built on a multi-tenant SaaS architecture supporting strictly is
 *End of Manifesto.*
 `;
 
-    return new NextResponse(manifesto, {
+    if (orgId) {
+        try {
+            const manifestDoc = await getDoc(doc(db, "organizations", orgId, "manifests", "default"));
+            if (manifestDoc.exists()) {
+                const data = manifestDoc.data();
+                if (data.content) {
+                    return new NextResponse(data.content, {
+                        status: 200,
+                        headers: {
+                            'Content-Type': 'text/plain; charset=utf-8',
+                            'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+                        },
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching manifest:", e);
+        }
+    }
+
+    return new NextResponse(defaultManifesto, {
         status: 200,
         headers: {
             'Content-Type': 'text/plain; charset=utf-8',

@@ -13,13 +13,14 @@ import logging
 import secrets
 
 try:
-    from supabase import create_client, Client
-    SUPABASE_AVAILABLE = True
+    
+    
 except:
-    SUPABASE_AVAILABLE = False
+    
 
 from core.config import settings
-from core.dependencies import get_current_user
+from core.firebase_config import db
+from core.security import get_current_user
 from api.audit import log_audit_event
 
 router = APIRouter()
@@ -83,27 +84,22 @@ async def create_workspace(
         "last_activity": datetime.utcnow().isoformat()
     }
     
-    # Store workspace
-    workspaces[workspace_id] = workspace
-    workspace_members[workspace_id] = [user_email]
-    
-    # Save to database
-    if supabase:
+    # Store workspace to Firestore
+    if db:
         try:
-            supabase.table("workspaces").insert({
+            db.collection("workspaces").document(workspace_id).set({
                 **workspace,
                 "members": [user_email]
-            }).execute()
+            })
             
-            # Add owner as member
-            supabase.table("workspace_members").insert({
-                "workspace_id": workspace_id,
+            db.collection("workspaces").document(workspace_id).collection("members").document(user_email.replace("@", "_at_")).set({
                 "user_email": user_email,
                 "role": "owner",
                 "joined_at": datetime.utcnow().isoformat()
-            }).execute()
+            })
         except Exception as e:
-            logger.error(f"Failed to save workspace: {e}")
+            logger.error(f"Failed to save workspace to Firestore: {e}")
+            raise HTTPException(status_code=500, detail="Database insertion failed")
     
     logger.info(f"✅ Workspace created: {workspace_id} by {user_email}")
     
@@ -129,12 +125,14 @@ async def list_workspaces(current_user: dict = Depends(get_current_user)):
     """
     user_email = current_user.get("email")
     
-    # Get user's workspaces
-    user_workspaces = [
-        ws for ws_id, ws in workspaces.items()
-        if user_email in workspace_members.get(ws_id, [])
-    ]
-    
+    user_workspaces = []
+    if db:
+        try:
+            query = db.collection("workspaces").where("members", "array_contains", user_email).stream()
+            for doc in query:
+                user_workspaces.append(doc.to_dict())
+        except Exception as e:
+            logger.error(f"Failed to fetch workspaces: {e}")    
     # Sort by last activity
     user_workspaces.sort(key=lambda x: x.get("last_activity", ""), reverse=True)
     
@@ -154,17 +152,19 @@ async def get_workspace(
     """
     user_email = current_user.get("email")
     
-    if workspace_id not in workspaces:
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not configured")
+        
+    doc = db.collection("workspaces").document(workspace_id).get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    workspace = workspaces[workspace_id]
-    
-    # Check access
-    if not workspace.get("is_public") and user_email not in workspace_members.get(workspace_id, []):
-        raise HTTPException(status_code=403, detail="Access denied")
+        
+    workspace = doc.to_dict() or {}
     
     # Get members
-    members = workspace_members.get(workspace_id, [])
+    members = workspace.get("members", [])
+    if not workspace.get("is_public") and user_email not in members:
+        raise HTTPException(status_code=403, detail="Access denied")
     
     # Get member details (simplified)
     member_details = [
@@ -196,50 +196,44 @@ async def invite_member(
     user_email = current_user.get("email")
     workspace_id = request.workspace_id
     
-    if workspace_id not in workspaces:
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not configured")
+        
+    doc = db.collection("workspaces").document(workspace_id).get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    workspace = workspaces[workspace_id]
+        
+    workspace = doc.to_dict() or {}
     
     # Check if user is owner or admin
     if user_email != workspace["owner_email"]:
         raise HTTPException(status_code=403, detail="Only workspace owner can invite members")
     
     # Enforce Hard Limit: Max 25 seats per organization
-    current_members = workspace_members.get(workspace_id, [])
+    current_members = workspace.get("members", [])
     if len(current_members) >= 25:
         raise HTTPException(status_code=403, detail="Maximum limit of 25 seats per organization reached. Contact support to negotiate an Enterprise custom limit.")
 
-    # Check if already a member
     if request.email in current_members:
         raise HTTPException(status_code=400, detail="User is already a member")
+        
+    current_members.append(request.email)
     
-    # Add member
-    if workspace_id not in workspace_members:
-        workspace_members[workspace_id] = []
-    
-    workspace_members[workspace_id].append(request.email)
-    workspace["member_count"] = len(workspace_members[workspace_id])
-    workspace["updated_at"] = datetime.utcnow().isoformat()
-    
-    # Save to database
-    if supabase:
-        try:
-            supabase.table("workspace_members").insert({
-                "workspace_id": workspace_id,
-                "user_email": request.email,
-                "role": request.role,
-                "invited_by": user_email,
-                "joined_at": datetime.utcnow().isoformat()
-            }).execute()
-            
-            # Update member count
-            supabase.table("workspaces").update({
-                "member_count": workspace["member_count"],
-                "updated_at": workspace["updated_at"]
-            }).eq("workspace_id", workspace_id).execute()
-        except Exception as e:
-            logger.error(f"Failed to add member: {e}")
+    try:
+        doc_ref.update({
+            "members": current_members,
+            "member_count": len(current_members),
+            "updated_at": datetime.utcnow().isoformat()
+        })
+        
+        doc_ref.collection("members").document(request.email.replace("@", "_at_")).set({
+            "user_email": request.email,
+            "role": request.role,
+            "invited_by": user_email,
+            "joined_at": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Invite error: {e}")
     
     logger.info(f"✅ User invited to workspace: {request.email} -> {workspace_id}")
     
@@ -270,10 +264,14 @@ async def remove_member(
     """
     user_email = current_user.get("email")
     
-    if workspace_id not in workspaces:
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not configured")
+        
+    doc = db.collection("workspaces").document(workspace_id).get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    workspace = workspaces[workspace_id]
+        
+    workspace = doc.to_dict() or {}
     
     # Check if user is owner
     if user_email != workspace["owner_email"]:
@@ -283,25 +281,19 @@ async def remove_member(
     if email == workspace["owner_email"]:
         raise HTTPException(status_code=400, detail="Cannot remove workspace owner")
     
-    # Remove member
-    if workspace_id in workspace_members and email in workspace_members[workspace_id]:
-        workspace_members[workspace_id].remove(email)
-        workspace["member_count"] = len(workspace_members[workspace_id])
-        workspace["updated_at"] = datetime.utcnow().isoformat()
+    current_members = workspace.get("members", [])
+    if email in current_members:
+        current_members.remove(email)
         
-        # Update database
-        if supabase:
-            try:
-                supabase.table("workspace_members").delete().eq(
-                    "workspace_id", workspace_id
-                ).eq("user_email", email).execute()
-                
-                supabase.table("workspaces").update({
-                    "member_count": workspace["member_count"],
-                    "updated_at": workspace["updated_at"]
-                }).eq("workspace_id", workspace_id).execute()
-            except Exception as e:
-                logger.error(f"Failed to remove member: {e}")
+        try:
+            doc_ref.update({
+                "members": current_members,
+                "member_count": len(current_members),
+                "updated_at": datetime.utcnow().isoformat()
+            })
+            doc_ref.collection("members").document(email.replace("@", "_at_")).delete()
+        except Exception as e:
+            logger.error(f"Remove member error: {e}")
         
         logger.info(f"✅ Member removed from workspace: {email} <- {workspace_id}")
         
@@ -332,43 +324,34 @@ async def update_workspace(
     """
     user_email = current_user.get("email")
     
-    if workspace_id not in workspaces:
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not configured")
+        
+    doc = db.collection("workspaces").document(workspace_id).get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    workspace = workspaces[workspace_id]
+        
+    workspace = doc.to_dict() or {}
     
     # Check if user is owner
     if user_email != workspace["owner_email"]:
         raise HTTPException(status_code=403, detail="Only workspace owner can update settings")
     
-    # Update fields
+    update_data = {"updated_at": datetime.utcnow().isoformat()}
     if request.name is not None:
+        update_data["name"] = request.name
         workspace["name"] = request.name
     if request.description is not None:
+        update_data["description"] = request.description
         workspace["description"] = request.description
     if request.is_public is not None:
+        update_data["is_public"] = request.is_public
         workspace["is_public"] = request.is_public
-    
-    workspace["updated_at"] = datetime.utcnow().isoformat()
-    
-    # Update database
-    if supabase:
-        try:
-            update_data = {
-                "updated_at": workspace["updated_at"]
-            }
-            if request.name is not None:
-                update_data["name"] = request.name
-            if request.description is not None:
-                update_data["description"] = request.description
-            if request.is_public is not None:
-                update_data["is_public"] = request.is_public
-            
-            supabase.table("workspaces").update(update_data).eq(
-                "workspace_id", workspace_id
-            ).execute()
-        except Exception as e:
-            logger.error(f"Failed to update workspace: {e}")
+        
+    try:
+        doc_ref.update(update_data)
+    except Exception as e:
+        logger.error(f"Workspace update failed: {e}")
     
     logger.info(f"✅ Workspace updated: {workspace_id}")
     
@@ -388,27 +371,23 @@ async def delete_workspace(
     """
     user_email = current_user.get("email")
     
-    if workspace_id not in workspaces:
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not configured")
+        
+    doc = db.collection("workspaces").document(workspace_id).get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    workspace = workspaces[workspace_id]
+        
+    workspace = doc.to_dict() or {}
     
     # Check if user is owner
     if user_email != workspace["owner_email"]:
         raise HTTPException(status_code=403, detail="Only workspace owner can delete")
     
-    # Delete workspace
-    del workspaces[workspace_id]
-    if workspace_id in workspace_members:
-        del workspace_members[workspace_id]
-    
-    # Delete from database
-    if supabase:
-        try:
-            supabase.table("workspaces").delete().eq("workspace_id", workspace_id).execute()
-            supabase.table("workspace_members").delete().eq("workspace_id", workspace_id).execute()
-        except Exception as e:
-            logger.error(f"Failed to delete workspace: {e}")
+    try:
+        doc_ref.delete()
+    except Exception as e:
+        logger.error(f"Delete workspace failed: {e}")
     
     logger.info(f"✅ Workspace deleted: {workspace_id}")
     
@@ -437,11 +416,13 @@ async def get_workspace_activity(
     """
     user_email = current_user.get("email")
     
-    if workspace_id not in workspaces:
+    doc_ref = db.collection("workspaces").document(workspace_id)
+    doc = doc_ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    # Check access
-    if user_email not in workspace_members.get(workspace_id, []):
+    workspace = doc.to_dict() or {}
+    members = workspace.get("members", [])
+    if user_email not in members:
         raise HTTPException(status_code=403, detail="Access denied")
     
     # Mock activity data (should come from database)
@@ -474,8 +455,8 @@ async def workspaces_health():
     return {
         "status": "healthy",
         "service": "workspaces",
-        "active_workspaces": len(workspaces),
-        "total_members": sum(len(members) for members in workspace_members.values()),
+        "active_workspaces": "db_managed",
+        "total_members": "db_managed",
         "features": [
             "workspace_management",
             "team_collaboration",

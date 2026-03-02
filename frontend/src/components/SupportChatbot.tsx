@@ -50,7 +50,9 @@ export default function SupportChatbot() {
 
     useEffect(() => {
         if (isInitialized) {
-            sessionStorage.setItem('aum_chat_history', JSON.stringify(messages));
+            // Keep last 50 messages to prevent QuotaExceededError
+            const messagesToStore = messages.length > 50 ? messages.slice(messages.length - 50) : messages;
+            sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore));
         }
     }, [messages, isInitialized]);
     const [input, setInput] = useState("");

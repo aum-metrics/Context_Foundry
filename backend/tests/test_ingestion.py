@@ -17,14 +17,18 @@ def test_recursive_split():
     # The first chunk should ideally break at the paragraph or sentence
     assert "This is a sentence." in chunks[0]
 
-@patch("api.ingestion.verify_user_org_access")
+@patch("core.security.db")
 @patch("api.ingestion.OpenAI")
 @patch("api.ingestion.db")
-def test_process_markdown(mock_db, mock_openai, mock_verify):
+def test_process_markdown(mock_db, mock_openai, mock_sec_db):
     """
     Test the parse endpoint which simulates zero-retention extraction.
     """
-    mock_verify.return_value = True
+    # 1. Setup Security Mock (Let verify_user_org_access run for real)
+    mock_user_doc = MagicMock()
+    mock_user_doc.exists = True
+    mock_user_doc.to_dict.return_value = {"orgId": "test_org"}
+    mock_sec_db.collection.return_value.document.return_value.get.return_value = mock_user_doc
 
     # Mock Firestore Database
     mock_batch = MagicMock()
@@ -64,5 +68,15 @@ def test_process_markdown(mock_db, mock_openai, mock_verify):
         )
         assert response.status_code == 200
         assert mock_batch.commit.called
+        
+        # Test Unhappy Path
+        mock_user_doc.to_dict.return_value = {"orgId": "hacker"}
+        response2 = client.post(
+            "/api/ingestion/parse",
+            headers={"Authorization": "Bearer mock-dev-token"},
+            data={"orgId": "test_org"},
+            files={"file": ("test.pdf", b"dummy pdf content", "application/pdf")}
+        )
+        assert response2.status_code == 403
     finally:
         pass

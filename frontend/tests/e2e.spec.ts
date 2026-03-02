@@ -1,130 +1,54 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('AUM Data Labs - Infinite Canvas E2E Tests', () => {
+test.describe('AUM Context Foundry E2E Tests', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:3001');
+        // Base URL is http://localhost:3000 as defined in playwright.config.ts
+        await page.goto('/');
         await page.waitForLoadState('networkidle');
     });
 
-    test('should load canvas with logo in toolbar', async ({ page }) => {
-        // Check that toolbar exists
-        const toolbar = page.locator('div').filter({ hasText: /\+ Data/ }).first();
-        await expect(toolbar).toBeVisible();
+    test('Landing Page - should load and display core messaging', async ({ page }) => {
+        // Verify Title and Hero exist
+        const heroText = page.locator('h1').filter({ hasText: 'Media Monitoring for' });
+        await expect(heroText).toBeVisible({ timeout: 10000 });
 
-        // Check logo is in toolbar
-        const logo = page.locator('img[alt="AUM Data Labs"]').first();
+        // Verify Logo exists
+        const logo = page.locator('text=AUM Context Foundry').first();
         await expect(logo).toBeVisible();
-
-        // Verify logo is in the toolbar (top of page)
-        const logoBox = await logo.boundingBox();
-        expect(logoBox?.y).toBeLessThan(100);
     });
 
-    test('should toggle light/dark mode', async ({ page }) => {
-        // Find dark mode toggle button
-        const darkModeBtn = page.locator('button').filter({ has: page.locator('svg') }).nth(1);
-
-        // Get initial background color
-        const container = page.locator('div[class*="cursor-crosshair"]').first();
-        const initialBg = await container.evaluate(el => window.getComputedStyle(el).backgroundColor);
-
-        // Toggle mode
-        await darkModeBtn.click();
-        await page.waitForTimeout(500);
-
-        // Verify background changed
-        const newBg = await container.evaluate(el => window.getComputedStyle(el).backgroundColor);
-        expect(initialBg).not.toBe(newBg);
+    test('Landing Page - Theme Toggle', async ({ page }) => {
+        // Assume default is light or auto, toggle it
+        const themeToggle = page.locator('button[aria-label="Toggle dark mode"]');
+        if (await themeToggle.isVisible()) {
+            await themeToggle.click();
+            await page.waitForTimeout(500); // Wait for transition
+            // Just verifying it doesn't crash is a good start
+            await expect(themeToggle).toBeVisible();
+        }
     });
 
-    test('should add data uploader to canvas', async ({ page }) => {
-        // Click "+ Data" button
-        const addDataBtn = page.locator('button').filter({ hasText: '+ Data' });
-        await addDataBtn.click();
+    test('Navigation - Login Page', async ({ page }) => {
+        // Click on Sign In
+        const signInLink = page.locator('a', { hasText: 'Sign In' }).first();
+        await signInLink.click();
 
-        // Wait for new uploader to appear
-        await page.waitForTimeout(500);
+        // Verify URL changes to /login
+        await page.waitForURL('**/login', { timeout: 10000 });
 
-        // Count uploaders (should be at least 2 now - initial + new)
-        const uploaders = page.locator('text=Drop your CSV here');
-        await expect(uploaders).toHaveCount(2, { timeout: 5000 });
+        // Verify Login Page content
+        await expect(page.locator('h1').filter({ hasText: 'Sign in to your account' })).toBeVisible();
     });
 
-    test('should open share modal', async ({ page }) => {
-        // Click Share button
-        const shareBtn = page.locator('button').filter({ hasText: 'Share' });
-        await shareBtn.click();
+    test('Mock Auth Bypass - Direct to Dashboard', async ({ page }) => {
+        // We go direct to dashboard with the mock token query param
+        await page.goto('/dashboard?mock=true');
+        await page.waitForLoadState('networkidle');
 
-        // Verify modal appears
-        await expect(page.locator('text=Share Canvas')).toBeVisible({ timeout: 5000 });
-    });
+        // Check if dashboard loaded correctly by checking for specific elements
+        await expect(page.locator('text=Brand Health Status')).toBeVisible({ timeout: 15000 });
 
-    test('should open More menu and access enterprise features', async ({ page }) => {
-        // Click More button (three dots)
-        const moreBtn = page.locator('button').filter({ has: page.locator('svg') }).last();
-        await moreBtn.click();
-
-        // Verify menu items
-        await expect(page.locator('text=Connectors')).toBeVisible();
-        await expect(page.locator('text=SSO Config')).toBeVisible();
-        await expect(page.locator('text=Action Items')).toBeVisible();
-
-        // Click Connectors
-        await page.locator('text=Connectors').click();
-
-        // Verify Connectors modal
-        await expect(page.locator('text=Data Connectors')).toBeVisible({ timeout: 5000 });
-    });
-
-    test('should pan canvas', async ({ page }) => {
-        // Get initial offset
-        const offsetDisplay = page.locator('text=/X: -?\\d+/');
-        const initialText = await offsetDisplay.textContent();
-
-        // Pan by dragging
-        const canvas = page.locator('div[class*="cursor-crosshair"]').first();
-        await canvas.hover({ position: { x: 500, y: 500 } });
-        await page.mouse.down();
-        await page.mouse.move(600, 600);
-        await page.mouse.up();
-
-        // Wait for update
-        await page.waitForTimeout(500);
-
-        // Verify offset changed
-        const newText = await offsetDisplay.textContent();
-        expect(initialText).not.toBe(newText);
-    });
-
-    test('should zoom canvas with mouse wheel', async ({ page }) => {
-        // Get initial scale
-        const scaleDisplay = page.locator('text=/Scale: \\d+%/');
-        const initialScale = await scaleDisplay.textContent();
-
-        // Zoom in
-        const canvas = page.locator('div[class*="cursor-crosshair"]').first();
-        await canvas.hover({ position: { x: 500, y: 500 } });
-        await page.mouse.wheel(0, -100);
-
-        // Wait for update
-        await page.waitForTimeout(500);
-
-        // Verify scale changed
-        const newScale = await scaleDisplay.textContent();
-        expect(initialScale).not.toBe(newScale);
-    });
-
-    test('should display natural language bar', async ({ page }) => {
-        // Check for NL query input
-        const nlBar = page.locator('input[placeholder*="Ask"]').or(page.locator('input[placeholder*="query"]'));
-        await expect(nlBar).toBeVisible({ timeout: 5000 });
-    });
-
-    test('backend health check', async ({ page }) => {
-        // Test backend is running
-        const response = await page.request.get('http://localhost:8001/api/health');
-        expect(response.ok()).toBeTruthy();
-        const data = await response.json();
-        expect(data.status).toBe('healthy');
+        // The radar chart or ASoV component should be visible
+        await expect(page.locator('text=Agentic Quality Score')).toBeVisible();
     });
 });

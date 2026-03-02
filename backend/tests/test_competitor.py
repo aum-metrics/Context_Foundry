@@ -6,12 +6,19 @@ from main import app
 
 client = TestClient(app, base_url="http://localhost")
 
+@patch("core.security.db")
 @patch("api.competitor.OpenAI")
 @patch("api.competitor.db")
-def test_get_competitor_displacement(mock_db, mock_openai):
+def test_get_competitor_displacement(mock_db, mock_openai, mock_sec_db):
     """
     Test live competitor displacement analysis endpoint using mocked GPT-4o-mini output.
     """
+    # 1. Setup Security Mock (Let verify_user_org_access run for real)
+    mock_user_doc = MagicMock()
+    mock_user_doc.exists = True
+    mock_user_doc.to_dict.return_value = {"orgId": "test_org"}
+    mock_sec_db.collection.return_value.document.return_value.get.return_value = mock_user_doc
+
     # Mock Firestore
     mock_doc = MagicMock()
     mock_doc.exists = True

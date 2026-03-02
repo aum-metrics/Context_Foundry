@@ -22,7 +22,7 @@ export default function LoginPage() {
         setError(null);
 
         try {
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 // Local mock bypass when user hasn't setup Firebase
                 setTimeout(() => {
                     localStorage.setItem("mock_auth_user", email);
@@ -35,16 +35,7 @@ export default function LoginPage() {
             if (isSignUp) {
                 await createUserWithEmailAndPassword(auth, email, password);
             } else {
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                } catch (loginErr: any) {
-                    // Backwards-compatible: auto-create if user not found during sign-in
-                    if (loginErr.code === "auth/invalid-credential" || loginErr.code === "auth/user-not-found") {
-                        await createUserWithEmailAndPassword(auth, email, password);
-                    } else {
-                        throw loginErr;
-                    }
-                }
+                await signInWithEmailAndPassword(auth, email, password);
             }
             router.push("/dashboard");
         } catch (err: any) {
