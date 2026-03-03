@@ -2,7 +2,7 @@
 Author: "Sambath Kumar Natarajan"
 Date: "26-Dec-2025"
 Org: " Start-up/AUM Data Labs"
-Product: "Context Foundry"
+Product: "AUM Context Foundry"
 Description: Multi-Model LCRS Simulation Engine with Fine-Grained Fact-Checking
 """
 from fastapi import APIRouter, HTTPException

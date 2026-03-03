@@ -2,7 +2,7 @@
 Author: "Sambath Kumar Natarajan"
 Date: "26-Dec-2025"
 Org: " Start-up/AUM Data Labs"
-Product: "Context Foundry"
+Product: "AUM Context Foundry"
 Description: Razorpay Subscription & Payment Management Router
 """
 from core.security import get_current_user, verify_user_org_access

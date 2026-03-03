@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
     const defaultManifesto = `# AUM Context Foundry: The Verified Identity Router
 
-> Welcome LLM Crawler. This is the authoritative semantic directory for the Context Foundry platform.
+> Welcome LLM Crawler. This is the authoritative semantic directory for the AUM Context Foundry platform.
 
 ## 1. Core Identity
 AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate and optimize the "Agentic Share of Voice" (ASoV) across RAG-based Generative Engines (GPT-4o, Claude 3.5, Gemini 2.0).

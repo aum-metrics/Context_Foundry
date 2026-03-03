@@ -1,4 +1,4 @@
-# Context Foundry: Sales & Lead Onboarding Guide
+# AUM Context Foundry: Sales & Lead Onboarding Guide
 
 **Target Audience:** Sales Interns, BDRs (Business Development Reps), Account Executives
 **Prerequisites:** Basic understanding of B2B SaaS sales cycles.
@@ -9,7 +9,7 @@
 
 *   **The Hook:** Do you know what ChatGPT is saying about your brand right now?
 *   **The Problem:** Large Language Models (LLMs) hallucinate. If a customer asks Perplexity or Gemini about your refund policy, and the AI invents a "30-day no questions asked" policy that you don't actually have, your brand takes the financial and reputational hit.
-*   **The Solution:** Context Foundry is a platform that allows you to upload your definitive "Source of Truth" (your pricing, policies, and products). We then run hundreds of automated, simulated conversations against ChatGPT, Claude, and Gemini to mathematically prove how accurately they represent your business. We score them using our proprietary LCRS logic.
+*   **The Solution:** AUM Context Foundry is a platform that allows you to upload your definitive "Source of Truth" (your pricing, policies, and products). We then run hundreds of automated, simulated conversations against ChatGPT, Claude, and Gemini to mathematically prove how accurately they represent your business. We score them using our proprietary LCRS logic.
 
 ---
 
@@ -19,7 +19,7 @@ When an intern gets on a call with a lead, they must adapt the pitch depending o
 
 ### Persona 1: The CMO (Chief Marketing Officer)
 *   **What they care about:** Brand Reputation, PR disasters, "Search Generative Experience" (SGE).
-*   **How you pitch them:** *"CMO, traditional SEO is dying. Users are switching to Perplexity and ChatGPT to find products. If ChatGPT hallucinates your features, you lose the lead before they even hit your website. Context Foundry gives you real-time Radar charts tracking your AI brand health."*
+*   **How you pitch them:** *"CMO, traditional SEO is dying. Users are switching to Perplexity and ChatGPT to find products. If ChatGPT hallucinates your features, you lose the lead before they even hit your website. AUM Context Foundry gives you real-time Radar charts tracking your AI brand health."*
 
 ### Persona 2: The CTO / CISO (Chief Security Officer)
 *   **What they care about:** Data Privacy, API Security, SOC2 Compliance.
@@ -36,13 +36,13 @@ When an intern gets on a call with a lead, they must adapt the pitch depending o
 Interns must memorize these rebuttals:
 
 **Objection:** *"Why don't we just use ChatGPT directly to test it ourselves?"*
-**Rebuttal:** *"You could, but ChatGPT is non-deterministic. If you ask it 100 times, you get 100 different answers. Context Foundry runs concurrent vector mathematics (cosine similarity) to grade the deterministic drift mathematically. We don't just tell you it hallucinated; we give you the exact metric of divergence."*
+**Rebuttal:** *"You could, but ChatGPT is non-deterministic. If you ask it 100 times, you get 100 different answers. AUM Context Foundry runs concurrent vector mathematics (cosine similarity) to grade the deterministic drift mathematically. We don't just tell you it hallucinated; we give you the exact metric of divergence."*
 
 **Objection:** *"Is our data safe? You are reading our internal pricing PDFs."*
 **Rebuttal:** *"All Context Documents are immediately vectorized and sharded on Google Cloud. We operate on a strict tenant-isolation architecture. Furthermore, organizations on the Enterprise tier use their own SAML SSO to ensure departing employees instantly lose access."*
 
 **Objection:** *"We already pay for an SEO agency."*
-**Rebuttal:** *"SEO agencies optimize for Google Blue Links. Context Foundry optimizes for RAG (Retrieval-Augmented Generation) ingestion. We generate the `llms.txt` manifest that AI bots specifically look for when crawling domains."*
+**Rebuttal:** *"SEO agencies optimize for Google Blue Links. AUM Context Foundry optimizes for RAG (Retrieval-Augmented Generation) ingestion. We generate the `llms.txt` manifest that AI bots specifically look for when crawling domains."*
 
 ---
 
@@ -71,6 +71,6 @@ Navigate to **Settings -> Team & Security**.
 
 1. Always define the Next Step on the call: *"Would you like us to provision a 14-day Explorer tier for you today to test this on 5 prompts?"*
 2. If they say yes, send them the specific registration URL for your staging/production environment.
-3. If they are Enterprise, send them the `Context_Foundry_Admin_Runbook.md` so their IT team can review our SSO and Security architecture prior to signing the contract.
+3. If they are Enterprise, send them the `AUM_Context_Foundry_Admin_Runbook.md` so their IT team can review our SSO and Security architecture prior to signing the contract.
 
 *End of Document Suite.*

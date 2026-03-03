@@ -1,8 +1,8 @@
-# Context Foundry - Master Administrative Runbook
+# AUM Context Foundry - Master Administrative Runbook
 
 *Version: 1.1.0* | *Status: Enterprise-Hardened (Post P0-P3 Remediation)*
 
-This exhaustive runbook provides system administrators, DevOps engineers, and support staff with the authoritative procedures for operating, configuring, and troubleshooting the Context Foundry platform.
+This exhaustive runbook provides system administrators, DevOps engineers, and support staff with the authoritative procedures for operating, configuring, and troubleshooting the AUM Context Foundry platform.
 
 ---
 
@@ -21,7 +21,7 @@ This exhaustive runbook provides system administrators, DevOps engineers, and su
 
 ## 1. Core Configuration Prerequisites
 
-To run Context Foundry securely in `production`, the Admin must provide the following baseline configurations. 
+To run AUM Context Foundry securely in `production`, the Admin must provide the following baseline configurations. 
 
 ### Backend Environment Variables (`backend/.env`)
 The platform is strict-closed by default. These variables are mandatory.
@@ -48,8 +48,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 ### Frontend Environment Variables (`frontend/.env.local`)
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=context-foundry-prod.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=context-foundry-prod
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=aum-context-foundry-prod.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=aum-context-foundry-prod
 NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 ```
 

@@ -2,7 +2,7 @@
 Author: "Sambath Kumar Natarajan"
 Date: "02-Mar-2026"
 Org: "Start-up/AUM Data Labs"
-Product: "Context Foundry"
+Product: "AUM Context Foundry"
 Description: Live Competitor Displacement Monitoring Engine.
 """
 from fastapi import APIRouter, Depends, HTTPException

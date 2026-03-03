@@ -1,4 +1,4 @@
-# Context Foundry: Database & Security Model
+# AUM Context Foundry: Database & Security Model
 
 **Target Audience:** Security Engineers, DevOps Interns, Backend Developers
 **Prerequisites:** Understanding of NoSQL, JSON, and basic Identity Access Management (IAM).
@@ -7,7 +7,7 @@
 
 ## 1. The NoSQL Philosophy (Firestore)
 
-Context Foundry runs on Google Cloud Firestore, a highly scalable NoSQL document database. 
+AUM Context Foundry runs on Google Cloud Firestore, a highly scalable NoSQL document database. 
 If you learned SQL (PostgreSQL, MySQL) in college, you need to unlearn a few things:
 
 1.  **No Joins:** You cannot `JOIN` the `users` collection with the `organizations` collection in a single query. You must make two separate fetches or duplicate the data (denormalization).

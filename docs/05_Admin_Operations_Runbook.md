@@ -1,4 +1,4 @@
-# Context Foundry: Administrator & Operations Runbook
+# AUM Context Foundry: Administrator & Operations Runbook
 
 **Target Audience:** Product Managers, Operations Interns, DevOps
 **Prerequisites:** Access to Google Cloud Console (Firestore, Cloud Run).
@@ -66,9 +66,9 @@ When a Massive Enterprise (like Fortune 500 Bank) signs up, they will demand Sin
 
 ### The Handshake Process
 1. Tell the Enterprise IT Admin to create an Application in their Okta/Azure portal.
-2. Give them our **Callback URL**: `https://api.contextfoundry.com/api/v1/sso/callback`
+2. Give them our **Callback URL**: `https://api.aumcontextfoundry.com/api/v1/sso/callback`
 3. They will give you two things: a **Client ID** and a **Client Secret**.
-4. You (or the enterprise admin) logs into the Context Foundry Dashboard -> Settings -> SSO.
+4. You (or the enterprise admin) logs into the AUM Context Foundry Dashboard -> Settings -> SSO.
 5. Paste the ID and Secret. The backend will instantly encrypt the Secret using our `SSO_ENCRYPTION_KEY` via AES-128 before saving it to the database.
 
 **Troubleshooting:** If SSO fails, it is almost always because the IT Admin forgot to whitelist our Callback URL in their system. Ask them to verify the redirect URI.
@@ -103,7 +103,7 @@ A Google Cloud Scheduler trigger fires a webhook to `/api/cron/reset-quotas` wit
 If Google Cloud is down, or the webhook fails, you must trigger it manually using the terminal on your laptop:
 
 ```bash
-curl -X POST https://api.contextfoundry.com/api/cron/reset-quotas \
+curl -X POST https://api.aumcontextfoundry.com/api/cron/reset-quotas \
      -H "x-cron-secret: YOUR-SUPER-SECRET-CRON-KEY"
 ```
 

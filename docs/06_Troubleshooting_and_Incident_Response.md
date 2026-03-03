@@ -1,4 +1,4 @@
-# Context Foundry: Troubleshooting & Incident Response
+# AUM Context Foundry: Troubleshooting & Incident Response
 
 **Target Audience:** L1/L2 Support Interns, Developers
 **Prerequisites:** Ability to read React error logs and FastAPI terminal tracebacks.

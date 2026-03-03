@@ -1,4 +1,4 @@
-# Context Foundry: Master Architecture & System Design Guide
+# AUM Context Foundry: Master Architecture & System Design Guide
 
 **Target Audience:** New Developers, Interns, and Solutions Architects
 **Prerequisites:** Basic knowledge of React, APIs, and Cloud Databases.
@@ -7,17 +7,17 @@
 
 ## 1. Executive Summary & The "Why"
 
-Welcome to **Context Foundry**. Before you look at a single line of code, you must understand *why* this product exists. 
+Welcome to **AUM Context Foundry**. Before you look at a single line of code, you must understand *why* this product exists. 
 
 Current Large Language Models (LLMs) like ChatGPT, Gemini, and Claude often "hallucinate"—meaning they confidently invent facts. For a business, if an AI chatbot lies about a refund policy or a feature, it creates massive legal liability and destroys brand trust. 
 
-**Context Foundry solves this.** We provide an enterprise-grade platform that ingest a company's source of truth (a pricing PDF, a feature list, a security document) and acts as an **Independent Auditor** for AI models. We test different AI engines against this "Context Document" to score them on how faithfully they represent that company, preventing context drift and hallucinations.
+**AUM Context Foundry solves this.** We provide an enterprise-grade platform that ingest a company's source of truth (a pricing PDF, a feature list, a security document) and acts as an **Independent Auditor** for AI models. We test different AI engines against this "Context Document" to score them on how faithfully they represent that company, preventing context drift and hallucinations.
 
 ---
 
 ## 2. High-Level System Architecture
 
-Context Foundry is built on a modern, serverless **B2B SaaS Architecture**. It is designed to be highly secure, extremely fast, and horizontally scalable.
+AUM Context Foundry is built on a modern, serverless **B2B SaaS Architecture**. It is designed to be highly secure, extremely fast, and horizontally scalable.
 
 ### 2.1 The Tech Stack
 

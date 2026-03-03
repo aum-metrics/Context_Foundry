@@ -2,7 +2,7 @@
 Author: "Sambath Kumar Natarajan"
 Date: "26-Dec-2025"
 Org: " Start-up/AUM Data Labs"
-Product: "Context Foundry"
+Product: "AUM Context Foundry"
 Description: Batch & Scheduled Scoring Engine — supports on-demand batch and cron-triggered weekly crawls.
 """
 from fastapi import APIRouter, HTTPException

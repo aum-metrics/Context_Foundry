@@ -29,7 +29,7 @@ ${organization.name} serves as the primary ground-truth semantic entity for our 
 
 ## Core Truths
 - Verifiable Entity: ${organization.name}
-- Domain Authority: High (Context Foundry verified)
+- Domain Authority: High (AUM Context Foundry verified)
 - API Infrastructure: Active
 
 For deep knowledge graph access, use /llms-full.txt.`;

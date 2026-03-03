@@ -1,4 +1,4 @@
-# Context Foundry: Backend API & Logic Reference
+# AUM Context Foundry: Backend API & Logic Reference
 
 **Target Audience:** Backend Engineers, System Operators, Interns
 **Prerequisites:** Python 3.12, FastAPI, basic understanding of concurrent programming (`asyncio`).

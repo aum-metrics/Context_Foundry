@@ -1,4 +1,4 @@
-# Context Foundry: Backend Secrets & API Key Architecture
+# AUM Context Foundry: Backend Secrets & API Key Architecture
 
 **Target Audience:** Backend Engineers, DevOps, SecOps
 **Prerequisites:** Understanding of `.env` files, Google Secret Manager, and the FastAPI `pydantic_settings` module.
@@ -7,7 +7,7 @@
 
 ## 1. Platform-Managed API Keys
 
-Context Foundry interacts with OpenAI, Anthropic, and Gemini. A single simulation run costs API credits. To handle billing and permissions securely across environments, the backend operates entirely on **Platform-Managed Keys**.
+AUM Context Foundry interacts with OpenAI, Anthropic, and Gemini. A single simulation run costs API credits. To handle billing and permissions securely across environments, the backend operates entirely on **Platform-Managed Keys**.
 
 We do not support Bring-Your-Own-Key (BYOK). All simulation runs are billed to our central corporate accounts, and we bill the client a flat subscription fee in return.
 
@@ -28,7 +28,7 @@ In DEV, you want your engineers iterating rapidly without accidentally burning $
 *   **Fallback Logic:** In DEV mode (`ENV=development`), if the database is missing a client's key, the backend automatically falls back to your local `.env` keys so the simulation never crashes.
 
 ### The QA Environment (Staging)
-QA is a live URL on the internet (e.g., `api-qa.contextfoundry.com`). You cannot use a `.env` file because the code runs inside a serverless Docker image on Google Cloud Run.
+QA is a live URL on the internet (e.g., `api-qa.aumcontextfoundry.com`). You cannot use a `.env` file because the code runs inside a serverless Docker image on Google Cloud Run.
 
 *   **Implementation:** Google Cloud Secret Manager.
 *   **The Workflow:** 

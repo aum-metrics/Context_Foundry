@@ -2,7 +2,7 @@
  * Author: "Sambath Kumar Natarajan"
  * Date: "26-Dec-2025"
  * Org: " Start-up/AUM Data Labs"
- * Product: "Context Foundry"
+ * Product: "AUM Context Foundry"
  * Description: Contextual Support Chatbot for Multi-Tenant Enterprise Assistance.
  */
 "use client";
@@ -91,7 +91,7 @@ export default function SupportChatbot() {
             if (!token || !organization?.id) {
                 response = "Please authenticate and select an organization to use the AI Context Assistant.";
             } else {
-                setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your Context Foundry...", timestamp: new Date() }]);
+                setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your AUM Context Foundry...", timestamp: new Date() }]);
 
                 const res = await fetch("/api/chatbot/ask", {
                     method: "POST",

@@ -9,7 +9,7 @@ export default function Loading() {
                     <Logo size={80} showText={false} />
                     <div className="flex flex-col items-center space-y-2">
                         <h2 className="text-xl font-light text-slate-900 dark:text-white tracking-widest uppercase">
-                            Context Foundry
+                            AUM Context Foundry
                         </h2>
                         <div className="flex items-center space-x-2">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />

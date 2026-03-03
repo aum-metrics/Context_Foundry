@@ -1,4 +1,4 @@
-# Context Foundry: Frontend Implementation Guide
+# AUM Context Foundry: Frontend Implementation Guide
 
 **Target Audience:** Frontend Engineers, Interns
 **Prerequisites:** React, Next.js (App Router), Tailwind CSS, Framer Motion.
@@ -7,7 +7,7 @@
 
 ## 1. Next.js App Router Structure
 
-Context Foundry uses the `Next.js 15 App Router`. This means file paths directly correspond to URL routes.
+AUM Context Foundry uses the `Next.js 15 App Router`. This means file paths directly correspond to URL routes.
 
 ### Directory Mapping
 *   `src/app/page.tsx` ➡️ Maps to `https://yourdomain.com/` (The Landing Page)
@@ -32,7 +32,7 @@ If a user tries to access `/dashboard` without being logged in, they must be red
 
 ## 3. Global State: The Organization Context
 
-Context Foundry is a "multi-tenant" application. Everything revolves around the Organization (Tenant). An intern must understand `OrganizationContext.tsx`.
+AUM Context Foundry is a "multi-tenant" application. Everything revolves around the Organization (Tenant). An intern must understand `OrganizationContext.tsx`.
 
 ### Why we need it
 If a user is logged in, passing their `orgId`, `subscriptionTier`, and `apiKeys` down as "props" through 15 layers of React components is a nightmare (called "prop drilling").
@@ -58,10 +58,10 @@ console.log(organization.subscriptionTier) // "growth"
 
 ## 4. UI Library & Styling Strategy (Tailwind)
 
-We do not write custom raw CSS in Context Foundry unless absolutely necessary. We use **Tailwind CSS**.
+We do not write custom raw CSS in AUM Context Foundry unless absolutely necessary. We use **Tailwind CSS**.
 
 ### The "Look and Feel" (Dark Mode by Default)
-Context Foundry is heavily biased toward Dark Mode for a premium, developer-centric aesthetic.
+AUM Context Foundry is heavily biased toward Dark Mode for a premium, developer-centric aesthetic.
 *   **Backgrounds:** `bg-slate-900` or `bg-slate-950`.
 *   **Accents:** We use `amber-500` for primary actions (simulations, upgrades) and `emerald-500` for success markers.
 *   **Gradients:** Look at the landing page headers. We use heavily stylized Tailwind texts: `bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-500`.
@@ -76,7 +76,7 @@ Whenever you build a new UI element:
 
 ## 5. Animations (`Framer Motion`)
 
-A massive part of Context Foundry's premium feel is the dynamic animation layer. We use `framer-motion` to handle mount/unmount and layout transitions smoothly.
+A massive part of AUM Context Foundry's premium feel is the dynamic animation layer. We use `framer-motion` to handle mount/unmount and layout transitions smoothly.
 
 ### The `<motion.div>`
 Instead of a standard `<div>`, use `<motion.div>` to add entrance animations.

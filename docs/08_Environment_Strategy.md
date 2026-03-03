@@ -1,6 +1,6 @@
 # Ultimate Environment Strategy: DEV ➡️ QA ➡️ PROD
 
-*Date: March 2026* | *Architectural Blueprint for Context Foundry*
+*Date: March 2026* | *Architectural Blueprint for AUM Context Foundry*
 
 Running a B2B Enterprise SaaS application on a single database is a ticking time bomb. One wrong database migration or bad code push will instantly wipe out all customer data. 
 
@@ -22,11 +22,11 @@ You will create three completely independent silos. They never share databases. 
 
 ### Step 1: Create 3 Firebase Projects
 Firebase projects act as the absolute boundary for your database (`Firestore`) and user authentication (`Firebase Auth`).
-*   **Firebase Project 1:** `context-foundry-dev`
-*   **Firebase Project 2:** `context-foundry-qa`
-*   **Firebase Project 3:** `context-foundry-prod`
+*   **Firebase Project 1:** `aum-context-foundry-dev`
+*   **Firebase Project 2:** `aum-context-foundry-qa`
+*   **Firebase Project 3:** `aum-context-foundry-prod`
 
-*Why?* If an engineer accidentally runs a script that deletes the `organizations` collection in DEV, it only deletes fake data in `context-foundry-dev`. The PROD database is cryptographically unreachable.
+*Why?* If an engineer accidentally runs a script that deletes the `organizations` collection in DEV, it only deletes fake data in `aum-context-foundry-dev`. The PROD database is cryptographically unreachable.
 
 ### Step 2: Create 3 Sets of Stripe/Razorpay Keys
 You must never process a real $500 payment when testing a new feature.
@@ -55,14 +55,14 @@ Vercel makes environment management incredibly easy.
 
 **Add the QA Firebase keys to the 'Preview' environment:**
 ```env
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=context-foundry-qa
-NEXT_PUBLIC_API_URL=https://api-qa.contextfoundry.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=aum-context-foundry-qa
+NEXT_PUBLIC_API_URL=https://api-qa.aumcontextfoundry.com
 ```
 
 **Add the PROD Firebase keys to the 'Production' environment:**
 ```env
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=context-foundry-prod
-NEXT_PUBLIC_API_URL=https://api.contextfoundry.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=aum-context-foundry-prod
+NEXT_PUBLIC_API_URL=https://api.aumcontextfoundry.com
 ```
 
 *Result:* When you merge a PR to `main`, Vercel builds the "Preview" site and connects it to the QA database. When you push to the `production` branch, Vercel builds the live site pointing to the PROD database.
@@ -101,8 +101,8 @@ FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-adminsdk-prod.json
 ### The CI/CD Pipeline (GitHub Actions)
 You will create a `.github/workflows/deploy.yml` file. 
 
-*   **When code is pushed to `main`:** GitHub Actions pulls the code, builds a Docker container, and deploys it to a Google Cloud Run service named `context-foundry-api-qa`.
-*   **When code is pushed to `production`:** GitHub Actions deploys the exact same Docker container to `context-foundry-api-prod`.
+*   **When code is pushed to `main`:** GitHub Actions pulls the code, builds a Docker container, and deploys it to a Google Cloud Run service named `aum-context-foundry-api-qa`.
+*   **When code is pushed to `production`:** GitHub Actions deploys the exact same Docker container to `aum-context-foundry-api-prod`.
 
 ---
 
@@ -115,18 +115,18 @@ Here is how a single code change moves securely through the environments.
 1.  **DEV Phase:**
     *   You create a branch `feature/export-pdf`.
     *   You run `npm run dev` and `python3 main.py` on your laptop.
-    *   You write the code. It saves fake PDF data to the `context-foundry-dev` Firebase project.
+    *   You write the code. It saves fake PDF data to the `aum-context-foundry-dev` Firebase project.
 2.  **QA Phase:**
     *   You open a Pull Request to `main`.
     *   You merge the PR.
     *   Vercel and GitHub Actions automatically deploy the code to QA.
-    *   You log into `https://qa.contextfoundry.com`. You test the button. It works, and the data saves to `context-foundry-qa`.
+    *   You log into `https://qa.aumcontextfoundry.com`. You test the button. It works, and the data saves to `aum-context-foundry-qa`.
 3.  **PROD Phase:**
     *   You confirm QA is perfectly stable.
     *   You open a Pull Request from `main` to `production`.
     *   You merge the PR.
     *   Vercel and GitHub Actions deploy the final code to PROD.
-    *   Real users can now see the button, and it interacts safely with `context-foundry-prod`.
+    *   Real users can now see the button, and it interacts safely with `aum-context-foundry-prod`.
 
 ---
 
