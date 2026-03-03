@@ -22,7 +22,6 @@
 | `CRON_SECRET` | YES (cron) | Bearer token for authenticating the billing cron | random 32+ char string |
 | `ENV` | NO | `development` or `production` (default: `production`) | `production` |
 | `ADMIN_SESSION_SECRET` | **YES** | Secret for signing admin session cookies | `random-string` |
-| `ALLOW_MOCK_AUTH` | NO | `true` to allow `mock_uid_dev` bypass in dev | `true` |
 | `RATE_LIMIT_PER_SECOND` | NO | IP-level rate limit for B2B API (default: 5) | `10` |
 
 > **Generating SSO_ENCRYPTION_KEY:**
@@ -58,8 +57,8 @@
 |------------|---------|--------------|
 | `users/{uid}` | User → org mapping | Read to verify membership |
 | `organizations/{orgId}` | Org config, plan, API keys | Modify plan, reset sims |
-| `organizations/{orgId}/manifests` | Ground truth CIM docs | Delete to clear ingestion |
-| `organizations/{orgId}/simulationCache` | 24hr cache | Delete to force fresh runs |
+| `organizations/{orgId}/manifests` | Ground truth CIM docs | Delete or wait for 24h TTL |
+| `organizations/{orgId}/simulationCache` | 24hr cache | Automatically cleared by TTL |
 | `organizations/{orgId}/auditLogs` | SOC2 audit trail | Read-only |
 | `api_keys/{sha256hash}` | B2B API keys | Revoke by setting `status: revoked` |
 | `ssoConfigs/{orgId}` | Enterprise SSO configs | Delete to disable SSO |
@@ -90,7 +89,8 @@ Client-side access is restricted:
 - `users/{uid}` — users can only read/write their own doc.
 - `organizations/{orgId}` — members can read; writes are backend-only (Admin SDK).
 - `api_keys` — backend-only access.
-- All sensitive writes go through the FastAPI backend which uses the Admin SDK (bypasses client rules).
+- All sensitive writes go through the FastAPI backend which uses the Admin SDK.
+- **`apiKeys` field is explicitly blocked** for all client-side reads in `firestore.rules`.
 
 ---
 

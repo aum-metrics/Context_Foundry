@@ -145,7 +145,7 @@ Organizations on the **Scale** plan can configure Single Sign-On (Okta, Azure AD
 1. Select your provider.
 2. Enter your Domain, Client ID, and Client Secret.
 3. Click **Configure SSO**.
-4. Once active, your team can sign in via your company's IdP.
+4. Once active, your team can sign in via your company's IdP using the centralized callback flow.
 
 ---
 
@@ -200,13 +200,13 @@ curl -X POST [YOUR_BACKEND_URL]/v1/run \
 See `FAQ.md` for a full list. Quick answers:
 
 **Q: Do you store my documents?**
-A: No. Raw documents are processed in memory and immediately deleted. Only embeddings are stored.
+A: No. Raw documents are processed in memory and immediately purged. Mathematical embeddings (the CIM) are stored for 24 hours and then automatically deleted via platform-wide TTL.
 
 **Q: Which AI models are tested?**
 A: GPT-4o (OpenAI), Claude 3.5 Sonnet (Anthropic), Gemini 2.0 Flash (Google).
 
 **Q: Do I need to provide my own API keys?**
-A: No. AUM provides platform-managed inference keys for all plans. BYOK is supported for enterprise customers.
+A: No. AUM provides platform-managed inference keys for all plans.
 
 **Q: What happens when I hit my simulation limit?**
 A: You'll see a clear "Limit Reached" message. You can upgrade immediately to continue.

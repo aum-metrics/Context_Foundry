@@ -78,9 +78,6 @@ export default function SoMCommandCenter() {
         const fetchCompetitors = async () => {
             try {
                 let token = await auth.currentUser?.getIdToken();
-                if (!token && (process.env.NODE_ENV === "development" || window.location.search.includes("mock=true"))) {
-                    token = "mock-dev-token";
-                }
                 if (!token) return;
                 const res = await fetch(`/api/competitor/displacement/${organization.id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -161,11 +158,6 @@ export default function SoMCommandCenter() {
         try {
             let token = await auth.currentUser?.getIdToken();
 
-            // Mock bypass for development/demo mode
-            if (!token && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
-                token = "mock-dev-token";
-            }
-
             if (!token) throw new Error("Authentication required.");
 
             const response = await fetch('/api/batch/batch', {
@@ -235,8 +227,8 @@ export default function SoMCommandCenter() {
             let token = await auth.currentUser?.getIdToken();
 
             // Mock bypass for development/demo mode
-            if (!token && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
-                token = "mock-dev-token";
+            if (!token) {
+                token = await auth.currentUser?.getIdToken() || undefined;
             }
             const response = await fetch('/api/seo/audit', {
                 method: 'POST',
@@ -264,10 +256,7 @@ export default function SoMCommandCenter() {
                         return;
                     }
                     try {
-                        let currentToken = await auth.currentUser?.getIdToken();
-                        if (!currentToken && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
-                            currentToken = "mock-dev-token";
-                        }
+                        let currentToken = await auth.currentUser?.getIdToken() || undefined;
                         const statusRes = await fetch(`/api/seo/audit/status/${organization.id}/${data.jobId}`, {
                             headers: { 'Authorization': `Bearer ${currentToken}` }
                         });

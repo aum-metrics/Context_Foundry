@@ -440,6 +440,8 @@ async def add_org_member(
     if not org_doc.exists:
         raise HTTPException(status_code=404, detail="Organization not found")
     org_data = org_doc.to_dict() or {}
+    # 🛡️ SECURITY HARDENING (P0): Never return apiKeys to the client
+    org_data.pop("apiKeys", None)
     plan = org_data.get("subscription", {}).get("planId", "explorer")
     seat_limits = {"explorer": 1, "growth": 5, "scale": 25, "enterprise": 25}
     max_seats = seat_limits.get(plan, 1)
@@ -736,6 +738,8 @@ async def get_public_manifest(org_id: str):
         manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
         if manifest_doc.exists:
             data = manifest_doc.to_dict() or {}
+            # 🛡️ Redact any potential keys in manifest metadata
+            data.pop("apiKeys", None)
             content = data.get("content")
             if content:
                 from fastapi.responses import PlainTextResponse

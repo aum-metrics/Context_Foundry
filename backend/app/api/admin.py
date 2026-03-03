@@ -5,45 +5,44 @@ Uses Firebase Admin SDK (bypasses Firestore client security rules).
 Auth: Verified by X-Admin-Token header matching the admin session cookie value.
 """
 
-from fastapi import APIRouter, HTTPException, Request, Depends
-from typing import Optional
-from pydantic import BaseModel
+from core.firebase_config import db, app as firebase_app
+from firebase_admin import auth as firebase_auth
+from core.security import security, HTTPAuthorizationCredentials
 import logging
 import os
-import secrets
-
-from core.firebase_config import db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Admin session token — MUST be set via env var in production; random default prevents guessing
-ADMIN_TOKEN = os.getenv("ADMIN_SESSION_SECRET", secrets.token_hex(32))
-
-
-def verify_admin(request: Request):
+async def verify_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
-    Verify the request comes from an authenticated admin.
-    The Next.js proxy forwards the admin cookie value as X-Admin-Token.
+    Verify the request comes from an authenticated Firebase user with 'admin' claim.
     """
-    token = request.headers.get("X-Admin-Token", "")
-    if token != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail="Admin authentication required")
-    return True
+    token = credentials.credentials
+    try:
+        decoded_token = firebase_auth.verify_id_token(token, app=firebase_app)
+        if decoded_token.get("role") == "admin" or decoded_token.get("admin") is True:
+            return decoded_token
+        
+        # Audit log for unauthorized access attempt
+        logger.warning(f"🚫 Unauthorized Admin Access Attempt: {decoded_token.get('email', 'unknown')}")
+        raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        logger.error(f"Admin auth failure: {e}")
+        raise HTTPException(status_code=401, detail="Invalid admin session")
 
 
 @router.get("/orgs")
 async def list_organizations(
-    request: Request,
     page_size: int = 15,
     cursor: Optional[str] = None,
+    admin_user: dict = Depends(verify_admin)
 ):
     """
     List organizations with Firestore cursor-based pagination.
-    Uses order_by + start_after for efficient page-level queries.
-    Member/sim counts are fetched only for the current page (not all orgs).
     """
-    verify_admin(request)
     
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -125,9 +124,9 @@ async def list_organizations(
                 "members": member_count,
                 "simulations": sim_count,
                 "apiKeys": {
-                    "openai": "configured" if data.get("apiKeys", {}).get("openai") else "",
-                    "gemini": "configured" if data.get("apiKeys", {}).get("gemini") else "",
-                    "anthropic": "configured" if data.get("apiKeys", {}).get("anthropic") else "",
+                    "openai": "configured" if (data.get("apiKeys") or {}).get("openai") else "",
+                    "gemini": "configured" if (data.get("apiKeys") or {}).get("gemini") else "",
+                    "anthropic": "configured" if (data.get("apiKeys") or {}).get("anthropic") else "",
                 },
                 "email": admin_email or data.get("email", ""),
                 "lastPayment": last_payment,
@@ -155,13 +154,11 @@ class UpdateApiKeyRequest(BaseModel):
 async def update_org_api_key(
     org_id: str,
     request_body: UpdateApiKeyRequest,
-    request: Request,
+    admin_user: dict = Depends(verify_admin)
 ):
     """
     Update an organization's API key via Admin SDK.
-    Replaces direct Firestore client writes from the admin dashboard.
     """
-    verify_admin(request)
 
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -188,15 +185,12 @@ class AdminPaymentLinkRequest(BaseModel):
 
 @router.post("/payment-link")
 async def admin_create_payment_link(
-    request: Request,
     body: AdminPaymentLinkRequest,
+    admin_user: dict = Depends(verify_admin)
 ):
     """
     Admin-only payment link creation.
-    Uses admin token auth instead of Firebase Bearer.
-    Proxies to Razorpay directly via Admin SDK.
     """
-    verify_admin(request)
 
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")

@@ -26,7 +26,7 @@ A machine-readable file served at your organization's URL that tells AI crawlers
 ## Privacy & Data Security
 
 **Q: Do you store my documents?**
-**No.** Documents are processed entirely in volatile memory using our Zero-Retention pipeline. The raw file is deleted immediately after processing. Only the mathematical embeddings are persisted — never the original text.
+**No.** Documents are processed entirely in volatile memory using our Zero-Retention pipeline. The raw file is deleted immediately after processing. Mathematical embeddings (the CIM) are stored for 24 hours and then automatically purged via platform-wide TTL. Only non-PII semantic vectors are persisted during this window.
 
 **Q: Where is my data stored?**
 Vector embeddings and organization metadata are stored in Google Firestore (regional, encrypted at rest). No raw documents or PII from documents is stored.
@@ -42,7 +42,7 @@ Only members of your organization (verified by Firestore user lookup). Backend u
 ## Setup & Onboarding
 
 **Q: Do I need to provide my own OpenAI/Anthropic/Gemini API keys?**
-No. AUM provides platform-managed inference keys for all plans. You start running simulations immediately after sign-up with zero configuration. Enterprise customers can optionally bring their own keys (BYOK) for isolated billing.
+No. AUM provides platform-managed inference keys for all plans. You start running simulations immediately after sign-up with zero configuration. All keys are automatically redacted from API responses to prevent leakage.
 
 **Q: How do I get started?**
 1. Sign up at [[YOUR_FRONTEND_URL]]([YOUR_FRONTEND_URL]).

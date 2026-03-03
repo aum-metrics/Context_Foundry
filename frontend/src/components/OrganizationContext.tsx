@@ -46,31 +46,6 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
     useEffect(() => {
         const fetchOrProvisionOrg = async () => {
-            const isMockMode = (typeof window !== "undefined" && window.location.search.includes("mock=true")) ||
-                (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash"));
-
-            if (isMockMode) {
-                // Mock organization for local demo or explicit mock mode
-                setOrganization({
-                    id: "dealersight", // Align with backend brutal fix
-                    name: "Dealersight",
-                    activeSeats: 5,
-                    subscriptionTier: "enterprise",
-                    apiKeys: {
-                        openai: "sk-mock-openai-key",
-                        gemini: "g-mock-gemini-key"
-                    }
-                });
-                setOrgUser({
-                    uid: user?.uid || "mock_uid_dev",
-                    email: user?.email || "dev@aumdatalabs.com",
-                    orgId: "dealersight",
-                    role: "admin",
-                });
-                setLoadingOrg(false);
-                return;
-            }
-
             if (!user) {
                 setOrganization(null);
                 setOrgUser(null);
@@ -126,14 +101,14 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     const orgDocRef = doc(db, "organizations", currentOrgUser.orgId);
                     const orgDocSnap = await getDoc(orgDocRef);
                     if (orgDocSnap.exists()) {
-                        const rawOrg = orgDocSnap.data();
+                        const rawOrg = orgDocSnap.data() || {};
+                        // 🛡️ SECURITY HARDENING (P0): Redact apiKeys
                         setOrganization({
                             id: orgDocSnap.id,
                             name: rawOrg.name || "",
                             activeSeats: rawOrg.activeSeats || 0,
                             // Normalize nested subscription object → flat subscriptionTier
                             subscriptionTier: rawOrg.subscriptionTier || rawOrg.subscription?.planId || "explorer",
-                            apiKeys: rawOrg.apiKeys,
                         });
                     }
                 }

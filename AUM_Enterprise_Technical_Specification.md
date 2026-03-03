@@ -32,10 +32,10 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 3. Backend calls `firebase_admin.auth.verify_id_token(token)` to decode.
 4. `verify_user_org_access(uid, orgId)` queries `users/{uid}.orgId` in Firestore and compares — **fail-closed** on DB errors.
 
-### Admin Panel Auth
-1. Uses `aum_admin_session` cookie signed via `ADMIN_SESSION_SECRET`.
-2. Backend validates `X-Admin-Token` against environment secret.
-3. In-memory session verification for proxy routes.
+### Admin Panel Auth (Custom Claims)
+1. Admin access is strictly governed by the `admin: true` custom claim on the Firebase ID token.
+2. Backend validates claims in `verify_admin` dependency; unauthorized attempts are blocked at the gateway.
+3. Plaintext admin login routes have been disabled to prevent credential leakage.
 
 ### API Key Auth (B2B)
 1. Provisioning generates `aum_<32-byte-urlsafe-token>`.
@@ -55,6 +55,7 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 | `/api/payments/verify` | Firebase JWT | ✅ |
 | `/api/payments/payment-link` | Firebase JWT | ✅ |
 | `/api/sso/configure` | Firebase JWT | ✅ |
+| `/api/sso/callback` | OAuth2 (Redirect) | N/A |
 | `/api/sso/status/{orgId}` | Firebase JWT | ✅ |
 | `/api/audit/logs/{orgId}` | Firebase JWT | ✅ |
 | `/api/competitor/displacement/{orgId}` | Firebase JWT | ✅ |
@@ -80,13 +81,12 @@ Where:
 | 60–85 | `minor_drift` | Manageable narrative deviation |
 | < 60 | `drift_detected` | Brand narrative actively misrepresented |
 
-### Sentinel Key Resolution
 When `apiKeys.openai == "internal_platform_managed"` (auto-provisioned orgs), the engine resolves at runtime:
 ```python
 if openai_key == "internal_platform_managed":
     openai_key = os.getenv("OPENAI_API_KEY")
 ```
-This ensures BYOK and platform-managed orgs use the same code path with zero behavior difference.
+Sensitive keys are **always redacted** from the final API response to prevent client-side exposure.
 
 ### Simulation Quota Enforcement
 Enforced via **Firestore atomic transaction** on `organizations/{orgId}.subscription.simsThisCycle`:
@@ -116,7 +116,7 @@ PDF Upload (multipart/form-data)
         ↓
 [Extraction] PyMuPDF4LLM → Markdown in RAM
         ↓
-[Zero-Retention] del content; gc.collect() — raw PDF purged
+[Zero-Retention] 24-hour TTL assigned via `expiresAt` → raw PDF purged
         ↓
 [Chunking] recursive_split(text, max_size=2000, overlap=200)
         ↓
@@ -124,9 +124,9 @@ PDF Upload (multipart/form-data)
         ↓
 [Schema] GPT-4o-mini JSON-LD CIM extraction
         ↓
-[Persistence] Firestore transaction → manifests/{id} + latest
+[Persistence] Firestore transaction → manifests/{id} + latest (with TTL)
         ↓
-[Chunks] Batch write → manifests/{id}/chunks/{i} (400/batch limit)
+[Chunks] Batch write → manifests/{id}/chunks/{i} (with TTL)
         ↓
 [Audit] SOC2 log → organizations/{orgId}/auditLogs
 ```
@@ -231,12 +231,10 @@ Async job pattern:
 
 ---
 
-## 9. Competitor Displacement Analysis
-
 - Endpoint: `GET /api/competitor/displacement/{orgId}`.
 - Returns: `{ competitors: [{ name, displacementRate, strengths, weaknesses }] }`.
 - Powered by GPT-4o-mini with org context from the latest CIM manifest.
-- Falls back to simulated data if no API key available in `ENV=development`.
+- **Fail-Closed**: Requires active authentication and valid CIM; no development fallbacks.
 
 ---
 

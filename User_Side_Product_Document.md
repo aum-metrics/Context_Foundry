@@ -1,6 +1,6 @@
 # AUM Context Foundry — User-Facing Product Document
 **Product Overview for Prospects & New Users**
-**v5.0.0 | March 2026**
+**v5.1.0 | March 2026**
 
 ---
 
@@ -42,7 +42,7 @@ Run any customer question through GPT-4o, Claude 3.5, and Gemini 2.0 simultaneou
 ### 📄 Zero-Retention Ingestion
 Upload your brand's ground truth — product specs, FAQs, case studies — in seconds. AUM processes everything in memory, builds your mathematical knowledge base, and immediately deletes the raw file.
 
-**No documents stored. Ever. Full compliance.**
+**No documents stored. Vector ground truth purged every 24 hours. Full compliance.**
 
 ### 🌐 Agent Manifesto (`/llms.txt`)
 Every organization gets a dynamic manifesto at their AUM URL. AI crawlers (SearchGPT, Perplexity, Claude web) ingest this file to learn the verified truth about your brand — directly from you.
@@ -97,7 +97,7 @@ STEP 3: FIX THE GAP
 
 | Concern | How AUM Handles It |
 |---------|-------------------|
-| Document privacy | Zero-retention — raw files never stored |
+| Document privacy | Zero-retention — raw files never stored; vectors purged in 24h |
 | Data isolation | Strict multi-tenant architecture; your data is never mixed with other organizations |
 | Access control | Firebase Auth + role-based (Admin/Member) per organization |
 | Audit trail | SOC2-compliant append-only logs for all sensitive operations |

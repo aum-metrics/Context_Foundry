@@ -89,11 +89,6 @@ export default function CoIntelligenceSimulator() {
         try {
             let token = await auth.currentUser?.getIdToken();
 
-            // Mock bypass for development/demo mode
-            if (!token && (window.location.search.includes("mock=true") || process.env.NODE_ENV === "development")) {
-                token = "mock-dev-token";
-            }
-
             if (!token) throw new Error("Authentication required to run simulations.");
 
             const response = await fetch('/api/simulation/run', {

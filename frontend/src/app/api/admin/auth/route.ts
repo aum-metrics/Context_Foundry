@@ -22,19 +22,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "System configuration error." }, { status: 500 });
         }
 
-        if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-            const cookieStore = await cookies();
-            cookieStore.set("aum_admin_session", ADMIN_SESSION_SECRET, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "strict",
-                path: "/",
-                maxAge: 60 * 60 * 8
-            });
-            return NextResponse.json({ success: true, token: "admin_authenticated" });
-        }
-
-        return NextResponse.json({ success: false, error: "Invalid credentials. Product admin access only." }, { status: 401 });
+        // 🛑 SECURITY HARDENING (P0): Plaintext passwords are deprecated.
+        // Admins must now use the main Firebase Login flow + Admin SDK Custom Claims.
+        return NextResponse.json({
+            success: false,
+            error: "Plaintext login is disabled. Please use Secure Admin Login via Firebase."
+        }, { status: 403 });
     } catch (_error) {
         return NextResponse.json({ success: false, error: "Authentication failed" }, { status: 500 });
     }

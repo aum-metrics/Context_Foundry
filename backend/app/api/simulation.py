@@ -249,6 +249,8 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
                     logger.info(f"🧪 Dev-mode: Org {request.orgId} not found, using mock keys.")
             else:
                 org_data = org_doc.to_dict() or {}
+                # 🛡️ SECURITY HARDENING (P0): Redact apiKeys
+                org_data.pop("apiKeys", None)
                 api_keys = org_data.get("apiKeys", {})
 
             # FETCH MANIFEST (Latest or Versioned)

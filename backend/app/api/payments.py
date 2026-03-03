@@ -297,14 +297,13 @@ async def razorpay_webhook(request: Request):
         raw_body = await request.body()
         signature = request.headers.get("X-Razorpay-Signature", "")
 
-        # 1. Verify Webhook Signature
-        if secret:
-            expected_signature = hmac.new(
-                secret.encode(), raw_body, digestmod=hashlib.sha256
-            ).hexdigest()
-            if not hmac.compare_digest(expected_signature, signature):
-                logger.error("Invalid Webhook Signature detected.")
-                raise HTTPException(status_code=400, detail="Invalid signature")
+        # 1. Verify Webhook Signature - Strict comparison
+        expected_signature = hmac.new(
+            secret.encode(), raw_body, digestmod=hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected_signature, signature):
+            logger.error(f"🛑 CRITICAL: Invalid Webhook Signature. Body: {raw_body[:100]}... Signature: {signature}")
+            raise HTTPException(status_code=400, detail="Invalid signature")
 
         # 2. Process Event
         data = await request.json()
@@ -315,23 +314,44 @@ async def razorpay_webhook(request: Request):
 
         # Handle successful payment or subscription activation
         if event in ["payment.captured", "subscription.activated", "order.paid"]:
-            # Extract orgId from notes
+            # Extract orgId and paymentId for idempotency
             entity = payload.get("payment", {}).get("entity") or payload.get("subscription", {}).get("entity") or {}
             notes = entity.get("notes", {})
             org_id = notes.get("orgId")
             plan_id = notes.get("planId", "growth")
+            payment_id = entity.get("id")
 
             if org_id and db:
-                now = datetime.utcnow()
-                db.collection("organizations").document(org_id).update({
-                    "subscription.planId": plan_id,
-                    "subscription.status": "active",
-                    "subscription.lastWebhookEvent": event,
-                    "subscription.activatedAt": now,
-                    "subscription.currentPeriodStart": now,
-                    "subscription.currentPeriodEnd": now + timedelta(days=30),
-                })
-                logger.info(f"Webhook: Org {org_id} upgraded to {plan_id} via {event}")
+                import google.cloud.firestore
+                @google.cloud.firestore.transactional
+                def atomic_activate(transaction, org_ref, p_id, p_plan, evt):
+                    snapshot = org_ref.get(transaction=transaction)
+                    if not snapshot.exists:
+                        return False
+                    
+                    data = snapshot.to_dict() or {}
+                    # Idempotency check: if this specific payment was already processed
+                    if data.get("subscription", {}).get("lastPaymentId") == p_id:
+                        logger.info(f"♻️ Webhook Idempotency: Payment {p_id} already processed for {org_id}")
+                        return True
+                    
+                    now = datetime.utcnow()
+                    transaction.update(org_ref, {
+                        "subscription.planId": p_plan,
+                        "subscription.status": "active",
+                        "subscription.lastWebhookEvent": evt,
+                        "subscription.lastPaymentId": p_id,
+                        "subscription.activatedAt": now,
+                        "subscription.currentPeriodStart": now,
+                        "subscription.currentPeriodEnd": now + timedelta(days=30),
+                    })
+                    return True
+
+                org_ref = db.collection("organizations").document(org_id)
+                success = atomic_activate(db.transaction(), org_ref, payment_id, plan_id, event)
+                
+                if success:
+                    logger.info(f"✅ Webhook: Org {org_id} upgraded to {plan_id} via {event}")
 
         return {"status": "ok"}
     except Exception as e:

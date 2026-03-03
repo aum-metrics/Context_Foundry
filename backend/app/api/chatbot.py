@@ -55,6 +55,8 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
             org_ref = db.collection("organizations").document(request.orgId).get()
             if org_ref.exists:
                 org_data = org_ref.to_dict() or {}
+                # 🛡️ SECURITY HARDENING (P0): Redact apiKeys
+                org_data.pop("apiKeys", None)
                 openai_key = org_data.get("apiKeys", {}).get("openai")
         except Exception as e:
             logger.error(f"Firestore org lookup failed: {e}")

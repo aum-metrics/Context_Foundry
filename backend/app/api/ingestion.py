@@ -9,6 +9,7 @@ import os
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 import json
 import datetime
+from datetime import timedelta
 import logging
 from fastapi import Depends
 import asyncio
@@ -188,19 +189,22 @@ async def parse_document(
             
             @firestore.transactional
             def update_manifest(txn, m_ref, l_ref, data, vector, id_val, total_chunks):
-                # 1. Write Manifest
+                # 1. Write Manifest with 24h TTL
+                expiry = datetime.datetime.utcnow() + timedelta(hours=24)
                 txn.set(m_ref, {
                     "content": json.dumps(data),
                     "embedding": vector,
                     "createdAt": datetime.datetime.utcnow(),
+                    "expiresAt": expiry,
                     "version": id_val,
                     "totalChunks": total_chunks
                 })
-                # 2. Write Latest
+                # 2. Write Latest with same TTL
                 txn.set(l_ref, {
                     "content": json.dumps(data),
                     "embedding": vector,
                     "createdAt": datetime.datetime.utcnow(),
+                    "expiresAt": expiry,
                     "version": id_val,
                     "totalChunks": total_chunks
                 })
@@ -213,7 +217,12 @@ async def parse_document(
                 batch = db.batch()
                 for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
                     c_ref = manifest_ref.collection("chunks").document(str(i))
-                    batch.set(c_ref, {"text": txt, "embedding": vec, "index": i})
+                    batch.set(c_ref, {
+                        "text": txt, 
+                        "embedding": vec, 
+                        "index": i,
+                        "expiresAt": datetime.datetime.utcnow() + timedelta(hours=24)
+                    })
                     if (i + 1) % 400 == 0:
                         batch.commit()
                         batch = db.batch()

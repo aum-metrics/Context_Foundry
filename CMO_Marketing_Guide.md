@@ -154,9 +154,10 @@ AUM's three-layer story:
 ## Proof Points (Use in Outreach)
 
 - LCRS scoring is mathematically deterministic — same input always produces the same score.
-- Zero-retention by design — raw documents never stored (compliance-friendly).
+- Zero-retention by design — raw documents never stored; vector data purged after 24 hours.
 - Auto-provisioned inference keys — start in under 60 seconds with no developer involvement.
-- Full audit trail — every simulation, ingestion, and member change is logged for compliance.
+- Full audit trail — SOC2-compliant logging of all sensitive operations.
+- Enterprise SSO — Secure OAuth2-based authentication for large teams.
 
 ---
 

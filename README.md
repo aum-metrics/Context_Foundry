@@ -11,9 +11,9 @@
 └──────────────────────────┬─────────────────────────────────┘
                            │ HTTPS + Bearer Token
 ┌──────────────────────────▼─────────────────────────────────┐
-│  LCRS GATEWAY (FastAPI 0.115)                              │
 │  /api/simulation  /api/ingestion  /api/seo  /api/competitor│
 │  /api/workspaces  /api/payments   /api/sso  /api/admin     │
+│  /api/auth/sso/callback                                    │
 └──────────────────────────┬─────────────────────────────────┘
                            │ firebase-admin + Service Account
 ┌──────────────────────────▼─────────────────────────────────┐
@@ -37,6 +37,7 @@ The **Low-Latency Claim-based Reliability Scoring** engine produces deterministi
 - Raw PDF uploaded → processed in volatile RAM via `PyMuPDF4LLM`.
 - Chunked, embedded (`text-embedding-3-small`), synthesized into JSON-LD CIM.
 - Raw bytes explicitly flushed (`del content; gc.collect()`).
+- **24-Hour TTL**: All ingested manifests and chunks are automatically purged after 24 hours via `expiresAt` timestamps.
 - **Zero S3/disk storage footprint.**
 
 ### 3. Identity Syndication
@@ -58,13 +59,13 @@ The **Low-Latency Claim-based Reliability Scoring** engine produces deterministi
 
 | Mechanism | Implementation |
 |-----------|---------------|
-| Auth | `firebase-admin` ID token verification; `aum_` prefix API keys with SHA-256 hash |
+| Auth | Firebase ID Token verification; **Custom Claims for Admin Access** |
 | Multi-tenancy | `verify_user_org_access` enforced on every org-scoped endpoint |
-| Payments | All Razorpay endpoints require auth + org ownership (`/create-order`, `/verify`, `/payment-link`) |
-| SSO | `/configure` and `/status` require org membership; Fernet encryption for client secrets; Full UI management in /dashboard |
-| Reliability | `TaskQueueRecovery` worker runs at startup to handle crashed process jobs |
-| Rate Limiting | `slowapi` + Firestore atomic transaction-based simulation quotas |
-| Webhook Security | `hmac.compare_digest` for Razorpay webhook verification |
+| API Security | **Global `apiKeys` Redaction** across all workspace and simulation responses |
+| Payments | All Razorpay endpoints require auth + org ownership; Transaction-based atomic webhooks |
+| SSO | OAuth2 Redirect & Callback flow; Fernet encryption for client secrets |
+| Reliability | `TaskQueueRecovery` worker handles stalled/crashed background jobs |
+| Webhook Security | `hmac.compare_digest` for Razorpay webhook verification + Idempotency checks |
 
 ---
 

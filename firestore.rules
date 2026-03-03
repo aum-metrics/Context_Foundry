@@ -24,8 +24,8 @@ service cloud.firestore {
 
     // Organizations and their subcollections
     match /organizations/{orgId} {
-      // Basic org info access
-      allow read: if belongsToOrg(orgId);
+      // Basic org info access - 🛡️ Hardened to prevent reading apiKeys
+      allow read: if belongsToOrg(orgId) && !('apiKeys' in resource.data);
       
       // Admin might need to update org settings
       allow write: if belongsToOrg(orgId) && getUserData().role == 'admin';

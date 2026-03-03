@@ -145,14 +145,8 @@ export default function SemanticIngestion() {
             formData.append('orgId', organization.id);
         }
 
-        let token: string | undefined;
-        const isMock = process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash");
-        if (isMock) {
-            token = "mock-dev-token";
-        } else {
-            token = await auth.currentUser?.getIdToken() || undefined;
-            if (!token) throw new Error("Authentication required for secure ingestion.");
-        }
+        let token = await auth.currentUser?.getIdToken() || undefined;
+        if (!token) throw new Error("Authentication required for secure ingestion.");
 
         const response = await fetch('/api/ingestion/parse', {
             method: 'POST',

@@ -82,7 +82,8 @@ The raw document binary is **never written to disk or external storage**. It is:
 1. Received as a byte stream in memory.
 2. Processed by PyMuPDF4LLM in-memory.
 3. Explicitly deleted (`del content`).
-4. Python garbage collected (`gc.collect()`).
+4. **24-Hour TTL Assigned**: The resulting manifest is assigned an `expiresAt` timestamp and automatically purged by Firestore after 24 hours.
+5. Python garbage collected (`gc.collect()`).
 
 Only the mathematical embeddings and JSON-LD schema are persisted.
 
@@ -148,7 +149,7 @@ cache_key = SHA-256(orgId + prompt + manifestVersion)
 cache_doc = organizations/{orgId}/simulationCache/{cache_key}
 TTL: 24 hours
 ```
-Cache is checked after plan validation and before API calls. Explorer plan still respects the 24hr TTL.
+Cache is checked after plan validation and before API calls. All entries are subject to the same 24-hour TTL as the parent manifest.
 
 ---
 

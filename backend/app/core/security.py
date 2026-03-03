@@ -30,18 +30,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Dev-mode bypass: accept mock tokens ONLY if explicitly enabled and in development
-    from core.config import settings
-    allow_mock = getattr(settings, "ALLOW_MOCK_AUTH", False)
-    if settings.ENV == "development" and allow_mock and token == "mock-dev-token":
-        logger.info("🔓 Dev-mode: accepting mock token (ALLOW_MOCK_AUTH is ON)")
-        return {
-            "uid": "mock_uid_dev",
-            "id": "mock_uid_dev",
-            "email": "dev@localhost",
-            "name": "Dev User",
-        }
-    
+    # Firebase ID Token verification
     try:
         # Verify the ID token using the Firebase Admin SDK.
         decoded_token = auth.verify_id_token(token, app=firebase_app)
@@ -72,13 +61,7 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     Verifies that the Firebase user belongs to the requested organization.
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
-    # Dev-mode bypass: Let the mock user through ONLY if explicitly enabled
-    from core.config import settings
-    allow_mock = getattr(settings, "ALLOW_MOCK_AUTH", False)
-    if settings.ENV == "development" and allow_mock and uid == "mock_uid_dev":
-        logger.info(f"🔓 Dev-mode: Bypassing org check for mock user on {target_org_id}")
-        return True
-
+    # BRUTAL AUDIT FIX: Fail-Closed logic.
     if not db:
         logger.error("🛑 Security Failure: Database connection missing. Access denied.")
         return False 
@@ -160,11 +143,6 @@ def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(securit
             user_doc = db.collection("users").document(user_info["uid"]).get()
             if user_doc.exists:
                 org_id = user_doc.to_dict().get("orgId")
-        
-        # BRUTAL FIX: If it's a mock token and no org found, default to 'dealersight' for demo stability
-        if not org_id and user_info["uid"] == "mock_uid_dev":
-            org_id = "dealersight"
-            logger.info("🔓 Dev-mode: Defaulting mock user to 'dealersight' org")
         
         return {
             "uid": user_info["uid"],
