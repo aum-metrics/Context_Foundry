@@ -73,7 +73,8 @@ For deep knowledge graph access, use /llms-full.txt.`;
             } else if (organization) {
                 await setDoc(doc(db, "organizations", organization.id, "manifests", "latest"), {
                     content: content,
-                    updatedAt: serverTimestamp()
+                    updatedAt: serverTimestamp(),
+                    version: "latest"
                 });
             }
             setDeploying(false);

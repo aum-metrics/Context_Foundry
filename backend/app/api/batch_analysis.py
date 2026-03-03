@@ -98,7 +98,7 @@ async def run_batch_simulation(
     if org_doc.exists:
         plan = org_doc.to_dict().get("subscription", {}).get("planId", "explorer")
         if plan not in ["growth", "scale", "enterprise"]:
-            raise HTTPException(status_code=403, detail="Batch Analysis requires a Growth or Scale plan.")
+            raise HTTPException(status_code=403, detail="Batch Analysis requires a Growth, Scale, or Enterprise plan.")
 
     job_id = str(uuid.uuid4())
     FirestoreTaskQueue.register_job(request.orgId, "batchJobs", job_id, request.model_dump())
@@ -211,7 +211,7 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
             db.collection("organizations").document(org_id).collection("weeklySnapshots").add({
                 "timestamp": datetime.utcnow(),
                 "domainStability": result["domainStability"],
-                "hallucinationRate": result["hallucinationRate"],
+                "driftRate": result["driftRate"],
                 "modelAverages": result.get("modelAverages", {}),
                 "totalChecks": result.get("totalChecks", 0),
             })
@@ -220,7 +220,7 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
                 "orgId": org_id,
                 "orgName": org_name,
                 "domainStability": result["domainStability"],
-                "hallucinationRate": result["hallucinationRate"],
+                "driftRate": result["driftRate"],
                 "status": "success",
             })
         except Exception as e:

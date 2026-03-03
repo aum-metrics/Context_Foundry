@@ -186,9 +186,9 @@ Content-Type: application/json
 - IP-level: 5 requests/second (configurable via `RATE_LIMIT_PER_SECOND` env).
 
 ### Key Lifecycle
-- Generate: `POST /api/api-keys` (Firebase JWT).
-- List: `GET /api/api-keys` (Firebase JWT, returns own org's keys).
-- Revoke: `DELETE /api/api-keys/{key_id}` (Firebase JWT, ownership verified by `userId`).
+- Generate: `POST /api/keys/generate` (Firebase JWT).
+- List: `GET /api/keys/list` (Firebase JWT, returns own org's keys).
+- Revoke: `DELETE /api/keys/{key_id}` (Firebase JWT, ownership verified by `userId`).
 
 ---
 
@@ -253,7 +253,7 @@ Supported providers: Okta, Azure AD, Google Workspace.
 
 A distributed-safe background job recovery system:
 
-- **Collection Architecture**: Jobs stored in `organizations/{orgId}/batch_jobs` and `organizations/{orgId}/seo_jobs`.
+- **Collection Architecture**: Jobs stored in `organizations/{orgId}/batchJobs` and `organizations/{orgId}/seoJobs`.
 - **States**: `queued` → `processing` → `complete`/`failed`.
 - **Recovery Worker**: `TaskQueueRecovery.sweep_stalled_jobs()` runs at startup and scans for jobs in `processing` state for >30 mins.
 - **Retry Logic**: Automatic retry up to 3 times before setting to `failed_permanent`.

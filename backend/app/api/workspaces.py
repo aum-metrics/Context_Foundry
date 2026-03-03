@@ -397,14 +397,16 @@ async def list_org_members(
         raise HTTPException(status_code=503, detail="Database unavailable")
     try:
         users_stream = db.collection("users").where("orgId", "==", org_id).stream()
-        members = []
-        for doc in users_stream:
-            user_data = doc.to_dict() or {}
+        # Also fetch pending invitations
+        invites_stream = db.collection("organizations").document(org_id).collection("pendingInvites").where("status", "==", "pending").stream()
+        for doc in invites_stream:
+            invite_data = doc.to_dict() or {}
             members.append({
-                "uid": user_data.get("uid", doc.id),
-                "email": user_data.get("email", ""),
-                "role": user_data.get("role", "member"),
-                "orgId": org_id
+                "uid": f"pending_{doc.id}",
+                "email": invite_data.get("email", ""),
+                "role": invite_data.get("role", "member"),
+                "orgId": org_id,
+                "status": "pending"
             })
         return {"members": members}
     except Exception as e:
@@ -466,6 +468,67 @@ async def add_org_member(
         metadata={"role": role}
     )
     return {"success": True, "message": f"Invitation created for {invite_email}"}
+
+
+@router.post("/{org_id}/accept-invite")
+async def accept_org_invite(
+    org_id: str,
+    request: dict,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    Accept an invitation to join an organization.
+    Converts pendingInvite to active user and increments activeSeats.
+    """
+    uid = current_user.get("uid")
+    email = current_user.get("email")
+    invite_id = request.get("inviteId")
+
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    
+    # 1. Verify invitation exists and is pending for this user's email
+    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
+    invite_doc = invite_ref.get()
+    
+    if not invite_doc.exists:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    
+    invite_data = invite_doc.to_dict() or {}
+    if invite_data.get("status") != "pending" or invite_data.get("email") != email:
+        raise HTTPException(status_code=400, detail="Invalid or expired invitation")
+
+    # 2. Atomic Transaction: Update user, mark invite complete, increment seats
+    batch = db.batch()
+    
+    # Update user record
+    user_ref = db.collection("users").document(uid)
+    batch.set(user_ref, {
+        "uid": uid,
+        "email": email,
+        "orgId": org_id,
+        "role": invite_data.get("role", "member"),
+        "joinedAt": datetime.utcnow().isoformat()
+    }, merge=True)
+    
+    # Mark invite as accepted
+    batch.update(invite_ref, {"status": "accepted", "acceptedAt": datetime.utcnow().isoformat()})
+    
+    # Increment active seats
+    org_ref = db.collection("organizations").document(org_id)
+    batch.update(org_ref, {"activeSeats": firestore.Increment(1)})
+    
+    batch.commit()
+    
+    log_audit_event(
+        org_id=org_id,
+        actor_id=uid,
+        event_type="member_joined",
+        resource_id=email,
+        metadata={"inviteId": invite_id}
+    )
+
+    return {"success": True, "message": "Successfully joined organization"}
 
 
 @router.delete("/{workspace_id}/members/{email}")

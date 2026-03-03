@@ -90,7 +90,7 @@ async def run_seo_audit(
     if org_doc.exists:
         plan = org_doc.to_dict().get("subscription", {}).get("planId", "explorer")
         if plan not in ["growth", "scale", "enterprise"]:
-            raise HTTPException(status_code=403, detail="SEO Readiness Audits require a Growth or Scale plan.")
+            raise HTTPException(status_code=403, detail="SEO Readiness Audits require a Growth, Scale, or Enterprise plan.")
 
     job_id = str(uuid.uuid4())
     FirestoreTaskQueue.register_job(request.orgId, "seoJobs", job_id, request.model_dump())

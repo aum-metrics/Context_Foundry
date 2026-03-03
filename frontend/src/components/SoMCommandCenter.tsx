@@ -187,7 +187,7 @@ export default function SoMCommandCenter() {
             });
             const data = await response.json();
 
-            if (data.status === "processing" || data.status === "queued" && data.jobId) {
+            if ((data.status === "processing" || data.status === "queued") && data.jobId) {
                 // Poll for completion
                 const pollInterval = setInterval(async () => {
                     batchIntervalRef.current = pollInterval;
@@ -402,7 +402,7 @@ export default function SoMCommandCenter() {
                     {batchResult && (
                         <div className="hidden md:block bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-4 py-2">
                             <div className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Domain Stability</div>
-                            <div className="text-xl font-light text-white">{batchResult.domainStability.toFixed(1)}%</div>
+                            <div className="text-xl font-light text-slate-900 dark:text-white">{batchResult.domainStability.toFixed(1)}%</div>
                         </div>
                     )}
                     <button

@@ -87,8 +87,8 @@ def check_api_tier_subscription(user_id: str) -> bool:
         plan_id = subscription.get("planId", "explorer").lower()
         status = subscription.get("status", "inactive").lower()
         
-        # ONLY growth and scale tiers get API access
-        if plan_id not in ["growth", "scale"] or status != "active":
+        # ONLY growth, scale and enterprise tiers get API access
+        if plan_id not in ["growth", "scale", "enterprise"] or status != "active":
             return False
         
         # Check expiry if applicable
@@ -129,8 +129,8 @@ async def generate_api_key_endpoint(
             raise HTTPException(
                 status_code=403,
                 detail={
-                    "error": "API keys are only available for Growth and Scale subscribers",
-                    "message": "Upgrade to the Growth or Scale plan to generate API keys. Available tiers: explorer, growth, scale",
+                    "error": "API keys are only available for Growth, Scale, and Enterprise subscribers",
+                    "message": "Upgrade to a Professional or Enterprise plan to generate API keys. Available tiers: explorer, growth, scale, enterprise",
                     "upgrade_url": "https://aumdatalabs.com/pricing"
                 }
             )

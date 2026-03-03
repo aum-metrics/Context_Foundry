@@ -31,14 +31,15 @@ service cloud.firestore {
       allow write: if belongsToOrg(orgId) && getUserData().role == 'admin';
 
       // Jobs and Manifests: Any org member can read/write (needed for FE interaction)
-      match /batchJobs/{jobId} { allow read, write: if belongsToOrg(orgId); }
-      match /seoJobs/{jobId} { allow read, write: if belongsToOrg(orgId); }
-      match /manifests/{docId} { allow read, write: if belongsToOrg(orgId); }
+      // Jobs and Manifests: Backend/System only for mutations
+      match /batchJobs/{jobId} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /seoJobs/{jobId} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /manifests/{docId} { allow read: if belongsToOrg(orgId); allow write: if false; }
 
       // Sensitive Subcollections: Read-only for members, No write except via backend
       match /api_keys/{key} { allow read: if belongsToOrg(orgId); allow write: if false; }
       match /payments/{pay} { allow read: if belongsToOrg(orgId); allow write: if false; }
-      match /audit_logs/{log} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /auditLogs/{log} { allow read: if belongsToOrg(orgId); allow write: if false; }
       match /pendingInvites/{inv} { allow read: if belongsToOrg(orgId); allow write: if false; }
     }
 

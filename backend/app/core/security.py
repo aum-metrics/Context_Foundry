@@ -72,11 +72,11 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     Verifies that the Firebase user belongs to the requested organization.
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
-    # Dev-mode bypass: Let any user through if mock auth is explicitly enabled
+    # Dev-mode bypass: Let the mock user through ONLY if explicitly enabled
     from core.config import settings
     allow_mock = getattr(settings, "ALLOW_MOCK_AUTH", False)
-    if settings.ENV == "development" and allow_mock:
-        logger.info(f"🔓 Dev-mode: Bypassing org check for user {uid} on {target_org_id}")
+    if settings.ENV == "development" and allow_mock and uid == "mock_uid_dev":
+        logger.info(f"🔓 Dev-mode: Bypassing org check for mock user on {target_org_id}")
         return True
 
     if not db:
