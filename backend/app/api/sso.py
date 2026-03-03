@@ -111,8 +111,47 @@ async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_con
             "is_active": is_active   # Legacy/Internal clarity
         }
     except Exception as e:
-        logger.error(f"Failed to fetch SSO status: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch status")
+        logger.error(f"SSO status check failed: {e}")
+        return {"configured": False, "enabled": False}
+
+
+@router.get("/lookup")
+async def lookup_sso_by_domain(domain: str):
+    """
+    Public endpoint to lookup SSO configuration by email domain.
+    Used by login page to resolve orgId.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    
+    if not domain or "@" in domain:
+        raise HTTPException(status_code=400, detail="Invalid domain format")
+
+    try:
+        # Search for active SSO config with this domain
+        query = db.collection("sso_configs").where("domain", "==", domain).limit(1).stream()
+        results = list(query)
+        
+        if not results:
+            raise HTTPException(status_code=404, detail="No SSO configuration found for this domain")
+        
+        config_doc = results[0]
+        config_data = config_doc.to_dict()
+        
+        if not config_data.get("is_active"):
+            raise HTTPException(status_code=404, detail="SSO for this domain is currently disabled")
+
+        return {
+            "success": True,
+            "organization_id": config_doc.id,
+            "provider": config_data.get("provider"),
+            "provider_name": SSO_PROVIDERS.get(config_data.get("provider"), {}).get("name", "Enterprise IDP")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"SSO domain lookup failed: {e}")
+        raise HTTPException(status_code=500, detail="Domain lookup failed")
 
 @router.post("/configure")
 async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth_context)):

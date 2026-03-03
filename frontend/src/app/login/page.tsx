@@ -126,22 +126,41 @@ export default function LoginPage() {
                     {!isSignUp && (
                         <button
                             type="button"
-                            onClick={() => {
-                                // For MVP persona flow, we initiate login assuming the organization has Okta configured
-                                // In a full implementation, we'd lookup provider by domain first
+                            disabled={loading}
+                            onClick={async () => {
                                 const domain = email.split('@')[1];
                                 if (!domain) {
                                     setError("Please enter your corporate email to initiate SSO.");
                                     return;
                                 }
-                                // P0 Fix: Correct route is /api/sso/login/{provider}
-                                // Needs an 'org' parameter. For the demo, we assume the user is trying to login to 'aum-core' or another known org if not specified.
-                                // If redirected from an invite, we might have it already.
-                                const searchParams = new URLSearchParams(window.location.search);
-                                const targetOrg = searchParams.get("orgId") || "aum-core";
-                                window.location.href = `/api/sso/login/google?org=${targetOrg}`;
+
+                                setLoading(true);
+                                try {
+                                    const searchParams = new URLSearchParams(window.location.search);
+                                    let targetOrg = searchParams.get("orgId");
+                                    let provider = "google"; // Default fallback
+
+                                    if (!targetOrg) {
+                                        // Attempt domain lookup
+                                        const res = await fetch(`/api/sso/lookup?domain=${domain}`);
+                                        if (res.ok) {
+                                            const data = await res.json();
+                                            targetOrg = data.organization_id;
+                                            provider = data.provider || "google";
+                                        } else {
+                                            // Handle 404 or other errors
+                                            const err = await res.json().catch(() => ({}));
+                                            throw new Error(err.detail || "No SSO configuration found for this domain.");
+                                        }
+                                    }
+
+                                    window.location.href = `/api/sso/login/${provider}?org=${targetOrg}`;
+                                } catch (err: unknown) {
+                                    setError(err instanceof Error ? err.message : "SSO initiation failed.");
+                                    setLoading(false);
+                                }
                             }}
-                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-slate-200 dark:border-white/10 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-slate-200 dark:border-white/10 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all disabled:opacity-50"
                         >
                             <Logo size={16} showText={false} /> Enterprise SSO
                         </button>

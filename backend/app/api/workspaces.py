@@ -541,17 +541,22 @@ async def add_org_member(
     batch.update(org_ref, {"activeSeats": firestore.Increment(1)})
 
     batch.commit()
+    
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    invite_id = invite_ref.id
+    invite_url = f"{frontend_url}/invite/{org_id}?inviteId={invite_id}"
 
     log_audit_event(
         org_id=org_id,
         actor_id=uid,
         event_type="member_invited",
         resource_id=invite_email,
-        metadata={"role": role, "placeholder_uid": placeholder_uid}
+        metadata={"role": role, "placeholder_uid": placeholder_uid, "invite_id": invite_id}
     )
     return {
         "success": True, 
         "message": f"Invitation created for {invite_email}",
+        "inviteUrl": invite_url,
         "member": {
             "uid": placeholder_uid,
             "email": invite_email,

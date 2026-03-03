@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import { db } from "@/lib/firestorePaths";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 export interface Organization {
     id: string;

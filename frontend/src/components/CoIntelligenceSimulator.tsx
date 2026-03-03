@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, AlertCircle, RefreshCw, Beaker, Play, FileText, ChevronRight, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2, Download } from "lucide-react";
+import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, Beaker, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
@@ -31,7 +31,7 @@ interface ModelResult {
 }
 
 export default function CoIntelligenceSimulator() {
-    const { organization, orgUser } = useOrganization();
+    const { organization } = useOrganization();
     useRazorpay();
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");

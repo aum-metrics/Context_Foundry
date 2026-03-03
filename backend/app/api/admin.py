@@ -40,6 +40,14 @@ async def verify_admin(
     # This ensures the dashboard remains operational while Firebase Admin Claims are rolled out.
     admin_secret = os.getenv("ADMIN_SESSION_SECRET")
     if admin_secret and token == admin_secret:
+        from api.audit import log_audit_event
+        log_audit_event(
+            org_id="system",
+            actor_id="system_admin",
+            event_type="admin_secret_used",
+            resource_id="admin_dashboard",
+            metadata={"source": "legacy_fallback"}
+        )
         return {"role": "admin", "uid": "system_admin", "email": "admin@aumdatalabs.com"}
 
     try:

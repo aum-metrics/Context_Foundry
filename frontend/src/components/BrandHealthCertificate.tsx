@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
-import { Shield, CheckCircle2, Award, Download, Share2, Globe, Cpu, Hexagon } from "lucide-react";
+import { Shield, Download, Share2, Globe, Cpu } from "lucide-react";
 import { Logo } from "./Logo";
 
 interface BrandHealthCertificateProps {
