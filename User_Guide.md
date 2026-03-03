@@ -1,5 +1,5 @@
 # AUM Context Foundry — User Guide
-**v5.0.0 | March 2026**
+**v5.1.0 | March 2026**
 
 ---
 
@@ -25,6 +25,7 @@ When you first log in, AUM automatically:
 - Creates an **Organization** for your company.
 - Provisions a **B2B API Key** for direct API access.
 - Sets you up on the **Explorer plan** (3 simulations/month, free).
+- Supports **Enterprise** scale out with priority support.
 
 You'll be taken straight to the Dashboard.
 
@@ -131,7 +132,13 @@ Navigate to **Settings → Team** to:
 - Set roles: **Admin** (full access) or **Member** (read + simulate).
 - View active seats.
 
-> **Seat Limits**: Explorer: 1 seat. Growth: 5 seats. Scale: 25 seats.
+> **Seat Limits**: Explorer: 1 seat. Growth: 5 seats. Scale: 25 seats. Enterprise: Unlimited.
+
+### 6.1 Accepting an Invitation
+1. Check your email for an invitation from AUM Data Labs.
+2. Click the **Join Organization** link.
+3. Sign in or create an account to activate your seat.
+4. Your name will now appear as "Seat Active" in the team directory.
 
 ### 6.2 Enterprise SSO
 Organizations on the **Scale** plan can configure Single Sign-On (Okta, Azure AD, Google) via **Settings → Enterprise SSO**.
@@ -206,4 +213,4 @@ A: You'll see a clear "Limit Reached" message. You can upgrade immediately to co
 
 ---
 
-*AUM Data Labs — User Guide v5.0.0*
+*AUM Data Labs — User Guide v5.1.0*

@@ -1,5 +1,5 @@
 # AUM Context Foundry — CMO & Marketing Guide
-**v5.0.0 | March 2026**
+**v5.1.0 | March 2026**
 
 ---
 
@@ -160,4 +160,4 @@ AUM's three-layer story:
 
 ---
 
-*AUM Data Labs — CMO & Marketing Guide v5.0.0*
+*AUM Data Labs — CMO & Marketing Guide v5.1.0*

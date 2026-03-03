@@ -1,4 +1,4 @@
-*Built by AUM Data Labs — Context Foundry v5.0.0*
+*Built by AUM Data Labs — Context Foundry v5.1.0*
 
 ---
 
@@ -113,6 +113,7 @@ PYTHONPATH=app pytest tests -v
 | Explorer | 1 | 3 | ✗ | Free |
 | Growth | 5 | 100 | ✓ | $79/mo |
 | Scale | 25 | 500 | ✓ | $249/mo |
+| Enterprise | Unlimited* | Unlimited | ✓ | Custom |
 
 ---
 
@@ -164,8 +165,9 @@ AUM/
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/workspaces/provision` | Firebase JWT | Auto-provision org + B2B key |
-| GET | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | List org members |
-| POST | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | Invite org member |
+| GET | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | List members + pending invites |
+| POST | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | Create pending invitation |
+| POST | `/api/workspaces/{orgId}/accept-invite` | Firebase JWT | Accept invitation + join org |
 | POST | `/api/simulation/run` | Firebase JWT | LCRS simulation |
 | POST | `/api/simulation/v1/run` | `aum_` API Key | B2B simulation gateway |
 | POST | `/api/ingestion/parse` | Firebase JWT | Zero-retention PDF ingestion |
@@ -179,4 +181,4 @@ AUM/
 
 ---
 
-*Built by AUM Data Labs — Context Foundry v5.0.0*
+*Built by AUM Data Labs — Context Foundry v5.1.0*

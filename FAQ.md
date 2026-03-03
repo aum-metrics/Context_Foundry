@@ -71,10 +71,11 @@ Instant. Your organization, user record, and B2B API key are created in a single
 | Feature | Growth | Scale |
 |---------|--------|-------|
 | Seats | 5 | 25 |
-| Simulations/mo | 100 | 500 |
-| Batch Stability Check | ✓ | ✓ |
-| Priority Support | ✓ | ✓ |
-| Enterprise SSO | — | ✓ |
+| Simulations/mo | 100 | 500 | Custom |
+| Batch Stability Check | ✓ | ✓ | ✓ |
+| Priority Support | ✓ | ✓ | ✓ |
+| Enterprise SSO | — | ✓ | ✓ |
+| Custom Model Training | — | — | ✓ |
 
 **Q: What payment methods are accepted?**
 All major credit/debit cards, UPI, and Net Banking via Razorpay.
@@ -124,4 +125,4 @@ A: High. AUM features a persistent task queue with an automated recovery worker 
 
 ---
 
-*AUM Data Labs — FAQ v5.0.0*
+*AUM Data Labs — FAQ v5.1.0*

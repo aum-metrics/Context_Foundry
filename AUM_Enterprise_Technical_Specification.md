@@ -1,5 +1,5 @@
 # AUM Context Foundry — Enterprise Technical Specification
-**v5.0.0 | March 2026**
+**v5.1.0 | March 2026**
 
 ---
 
@@ -78,7 +78,7 @@ Where:
 |-------|-------|---------|
 | > 85 | `high_fidelity` | AI accurately represents brand |
 | 60–85 | `minor_drift` | Manageable narrative deviation |
-| < 60 | `critical_drift` | Brand narrative actively misrepresented |
+| < 60 | `drift_detected` | Brand narrative actively misrepresented |
 
 ### Sentinel Key Resolution
 When `apiKeys.openai == "internal_platform_managed"` (auto-provisioned orgs), the engine resolves at runtime:
@@ -94,6 +94,7 @@ Enforced via **Firestore atomic transaction** on `organizations/{orgId}.subscrip
 Explorer:  3 simulations/cycle
 Growth:   100 simulations/cycle
 Scale:    500 simulations/cycle
+Enterprise: Unlimited / Custom
 ```
 Transaction is skipped in `ENV=development` for local testing.
 
@@ -314,4 +315,4 @@ See `Admin_Support_Handbook.md` for the complete variable reference.
 
 ---
 
-*AUM Data Labs — Context Foundry Enterprise Technical Specification v5.0.0*
+*AUM Data Labs — Context Foundry Enterprise Technical Specification v5.1.0*

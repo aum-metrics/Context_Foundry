@@ -1,5 +1,5 @@
 # AUM Context Foundry — Admin Support Handbook
-**v5.0.0 | March 2026 | CONFIDENTIAL — Internal Operations Only**
+**v5.1.0 | March 2026 | CONFIDENTIAL — Internal Operations Only**
 
 ---
 
@@ -22,7 +22,7 @@
 | `CRON_SECRET` | YES (cron) | Bearer token for authenticating the billing cron | random 32+ char string |
 | `ENV` | NO | `development` or `production` (default: `production`) | `production` |
 | `ADMIN_SESSION_SECRET` | **YES** | Secret for signing admin session cookies | `random-string` |
-| `ALLOW_MOCK_AUTH` | NO | `true` to allow `mock-dev-token` in dev | `true` |
+| `ALLOW_MOCK_AUTH` | NO | `true` to allow `mock_uid_dev` bypass in dev | `true` |
 | `RATE_LIMIT_PER_SECOND` | NO | IP-level rate limit for B2B API (default: 5) | `10` |
 
 > **Generating SSO_ENCRYPTION_KEY:**
@@ -62,7 +62,7 @@
 | `organizations/{orgId}/simulationCache` | 24hr cache | Delete to force fresh runs |
 | `organizations/{orgId}/auditLogs` | SOC2 audit trail | Read-only |
 | `api_keys/{sha256hash}` | B2B API keys | Revoke by setting `status: revoked` |
-| `sso_configs/{orgId}` | Enterprise SSO configs | Delete to disable SSO |
+| `ssoConfigs/{orgId}` | Enterprise SSO configs | Delete to disable SSO |
 
 ### 2.2 Manually Reset Simulation Quota
 ```
@@ -240,4 +240,4 @@ git push origin v4.1.0
 
 ---
 
-*AUM Data Labs — Admin Support Handbook v5.0.0 | CONFIDENTIAL*
+*AUM Data Labs — Admin Support Handbook v5.1.0 | CONFIDENTIAL*
