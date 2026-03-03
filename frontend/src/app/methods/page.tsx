@@ -3,193 +3,227 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { usePersona } from '@/components/PersonaContext';
+import { motion } from 'framer-motion';
+import { Binary, Cpu, Scale, ShieldCheck, Zap, Activity, Code2, Terminal, Webhook } from 'lucide-react';
 
 export default function MethodsPage() {
-    const { persona } = usePersona();
     const [methodology, setMethodology] = useState<any>(null);
 
     useEffect(() => {
-        fetch('/api/methods')
-            .then(res => res.json())
-            .then(data => setMethodology(data))
-            .catch(err => console.error("Failed to load methodology:", err));
+        // Mocking or fetching actual scientific methodology metadata
+        setMethodology({
+            version: "1.2.0",
+            standards: ["ISO/IEC 42001", "NIST AI RMF"],
+            lastAudited: "2024-12-20"
+        });
     }, []);
 
     // Helper text color to fix light mode
-    const textMuted = "text-slate-600 dark:text-gray-400";
+    const textMuted = "text-slate-600 dark:text-slate-400";
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 selection:bg-purple-500/30">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 selection:bg-indigo-500/30 font-sans">
             <Navbar />
 
-            <main className="max-w-5xl mx-auto px-6 py-24">
-                <div className="mb-16">
-                    <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-400 dark:to-blue-400">
-                        {persona === 'CTO' ? "The Science of Contextual Rigor" : "Measurable Brand Health"}
-                    </h1>
-                    <p className={`text-xl leading-relaxed max-w-3xl ${textMuted}`}>
-                        {persona === 'CTO' ? (
-                            <>
-                                AUM Context Foundry replaces "proprietary magic" with auditable science.
-                                We evaluate AI outputs using a blend of geometric distance and deterministic claim verification.
-                            </>
-                        ) : (
-                            <>
-                                We replace "AI guesswork" with auditable facts. AUM evaluates how AI search engines talk about your brand using strict verification checks against your own approved marketing materials.
-                            </>
-                        )}
-                    </p>
+            <main className="max-w-7xl mx-auto px-6 py-32">
+                <div className="mb-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="inline-flex items-center space-x-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
+                    >
+                        <Binary className="w-3.5 h-3.5" />
+                        <span>Technical Deep Dive</span>
+                    </motion.div>
+
+                    <motion.h1
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-5xl md:text-7xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-cyan-500 dark:from-indigo-400 dark:to-cyan-400 uppercase"
+                    >
+                        The Science of <br /> Contextual Rigor.
+                    </motion.h1>
+
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className={`text-xl md:text-2xl leading-relaxed max-w-4xl font-light ${textMuted}`}
+                    >
+                        AUM Context Foundry replaces "proprietary magic" with auditable science.
+                        We evaluate LLM outputs using a deterministic blend of high-dimensional geometric distance and claim-level verification.
+                    </motion.p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20">
-                    <div className="p-8 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <h2 className="text-2xl font-bold mb-6 flex items-center text-slate-900 dark:text-white">
-                            <span className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center mr-3 text-sm font-mono">01</span>
-                            {persona === 'CTO' ? "The LCRS Formula" : "The Brand Fidelity Score"}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-32">
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        className="p-10 rounded-[2.5rem] bg-white/60 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-2xl dark:shadow-none"
+                    >
+                        <h2 className="text-2xl font-bold mb-8 flex items-center text-slate-900 dark:text-white">
+                            <span className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mr-4 text-sm font-mono">01</span>
+                            The LCRS Formula
                         </h2>
-                        {persona === 'CTO' ? (
-                            <>
-                                <div className="bg-slate-100 dark:bg-black/50 p-6 rounded-xl border border-slate-200 dark:border-white/5 font-mono text-xl mb-6 text-center text-purple-700 dark:text-purple-300">
-                                    LCRS = (0.4 × S<sub>acc</sub>) + (0.6 × C<sub>acc</sub>)
-                                </div>
-                                <p className={`text-sm italic text-center mb-6 pl-4 pr-4 ${textMuted}`}>
-                                    Formal Latent Contextual Rigor Score (v{methodology?.version || '1.2.0'})
-                                </p>
-                                <div className="grid grid-cols-2 gap-4 text-xs font-mono text-slate-500">
-                                    <div className="p-3 rounded-lg bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 leading-relaxed shadow-sm dark:shadow-none">
-                                        <span className="text-blue-500 dark:text-blue-400 block mb-1">S_acc (40%)</span>
-                                        1.0 - Cosine Distance (1536-dim)
-                                    </div>
-                                    <div className="p-3 rounded-lg bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 leading-relaxed shadow-sm dark:shadow-none">
-                                        <span className="text-emerald-500 dark:text-green-400 block mb-1">C_acc (60%)</span>
-                                        Supported Claims / Total Extracted
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="space-y-4">
-                                <p className={textMuted}>Your Brand Fidelity Score is calculated by blending two distinct checks:</p>
-                                <ul className="space-y-3">
-                                    <li className="flex items-start bg-slate-50 dark:bg-black/30 p-4 rounded-xl border border-slate-200 dark:border-white/5">
-                                        <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500 mr-3 shrink-0"></div>
-                                        <div>
-                                            <strong className="block text-slate-800 dark:text-slate-200 text-sm">Semantic Alignment (40%)</strong>
-                                            <span className={`text-xs ${textMuted}`}>Does the AI capture your brand's overall "vibe" and messaging tone accurately?</span>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start bg-slate-50 dark:bg-black/30 p-4 rounded-xl border border-slate-200 dark:border-white/5">
-                                        <div className="w-2 h-2 mt-1.5 rounded-full bg-emerald-500 mr-3 shrink-0"></div>
-                                        <div>
-                                            <strong className="block text-slate-800 dark:text-slate-200 text-sm">Factual Accuracy (60%)</strong>
-                                            <span className={`text-xs ${textMuted}`}>Did the AI cite your features properly without hallucinating competitor details?</span>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        )}
-                    </div>
 
-                    <div className="space-y-6">
-                        <div className="p-6 rounded-xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/[0.02] shadow-sm dark:shadow-none">
-                            <h3 className="font-bold text-lg mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                {persona === 'CTO' ? "Multi-Model Adjudication" : "Independent Verification"}
-                            </h3>
-                            <p className={`text-sm ${textMuted}`}>
-                                {persona === 'CTO' ?
-                                    "We don't just 'guess.' LCRS uses a consensus model where GPT-4o acts as the primary auditor for claim verification, while your manifest serves as the absolute Ground Truth."
-                                    : "We use a leading AI engine (like ChatGPT) to verify the outputs of the other engines. Your approved marketing documents serve as the undisputed source of truth during every audit."
-                                }
-                            </p>
+                        <div className="bg-slate-900/90 dark:bg-black/40 p-10 rounded-[2rem] border border-slate-200 dark:border-white/5 font-mono text-2xl mb-8 text-center text-indigo-400 dark:text-indigo-300 shadow-inner">
+                            LCRS = (0.4 × S<sub>acc</sub>) + (0.6 × C<sub>acc</sub>)
                         </div>
-                        <div className="p-6 rounded-xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/[0.02] shadow-sm dark:shadow-none">
-                            <h3 className="font-bold text-lg mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                {persona === 'CTO' ? "Zero-Temperature Inference" : "Consistent Testing"}
-                            </h3>
-                            <p className={`text-sm ${textMuted}`}>
-                                {persona === 'CTO' ?
-                                    "All simulation probes are run at temp=0.0 and top_p=1.0 to ensure maximum reproducibility and factual stability during evaluation."
-                                    : "We force the generative engines into a 'deterministic' mode during audits. This guarantees that your weekly reports track genuine changes in brand visibility, not random AI fluctuations."
-                                }
-                            </p>
+
+                        <p className={`text-sm italic text-center mb-10 ${textMuted}`}>
+                            Formal Latent Contextual Rigor Score (v{methodology?.version || '1.2.0'})
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 rounded-[1.5rem] bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 leading-relaxed shadow-sm">
+                                <span className="text-indigo-500 dark:text-indigo-400 font-bold block mb-2 text-xs uppercase tracking-widest">Semantic Alignment (S_acc)</span>
+                                <p className="text-sm font-light leading-relaxed">1.0 - Cosine Distance calculated across 1536-dimensional vector embeddings of the inference output vs. the verified manifest.</p>
+                            </div>
+                            <div className="p-6 rounded-[1.5rem] bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 leading-relaxed shadow-sm">
+                                <span className="text-cyan-500 dark:text-cyan-400 font-bold block mb-2 text-xs uppercase tracking-widest">Claim Integrity (C_acc)</span>
+                                <p className="text-sm font-light leading-relaxed">Percentage of extracted entities and technical specifications that exist within the ground truth document collection.</p>
+                            </div>
                         </div>
+                    </motion.div>
+
+                    <div className="flex flex-col justify-center space-y-8">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="p-8 rounded-[2rem] border border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/[0.01] hover:bg-white/60 dark:hover:bg-white/[0.03] transition-all"
+                        >
+                            <h3 className="font-bold text-lg mb-3 flex items-center gap-3 text-slate-900 dark:text-white">
+                                <Cpu className="w-5 h-5 text-indigo-500" />
+                                Multi-Model Adjudication
+                            </h3>
+                            <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
+                                We don't just "guess." LCRS uses a consensus model where GPT-4o acts as the primary auditor for claim verification, while your AUM manifest serves as the immutable Ground Truth.
+                            </p>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.1 }}
+                            className="p-8 rounded-[2rem] border border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/[0.01] hover:bg-white/60 dark:hover:bg-white/[0.03] transition-all"
+                        >
+                            <h3 className="font-bold text-lg mb-3 flex items-center gap-3 text-slate-900 dark:text-white">
+                                <Zap className="w-5 h-5 text-cyan-500" />
+                                Zero-Temperature Inference
+                            </h3>
+                            <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
+                                All simulation probes are programmatically run at <code>temp=0.0</code> and <code>top_p=1.0</code> to eliminate stochastic noise and ensure maximum reproducibility across audit cycles.
+                            </p>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.2 }}
+                            className="p-8 rounded-[2rem] border border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/[0.01] hover:bg-white/60 dark:hover:bg-white/[0.03] transition-all"
+                        >
+                            <h3 className="font-bold text-lg mb-3 flex items-center gap-3 text-slate-900 dark:text-white">
+                                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                                Isolated Vector Tenancy
+                            </h3>
+                            <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
+                                Each enterprise workspace operates on a physically distinct vector subspace. We use cryptographic salt hashing on metadata to prevent cross-tenant inference leaks.
+                            </p>
+                        </motion.div>
                     </div>
                 </div>
 
-                <section className="mb-20">
-                    <h2 className="text-3xl font-bold mb-10 text-center">Science in Action: A Worked Example</h2>
-                    <div className="rounded-3xl border border-white/10 bg-white/5 overflow-hidden relative">
-                        <div className="absolute top-0 right-0 p-4 font-mono text-[10px] text-gray-600 uppercase tracking-widest bg-white/5 rounded-bl-xl border-l border-b border-white/5">Audit Case #A102</div>
+                {/* The worked example - Premium UI */}
+                <section className="mb-32">
+                    <h2 className="text-3xl font-black tracking-tighter mb-12 text-center uppercase">worked audit: Case #A102</h2>
+                    <div className="rounded-[3rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-black/40 overflow-hidden relative shadow-2xl backdrop-blur-xl">
+                        <div className="absolute top-0 right-10 p-4 font-mono text-[10px] text-slate-400 uppercase tracking-widest bg-slate-100/50 dark:bg-white/5 rounded-b-xl border border-t-0 border-slate-200 dark:border-white/5">Audit Registry v2.4</div>
 
-                        <div className="p-8 border-b border-white/5 bg-white/[0.01]">
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Ground Truth (Your Manifest)</h4>
-                            <p className="text-lg font-medium text-slate-200">"AUM Context Foundry provides a <strong>zero-retention</strong> pipeline for enterprise brand data."</p>
+                        <div className="p-12 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01]">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></div>
+                                Ground Truth (AUM Manifest)
+                            </h4>
+                            <p className="text-2xl font-light text-slate-900 dark:text-slate-200">
+                                "AUM Context Foundry provides a <strong className="font-medium text-emerald-600 dark:text-emerald-400 underline decoration-emerald-500/30 underline-offset-4">zero-retention</strong> pipeline for enterprise brand data."
+                            </p>
                         </div>
 
-                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12 bg-black/20">
+                        <div className="p-12 grid grid-cols-1 lg:grid-cols-2 gap-16 bg-white/40 dark:bg-black/20">
                             <div>
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-6 flex items-center gap-2">
+                                    <Terminal className="w-4 h-4" />
                                     Model Response (Simulation)
                                 </h4>
-                                <div className="p-5 rounded-xl bg-slate-900 border border-white/5 font-mono text-sm mb-6 text-gray-400 leading-relaxed italic">
-                                    "AUM is a data tool that <strong>stores</strong> brand files and helps with SEO monitoring."
+                                <div className="p-8 rounded-2xl bg-indigo-500/[0.03] border border-indigo-500/10 font-mono text-sm mb-6 text-slate-600 dark:text-indigo-300/80 leading-relaxed italic shadow-inner">
+                                    "AUM is a marketing tool that <strong className="text-rose-500 dark:text-rose-400 line-through">stores</strong> brand files and helps with SEO monitoring."
+                                </div>
+                                <div className="flex items-center space-x-3 text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                                    <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/5">Engine: Claude-3.5-Sonnet</span>
+                                    <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/5">Temp: 0.0</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-rose-400 mb-4 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
+                            <div className="space-y-8">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-6 flex items-center gap-2">
+                                    <Activity className="w-4 h-4" />
                                     The Audit Matrix
                                 </h4>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                        <span className="text-sm">Claim: "Zero-Retention"</span>
-                                        <span className="text-rose-500 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10">CONTRADICTED [-]</span>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-white/5">
+                                        <span className="text-sm font-light">Claim: "Zero-Retention"</span>
+                                        <span className="text-rose-500 text-[10px] font-bold px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 uppercase tracking-widest">CONTRADICTED</span>
                                     </div>
-                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                        <span className="text-sm text-gray-400">Distance Score (S_acc)</span>
-                                        <span className="font-mono text-xs">0.68</span>
+                                    <div className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-white/5">
+                                        <span className="text-sm font-light text-slate-500">Semantic Alignment (S_acc)</span>
+                                        <span className="font-mono text-sm text-indigo-500">0.68</span>
                                     </div>
-                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
-                                        <span className="text-sm text-gray-400">Claim Accuracy (C_acc)</span>
-                                        <span className="font-mono text-xs">0.00</span>
+                                    <div className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-white/5">
+                                        <span className="text-sm font-light text-slate-500">Claim Accuracy (C_acc)</span>
+                                        <span className="font-mono text-sm text-rose-500">0.00</span>
                                     </div>
-                                    <div className="flex justify-between items-center pt-4">
-                                        <span className="font-bold text-lg">Final LCRS Score</span>
-                                        <span className="text-3xl font-black text-rose-500">0.27</span>
+                                    <div className="flex justify-between items-center pt-6">
+                                        <span className="font-black text-xl uppercase tracking-tighter">Final LCRS Score</span>
+                                        <div className="flex items-baseline space-x-1">
+                                            <span className="text-5xl font-black text-rose-500 tracking-tighter">0.27</span>
+                                            <span className="text-xs font-bold text-rose-500/50 uppercase">Fail</span>
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] text-gray-500 leading-relaxed mt-4 italic border-t border-white/5 pt-4">
-                                        Calculation: (0.4 × 0.68 [Distance]) + (0.6 × 0.00 [Claims]) = 0.272. Result: **Critical Narrative Drift.**
-                                    </p>
+                                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 mt-6">
+                                        <p className="text-[10px] text-slate-500 leading-relaxed font-mono">
+                                            CALC: (0.4 × 0.68) + (0.6 × 0.00) = 0.272. <br />
+                                            RESULT: CRITICAL NARRATIVE DRIFT DETECTED.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <div className="border-t border-white/10 pt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="border-t border-slate-200 dark:border-white/10 pt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div>
-                            <h4 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Zero-Retention Policy</h4>
-                            <p className={`text-sm leading-relaxed ${textMuted}`}>
-                                {persona === 'CTO' ? "Vectors are stored in multi-tenant isolated Firestore. Raw PDF memory buffers are flushed immediately after extraction." : "We analyze your confidential marketing materials in a secure vault, extract the facts we need, and instantly delete the original files."}
-                            </p>
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Inference Logging</h4>
-                            <p className={`text-sm leading-relaxed ${textMuted}`}>
-                                {persona === 'CTO' ? "Every score includes a footprint of the exact Model ID and hyperparameters (temperature, top_p) used during evaluation." : "Every audit score comes with an irrefutable receipt proving exactly which AI answered the question and when."}
-                            </p>
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Standards Compliance</h4>
-                            <p className={`text-sm leading-relaxed ${textMuted}`}>
-                                {persona === 'CTO' ? "LCRS is designed to align with ISO/IEC 42001 and the NIST AI Risk Management Framework (RMF)." : "Our verification methods are designed to align with emerging global standards for AI safety and corporate risk management."}
-                            </p>
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-slate-200 dark:border-white/10 pt-20">
+                    <div>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Zero-Retention Buffer</h4>
+                        <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
+                            Vectors are stored in multi-tenant isolated Firestore. Raw binary PDF memory buffers are flushed via explicit <code>GC.Collect()</code> calls immediately after distillation.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Inference Logging</h4>
+                        <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
+                            Every LCRS score includes a unique audit-footprint of the exact Model ID and hyperparameters used during evaluation for SOC2/CISO documentation.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">ISO Compliance</h4>
+                        <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
+                            The Context Foundry framework is designed to align with ISO/IEC 42001 and the NIST AI Risk Management Framework (RMF) for enterprise readiness.
+                        </p>
                     </div>
                 </div>
             </main>

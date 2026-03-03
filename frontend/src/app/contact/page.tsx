@@ -11,12 +11,10 @@ import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
-import { usePersona } from '@/components/PersonaContext';
 import { db } from "@/lib/firestorePaths";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function ContactPage() {
-    const { persona } = usePersona();
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const textMuted = "text-slate-600 dark:text-slate-400";
@@ -59,7 +57,7 @@ export default function ContactPage() {
                 >
                     <h1 className="text-5xl md:text-6xl font-light tracking-tighter mb-6 text-slate-900 dark:text-white">Get in Touch</h1>
                     <p className={`text-xl font-light max-w-2xl mx-auto ${textMuted}`}>
-                        {persona === 'CTO' ? "Connect with AUM Data Labs for strategic audits, custom deployments, or enterprise support." : "Connect with AUM Data Labs to secure your Agentic SEO pipeline and monitor brand visibility in generative search."}
+                        Connect with AUM Data Labs to secure your Agentic SEO pipeline and monitor brand visibility in generative search.
                     </p>
                 </motion.div>
 
@@ -116,7 +114,7 @@ export default function ContactPage() {
                     >
                         <h2 className="text-3xl font-light mb-6">Partner with Us</h2>
                         <p className="opacity-80 leading-relaxed mb-8">
-                            {persona === 'CTO' ? "We are helping global leaders secure their narrative in the agentic web. Request a personalized strategic audit today." : "Don't let your competitors own the AI answers when buyers ask about your category. Request a free visibility audit today."}
+                            Don't let your competitors own the AI answers when buyers ask about your category. Request a free visibility audit today.
                         </p>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <input
@@ -135,7 +133,7 @@ export default function ContactPage() {
                             />
                             <textarea
                                 name="goals"
-                                placeholder={persona === 'CTO' ? "Strategic Goals or Architecture Questions" : "What metrics or pipeline problems are you trying to solve?"}
+                                placeholder="What metrics or pipeline problems are you trying to solve?"
                                 required
                                 rows={4}
                                 className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all placeholder:text-white/70 text-white shadow-inner"

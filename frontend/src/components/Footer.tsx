@@ -2,15 +2,16 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { Logo } from './Logo';
 
 export default function Footer() {
     return (
         <footer className="border-t border-white/5 bg-[#050505] py-20 px-6">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
                 <div className="max-w-xs">
-                    <div className="font-bold text-xl mb-6 text-white tracking-tighter">
-                        AUM <span className="text-blue-500">CONTEXT FOUNDRY</span>
-                    </div>
+                    <Link href="/" className="inline-block mb-6">
+                        <Logo size={28} showText={true} theme="dark" />
+                    </Link>
                     <p className="text-sm text-gray-500 leading-relaxed">
                         The "Smoke Detector" for narrative drift. Ensuring enterprise brand fidelity in the agentic era.
                     </p>
@@ -20,9 +21,9 @@ export default function Footer() {
                     <div>
                         <h4 className="font-bold text-white mb-6 text-sm uppercase tracking-widest">Platform</h4>
                         <ul className="space-y-4 text-sm text-gray-500">
-                            <li><Link href="/methods" className="hover:text-white">Math & Methods</Link></li>
-                            <li><Link href="/security" className="hover:text-white">Security & Trust</Link></li>
-                            <li><Link href="/#pricing" className="hover:text-white">Enterprise Plans</Link></li>
+                            <li><Link href="/methods" className="hover:text-white transition-colors">For Engineering</Link></li>
+                            <li><Link href="/security" className="hover:text-white transition-colors">Security Architecture</Link></li>
+                            <li><Link href="/#pricing" className="hover:text-white transition-colors">Enterprise Plans</Link></li>
                         </ul>
                     </div>
                     <div>

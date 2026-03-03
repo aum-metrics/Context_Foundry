@@ -8,20 +8,18 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Sparkles, Globe, Webhook, Code2, Terminal, Activity, CheckCircle2 } from "lucide-react";
+import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Sparkles, Globe, Webhook, Code2, Terminal, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Logo } from "@/components/Logo";
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
-import { usePersona } from "@/components/PersonaContext";
 import ProductDemoVideo from "@/components/ProductDemoVideo";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
-    const { persona } = usePersona();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -61,49 +59,30 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.1 }}
                         className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl text-slate-900 dark:text-white uppercase"
                     >
-                        {persona === 'CTO' ? (
-                            <>
-                                Your Brand, <br className="hidden md:block" />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-cyan-500 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-cyan-300">
-                                    Correctly Cited by AI.
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                Protect Your Brand's <br className="hidden md:block" />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-cyan-500 to-indigo-500 dark:from-emerald-400 dark:via-cyan-400 dark:to-indigo-300">
-                                    AI Search Revenue.
-                                </span>
-                            </>
-                        )}
+                        Protect Your Brand's <br className="hidden md:block" />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-cyan-500 to-indigo-500 dark:from-emerald-400 dark:via-cyan-400 dark:to-indigo-300">
+                            AI Search Revenue.
+                        </span>
                     </motion.h1>
 
-                    <motion.p
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="text-xl md:text-2xl text-slate-600 dark:text-slate-400/80 mb-12 max-w-3xl leading-relaxed font-light"
                     >
-                        {persona === 'CTO' ? (
-                            <>
-                                Trusting AI with your brand shouldn't be a leap of faith.
-                                AUM is the <span className="text-indigo-600 dark:text-indigo-400 font-medium">"Smoke Detector"</span> for narrative drift and the
-                                <span className="text-slate-900 dark:text-white font-medium"> Identity Router</span> for active remediation across SearchGPT, Perplexity, and Gemini.
-                            </>
-                        ) : (
-                            <div className="space-y-4">
-                                <span>
-                                    According to Gartner (2024), over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B technology buyers</strong> start their journey with a generative AI prompt.
-                                </span>
-                                <span className="block mt-2">
-                                    AUM ensures ChatGPT, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
-                                </span>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-4">
-                                    [1] Gartner. "B2B Tech Buyer Search Trends" (2024).
-                                </p>
-                            </div>
-                        )}
-                    </motion.p>
+                        <div className="space-y-4">
+                            <span>
+                                According to Gartner (2024), over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B technology buyers</strong> start their journey with a generative AI prompt.
+                            </span>
+                            <span className="block mt-2">
+                                AUM ensures ChatGPT, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
+                            </span>
+                            <p className="text-xs text-slate-500 dark:text-slate-500 italic mt-4">
+                                [1] Gartner. "B2B Tech Buyer Search Trends" (2024).
+                            </p>
+                        </div>
+                    </motion.div>
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -125,82 +104,49 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div>
                             <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-6">
-                                {persona === 'CTO' ? (
-                                    <>The <span className="font-semibold text-indigo-600 dark:text-indigo-400">AUM Context</span> Moat</>
-                                ) : (
-                                    <>Drive Pipeline with <span className="font-semibold text-emerald-600 dark:text-emerald-400">Agentic SEO</span></>
-                                )}
+                                Drive Pipeline with <span className="font-semibold text-emerald-600 dark:text-emerald-400">Agentic SEO</span>
                             </h2>
-                            {persona === 'CTO' ? (
-                                <>
-                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                        <strong>Monitor. Fix. Prove.</strong> Run multi-model simulations, fix factual drift with a zero-retention ingestion pipeline, and publish a machine-readable brand manifest for the agentic era.
-                                    </p>
-                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                        Our platform ensures your enterprise data is the <strong>most heavily weighted</strong> and <strong>least hallucinated</strong> entity across GPT-4o, Claude, and Gemini.
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                        <strong>Track your Agentic Share of Voice (ASoV).</strong> We audit what AI says about you, alert you to hallucinations, and provide the exact data pipeline to inject the facts.
-                                    </p>
-                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                        Stop losing leads to outdated AI models. We ensure your brand is cited accurately and prominently across every major generative engine.
-                                    </p>
-                                </>
-                            )}
+                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
+                                <strong>Track your Agentic Share of Voice (ASoV).</strong> We audit what AI says about you, alert you to hallucinations, and provide the exact data pipeline to inject the facts.
+                            </p>
+                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
+                                Stop losing leads to outdated AI models. We ensure your brand is cited accurately and prominently across every major generative engine.
+                            </p>
 
                             <div className="space-y-4">
-                                {persona === 'CTO' ? (
-                                    <>
-                                        <div className="flex items-start">
-                                            <div className="mt-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mr-4 shrink-0">
-                                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-medium text-slate-900 dark:text-white">RAG Fidelity Monitoring</h4>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">We utilize technical rigor like 'Ragas' to ensure your brand's AI retrieval remains within 100% accuracy thresholds.</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-start">
-                                            <div className="mt-1 w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center mr-4 shrink-0">
-                                                <Zap className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-medium text-slate-900 dark:text-white">Real-time Semantic Ingestion</h4>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Drop in messy marketing PDFs; get out pristine, LLM-optimized JSON-LD schemas.</p>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex items-start">
-                                            <div className="mt-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mr-4 shrink-0">
-                                                <BarChart3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-medium text-slate-900 dark:text-white">Real-time Brand Auditing</h4>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly how your brand compares to competitors across all major AI chatbots.</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-start">
-                                            <div className="mt-1 w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center mr-4 shrink-0">
-                                                <Sparkle className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-medium text-slate-900 dark:text-white">Direct-to-AI Correction</h4>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Upload your latest marketing sheets to update the AI ecosystems instantly without coding.</p>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                                <div className="flex items-start">
+                                    <div className="mt-1 w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center mr-4 shrink-0">
+                                        <Crosshair className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-medium text-slate-900 dark:text-white">Competitor Benchmarking</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly when and why Claude or Perplexity recommend your competitors instead of you.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="mt-1 w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center mr-4 shrink-0">
+                                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-medium text-slate-900 dark:text-white">Hallucination Alerts</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Get immediate pings when AI models invent false limitations about your product.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="mt-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mr-4 shrink-0">
+                                        <Activity className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-medium text-slate-900 dark:text-white">Direct-to-AI Correction</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Upload your latest marketing sheets to update the AI ecosystems instantly without coding.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div className="relative group">
                             <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-500/10 to-fuchsia-500/10 rounded-3xl blur-2xl group-hover:from-indigo-500/20 group-hover:to-fuchsia-500/20 transition duration-700"></div>
-                            <div className="relative rounded-[2rem] glass-morphism p-8 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                            <div className="relative rounded-[2rem] border border-slate-200 dark:border-white/10 glass-morphism p-8 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                                 <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-200/50 dark:border-white/10">
                                     <h3 className="font-medium text-slate-900 dark:text-white flex items-center">
                                         <Activity className="w-4 h-4 mr-2 text-indigo-500" />
@@ -209,7 +155,7 @@ export default function LandingPage() {
                                     <span className="text-2xl font-light text-cyan-600 dark:text-cyan-400">84.2%</span>
                                 </div>
                                 <div className="space-y-4">
-                                    {[persona === 'CTO' ? 'GPT-4o' : 'ChatGPT', 'Claude 3.5', 'Gemini 2.0 Flash'].map((model, i) => (
+                                    {['ChatGPT', 'Claude 3.5', 'Gemini 2.0 Flash'].map((model, i) => (
                                         <div key={model} className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-slate-600 dark:text-slate-400">{model}</span>
@@ -254,7 +200,9 @@ export default function LandingPage() {
                             <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
                                 <Binary className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
                             </div>
-                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">LCRS Scoring</h4>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white transition-colors group-hover:text-indigo-500">
+                                <Link href="/methods">LCRS Scoring</Link>
+                            </h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
                                 Our <strong>Latent Contextual Rigor Scoring</strong> engine uses claim extraction and vector divergence to mathematically prove AI accuracy against your verified ground truth.
                             </p>
@@ -274,7 +222,9 @@ export default function LandingPage() {
                             <div className="w-14 h-14 rounded-2xl bg-fuchsia-50 dark:bg-fuchsia-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
                                 <Lock className="w-7 h-7 text-fuchsia-600 dark:text-fuchsia-400" />
                             </div>
-                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">Zero-Retention Ingestion</h4>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white transition-colors group-hover:text-fuchsia-500">
+                                <Link href="/security">Zero-Retention Ingestion</Link>
+                            </h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
                                 Built for CISO-level compliance. Our <strong>Semantic Ingestion</strong> pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches persistent disk.
                             </p>
@@ -296,7 +246,9 @@ export default function LandingPage() {
                             <div className="w-14 h-14 rounded-2xl bg-cyan-50 dark:bg-cyan-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
                                 <BarChart3 className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
                             </div>
-                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white">ASoV Indexing</h4>
+                            <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white transition-colors group-hover:text-cyan-500">
+                                <Link href="/methods">ASoV Indexing</Link>
+                            </h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
                                 Move beyond clicks. <strong>Agentic Share of Voice</strong> measures how often and how accurately your brand is cited by LLMs during competitive purchasing simulations.
                             </p>
@@ -306,7 +258,7 @@ export default function LandingPage() {
                             </div>
                         </motion.div>
                     </div>
-                </section>
+                </section >
 
 
                 {/* Demo Video Area */}
@@ -330,7 +282,7 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {[
-                            { metric: '3', label: 'LLM Providers', sub: persona === 'CTO' ? 'GPT-4o · Claude · Gemini' : 'ChatGPT · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
+                            { metric: '3', label: 'LLM Providers', sub: 'ChatGPT · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
                             { metric: '99.99%', label: 'Uptime SLA', sub: 'Multi-region deployment', cls: 'text-emerald-600 dark:text-emerald-400' },
                             { metric: '< 50ms', label: 'Scoring Latency', sub: 'Real-time analysis', cls: 'text-cyan-600 dark:text-cyan-400' },
                             { metric: 'SOC2', label: 'Compliance Ready', sub: 'Zero-retention processing', cls: 'text-fuchsia-600 dark:text-fuchsia-400' },
@@ -358,7 +310,7 @@ export default function LandingPage() {
                         <span>·</span>
                         <span className="flex items-center"><Scale className="w-3.5 h-3.5 mr-1.5" /> RBAC Access Control</span>
                     </div>
-                </section>
+                </section >
 
                 {/* API & Developer Platform Section */}
                 <section id="api" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
@@ -391,7 +343,7 @@ export default function LandingPage() {
                                     </div>
                                     <div>
                                         <h4 className="text-slate-900 dark:text-white font-medium mb-1">ASoV & Context Drift Endpoints</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Pull real-time mathematical scores (60/40 blend) for brand fidelity across {persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Pull real-time mathematical scores (60/40 blend) for brand fidelity across ChatGPT, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
                                     </div>
                                 </li>
                             </ul>
@@ -459,7 +411,7 @@ export default function LandingPage() {
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">3</strong> weekly brand probes</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> ({persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (ChatGPT, Claude, Gemini)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic ASoV score</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> preview</li>
@@ -493,7 +445,7 @@ export default function LandingPage() {
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">125</strong> weekly brand probes</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> ({persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (ChatGPT, Claude, Gemini)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
@@ -550,13 +502,13 @@ export default function LandingPage() {
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Brand Probe&quot;?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against {persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude, and Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
+                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against ChatGPT, Claude, and Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Why does the free tier include all 3 models?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                Because a single-model score isn&apos;t the insight. The insight is when {persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'} rates your brand at 91% accuracy and Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
+                                Because a single-model score isn&apos;t the insight. The insight is when ChatGPT rates your brand at 91% accuracy and Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
