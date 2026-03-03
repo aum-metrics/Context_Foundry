@@ -94,7 +94,9 @@ AUM's three-layer story:
 | Zero-retention compliance | ✅ | N/A | N/A | N/A |
 | B2B API (CI/CD integration) | ✅ | Limited | ❌ | Some |
 
-**Key differentiator**: AUM is the only platform with a **deterministic mathematical score** (LCRS) for brand fidelity across AI models — not a qualitative summary or manual review.
+**Key differentiator**: AUM is the only platform with a **reproducible, auditable scoring system** (LCRS) for brand fidelity across AI models — combining claim verification and semantic distance rather than qualitative summaries.
+
+> **Internal note for sales team**: The LCRS 60/40 weighting is an engineering design choice, not derived from peer-reviewed research. Do not describe it as "scientifically proven" or "academically validated" to enterprise buyers. Describe it as "reproducible, auditable, and transparent" — which it is.
 
 ---
 
@@ -153,7 +155,7 @@ AUM's three-layer story:
 
 ## Proof Points (Use in Outreach)
 
-- LCRS scoring is mathematically deterministic — same input always produces the same score.
+- LCRS scoring is reproducible — same input always produces the same score (temperature=0). The 60/40 blend is an engineering design choice, not derived from published research.
 - Zero-retention by design — raw documents never stored; vector data purged after 24 hours.
 - Auto-provisioned inference keys — start in under 60 seconds with no developer involvement.
 - Full audit trail — SOC2-compliant logging of all sensitive operations.

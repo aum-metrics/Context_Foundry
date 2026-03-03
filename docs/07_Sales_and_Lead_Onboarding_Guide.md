@@ -36,7 +36,9 @@ When an intern gets on a call with a lead, they must adapt the pitch depending o
 Interns must memorize these rebuttals:
 
 **Objection:** *"Why don't we just use ChatGPT directly to test it ourselves?"*
-**Rebuttal:** *"You could, but ChatGPT is non-deterministic. If you ask it 100 times, you get 100 different answers. AUM Context Foundry runs concurrent vector mathematics (cosine similarity) to grade the deterministic drift mathematically. We don't just tell you it hallucinated; we give you the exact metric of divergence."*
+**Rebuttal:** *"You could, but doing it manually doesn't scale and gives you no historical baseline. AUM Context Foundry runs concurrent multi-model evaluations (GPT-4o, Claude, Gemini simultaneously) and produces a reproducible LCRS score that combines semantic distance with factual claim verification. You get a single auditable number you can trend over time — not a one-off subjective assessment."*
+
+> **Important: Do NOT describe LCRS as "scientifically proven," "academically validated," or "mathematically verified."** Describe it as "reproducible," "auditable," and "transparent." The methodology is honest and well-documented but has no peer-reviewed backing. Enterprise legal teams will check this.
 
 **Objection:** *"Is our data safe? You are reading our internal pricing PDFs."*
 **Rebuttal:** *"All Context Documents are immediately vectorized and sharded on Google Cloud. We operate on a strict tenant-isolation architecture. Furthermore, organizations on the Enterprise tier use their own SAML SSO to ensure departing employees instantly lose access."*

@@ -137,7 +137,7 @@ Here is the exact framework you take:
 
 If you hear senior engineers throw around these terms, here is what they mean:
 
-*   **LCRS (Logical Contextual Representation Score):** Our proprietary formula. It's the 60/40 blend of semantic math (embeddings) and deterministic math (claim verification) that gives an AI a grade from 0-100%. Found in `backend/app/api/simulation.py`.
+*   **LCRS (Logical Contextual Representation Score):** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. Reproducible but not academically validated. Found in `backend/app/api/simulation.py`.
 *   **DLQ (Dead Letter Queue):** The graveyard for background tasks that crashed. Jobs that fail 3 times are marked `failed_permanent`. Found in `backend/app/utils/task_queue_recovery.py`.
 *   **CIM (Context Information Model):** The mathematical and semantic representation of an organization's verified ground truth — JSON-LD schema + 1536-dimensional embeddings. Found in `backend/app/api/ingestion.py`.
 *   **Manifest (`llms.txt`):** The CIM synthesized into AI-crawler-friendly plain text. Served at `/llms.txt?orgId=...`. Hardened: org-specific failures return 503 (no silent fallback).

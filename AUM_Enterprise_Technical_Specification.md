@@ -88,6 +88,16 @@ if openai_key == "internal_platform_managed":
 ```
 Sensitive keys are **always redacted** from the final API response to prevent client-side exposure.
 
+### LCRS Formula (Scoring Heuristic)
+
+The Logical Contextual Representation Score is a blended metric:
+
+```
+LCRS = (0.6 × Cs/Ct) + (0.4 × (1 − Dc))
+```
+
+> **Methodology candor**: The 60/40 weighting is an engineering design choice optimizing for factual accuracy over semantic similarity. It is not derived from ablation studies, published research, or peer review. A diligence buyer should understand this is a practical heuristic, not a scientifically validated metric.
+
 ### Simulation Quota Enforcement
 Enforced via **Firestore atomic transaction** on `organizations/{orgId}.subscription.simsThisCycle`:
 ```
@@ -296,6 +306,9 @@ backend/tests/
   test_audit.py        — audit log write + retrieval endpoint
   test_rag_logic.py    — cosine similarity math, scoring logic
 ```
+The methodology endpoint transparently discloses the scoring formula:
+- Standards references (ISO/IEC 42001, NIST AI RMF) indicate design principles the system was **informed by**, not formal certifications or compliance attestations.
+- The 60/40 blend is a design choice. The `/api/methods/` endpoint exposes the full formula for audibility.
 
 Run:
 ```bash

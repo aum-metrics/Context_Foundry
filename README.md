@@ -39,8 +39,46 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 1. **Ingests** the document into a zero-retention semantic pipeline (no raw data persists).
 2. **Simulates** queries against GPT-4o, Claude, and Gemini simultaneously.
-3. **Scores** each AI's response using our proprietary LCRS (Logical Contextual Representation Score) — a 60/40 blend of claim verification and semantic fidelity.
+3. **Scores** each AI's response using our LCRS (Logical Contextual Representation Score) — a 60/40 blend of claim verification and semantic fidelity.
 4. **Publishes** a verified `/llms.txt` manifesto that forces RAG agents (SearchGPT, Perplexity) to prioritize the company's ground truth.
+
+### Feature Maturity Matrix
+
+> **Diligence note**: This table honestly categorizes each feature's production readiness.
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude, Gemini). 60/40 blend is reproducible and auditable but not academically validated (see Methodology Candor below). |
+| **Zero-Retention Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. |
+| **Identity Syndication (`/llms.txt`)** | ✅ Production | Dynamic per-tenant manifest. Fail-closed rate limiting. |
+| **B2B API Gateway** | ✅ Production | `aum_`-prefixed keys, SHA-256 hashed, tier-gated. |
+| **Enterprise SSO** | ✅ Production | Okta/Azure AD/Google, Fernet-encrypted secrets, CSRF-protected. |
+| **Payments (Razorpay)** | ✅ Production | India (INR) only. No Stripe/USD integration. |
+| **Support Chatbot** | ⚠️ Functional | RAG over latest manifest only (no multi-doc). Conversation memory limited to last 4 messages. |
+| **Competitor Displacement** | ⚠️ Demo | Single GPT-4o-mini call with crafted prompt. Not a systematic monitoring pipeline. |
+| **SEO Audit** | ⚠️ Stub | Playwright scrapes page but scoring is hardcoded (`overallScore: 70`). Not production analytics. |
+| **Batch Stability** | ⚠️ Manual | Works but requires manual cron setup. No automated weekly scheduling infrastructure. |
+| **Email Delivery** | ⚠️ Conditional | Silent no-op unless `RESEND_API_KEY` is configured. Invitations silently swallowed by default. |
+| **Help Center** | ❌ Not Built | "In progress — check back soon" placeholder. |
+| **Status Page** | ❌ Not Built | Route exists but no content. |
+| **Global Payments (USD/Stripe)** | ❌ Not Built | Only Razorpay (India-centric). |
+| **Multi-Document Explorer** | ❌ UX Gap | Explorer users hit a hard 1-doc cap with a 403 error (no graceful upgrade prompt). |
+
+### Test Coverage
+
+| Dimension | Current State |
+|-----------|---------------|
+| Unit tests | 10 tests (simulation, ingestion, competitor, audit, RAG math) |
+| Integration tests | None — all tests mock Firestore |
+| E2E tests | None |
+| CI | Frontend lint + backend syntax + pytest |
+
+### Methodology Candor (LCRS)
+
+The 60/40 blend of claim verification and cosine similarity is:
+- **Reproducible**: Same inputs always produce the same score (temperature=0).
+- **Auditable**: Full formula, weights, and variables are exposed via `/api/methods/`.
+- **Not academically validated**: The 60/40 ratio is an engineering design choice, not derived from published research. There is no ablation study or peer-reviewed paper backing this specific weighting. A sophisticated buyer or their counsel may challenge this. The `methods.py` endpoint and docs are transparent about what it is — a practical scoring heuristic, not a peer-reviewed metric.
 
 ---
 
@@ -467,14 +505,15 @@ Build policy: `ignoreDuringBuilds: false` in `next.config.ts` means **lint error
 
 ## 9. Core Technical Moats
 
-### LCRS Engine (60/40 Mathematical Scoring)
-The **Low-Latency Claim-based Reliability Scoring** engine (`backend/app/api/simulation.py`, 810 lines) produces deterministic fidelity verdicts:
+### LCRS Engine (60/40 Scoring Heuristic)
+The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducible fidelity scores:
 
 - **60% Claim Accuracy**: Atomic factual claims are extracted from AI responses using an LLM-as-a-judge sub-routine, then cross-verified against the organization's ground-truth document.
 - **40% Semantic Fidelity**: Cosine similarity between the embedded AI response and the Context Information Model (CIM) in 1536-dimensional space.
-- **Formula**: `drift = 100 - ((claim_match * 0.6 + semantic_sim * 0.4) * 100)`
+- **Formula**: `LCRS = (0.6 * claim_accuracy) + (0.4 * (1 - cosine_distance))`
 - **Key functions**: `extract_claims()`, `verify_claims()`, `compute_divergence()`, `_score_model()`
-- **Parallel execution**: `asyncio.gather()` runs all 3 models simultaneously (10s instead of 25s).
+- **Parallel execution**: `asyncio.gather()` runs all 3 models simultaneously (~10s instead of ~25s).
+- **Methodology caveat**: The 60/40 weighting is an engineering design choice. It is not derived from ablation studies or peer-reviewed research. See the Methodology Candor section above.
 
 ### Zero-Retention Semantic Pipeline
 - Raw PDF uploaded → processed in volatile RAM via `PyMuPDF4LLM`.
