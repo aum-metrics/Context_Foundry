@@ -1,28 +1,28 @@
 import { NextResponse } from 'next/server';
-// Basic in-memory rate limiting map (per-instance) for Edge/Serverless Next.js
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const now = Date.now();
 
-    // 🛡️ SECURITY HARDENING (P2): Reliable execution throttle
-    // Using an in-memory map instead of Firestore client SDK writes since
-    // unauthenticated firestore writes are blocked by security rules mapping it fail-open.
+    // 🛡️ SECURITY HARDENING (P2): Global execution throttle
+    // Queries the central backend auth-bypassed rate limiter to prevent
+    // region-hopping crawler bypasses while keeping client SDKs locked down.
     if (ip !== "unknown") {
-        const data = rateLimitMap.get(ip) || { count: 0, resetAt: now + 15 * 60 * 1000 };
+        try {
+            const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+            const rlRequest = await fetch(`${backendUrl}/api/workspaces/llms-rate-limit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip })
+            });
 
-        if (data.resetAt < now) {
-            data.count = 1;
-            data.resetAt = now + 15 * 60 * 1000;
-        } else {
-            data.count += 1;
-        }
-
-        rateLimitMap.set(ip, data);
-
-        if (data.count > 100) {
-            return new NextResponse("Rate limit exceeded.", { status: 429 });
+            if (rlRequest.status === 429) {
+                return new NextResponse("Rate limit exceeded.", { status: 429 });
+            }
+        } catch (e) {
+            console.error("Global rate limiting error:", e);
+            // Fail-open if backend is unreachable to avoid breaking the core endpoint directory
         }
     }
 

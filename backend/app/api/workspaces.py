@@ -179,6 +179,7 @@ async def provision_organization(
         batch.set(db.collection("api_keys").document(hashed_key), {
             "keyHash": hashed_key,
             "orgId": new_org_id,
+            "userId": uid,
             "name": "Default B2B Gateway Key",
             "createdAt": datetime.now(timezone.utc),
             "lastUsedAt": None,
@@ -1022,3 +1023,70 @@ async def get_public_manifest(org_id: str):
     except Exception as e:
         logger.error(f"Failed to fetch public manifest for {org_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/llms-rate-limit")
+async def check_llms_rate_limit(request: Request):
+    """
+    Global Server-Side Rate Limiter for the public llms.txt route.
+    Called from Next.js Edge to evaluate cross-region request counts securely bypassing client-SDK locks.
+    Expects { "ip": "..." } in body
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unconfigured")
+    
+    try:
+        data = await request.json()
+        ip = data.get("ip", "unknown")
+        
+        if ip == "unknown":
+            return {"allowed": True, "count": 1} # Cannot throttle unknown safely
+            
+        doc_id = f"llms_txt_{ip.replace('.', '_')}"
+        rl_ref = db.collection("rate_limits").document(doc_id)
+        
+        # We use a transaction to prevent race conditions on the counter
+        @firebase_admin.firestore.transactional
+        def evaluate_rate_limit(transaction, ref):
+            now = int(datetime.now(timezone.utc).timestamp() * 1000)
+            snapshot = ref.get(transaction=transaction)
+            
+            if snapshot.exists:
+                data = snapshot.to_dict()
+                reset_at = data.get("resetAt", 0)
+                count = data.get("count", 0)
+                
+                if reset_at <= now:
+                    # Window reset
+                    new_data = {"count": 1, "resetAt": now + 15 * 60 * 1000}
+                    transaction.update(ref, new_data)
+                    return {"allowed": True, "count": 1, "reset_at": new_data["resetAt"]}
+                
+                if count >= 100:
+                    # Too many requests in active window
+                    return {"allowed": False, "count": count, "reset_at": reset_at}
+                
+                # Increment
+                new_data = {"count": count + 1, "resetAt": reset_at}
+                transaction.update(ref, new_data)
+                return {"allowed": True, "count": count + 1, "reset_at": reset_at}
+            else:
+                # First request from IP
+                new_data = {"count": 1, "resetAt": now + 15 * 60 * 1000}
+                transaction.set(ref, new_data)
+                return {"allowed": True, "count": 1, "reset_at": new_data["resetAt"]}
+                
+        # Execute transcation mapping
+        transaction = db.transaction()
+        result = evaluate_rate_limit(transaction, rl_ref)
+        
+        if not result["allowed"]:
+            raise HTTPException(status_code=429, detail="Too Many Requests")
+            
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Global Rate Limiter Failed for IP: {e}")
+        # Always Fail-Open strictly for text routing rather than blocking on Auth failures
+        return {"allowed": True, "count": 1, "note": "fail-open execution"}

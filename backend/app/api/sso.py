@@ -137,13 +137,30 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         results = list(query)
         
         if not results:
-            raise HTTPException(status_code=404, detail="No SSO configuration found for this domain")
+            import asyncio
+            # Artificially delay to prevent timing attacks, return fake structurally correct intent
+            await asyncio.sleep(0.1)
+            jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
+            fake_payload = {"org_id": "none", "provider": "none", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+            return {
+                "success": True,
+                "intent_token": jwt.encode(fake_payload, jwt_key, algorithm="HS256"),
+                "provider_name": "Enterprise IDP"
+            }
         
         config_doc = results[0]
         config_data = config_doc.to_dict()
         
         if not config_data.get("is_active"):
-            raise HTTPException(status_code=404, detail="SSO for this domain is currently disabled")
+            import asyncio
+            await asyncio.sleep(0.1)
+            jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
+            fake_payload = {"org_id": "none", "provider": "none", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+            return {
+                "success": True,
+                "intent_token": jwt.encode(fake_payload, jwt_key, algorithm="HS256"),
+                "provider_name": "Enterprise IDP"
+            }
 
         provider = config_data.get("provider")
         
@@ -196,7 +213,8 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
             from cryptography.fernet import Fernet
             import base64
             import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(settings.JWT_SECRET.encode()[:32].ljust(32, b'0')).decode())
+            # Security Hardening (P2): Decoupled encryption fallback from JWT signing
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-sso-encryption-dev-fallback1").decode())
             f = Fernet(key)
             config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
@@ -249,18 +267,29 @@ async def sso_provider_login(intent: str):
             tenant=config.get("tenant_id", "")
         )
         
-        # Build Redirect URL
+        # Build Redirect URL with CSRF
         import urllib.parse
+        state_nonce = secrets.token_urlsafe(32)
         params = {
             "client_id": config.get("client_id"),
             "redirect_uri": f"{settings.FRONTEND_URL}/api/sso/callback",
             "response_type": "code",
             "scope": " ".join(provider_config["scopes"]),
-            "state": f"{org}:{provider}:{secrets.token_urlsafe(16)}", # CSRF + Context
+            "state": f"{org}:{provider}:{state_nonce}", # CSRF + Context
         }
         
         full_url = f"{auth_url}?{urllib.parse.urlencode(params)}"
-        return RedirectResponse(url=full_url)
+        response = RedirectResponse(url=full_url)
+        # Set HTTP-only secure CSRF cookie to validate against on return
+        response.set_cookie(
+            key="sso_state",
+            value=state_nonce,
+            max_age=300, # 5 minutes
+            httponly=True,
+            secure=settings.ENV == "production",
+            samesite="lax"
+        )
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -277,12 +306,24 @@ async def sso_callback(code: str, state: str, request: Request):
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        # 1. Parse State
+        # 1. Parse & Verify CSRF State
+        # Extract the cookie the browser sent back to us
+        sso_cookie = request.cookies.get("sso_state")
+        if not sso_cookie:
+            logger.warning("SSO Callback missing CSRF state cookie")
+            raise HTTPException(status_code=400, detail="SSO session expired or missing state. Please try logging in again.")
+
         state_parts = state.split(":")
         if len(state_parts) < 3:
             raise HTTPException(status_code=400, detail="Invalid state parameter")
         
-        org_id, provider_id = state_parts[0], state_parts[1]
+        org_id, provider_id, state_nonce = state_parts[0], state_parts[1], state_parts[2]
+        
+        # Verify cryptographically
+        if not secrets.compare_digest(sso_cookie, state_nonce):
+            logger.error(f"CSRF Attack Blocked: State mismatch during SSO Callback for Org {org_id}")
+            raise HTTPException(status_code=403, detail="Invalid SSO state parameter. Authentication aborted.")
+        
         
         # 2. Fetch Config
         doc = db.collection("sso_configs").document(org_id).get()
@@ -300,7 +341,7 @@ async def sso_callback(code: str, state: str, request: Request):
             from cryptography.fernet import Fernet
             import base64
             import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(settings.JWT_SECRET.encode()[:32].ljust(32, b'0')).decode())
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-sso-encryption-dev-fallback1").decode())
             f = Fernet(key)
             client_secret = f.decrypt(client_secret.encode()).decode()
 
@@ -387,7 +428,9 @@ async def sso_callback(code: str, state: str, request: Request):
         
         # 9. Redirect to Frontend with Custom Token
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        return RedirectResponse(url=f"{frontend_url}/sso-callback?token={custom_token}")
+        response = RedirectResponse(url=f"{frontend_url}/sso-callback?token={custom_token}")
+        response.delete_cookie("sso_state")
+        return response
         
     except Exception as e:
         logger.error(f"SSO Callback failed: {e}")
