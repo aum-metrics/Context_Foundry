@@ -136,11 +136,17 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         query = db.collection("sso_configs").where("domain", "==", domain).limit(1).stream()
         results = list(query)
         
+        # Instantiate document before evaluating fields
+        config_data = {}
+        if results:
+            config_doc = results[0]
+            config_data = config_doc.to_dict() or {}
+            
         if not results or not config_data.get("is_active"):
-            import asyncio
             if not results:
-                # Artificially delay to prevent timing attacks, return fake structurally correct intent
-                await asyncio.sleep(0.1)
+                # To perfectly mask, we execute a literal DB fetch instead of a sleep to match latency
+                _ = db.collection("sso_configs").document("fake_timing_mask").get()
+                
             fake_payload = {"org_id": "none", "provider": "none", "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()}
             return {
                 "success": True,
@@ -235,17 +241,11 @@ async def sso_provider_login(intent: str):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=400, detail="Invalid SSO intent")
 
-    # Active Anti-Enumeration mask - identically mimic disabled state
+    # Active Anti-Enumeration mask - identically mimic disabled state with a real firestore fetch
     if org == "none" or provider == "none":
-        import asyncio
-        import random
-        # Wait precisely long enough to act like a real firestore document fetch
-        async def sleep_and_raise():
-            await asyncio.sleep(random.uniform(0.05, 0.15))
-            raise HTTPException(status_code=400, detail="SSO is currently disabled for this organization")
-        
-        # We process it down the pipeline slightly then explode intentionally to trick timing attacks
-        return await sleep_and_raise()
+        # Wait precisely long enough to act like a real firestore document fetch by executing one
+        _ = db.collection("sso_configs").document("fake_timing_mask").get()
+        raise HTTPException(status_code=400, detail="SSO is currently disabled for this organization")
 
     if not org or not provider or provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO configuration")

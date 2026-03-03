@@ -1083,5 +1083,5 @@ async def check_llms_rate_limit(request: Request):
         raise
     except Exception as e:
         logger.error(f"Global Rate Limiter Failed for IP: {e}")
-        # Always Fail-Open strictly for text routing rather than blocking on Auth failures
-        return {"allowed": True, "count": 1, "note": "fail-open execution"}
+        # Hardened strictly to fail-close to guarantee enforcement.
+        raise HTTPException(status_code=500, detail="Internal server error evaluating rate limit")

@@ -20,9 +20,14 @@ export async function GET(request: Request) {
             if (rlRequest.status === 429) {
                 return new NextResponse("Rate limit exceeded.", { status: 429 });
             }
+            if (!rlRequest.ok) {
+                return new NextResponse("Rate Limiter unavailable.", { status: 500 });
+            }
         } catch (e) {
             console.error("Global rate limiting error:", e);
-            // Fail-open if backend is unreachable to avoid breaking the core endpoint directory
+            // 🛡️ SECURITY HARDENING (P1): Enforce strict fail-close. 
+            // Swallowing execution allows bypass on transient networking errors.
+            return new NextResponse("Internal Server Error.", { status: 500 });
         }
     }
 
