@@ -30,7 +30,7 @@ Traditional SEO was about winning on Google's search results page. Agentic SEO �
 
 Before pitching the solution, ensure the prospect understands the problem:
 
-1. **The Shift**: 30%+ of search-like queries in 2025 were answered by AI assistants, not traditional search. This is growing at ~40% YoY.
+1. **The Shift**: 30%+ of search-like queries in 2025 were answered by AI assistants, not traditional search. This is growing at ~40% YoY. *(Source: Gartner, "The Future of Search Engine Marketing", 2024)*
 2. **The Risk**: AI models hallucinate, interpolate from stale training data, and mix brand facts with competitor narratives.
 3. **The Invisibility**: Most brands have zero visibility into what AI says about them. There's no Google Search Console for AI.
 4. **The Stakes**: A misrepresented brand in AI responses = lost consideration at the exact moment intent is highest.
@@ -108,7 +108,7 @@ AUM's three-layer story:
 ### 2. Outbound Enterprise (Growth → Scale/Enterprise)
 - ICP firmographic: B2B SaaS, $50M+ ARR, competitive category
 - Trigger events: New competitor funding, AI initiative announcement
-- Motion: ROI framing — "X% of your pipeline is now AI-influenced. You're not measuring it."
+- Motion: ROI framing — "Over 60% of your buyer's journey is now AI-influenced (Gartner, 2024). You're not tracking or measuring it."
 
 ### 3. Partner/Agency Channel
 - SEO agencies positioning into "Agentic SEO"

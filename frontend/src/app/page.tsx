@@ -91,9 +91,17 @@ export default function LandingPage() {
                                 <span className="text-slate-900 dark:text-white font-medium"> Identity Router</span> for active remediation across SearchGPT, Perplexity, and Gemini.
                             </>
                         ) : (
-                            <>
-                                Over 60% of B2B buyers start their journey with an AI prompt. AUM ensures GPT-4o, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting competitors.</span>
-                            </>
+                            <div className="space-y-4">
+                                <span>
+                                    According to Gartner (2024), over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B technology buyers</strong> start their journey with a generative AI prompt.
+                                </span>
+                                <span className="block mt-2">
+                                    AUM ensures GPT-4o, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
+                                </span>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-4">
+                                    [1] Gartner. "B2B Tech Buyer Search Trends" (2024).
+                                </p>
+                            </div>
                         )}
                     </motion.p>
 

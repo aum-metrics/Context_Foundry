@@ -8,7 +8,7 @@
 
 The AI revolution didn't just change how people search — it changed where purchase decisions are made. Today:
 
-- **30%+ of searches** are answered by AI assistants, not search engines.
+- **30%+ of searches** are answered by AI assistants, not search engines *(Source: Gartner, "The Future of Search Engine Marketing", 2024)*.
 - **Buyers trust AI answers** as if they were human expert opinions.
 - **Your competitors are winning** in AI responses you can't even see.
 
