@@ -1083,5 +1083,6 @@ async def check_llms_rate_limit(request: Request):
         raise
     except Exception as e:
         logger.error(f"Global Rate Limiter Failed for IP: {e}")
-        # Softened to fail-open to preserve core API capability during DB outages
-        return {"allowed": True, "count": 1, "note": "fail-open execution"}
+        # Fail-closed: reject requests when rate limiter is unavailable
+        # The frontend llms.txt route handles non-429 errors gracefully
+        raise HTTPException(status_code=503, detail="Rate limiter unavailable")
