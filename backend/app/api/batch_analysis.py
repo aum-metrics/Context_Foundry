@@ -12,7 +12,7 @@ import asyncio
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 
 logger = logging.getLogger(__name__)

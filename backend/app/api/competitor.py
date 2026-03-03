@@ -57,6 +57,8 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
                 org_data = org_doc.to_dict() or {}
                 org_name = org_data.get("name", "Unknown Company")
                 api_key = org_data.get("apiKeys", {}).get("openai", api_key)
+                # 🛡️ SECURITY HARDENING: Redact apiKeys from org_data (consistent with simulation.py)
+                org_data.pop("apiKeys", None)
         except Exception as e:
             logger.error(f"Failed to fetch org data: {e}")
 

@@ -7,7 +7,7 @@ Description: Internal Cron Jobs for Billing and Quotas
 """
 from fastapi import APIRouter, HTTPException, Request, Depends
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from core.firebase_config import db
 from core.config import settings
 import os

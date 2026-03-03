@@ -1039,8 +1039,8 @@ async def check_llms_rate_limit(request: Request):
         doc_id = f"llms_txt_{ip.replace('.', '_')}"
         rl_ref = db.collection("rate_limits").document(doc_id)
         
-        # We use a transaction to prevent race conditions on the counter
-        @firebase_admin.firestore.transactional
+        # Use google.cloud.firestore transactional (not firebase_admin.firestore)
+        @firestore.transactional
         def evaluate_rate_limit(transaction, ref):
             now = int(datetime.now(timezone.utc).timestamp() * 1000)
             snapshot = ref.get(transaction=transaction)

@@ -451,7 +451,11 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                     # Check subscription cache validity
                     org_doc_cache = db.collection("organizations").document(request.orgId).get()
                     org_plan_cache = org_doc_cache.to_dict().get("subscription", {}).get("planId", "explorer") if org_doc_cache.exists else "explorer"
-                    if org_plan_cache != "explorer" or request.prompt == cached_data.get("prompt"):
+                    # Cache policy: Paid plans always serve cache (cost optimization).
+                    # Explorer plans only serve cache for the exact same prompt.
+                    is_paid_plan = org_plan_cache != "explorer"
+                    is_same_prompt = request.prompt == cached_data.get("prompt")
+                    if is_paid_plan or is_same_prompt:
                         logger.info(f"Cache HIT for simulation {cache_key}. Serving redundant request for $0.00.")
                         return {
                             "results": cached_data.get("results", []),

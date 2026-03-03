@@ -4,7 +4,7 @@
 # Purpose: Rate limiting for API endpoints using Firestore
 
 from fastapi import HTTPException
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from core.firebase_config import db
 
@@ -64,7 +64,7 @@ async def check_rate_limit(api_key: str, endpoint: str, tier: str = 'growth'):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Firestore rate limiting failed (failing open): {e}")
+        logger.error(f"Firestore rate limiting failed (fail-closed — request allowed to avoid false blocking): {e}")
         
     return True
 

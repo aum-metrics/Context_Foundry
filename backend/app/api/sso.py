@@ -203,8 +203,9 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
         if config_data.get("client_secret"):
             from cryptography.fernet import Fernet
             import base64
-            # Security Hardening (P2): Decoupled encryption fallback tightly enforced in config.py
-            key = base64.urlsafe_b64encode(settings.SSO_ENCRYPTION_KEY.encode()[:32].ljust(32, b'0')).decode()
+            import hashlib
+            # Security Hardening: Full-entropy key derivation via SHA-256
+            key = base64.urlsafe_b64encode(hashlib.sha256(settings.SSO_ENCRYPTION_KEY.encode()).digest()).decode()
             f = Fernet(key)
             config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
@@ -335,7 +336,9 @@ async def sso_callback(code: str, state: str, request: Request):
         if client_secret:
             from cryptography.fernet import Fernet
             import base64
-            key = base64.urlsafe_b64encode(settings.SSO_ENCRYPTION_KEY.encode()[:32].ljust(32, b'0')).decode()
+            import hashlib
+            # Security Hardening: Full-entropy key derivation via SHA-256
+            key = base64.urlsafe_b64encode(hashlib.sha256(settings.SSO_ENCRYPTION_KEY.encode()).digest()).decode()
             f = Fernet(key)
             client_secret = f.decrypt(client_secret.encode()).decode()
 
