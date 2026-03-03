@@ -158,8 +158,6 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         
         # Security Hardening (P1): Mint short-lived opaque intent token instead of leaking tenant data
         # Now universally referencing config.py for the static fallback
-        fake_intent = False
-        jwt_key = settings.SSO_ENCRYPTION_KEY
         payload = {
             "org_id": config_doc.id,
             "provider": provider,

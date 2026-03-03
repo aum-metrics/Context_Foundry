@@ -149,8 +149,21 @@ export default function LoginPage() {
                                         const intentToken = data.intent_token;
 
                                         if (intentToken) {
-                                            window.location.href = `/api/sso/login?intent=${intentToken}`;
-                                            return;
+                                            // Security Hardening (P1): Verify Authentic Payload
+                                            // The backend artificially mints spoofed intent tokens for invalid domains to prevent enumeration attacks.
+                                            // Decode the base64 JWT payload strictly locally so we don't blind-direct standard users into a guaranteed 400 error.
+                                            try {
+                                                const payloadBase64 = intentToken.split('.')[1];
+                                                const decodedPayload = JSON.parse(atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/')));
+
+                                                if (decodedPayload.org_id && decodedPayload.org_id !== "none") {
+                                                    window.location.href = `/api/sso/login?intent=${intentToken}`;
+                                                    return;
+                                                }
+                                                // If 'none', silently fall through to Google popup as designed by backend
+                                            } catch (e) {
+                                                console.error("Failed to decode SSO intent payload", e);
+                                            }
                                         }
                                     }
 
