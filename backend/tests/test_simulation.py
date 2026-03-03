@@ -2,29 +2,21 @@ import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from main import app
-from core.security import get_auth_context
+
+client = TestClient(app, base_url="http://localhost")
 
 
-def make_auth_override(uid: str):
-    def _auth():
-        return {"uid": uid, "type": "session"}
-    return _auth
-
-
-@patch("core.security.db")
+@patch("api.simulation.verify_user_org_access")
 @patch("api.simulation.anthropic")
 @patch("api.simulation.genai")
 @patch("api.simulation.OpenAI")
 @patch("api.simulation.db")
-def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mock_sec_db):
+def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mock_verify):
     """
     Test the evaluate-query endpoint for initiating multi-model simulations.
     """
     # 1. Setup Security Mock
-    mock_user_doc = MagicMock()
-    mock_user_doc.exists = True
-    mock_user_doc.to_dict.return_value = {"orgId": "test_org"}
-    mock_sec_db.collection.return_value.document.return_value.get.return_value = mock_user_doc
+    mock_verify.return_value = True
 
     # 2. Setup Simulation Mock
     mock_org_doc = MagicMock()
@@ -88,8 +80,6 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mo
     mock_client.chat.completions.create.return_value = mock_run_completion
 
     # Happy Path — user belongs to test_org
-    app.dependency_overrides[get_auth_context] = make_auth_override("test_user_123")
-    client = TestClient(app, base_url="http://localhost")
     response = client.post(
         "/api/simulation/run",
         headers={"Authorization": "Bearer mock-dev-token"},
@@ -100,16 +90,13 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mo
     assert "results" in data
 
     # Unhappy Path — user belongs to different org
-    mock_user_doc.to_dict.return_value = {"orgId": "hacker_org"}
+    mock_verify.return_value = False
     response = client.post(
         "/api/simulation/run",
         headers={"Authorization": "Bearer mock-dev-token"},
         json={"orgId": "test_org", "manifestVersion": "latest", "prompt": "Test query"}
     )
     assert response.status_code == 403, response.text
-
-    # Cleanup
-    app.dependency_overrides.pop(get_auth_context, None)
 
 
 def test_lcrs_scoring_math():

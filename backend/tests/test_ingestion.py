@@ -3,15 +3,8 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from main import app
 from api.ingestion import recursive_split
-from core.security import get_auth_context
 
 client = TestClient(app, base_url="http://localhost")
-
-
-def make_auth_override(uid: str):
-    def _auth():
-        return {"uid": uid, "type": "session"}
-    return _auth
 
 
 def test_recursive_split():
@@ -26,18 +19,15 @@ def test_recursive_split():
     assert "This is a sentence." in chunks[0]
 
 
-@patch("core.security.db")
+@patch("api.ingestion.verify_user_org_access")
 @patch("api.ingestion.OpenAI")
 @patch("api.ingestion.db")
-def test_process_markdown(mock_db, mock_openai, mock_sec_db):
+def test_process_markdown(mock_db, mock_openai, mock_verify):
     """
     Test the parse endpoint which simulates zero-retention extraction.
     """
     # Security Mock
-    mock_user_doc = MagicMock()
-    mock_user_doc.exists = True
-    mock_user_doc.to_dict.return_value = {"orgId": "test_org"}
-    mock_sec_db.collection.return_value.document.return_value.get.return_value = mock_user_doc
+    mock_verify.return_value = True
 
     # Mock Firestore Database
     mock_batch = MagicMock()
@@ -78,7 +68,6 @@ def test_process_markdown(mock_db, mock_openai, mock_sec_db):
     mock_client.chat.completions.create.return_value = mock_completion
 
     # Happy Path — user belongs to test_org
-    app.dependency_overrides[get_auth_context] = make_auth_override("test_user_123")
     response = client.post(
         "/api/ingestion/parse",
         headers={"Authorization": "Bearer mock-dev-token"},
@@ -88,14 +77,11 @@ def test_process_markdown(mock_db, mock_openai, mock_sec_db):
     assert response.status_code == 200, f"Status {response.status_code}: {response.text}"
 
     # Unhappy Path — user belongs to different org
-    mock_user_doc.to_dict.return_value = {"orgId": "hacker"}
-    response2 = client.post(
+    mock_verify.return_value = False
+    response = client.post(
         "/api/ingestion/parse",
         headers={"Authorization": "Bearer mock-dev-token"},
         data={"orgId": "test_org"},
         files={"file": ("test.pdf", b"dummy pdf content", "application/pdf")}
     )
-    assert response2.status_code == 403, response2.text
-
-    # Cleanup
-    app.dependency_overrides.pop(get_auth_context, None)
+    assert response.status_code == 403, response.text

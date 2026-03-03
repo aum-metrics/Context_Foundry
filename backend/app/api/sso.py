@@ -10,6 +10,9 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel
 import logging
 from datetime import datetime, timedelta
+import httpx
+from firebase_admin import auth as firebase_auth
+from core.firebase_config import app as firebase_app
 
 from core.config import settings
 from core.firebase_config import db
@@ -198,15 +201,90 @@ async def sso_callback(code: str, state: str, request: Request):
             f = Fernet(key)
             client_secret = f.decrypt(client_secret.encode()).decode()
 
-        # 4. Exchange Code for Token (Implementation Placeholder for specific IdP SDKs)
-        # For Demo: We simulate the mapping of the IdP user to a Firebase user.
-        # In Production: Use `httpx` to POST to `provider_config['token_url']`
+        # 4. Exchange Code for Token
+        token_url = provider_config["token_url"].format(
+            domain=config.get("domain", ""),
+            tenant=config.get("tenant_id", "")
+        )
         
-        logger.info(f"✅ SSO Callback Success for Org:{org_id} via {provider_id}")
+        redirect_uri = f"{settings.API_V1_STR}/sso/callback"
         
-        # 5. Redirect to Frontend with success (Frontend then calls Firebase with the result if needed)
+        async with httpx.AsyncClient() as client:
+            # Token Exchange
+            token_resp = await client.post(token_url, data={
+                "client_id": config.get("client_id"),
+                "client_secret": client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri
+            }, headers={"Accept": "application/json"})
+            
+            if token_resp.status_code != 200:
+                logger.error(f"IdP Token Exchange failed: {token_resp.text}")
+                raise HTTPException(status_code=400, detail="IdP Token Exchange failed")
+                
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+            
+            # 5. Fetch User Info
+            userinfo_url = provider_config["userinfo_url"].format(
+                domain=config.get("domain", ""),
+                tenant=config.get("tenant_id", "")
+            )
+            
+            user_resp = await client.get(userinfo_url, headers={
+                "Authorization": f"Bearer {access_token}"
+            })
+            
+            if user_resp.status_code != 200:
+                logger.error(f"IdP User Info failed: {user_resp.text}")
+                raise HTTPException(status_code=400, detail="IdP User Info failed")
+                
+            user_data = user_resp.json()
+            email = user_data.get("email")
+            
+            if not email:
+                raise HTTPException(status_code=400, detail="SSO provider did not return an email address")
+
+        # 6. Map ID to Firebase User
+        try:
+            firebase_user = firebase_auth.get_user_by_email(email, app=firebase_app)
+            uid = firebase_user.uid
+        except firebase_auth.UserNotFoundError:
+            firebase_user = firebase_auth.create_user(
+                email=email,
+                email_verified=True,
+                display_name=user_data.get("name", ""),
+                app=firebase_app
+            )
+            uid = firebase_user.uid
+            
+        # 7. Assure Org Membership
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        if not user_doc.exists:
+            user_ref.set({
+                "uid": uid,
+                "email": email,
+                "orgId": org_id,
+                "role": "member",
+                "joinedAt": datetime.utcnow().isoformat()
+            })
+        else:
+            current_org = user_doc.to_dict().get("orgId")
+            if current_org != org_id:
+                logger.warning(f"SSO Warning: User {email} transitioned from org {current_org} to {org_id}")
+                user_ref.update({"orgId": org_id})
+                
+        # 8. Mint Custom Token for Frontend
+        custom_token_bytes = firebase_auth.create_custom_token(uid, app=firebase_app)
+        custom_token = custom_token_bytes.decode("utf-8")
+        
+        logger.info(f"✅ SSO Callback Success for Org:{org_id} via {provider_id} (User: {email})")
+        
+        # 9. Redirect to Frontend with Custom Token
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        return RedirectResponse(url=f"{frontend_url}/dashboard?sso=success&org={org_id}")
+        return RedirectResponse(url=f"{frontend_url}/sso-callback?token={custom_token}")
         
     except Exception as e:
         logger.error(f"SSO Callback failed: {e}")

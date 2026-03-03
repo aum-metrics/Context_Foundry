@@ -93,12 +93,12 @@ async def run_batch_simulation(
     if not verify_user_org_access(uid, request.orgId):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    # Entitlement Check: Batch Analysis requires Growth or Scale
+    # Entitlement Check: Batch Analysis requires Growth, Scale, or Enterprise
     org_doc = db.collection("organizations").document(request.orgId).get()
     if org_doc.exists:
         plan = org_doc.to_dict().get("subscription", {}).get("planId", "explorer")
         if plan not in ["growth", "scale", "enterprise"]:
-            raise HTTPException(status_code=403, detail="Batch Analysis requires a Growth, Scale, or Enterprise plan.")
+            raise HTTPException(status_code=403, detail=f"Batch Analysis requires a Growth, Scale, or Enterprise plan. Current plan: {plan}.")
 
     job_id = str(uuid.uuid4())
     FirestoreTaskQueue.register_job(request.orgId, "batchJobs", job_id, request.model_dump())

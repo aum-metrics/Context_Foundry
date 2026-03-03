@@ -81,6 +81,46 @@ async def provision_organization(
                 "message": "User already provisioned."
             }
             
+        # Check if they were invited (placeholder user exists)
+        invited_users = db.collection("users").where("email", "==", email).where("status", "==", "invited_pending_auth").limit(1).get()
+        if invited_users:
+            placeholder_doc = invited_users[0]
+            placeholder_data = placeholder_doc.to_dict()
+            org_id = placeholder_data.get("orgId")
+            role = placeholder_data.get("role", "member")
+            placeholder_uid = placeholder_doc.id
+            
+            # Auto-accept: create actual user doc, delete placeholder
+            user_payload = {
+                "uid": uid,
+                "email": email,
+                "orgId": org_id,
+                "role": role,
+                "joinedAt": datetime.utcnow().isoformat()
+            }
+            user_ref.set(user_payload)
+            placeholder_doc.reference.delete()
+            
+            # Mark the actual invite doc as accepted
+            invite_id = placeholder_uid.replace("invited_", "")
+            invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
+            if invite_ref.get().exists:
+                 invite_ref.update({"status": "accepted", "acceptedAt": datetime.utcnow().isoformat(), "acceptedByUid": uid})
+            
+            log_audit_event(
+                org_id=org_id,
+                actor_id=uid,
+                event_type="member_joined",
+                resource_id=email,
+                metadata={"inviteId": invite_id, "auto_accepted": True}
+            )
+            
+            return {
+                "status": "joined_existing",
+                "orgId": org_id,
+                "message": "Automatically joined organization from pending invitation."
+            }
+            
         # Generates a new Organization ID
         new_org_id = f"org_{int(datetime.utcnow().timestamp())}_{secrets.token_urlsafe(6)}"
         

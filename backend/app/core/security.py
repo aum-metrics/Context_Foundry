@@ -30,6 +30,27 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # 🛡️ SECURITY HARDENING (P0): Strict explicit mock bypass check
+    from core.config import settings
+    allow_mock = getattr(settings, "ALLOW_MOCK_AUTH", False)
+    
+    if token == "mock-dev-token":
+        if settings.ENV == "development" and allow_mock:
+            logger.info("🔓 Dev-mode: accepting mock token (ALLOW_MOCK_AUTH is ON)")
+            return {
+                "uid": "mock_uid_dev",
+                "email": "dev@localhost",
+                "orgId": "mock-org-123",
+                "role": "admin"
+            }
+        else:
+            logger.critical("🛑 SECURITY BREACH ATTEMPT: mock-dev-token used in production or without ALLOW_MOCK_AUTH=True")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token signature",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     # Firebase ID Token verification
     try:
         # Verify the ID token using the Firebase Admin SDK.
@@ -68,7 +89,7 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
         
     try:
         user_doc = db.collection("users").document(uid).get()
-        if user_doc.exists:
+        if getattr(user_doc, 'exists', False):
             user_data = user_doc.to_dict() or {}
             if user_data.get("orgId") == target_org_id:
                 return True

@@ -36,17 +36,19 @@ service cloud.firestore {
       match /seoJobs/{jobId} { allow read: if belongsToOrg(orgId); allow write: if false; }
       match /manifests/{docId} { allow read: if belongsToOrg(orgId); allow write: if false; }
 
-      // Sensitive Subcollections: Read-only for members, No write except via backend
-      match /api_keys/{key} { allow read: if belongsToOrg(orgId); allow write: if false; }
-      match /payments/{pay} { allow read: if belongsToOrg(orgId); allow write: if false; }
-      match /auditLogs/{log} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      // Sensitive Subcollections: Read-only for ADMINS, No write except via backend
+      match /api_keys/{key} { allow read: if belongsToOrg(orgId) && getUserData().role == 'admin'; allow write: if false; }
+      match /payments/{pay} { allow read: if belongsToOrg(orgId) && getUserData().role == 'admin'; allow write: if false; }
+      match /auditLogs/{log} { allow read: if belongsToOrg(orgId) && getUserData().role == 'admin'; allow write: if false; }
       match /pendingInvites/{inv} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /scoringHistory/{hist} { allow read: if belongsToOrg(orgId); allow write: if false; }
     }
 
-    // Leads/Contact Funnel: Allow public write, Admin only read
+    // Leads/Contact Funnel: Allow public write (P1 Fix), Admin only read
     match /leads/{leadId} {
       allow create: if true;
       allow read: if isSignedIn() && getUserData().role == 'admin';
+      allow update, delete: if false;
     }
 
     // Public Assets

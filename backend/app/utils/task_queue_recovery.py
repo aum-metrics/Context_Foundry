@@ -30,7 +30,7 @@ class TaskQueueRecovery:
     STALE_THRESHOLD_MINUTES = 30
     MAX_RETRIES = 3
 
-    # Collections that contain background job sub-collections
+    # Collections that contain background job sub-collections (P1 Fix: align with worker collections)
     JOB_COLLECTIONS = ["batchJobs", "seoJobs"]
 
     @staticmethod

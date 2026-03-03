@@ -3,15 +3,8 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from main import app
 from api.audit import log_audit_event
-from core.security import get_auth_context
 
 client = TestClient(app, base_url="http://localhost")
-
-
-def make_auth_override(uid: str):
-    def _auth():
-        return {"uid": uid, "type": "session"}
-    return _auth
 
 
 @patch("api.audit.db")
@@ -49,17 +42,14 @@ def test_log_audit_event(mock_db):
     assert payload["metadata"]["filename"] == "test.pdf"
 
 
-@patch("core.security.db")
+@patch("core.security.verify_user_org_access")
 @patch("api.audit.db")
-def test_get_org_audit_logs(mock_db, mock_sec_db):
+def test_get_org_audit_logs(mock_db, mock_verify):
     """
     Test the GET endpoint for retrieving audit logs.
     """
     # Setup Security Mock
-    mock_user_doc = MagicMock()
-    mock_user_doc.exists = True
-    mock_user_doc.to_dict.return_value = {"orgId": "test_org"}
-    mock_sec_db.collection.return_value.document.return_value.get.return_value = mock_user_doc
+    mock_verify.return_value = True
 
     # Mock Firestore stream
     mock_collection = MagicMock()
@@ -79,17 +69,13 @@ def test_get_org_audit_logs(mock_db, mock_sec_db):
     mock_query2.stream.return_value = [mock_log]
 
     # Happy Path - user belongs to test_org
-    app.dependency_overrides[get_auth_context] = make_auth_override("test_user_123")
     response = client.get("/api/audit/logs/test_org", headers={"Authorization": "Bearer mock-dev-token"})
     assert response.status_code == 200, f"Status {response.status_code}: {response.text}"
     data = response.json()
     assert len(data) == 1
     assert data[0]["eventType"] == "test_event"
 
-    # Unhappy Path - user in a different org (change mock to return wrong orgId)
-    mock_sec_db.collection.return_value.document.return_value.get.return_value.to_dict.return_value = {"orgId": "hacker_org"}
-    response2 = client.get("/api/audit/logs/test_org", headers={"Authorization": "Bearer mock-dev-token"})
-    assert response2.status_code == 403, response2.text
-
-    # Cleanup
-    app.dependency_overrides.pop(get_auth_context, None)
+    # Unhappy Path - user in a different org
+    mock_verify.return_value = False
+    response = client.get("/api/audit/logs/test_org", headers={"Authorization": "Bearer mock-dev-token"})
+    assert response.status_code == 403, response.text

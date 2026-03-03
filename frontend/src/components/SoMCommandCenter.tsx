@@ -549,21 +549,7 @@ export default function SoMCommandCenter() {
                             <Globe className="w-4 h-4 mr-2 text-emerald-500" />
                             SEO + GEO Readiness Audit
                         </h2>
-                        {organization?.subscriptionTier === "explorer" ? (
-                            <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
-                                <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth or Scale plan.</p>
-                                <button
-                                    onClick={() => {
-                                        setUpgradeFeatureName("SEO & GEO Readiness Audits");
-                                        setIsUpgradeModalOpen(true);
-                                    }}
-                                    className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline py-1 px-3 border border-indigo-200 dark:border-indigo-500/20 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
-                                >
-                                    Upgrade to Growth
-                                </button>
-                            </div>
-                        ) : (
+                        {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "explorer") ? (
                             <div className="flex space-x-3 mb-4">
                                 <input
                                     type="url"
@@ -579,6 +565,20 @@ export default function SoMCommandCenter() {
                                     className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm transition-colors"
                                 >
                                     {seoLoading ? "Auditing..." : "Audit"}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
+                                <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth, Scale, or Enterprise plan.</p>
+                                <button
+                                    onClick={() => {
+                                        setUpgradeFeatureName("SEO & GEO Readiness Audits");
+                                        setIsUpgradeModalOpen(true);
+                                    }}
+                                    className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline py-1 px-3 border border-indigo-200 dark:border-indigo-500/20 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                                >
+                                    Upgrade to Growth
                                 </button>
                             </div>
                         )}

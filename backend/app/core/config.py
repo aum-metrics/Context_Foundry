@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "your-secret-key-change-in-production" # Default for Dev
     JWT_ALGORITHM: str = "HS256"
     JWT_EXP_MINUTES: int = 10080  # 7 days
-    ALLOW_MOCK_AUTH: bool = False # Disabled by default for production safety
+    ALLOW_MOCK_AUTH: bool = False # 🛡️ SECURITY HARDENING (P0): Disabled by default, actively blocked in security.py if ENV=production
     
     # Provider Keys
     OPENAI_API_KEY: Optional[str] = None
