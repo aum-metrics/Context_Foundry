@@ -243,6 +243,12 @@ export default function TeamSettings() {
                                             >
                                                 {copied ? "Copied!" : "Copy URL"}
                                             </button>
+                                            <a
+                                                href={`mailto:${inviteEmail}?subject=Invitation to join ${organization.name}&body=You have been invited to join ${organization.name} on AUM Context Foundry.%0D%0A%0D%0AAccept your invitation here: ${encodeURIComponent(inviteUrl)}`}
+                                                className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center"
+                                            >
+                                                Send Email
+                                            </a>
                                         </div>
                                         <button
                                             type="button"

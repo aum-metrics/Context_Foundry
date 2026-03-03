@@ -22,12 +22,16 @@ export default function LoginPage() {
         setError(null);
 
         try {
+            const searchParams = new URLSearchParams(window.location.search);
+            const redirectParams = searchParams.get("redirect");
+            const targetUrl = redirectParams || "/dashboard";
+
             if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 // Local mock bypass when user hasn't setup Firebase
                 setTimeout(() => {
                     localStorage.setItem("mock_auth_user", email);
                     window.dispatchEvent(new Event("mock_auth_change"));
-                    router.push("/dashboard");
+                    router.push(targetUrl);
                 }, 1000);
                 return;
             }
@@ -37,7 +41,7 @@ export default function LoginPage() {
             } else {
                 await signInWithEmailAndPassword(auth, email, password);
             }
-            router.push("/dashboard");
+            router.push(targetUrl);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Authentication failed");
             setLoading(false);
@@ -147,11 +151,11 @@ export default function LoginPage() {
                                             const data = await res.json();
                                             targetOrg = data.organization_id;
                                             provider = data.provider || "google";
-                                        } else {
                                             // Fallback to standard Google popup if SSO lookup fails
                                             const authProvider = new GoogleAuthProvider();
                                             await signInWithPopup(auth, authProvider);
-                                            router.push("/dashboard");
+                                            const redirectUrl = searchParams.get("redirect") || "/dashboard";
+                                            router.push(redirectUrl);
                                             return;
                                         }
                                     }

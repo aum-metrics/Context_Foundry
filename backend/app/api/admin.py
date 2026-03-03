@@ -4,6 +4,7 @@ from typing import Optional, Any
 from core.firebase_config import db, app as firebase_app
 from firebase_admin import auth as firebase_auth
 from core.security import security, HTTPAuthorizationCredentials
+from api.audit import log_audit_event
 import logging
 import os
 
@@ -37,8 +38,14 @@ async def verify_admin(
 
     try:
         decoded_token = firebase_auth.verify_id_token(token, app=firebase_app)
-        # Check for role or admin claim
         if decoded_token.get("role") == "admin" or decoded_token.get("admin") is True:
+            log_audit_event(
+                org_id="system_admin",
+                actor_id=decoded_token.get("email", "unknown_admin"),
+                event_type="admin_session_verified",
+                resource_id=decoded_token.get("uid", "unknown_uid"),
+                metadata={"action": request.url.path}
+            )
             return decoded_token
         
         logger.warning(f"🚫 Unauthorized Admin Access Attempt: {decoded_token.get('email', 'unknown')}")
@@ -186,6 +193,13 @@ async def update_org_api_key(
         db.collection("organizations").document(org_id).update({
             f"apiKeys.{request_body.provider}": request_body.value
         })
+        log_audit_event(
+            org_id=org_id,
+            actor_id=admin_user.get("email", "admin"),
+            event_type="admin_apikey_updated",
+            resource_id=request_body.provider,
+            metadata={"action": "update_key"}
+        )
         return {"success": True, "message": f"{request_body.provider} key updated for {org_id}"}
     except Exception as e:
         logger.error(f"Admin key update failed: {e}")
