@@ -8,23 +8,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Play, ShieldCheck, Zap, Moon, Sun, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Sparkles, Globe, Webhook, Code2, Terminal, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
+import { ArrowRight, Play, ShieldCheck, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Webhook, Code2, Terminal, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
-import { Logo } from "@/components/Logo";
-import React, { useEffect, useState } from "react";
-import { useTheme } from "@/components/ThemeProvider";
+import React from "react";
 import ProductDemoVideo from "@/components/ProductDemoVideo";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export default function LandingPage() {
-    const { theme, toggleTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans overflow-x-hidden selection:bg-indigo-500/30 transition-colors duration-300">

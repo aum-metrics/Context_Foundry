@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         });
         const data = await resp.json();
         return NextResponse.json(data, { status: resp.status });
-    } catch (err) {
+    } catch (_err) {
         return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
     }
 }

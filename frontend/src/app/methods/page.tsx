@@ -4,10 +4,10 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { motion } from 'framer-motion';
-import { Binary, Cpu, Scale, ShieldCheck, Zap, Activity, Code2, Terminal, Webhook } from 'lucide-react';
+import { Binary, Cpu, ShieldCheck, Zap, Activity, Terminal } from 'lucide-react';
 
 export default function MethodsPage() {
-    const [methodology, setMethodology] = useState<any>(null);
+    const [methodology, setMethodology] = useState<{ version: string, standards: string[], lastAudited: string } | null>(null);
 
     useEffect(() => {
         // Mocking or fetching actual scientific methodology metadata

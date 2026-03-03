@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { CodeSquare, ShieldAlert, Key, UserPlus } from "lucide-react";
+import { ShieldAlert, Key, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
 
@@ -148,9 +148,11 @@ export default function LoginPage() {
                                             targetOrg = data.organization_id;
                                             provider = data.provider || "google";
                                         } else {
-                                            // Handle 404 or other errors
-                                            const err = await res.json().catch(() => ({}));
-                                            throw new Error(err.detail || "No SSO configuration found for this domain.");
+                                            // Fallback to standard Google popup if SSO lookup fails
+                                            const authProvider = new GoogleAuthProvider();
+                                            await signInWithPopup(auth, authProvider);
+                                            router.push("/dashboard");
+                                            return;
                                         }
                                     }
 

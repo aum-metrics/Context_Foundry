@@ -5,10 +5,9 @@
  */
 "use client";
 
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Activity, Globe, Zap, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Activity, Zap, AlertTriangle } from "lucide-react";
 
 interface ServiceStatus {
     name: string;
@@ -58,7 +57,7 @@ export default function StatusPage() {
                         setAvgLatency(`--`);
                     }
                 }
-            } catch (err) {
+            } catch (_err) {
                 if (isMounted) {
                     setGlobalStatus("Degraded");
                 }

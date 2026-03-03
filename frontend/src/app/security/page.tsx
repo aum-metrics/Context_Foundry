@@ -4,7 +4,7 @@ import React from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { motion } from 'framer-motion';
-import { ShieldAlert, ShieldCheck, Lock, Share2, Server, Database, Key, Activity, EyeOff, Shield } from 'lucide-react';
+import { ShieldCheck, Server, Key } from 'lucide-react';
 
 export default function SecurityPage() {
     const textMuted = "text-slate-600 dark:text-gray-400";

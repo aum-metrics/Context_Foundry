@@ -17,7 +17,7 @@ function AcceptInviteContent() {
     const router = useRouter();
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
     const [message, setMessage] = useState("");
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<import('firebase/auth').User | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -63,7 +63,7 @@ function AcceptInviteContent() {
                     setStatus("error");
                     setMessage(data.detail || "Failed to join organization.");
                 }
-            } catch (err) {
+            } catch (_err) {
                 setStatus("error");
                 setMessage("An unexpected error occurred.");
             }

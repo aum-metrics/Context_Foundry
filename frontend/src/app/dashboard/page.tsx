@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Logo } from "@/components/Logo";
 import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";

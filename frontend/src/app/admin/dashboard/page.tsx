@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Shield, LogOut, Building2, Key, Users, CreditCard,
-    RefreshCw, Copy, Check, Search, AlertTriangle,
-    CheckCircle, XCircle, Send, RotateCcw, Eye, EyeOff, Activity
+    LogOut, Building2, Key, Users, CreditCard,
+    RefreshCw, Check, Search, AlertTriangle,
+    CheckCircle, XCircle, Send, RotateCcw, Activity
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
 
 interface OrgData {
@@ -34,8 +33,6 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<TabType>("organizations");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedOrg, setSelectedOrg] = useState<OrgData | null>(null);
-    const [copiedKey, setCopiedKey] = useState<string | null>(null);
-    const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [actionSuccess, setActionSuccess] = useState<string | null>(null);
     const [orgs, setOrgs] = useState<OrgData[]>([]);
@@ -44,7 +41,7 @@ export default function AdminDashboard() {
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [healthStatus, setHealthStatus] = useState<any[]>([]);
+    const [healthStatus, setHealthStatus] = useState<{ name: string; endpoint: string; status: string }[]>([]);
     const [checkingHealth, setCheckingHealth] = useState(false);
 
     useEffect(() => {
@@ -77,7 +74,7 @@ export default function AdminDashboard() {
             }
 
             const data = await resp.json();
-            const orgList: OrgData[] = (data.orgs || []).map((o: any) => ({
+            const orgList: OrgData[] = (data.orgs || []).map((o: Record<string, unknown>) => ({
                 id: o.id,
                 name: o.name,
                 plan: o.plan,
@@ -198,12 +195,6 @@ export default function AdminDashboard() {
         }
         setActionLoading(null);
         setTimeout(() => setActionSuccess(null), 2000);
-    };
-
-    const copyToClipboard = (text: string, keyId: string) => {
-        navigator.clipboard.writeText(text);
-        setCopiedKey(keyId);
-        setTimeout(() => setCopiedKey(null), 1500);
     };
 
     const filteredOrgs = orgs.filter(org =>

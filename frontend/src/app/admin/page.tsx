@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, Eye, EyeOff } from "lucide-react";
-import { motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -30,10 +31,14 @@ export default function AdminLoginPage() {
         setLoading(true);
 
         try {
+            // First authenticate with Firebase
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const token = await userCredential.user.getIdToken();
+
             const res = await fetch("/api/admin/auth", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ token })
             });
 
             if (res.ok) {
@@ -46,8 +51,8 @@ export default function AdminLoginPage() {
             } else {
                 setError("Invalid credentials. Product admin access only.");
             }
-        } catch (err) {
-            setError("Authentication service unavailable.");
+        } catch (_err) {
+            setError("Authentication failed or service unavailable.");
         } finally {
             setLoading(false);
         }
