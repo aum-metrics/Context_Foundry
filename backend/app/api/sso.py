@@ -136,42 +136,30 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         query = db.collection("sso_configs").where("domain", "==", domain).limit(1).stream()
         results = list(query)
         
-        if not results:
+        if not results or not config_data.get("is_active"):
             import asyncio
-            # Artificially delay to prevent timing attacks, return fake structurally correct intent
-            await asyncio.sleep(0.1)
-            jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
-            fake_payload = {"org_id": "none", "provider": "none", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+            if not results:
+                # Artificially delay to prevent timing attacks, return fake structurally correct intent
+                await asyncio.sleep(0.1)
+            fake_payload = {"org_id": "none", "provider": "none", "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()}
             return {
                 "success": True,
-                "intent_token": jwt.encode(fake_payload, jwt_key, algorithm="HS256"),
-                "provider_name": "Enterprise IDP"
-            }
-        
-        config_doc = results[0]
-        config_data = config_doc.to_dict()
-        
-        if not config_data.get("is_active"):
-            import asyncio
-            await asyncio.sleep(0.1)
-            jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
-            fake_payload = {"org_id": "none", "provider": "none", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
-            return {
-                "success": True,
-                "intent_token": jwt.encode(fake_payload, jwt_key, algorithm="HS256"),
+                "intent_token": jwt.encode(fake_payload, settings.SSO_ENCRYPTION_KEY, algorithm="HS256"),
                 "provider_name": "Enterprise IDP"
             }
 
         provider = config_data.get("provider")
         
         # Security Hardening (P1): Mint short-lived opaque intent token instead of leaking tenant data
-        jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
+        # Now universally referencing config.py for the static fallback
+        fake_intent = False
+        jwt_key = settings.SSO_ENCRYPTION_KEY
         payload = {
             "org_id": config_doc.id,
             "provider": provider,
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=5)
+            "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
         }
-        intent_token = jwt.encode(payload, jwt_key, algorithm="HS256")
+        intent_token = jwt.encode(payload, settings.SSO_ENCRYPTION_KEY, algorithm="HS256")
 
         return {
             "success": True,
@@ -212,9 +200,8 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
         if config_data.get("client_secret"):
             from cryptography.fernet import Fernet
             import base64
-            import os
-            # Security Hardening (P2): Decoupled encryption fallback from JWT signing
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-sso-encryption-dev-fallback1").decode())
+            # Security Hardening (P2): Decoupled encryption fallback tightly enforced in config.py
+            key = base64.urlsafe_b64encode(settings.SSO_ENCRYPTION_KEY.encode()[:32].ljust(32, b'0')).decode()
             f = Fernet(key)
             config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
@@ -239,9 +226,8 @@ async def sso_provider_login(intent: str):
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
     
-    jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
     try:
-        payload = jwt.decode(intent, jwt_key, algorithms=["HS256"])
+        payload = jwt.decode(intent, settings.SSO_ENCRYPTION_KEY, algorithms=["HS256"])
         org = payload.get("org_id")
         provider = payload.get("provider")
     except jwt.ExpiredSignatureError:
@@ -251,6 +237,18 @@ async def sso_provider_login(intent: str):
 
     if not org or not provider or provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO configuration")
+        
+    # Active Anti-Enumeration mask - identically mimic disabled state
+    if org == "none" or provider == "none":
+        import asyncio
+        import random
+        from fastapi.responses import JSONResponse
+        async def sleep_and_raise():
+            await asyncio.sleep(random.uniform(0.05, 0.15))
+            raise HTTPException(status_code=400, detail="SSO is currently disabled for this organization")
+        
+        # We process it down the pipeline slightly then explode intentionally to trick timing attacks
+        return await sleep_and_raise()
         
     try:
         doc = db.collection("sso_configs").document(org).get()
@@ -340,8 +338,7 @@ async def sso_callback(code: str, state: str, request: Request):
         if client_secret:
             from cryptography.fernet import Fernet
             import base64
-            import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-sso-encryption-dev-fallback1").decode())
+            key = base64.urlsafe_b64encode(settings.SSO_ENCRYPTION_KEY.encode()[:32].ljust(32, b'0')).decode()
             f = Fernet(key)
             client_secret = f.decrypt(client_secret.encode()).decode()
 
