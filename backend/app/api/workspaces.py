@@ -848,6 +848,8 @@ async def get_org_profile(
             "status": data.get("subscription", {}).get("status", "active"),
             "createdAt": data.get("createdAt")
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch org profile: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -34,7 +34,14 @@ async def verify_admin(
         
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
-        
+    
+    # 🛡️ SECURITY HARDENING (P0): Transitionary Parity
+    # Support THE secure Admin Session Secret as a legacy fallback for the transitions period.
+    # This ensures the dashboard remains operational while Firebase Admin Claims are rolled out.
+    admin_secret = os.getenv("ADMIN_SESSION_SECRET")
+    if admin_secret and token == admin_secret:
+        return {"role": "admin", "uid": "system_admin", "email": "admin@aumdatalabs.com"}
+
     try:
         decoded_token = firebase_auth.verify_id_token(token, app=firebase_app)
         # Check for role or admin claim

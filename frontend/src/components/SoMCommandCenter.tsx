@@ -15,12 +15,11 @@ import { UpgradeModal } from "./UpgradeModal";
 import { Hexagon, Award } from "lucide-react";
 import BrandHealthCertificate from "./BrandHealthCertificate";
 
-// Fallback data — only used when Firestore is unavailable
-const fallbackData = {
-    gpt4: [{ name: "Mon", score: 80 }, { name: "Tue", score: 82 }, { name: "Wed", score: 81 }, { name: "Thu", score: 85 }, { name: "Fri", score: 89 }, { name: "Sat", score: 92 }, { name: "Sun", score: 95 }],
-    claude: [{ name: "Mon", score: 60 }, { name: "Tue", score: 58 }, { name: "Wed", score: 63 }, { name: "Thu", score: 68 }, { name: "Fri", score: 72 }, { name: "Sat", score: 69 }, { name: "Sun", score: 75 }],
-    gemini: [{ name: "Mon", score: 45 }, { name: "Tue", score: 52 }, { name: "Wed", score: 49 }, { name: "Thu", score: 60 }, { name: "Fri", score: 65 }, { name: "Sat", score: 62 }, { name: "Sun", score: 70 }],
-};
+interface BatchResult {
+    domainStability: number;
+    driftRate: number;
+    modelAverages?: Record<string, number>;
+}
 
 interface ScoringHistoryEntry {
     prompt: string;
@@ -41,7 +40,7 @@ export default function SoMCommandCenter() {
     const { organization } = useOrganization();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
     const [batchLoading, setBatchLoading] = useState(false);
-    const [batchResult, setBatchResult] = useState<{ domainStability: number, driftRate: number } | null>(null);
+    const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
 
@@ -94,7 +93,7 @@ export default function SoMCommandCenter() {
         return entries;
     };
 
-    const { data: historyEntries, error, isLoading: loading } = useSWR(
+    const { data: historyEntries, error: _error, isLoading: loading } = useSWR(
         organization ? `history-${organization.id}` : null,
         () => fetchHistory(organization!.id)
     );
@@ -124,8 +123,8 @@ export default function SoMCommandCenter() {
         });
 
         // Mix in Batch Results if present
-        if (batchResult && (batchResult as any).modelAverages) {
-            return { ...newAverages, ...(batchResult as any).modelAverages };
+        if (batchResult && batchResult.modelAverages) {
+            return { ...newAverages, ...batchResult.modelAverages };
         }
 
         return newAverages;
@@ -337,7 +336,7 @@ export default function SoMCommandCenter() {
 
     const chartData = useMemo(() => {
         if (loading) return [];
-        if (!historyEntries && !error) return [];
+        if (!historyEntries && !_error) return [];
         if (historyEntries && historyEntries.length === 0) return [];
 
         const targetModel = activeTab;
@@ -353,7 +352,7 @@ export default function SoMCommandCenter() {
         }
 
         return dataPoints;
-    }, [historyEntries, activeTab, loading, error]);
+    }, [historyEntries, activeTab, loading, _error]);
 
     const fidelityRisks = useMemo(() => {
         if (!historyEntries) return [];

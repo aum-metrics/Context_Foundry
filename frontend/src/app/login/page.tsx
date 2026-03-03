@@ -38,8 +38,8 @@ export default function LoginPage() {
                 await signInWithEmailAndPassword(auth, email, password);
             }
             router.push("/dashboard");
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Authentication failed");
             setLoading(false);
         }
     };
@@ -115,6 +115,32 @@ export default function LoginPage() {
                             "Sign In"
                         )}
                     </button>
+
+                    {!isSignUp && (
+                        <div className="relative pt-2">
+                            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-slate-200 dark:border-white/5 h-px"></div>
+                            <span className="relative z-10 bg-white dark:bg-slate-900 px-3 text-[10px] uppercase tracking-[0.2em] text-slate-400 mx-auto block w-max">Or</span>
+                        </div>
+                    )}
+
+                    {!isSignUp && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                // For MVP persona flow, we initiate login assuming the organization has Okta configured
+                                // In a full implementation, we'd lookup provider by domain first
+                                const domain = email.split('@')[1];
+                                if (!domain) {
+                                    setError("Please enter your corporate email to initiate SSO.");
+                                    return;
+                                }
+                                router.push(`/api/login?provider=google&domain=${domain}`);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-slate-200 dark:border-white/10 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                        >
+                            <Logo size={16} showText={false} /> Enterprise SSO
+                        </button>
+                    )}
                 </form>
 
                 <div className="mt-6 text-center">

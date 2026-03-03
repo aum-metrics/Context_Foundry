@@ -9,7 +9,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, CheckCircle, Database, Server, Hexagon, Shield, FileJson, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, CheckCircle, Database, Server, Hexagon, Shield, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2 } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
 import { db } from "@/lib/firestorePaths";
@@ -67,23 +67,13 @@ export default function SemanticIngestion() {
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
     const [isDragging, setIsDragging] = useState(false);
     const [schemaData, setSchemaData] = useState<string | null>(null);
-    const [apiKeysCache, setApiKeysCache] = useState<{ openai?: string, gemini?: string }>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Processing simulation logs
     const [logs, setLogs] = useState<string[]>([]);
 
     useEffect(() => {
-        if (!organization) return;
-        const fetchKeys = async () => {
-            try {
-                const orgDoc = await getDoc(doc(db, "organizations", organization.id));
-                if (orgDoc.exists() && orgDoc.data().apiKeys) {
-                    setApiKeysCache(orgDoc.data().apiKeys);
-                }
-            } catch (err) { }
-        };
-        fetchKeys();
+        // Semantic Ingestion logic initialization
     }, [organization]);
 
     const handleDragOver = (e: React.DragEvent) => {
