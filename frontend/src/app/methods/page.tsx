@@ -99,7 +99,7 @@ export default function MethodsPage() {
                             <p className={`text-sm ${textMuted}`}>
                                 {persona === 'CTO' ?
                                     "We don't just 'guess.' LCRS uses a consensus model where GPT-4o acts as the primary auditor for claim verification, while your manifest serves as the absolute Ground Truth."
-                                    : "We use a leading AI engine to verify the outputs of the other engines. Your approved marketing documents serve as the undisputed source of truth during every audit."
+                                    : "We use a leading AI engine (like ChatGPT) to verify the outputs of the other engines. Your approved marketing documents serve as the undisputed source of truth during every audit."
                                 }
                             </p>
                         </div>

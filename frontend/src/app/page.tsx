@@ -96,7 +96,7 @@ export default function LandingPage() {
                                     According to Gartner (2024), over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B technology buyers</strong> start their journey with a generative AI prompt.
                                 </span>
                                 <span className="block mt-2">
-                                    AUM ensures GPT-4o, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
+                                    AUM ensures ChatGPT, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
                                 </span>
                                 <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-4">
                                     [1] Gartner. "B2B Tech Buyer Search Trends" (2024).
@@ -209,7 +209,7 @@ export default function LandingPage() {
                                     <span className="text-2xl font-light text-cyan-600 dark:text-cyan-400">84.2%</span>
                                 </div>
                                 <div className="space-y-4">
-                                    {['GPT-4o', 'Claude 3.5', 'Gemini 2.0 Flash'].map((model, i) => (
+                                    {[persona === 'CTO' ? 'GPT-4o' : 'ChatGPT', 'Claude 3.5', 'Gemini 2.0 Flash'].map((model, i) => (
                                         <div key={model} className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-slate-600 dark:text-slate-400">{model}</span>
@@ -330,7 +330,7 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {[
-                            { metric: '3', label: 'LLM Providers', sub: 'GPT-4o · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
+                            { metric: '3', label: 'LLM Providers', sub: persona === 'CTO' ? 'GPT-4o · Claude · Gemini' : 'ChatGPT · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
                             { metric: '99.99%', label: 'Uptime SLA', sub: 'Multi-region deployment', cls: 'text-emerald-600 dark:text-emerald-400' },
                             { metric: '< 50ms', label: 'Scoring Latency', sub: 'Real-time analysis', cls: 'text-cyan-600 dark:text-cyan-400' },
                             { metric: 'SOC2', label: 'Compliance Ready', sub: 'Zero-retention processing', cls: 'text-fuchsia-600 dark:text-fuchsia-400' },
@@ -391,7 +391,7 @@ export default function LandingPage() {
                                     </div>
                                     <div>
                                         <h4 className="text-slate-900 dark:text-white font-medium mb-1">ASoV & Context Drift Endpoints</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Pull real-time mathematical scores (60/40 blend) for brand fidelity across GPT-4o, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Pull real-time mathematical scores (60/40 blend) for brand fidelity across {persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
                                     </div>
                                 </li>
                             </ul>
@@ -459,7 +459,7 @@ export default function LandingPage() {
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">3</strong> weekly brand probes</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (GPT-4o, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> ({persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude, Gemini)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic ASoV score</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> preview</li>
@@ -493,7 +493,7 @@ export default function LandingPage() {
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">125</strong> weekly brand probes</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> (GPT-4o, Claude, Gemini)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">All 3 models</strong> ({persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude, Gemini)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
@@ -550,13 +550,13 @@ export default function LandingPage() {
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Brand Probe&quot;?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against GPT-4o, Claude, and Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
+                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against {persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'}, Claude, and Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Why does the free tier include all 3 models?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                Because a single-model score isn&apos;t the insight. The insight is when GPT-4o rates your brand at 91% accuracy and Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
+                                Because a single-model score isn&apos;t the insight. The insight is when {persona === 'CTO' ? 'GPT-4o' : 'ChatGPT'} rates your brand at 91% accuracy and Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
