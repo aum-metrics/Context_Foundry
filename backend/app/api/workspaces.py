@@ -5,13 +5,14 @@ Team-centric collaborative workspaces for data analysis
 Core of the "Figma for Data" experience
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 import logging
 import secrets
 import os
+import firebase_admin
 
 from core.config import settings
 from core.firebase_config import db
@@ -19,12 +20,6 @@ from core.security import get_auth_context, get_current_user, verify_user_org_ac
 from api.audit import log_audit_event
 from google.cloud import firestore
 from utils.email_service import send_invite_email
-
-from core.config import settings
-from core.firebase_config import db
-from core.security import get_auth_context, get_current_user, verify_user_org_access
-from api.audit import log_audit_event
-from google.cloud import firestore
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

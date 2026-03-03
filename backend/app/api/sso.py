@@ -235,20 +235,20 @@ async def sso_provider_login(intent: str):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=400, detail="Invalid SSO intent")
 
-    if not org or not provider or provider not in SSO_PROVIDERS:
-        raise HTTPException(status_code=400, detail="Invalid SSO configuration")
-        
     # Active Anti-Enumeration mask - identically mimic disabled state
     if org == "none" or provider == "none":
         import asyncio
         import random
-        from fastapi.responses import JSONResponse
+        # Wait precisely long enough to act like a real firestore document fetch
         async def sleep_and_raise():
             await asyncio.sleep(random.uniform(0.05, 0.15))
             raise HTTPException(status_code=400, detail="SSO is currently disabled for this organization")
         
         # We process it down the pipeline slightly then explode intentionally to trick timing attacks
         return await sleep_and_raise()
+
+    if not org or not provider or provider not in SSO_PROVIDERS:
+        raise HTTPException(status_code=400, detail="Invalid SSO configuration")
         
     try:
         doc = db.collection("sso_configs").document(org).get()
