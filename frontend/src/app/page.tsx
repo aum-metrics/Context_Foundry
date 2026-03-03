@@ -14,12 +14,14 @@ import Image from "next/image";
 import { Logo } from "@/components/Logo";
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { usePersona } from "@/components/PersonaContext";
 import ProductDemoVideo from "@/components/ProductDemoVideo";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
+    const { persona } = usePersona();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -59,10 +61,21 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.1 }}
                         className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl text-slate-900 dark:text-white uppercase"
                     >
-                        Your Brand, <br className="hidden md:block" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-cyan-500 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-cyan-300">
-                            Correctly Cited by AI.
-                        </span>
+                        {persona === 'CTO' ? (
+                            <>
+                                Your Brand, <br className="hidden md:block" />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-cyan-500 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-cyan-300">
+                                    Correctly Cited by AI.
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                Protect Your Brand's <br className="hidden md:block" />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-cyan-500 to-indigo-500 dark:from-emerald-400 dark:via-cyan-400 dark:to-indigo-300">
+                                    AI Search Revenue.
+                                </span>
+                            </>
+                        )}
                     </motion.h1>
 
                     <motion.p
@@ -71,9 +84,17 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="text-xl md:text-2xl text-slate-600 dark:text-slate-400/80 mb-12 max-w-3xl leading-relaxed font-light"
                     >
-                        Trusting AI with your brand shouldn't be a leap of faith.
-                        AUM is the <span className="text-indigo-600 dark:text-indigo-400 font-medium">"Smoke Detector"</span> for narrative drift and the
-                        <span className="text-slate-900 dark:text-white font-medium"> Identity Router</span> for active remediation across SearchGPT, Perplexity, and Gemini.
+                        {persona === 'CTO' ? (
+                            <>
+                                Trusting AI with your brand shouldn't be a leap of faith.
+                                AUM is the <span className="text-indigo-600 dark:text-indigo-400 font-medium">"Smoke Detector"</span> for narrative drift and the
+                                <span className="text-slate-900 dark:text-white font-medium"> Identity Router</span> for active remediation across SearchGPT, Perplexity, and Gemini.
+                            </>
+                        ) : (
+                            <>
+                                Over 60% of B2B buyers start their journey with an AI prompt. AUM ensures GPT-4o, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting competitors.</span>
+                            </>
+                        )}
                     </motion.p>
 
                     <motion.div
@@ -96,34 +117,76 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div>
                             <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-6">
-                                The <span className="font-semibold text-indigo-600 dark:text-indigo-400">AUM Context</span> Moat
+                                {persona === 'CTO' ? (
+                                    <>The <span className="font-semibold text-indigo-600 dark:text-indigo-400">AUM Context</span> Moat</>
+                                ) : (
+                                    <>Drive Pipeline with <span className="font-semibold text-emerald-600 dark:text-emerald-400">Agentic SEO</span></>
+                                )}
                             </h2>
-                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                <strong>Monitor. Fix. Prove.</strong> Run multi-model simulations, fix factual drift with a zero-retention ingestion pipeline, and publish a machine-readable brand manifest for the agentic era.
-                            </p>
-                            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                Our platform ensures your enterprise data is the <strong>most heavily weighted</strong> and <strong>least hallucinated</strong> entity across GPT-4o, Claude, and Gemini.
-                            </p>
+                            {persona === 'CTO' ? (
+                                <>
+                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
+                                        <strong>Monitor. Fix. Prove.</strong> Run multi-model simulations, fix factual drift with a zero-retention ingestion pipeline, and publish a machine-readable brand manifest for the agentic era.
+                                    </p>
+                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
+                                        Our platform ensures your enterprise data is the <strong>most heavily weighted</strong> and <strong>least hallucinated</strong> entity across GPT-4o, Claude, and Gemini.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
+                                        <strong>Track your Agentic Share of Voice (ASoV).</strong> We audit what AI says about you, alert you to hallucinations, and provide the exact data pipeline to inject the facts.
+                                    </p>
+                                    <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
+                                        Stop losing leads to outdated AI models. We ensure your brand is cited accurately and prominently across every major generative engine.
+                                    </p>
+                                </>
+                            )}
 
                             <div className="space-y-4">
-                                <div className="flex items-start">
-                                    <div className="mt-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mr-4 shrink-0">
-                                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-medium text-slate-900 dark:text-white">RAG Fidelity Monitoring</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">We utilize technical rigor like 'Ragas' to ensure your brand's AI retrieval remains within 100% accuracy thresholds.</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start">
-                                    <div className="mt-1 w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center mr-4 shrink-0">
-                                        <Zap className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-medium text-slate-900 dark:text-white">Real-time Semantic Ingestion</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Drop in messy marketing PDFs; get out pristine, LLM-optimized JSON-LD schemas.</p>
-                                    </div>
-                                </div>
+                                {persona === 'CTO' ? (
+                                    <>
+                                        <div className="flex items-start">
+                                            <div className="mt-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mr-4 shrink-0">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-slate-900 dark:text-white">RAG Fidelity Monitoring</h4>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">We utilize technical rigor like 'Ragas' to ensure your brand's AI retrieval remains within 100% accuracy thresholds.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start">
+                                            <div className="mt-1 w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center mr-4 shrink-0">
+                                                <Zap className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-slate-900 dark:text-white">Real-time Semantic Ingestion</h4>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Drop in messy marketing PDFs; get out pristine, LLM-optimized JSON-LD schemas.</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-start">
+                                            <div className="mt-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mr-4 shrink-0">
+                                                <BarChart3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-slate-900 dark:text-white">Real-time Brand Auditing</h4>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly how your brand compares to competitors across all major AI chatbots.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start">
+                                            <div className="mt-1 w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center mr-4 shrink-0">
+                                                <Sparkle className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-slate-900 dark:text-white">Direct-to-AI Correction</h4>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Upload your latest marketing sheets to update the AI ecosystems instantly without coding.</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
