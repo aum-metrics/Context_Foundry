@@ -106,9 +106,9 @@ async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_con
         is_active = config.get("is_active", False)
         return {
             "configured": True,
-            "enabled": is_active,  # Match frontend SSOSettings.tsx:9
+            "enabled": is_active,  # Canonical frontend gate
             "provider": config.get("provider"),
-            "is_active": is_active
+            "is_active": is_active   # Legacy/Internal clarity
         }
     except Exception as e:
         logger.error(f"Failed to fetch SSO status: {e}")

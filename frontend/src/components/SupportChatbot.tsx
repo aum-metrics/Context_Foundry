@@ -32,7 +32,7 @@ export default function SupportChatbot() {
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
-                const hydrated = parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+                const hydrated = parsed.map((m: Omit<Message, 'timestamp'> & { timestamp: string }) => ({ ...m, timestamp: new Date(m.timestamp) }));
                 setMessages(hydrated);
             } catch (e) {
                 console.error("Failed to parse chat history", e);

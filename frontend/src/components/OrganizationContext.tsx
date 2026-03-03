@@ -96,20 +96,22 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
                 setOrgUser(currentOrgUser);
 
-                // Fetch the Organization details
+                // Fetch the Organization details via safe backend endpoint (P0 Hardening)
                 if (currentOrgUser.orgId) {
-                    const orgDocRef = doc(db, "organizations", currentOrgUser.orgId);
-                    const orgDocSnap = await getDoc(orgDocRef);
-                    if (orgDocSnap.exists()) {
-                        const rawOrg = orgDocSnap.data() || {};
-                        // 🛡️ SECURITY HARDENING (P0): Redact apiKeys
-                        setOrganization({
-                            id: orgDocSnap.id,
-                            name: rawOrg.name || "",
-                            activeSeats: rawOrg.activeSeats || 0,
-                            // Normalize nested subscription object → flat subscriptionTier
-                            subscriptionTier: rawOrg.subscriptionTier || rawOrg.subscription?.planId || "explorer",
-                        });
+                    const token = await user.getIdToken();
+                    const orgResponse = await fetch(`/api/workspaces/${currentOrgUser.orgId}/profile`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+
+                    if (orgResponse.ok) {
+                        const orgData = await orgResponse.json();
+                        setOrganization(orgData);
+                    } else {
+                        console.error("Safe org fetch failed:", orgResponse.status);
+                        // Fallback/Redundant check (if endpoint fails, we don't return partial state)
+                        throw new Error("Failed to load organization profile safely.");
                     }
                 }
             } catch (error) {

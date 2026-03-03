@@ -1,6 +1,26 @@
 import { useCallback, useState } from "react";
 import { auth } from "@/lib/firebase";
 
+interface RazorpaySuccessResponse {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+}
+
+interface RazorpayFailureResponse {
+    error: {
+        code: string;
+        description: string;
+        source: string;
+        step: string;
+        reason: string;
+        metadata: {
+            order_id: string;
+            payment_id: string;
+        };
+    };
+}
+
 export interface RazorpayOptions {
     key: string;
     amount: string;
@@ -8,7 +28,7 @@ export interface RazorpayOptions {
     name: string;
     description: string;
     order_id: string;
-    handler: (response: any) => void;
+    handler: (response: RazorpaySuccessResponse) => void;
     prefill?: {
         name?: string;
         email?: string;
@@ -22,7 +42,10 @@ export interface RazorpayOptions {
 // Extend window interface
 declare global {
     interface Window {
-        Razorpay: any;
+        Razorpay: new (options: RazorpayOptions) => {
+            on: (event: string, handler: (response: RazorpayFailureResponse) => void) => void;
+            open: () => void;
+        };
     }
 }
 
@@ -57,7 +80,7 @@ export function useRazorpay() {
             orgId: string,
             email: string,
             onSuccess?: () => void,
-            onFailure?: (error: any) => void
+            onFailure?: (error: unknown) => void
         ) => {
             try {
                 const res = await loadRazorpayScript();
@@ -98,7 +121,7 @@ export function useRazorpay() {
                     name: "AUM Context Foundry",
                     description: orderData.description,
                     order_id: orderData.orderId,
-                    handler: async function (response: any) {
+                    handler: async function (response: RazorpaySuccessResponse) {
                         try {
                             // 3. Verify payment on backend
                             const verifyResponse = await fetch("/api/payments/verify", {
@@ -134,7 +157,7 @@ export function useRazorpay() {
                 };
 
                 const rzp = new window.Razorpay(options);
-                rzp.on("payment.failed", function (response: any) {
+                rzp.on("payment.failed", function (response: RazorpayFailureResponse) {
                     if (onFailure) onFailure(response.error);
                 });
                 rzp.open();

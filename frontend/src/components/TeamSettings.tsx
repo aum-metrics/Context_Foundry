@@ -108,16 +108,15 @@ export default function TeamSettings() {
                     setMembers([...members, { uid: newUserId, email: inviteEmail, role: "member", orgId: organization.id }]);
                 }
 
-                // Force a reload of the organization context to sync the Active Seats count
-                // (Optimistically increment first to avoid lag)
-                organization.activeSeats += 1;
+                // Force a reload of the organization context if parent-level sync is needed
+                // (Direct mutation removed per review findings)
             }
 
             setInviteSuccess(true);
             setInviteEmail("");
             setTimeout(() => setInviteSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.message || "Failed to provision access.");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to provision access.");
         }
         setInviting(false);
     };

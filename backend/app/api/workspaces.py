@@ -813,6 +813,50 @@ async def get_workspace_activity(
         "total_count": len(activities)
     }
 
+@router.get("/{org_id}/profile")
+async def get_org_profile(
+    org_id: str,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    🛡️ SECURITY HARDENING (P0): Safe Organization Profile.
+    Returns a redacted version of the organization document to the frontend.
+    Bypasses the direct-doc-read deny rule in firestore.rules.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    # Verify user belongs to this org
+    if current_user.get("orgId") != org_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
+
+    try:
+        org_doc = db.collection("organizations").document(org_id).get()
+        if not org_doc.exists:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        
+        data = org_doc.to_dict() or {}
+        
+        # Redact highly sensitive fields
+        data.pop("apiKeys", None)
+        
+        return {
+            "id": org_id,
+            "name": data.get("name", "Unnamed Organization"),
+            "activeSeats": data.get("activeSeats", 0),
+            "subscriptionTier": data.get("subscription", {}).get("planId", "explorer"),
+            "status": data.get("subscription", {}).get("status", "active"),
+            "createdAt": data.get("createdAt")
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch org profile: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.get("/health")
+async def workspaces_health():
+    """Health check for workspaces service"""
+    return {"status": "healthy", "service": "workspaces"}
+
 # NOTE: /health is now defined BEFORE /{workspace_id} to avoid route shadowing
 
 @router.get("/{org_id}/manifest")
