@@ -92,6 +92,13 @@ async def mint_admin_session(
             raise
         raise HTTPException(status_code=500, detail="Failed to create secure session")
 
+@router.get("/verify-session")
+async def verify_admin_session_route(admin_user: dict = Depends(verify_admin)):
+    """
+    Explicitly check if the current Admin Session Cookie is valid, unrevoked, and has the admin claim.
+    """
+    return {"success": True, "verified": True, "uid": admin_user.get("uid")}
+
 @router.get("/orgs")
 async def list_organizations(
     page_size: int = 15,

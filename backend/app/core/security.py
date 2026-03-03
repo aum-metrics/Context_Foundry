@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 import logging
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from core.firebase_config import app as firebase_app
 from core.firebase_config import db
 

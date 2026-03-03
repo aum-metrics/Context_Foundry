@@ -141,32 +141,25 @@ export default function LoginPage() {
                                 setLoading(true);
                                 try {
                                     const searchParams = new URLSearchParams(window.location.search);
-                                    const targetOrg = searchParams.get("orgId");
-                                    const provider = "google"; // Default fallback
 
-                                    if (!targetOrg) {
-                                        // Attempt domain lookup
-                                        const res = await fetch(`/api/sso/lookup?domain=${domain}`);
-                                        if (res.ok) {
-                                            const data = await res.json();
-                                            const intentToken = data.intent_token;
+                                    // Attempt domain lookup (explicit orgId is deprecated for Security Intent Tokens)
+                                    const res = await fetch(`/api/sso/lookup?domain=${domain}`);
+                                    if (res.ok) {
+                                        const data = await res.json();
+                                        const intentToken = data.intent_token;
 
-                                            if (intentToken) {
-                                                window.location.href = `/api/sso/login?intent=${intentToken}`;
-                                                return;
-                                            }
+                                        if (intentToken) {
+                                            window.location.href = `/api/sso/login?intent=${intentToken}`;
+                                            return;
                                         }
-
-                                        // Fallback to standard Google popup if SSO lookup fails or no intent is returned
-                                        const authProvider = new GoogleAuthProvider();
-                                        await signInWithPopup(auth, authProvider);
-                                        const redirectUrl = searchParams.get("redirect") || "/dashboard";
-                                        router.push(redirectUrl);
-                                        return;
                                     }
 
-                                    // Legacy fallback for explicit orgId in URL (optional, can be deprecated)
-                                    window.location.href = `/api/sso/login/${provider}?org=${targetOrg}`;
+                                    // Fallback to standard Google popup if SSO lookup fails or no intent is returned
+                                    const authProvider = new GoogleAuthProvider();
+                                    await signInWithPopup(auth, authProvider);
+                                    const redirectUrl = searchParams.get("redirect") || "/dashboard";
+                                    router.push(redirectUrl);
+                                    return;
                                 } catch (err: unknown) {
                                     setError(err instanceof Error ? err.message : "SSO initiation failed.");
                                     setLoading(false);

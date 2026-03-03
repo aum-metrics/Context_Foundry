@@ -1,33 +1,29 @@
 import { NextResponse } from 'next/server';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-export const dynamic = 'force-dynamic';
+// Basic in-memory rate limiting map (per-instance) for Edge/Serverless Next.js
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 export async function GET(request: Request) {
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const now = Date.now();
 
-    try {
-        const { db } = await import('@/lib/firestorePaths');
-        if (ip !== "unknown") {
-            const rlRef = doc(db, "rate_limits", `llms_txt_${ip.replace(/\./g, '_')}`);
-            const rlDoc = await getDoc(rlRef);
-            if (rlDoc.exists()) {
-                const data = rlDoc.data();
-                if (data.resetAt > now && data.count > 100) {
-                    return new NextResponse("Rate limit exceeded.", { status: 429 });
-                } else if (data.resetAt <= now) {
-                    await setDoc(rlRef, { count: 1, resetAt: now + 15 * 60 * 1000 });
-                } else {
-                    await setDoc(rlRef, { count: data.count + 1, resetAt: data.resetAt }, { merge: true });
-                }
-            } else {
-                await setDoc(rlRef, { count: 1, resetAt: now + 15 * 60 * 1000 });
-            }
+    // 🛡️ SECURITY HARDENING (P2): Reliable execution throttle
+    // Using an in-memory map instead of Firestore client SDK writes since
+    // unauthenticated firestore writes are blocked by security rules mapping it fail-open.
+    if (ip !== "unknown") {
+        const data = rateLimitMap.get(ip) || { count: 0, resetAt: now + 15 * 60 * 1000 };
+
+        if (data.resetAt < now) {
+            data.count = 1;
+            data.resetAt = now + 15 * 60 * 1000;
+        } else {
+            data.count += 1;
         }
-    } catch (e) {
-        console.error("Rate limiting error:", e);
-        // Fail-open if Firestore is unreachable to avoid breaking the endpoint
+
+        rateLimitMap.set(ip, data);
+
+        if (data.count > 100) {
+            return new NextResponse("Rate limit exceeded.", { status: 429 });
+        }
     }
 
     const { searchParams } = new URL(request.url);

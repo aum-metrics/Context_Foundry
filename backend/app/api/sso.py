@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import secrets
 import jwt
 import os
+import httpx
 from firebase_admin import auth as firebase_auth
 from core.firebase_config import app as firebase_app
 
@@ -147,7 +148,7 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         provider = config_data.get("provider")
         
         # Security Hardening (P1): Mint short-lived opaque intent token instead of leaking tenant data
-        jwt_key = os.getenv("SSO_ENCRYPTION_KEY", "aum-context-foundry-secure-key32-fallback-dev")
+        jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.SECRET_KEY)
         payload = {
             "org_id": config_doc.id,
             "provider": provider,
@@ -181,6 +182,9 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     uid = auth.get("uid")
     if not verify_user_org_access(uid, request.organization_id):
         raise HTTPException(status_code=403, detail="Unauthorized: you don't belong to this organization")
+    
+    if auth.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized: only admins can configure SSO")
 
     if request.provider not in SSO_PROVIDERS:
         raise HTTPException(status_code=400, detail="Invalid SSO provider")
@@ -192,7 +196,7 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
             from cryptography.fernet import Fernet
             import base64
             import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-context-foundry-secure-key32").decode())
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(settings.SECRET_KEY.encode()[:32].ljust(32, b'0')).decode())
             f = Fernet(key)
             config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
@@ -217,7 +221,7 @@ async def sso_provider_login(intent: str):
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
     
-    jwt_key = os.getenv("SSO_ENCRYPTION_KEY", "aum-context-foundry-secure-key32-fallback-dev")
+    jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.SECRET_KEY)
     try:
         payload = jwt.decode(intent, jwt_key, algorithms=["HS256"])
         org = payload.get("org_id")

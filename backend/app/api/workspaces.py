@@ -161,8 +161,10 @@ async def provision_organization(
             "createdAt": datetime.now(timezone.utc)
         }
         
+        batch = db.batch()
+        
         # 1. Create Organization
-        db.collection("organizations").document(new_org_id).set(org_payload)
+        batch.set(db.collection("organizations").document(new_org_id), org_payload)
         
         # 2. Register User
         user_payload = {
@@ -171,10 +173,10 @@ async def provision_organization(
             "orgId": new_org_id,
             "role": "admin"
         }
-        user_ref.set(user_payload)
+        batch.set(user_ref, user_payload)
         
         # 3. Store the hashed B2B Gateway key for external API-based licensing
-        db.collection("api_keys").document(hashed_key).set({
+        batch.set(db.collection("api_keys").document(hashed_key), {
             "keyHash": hashed_key,
             "orgId": new_org_id,
             "name": "Default B2B Gateway Key",
@@ -182,6 +184,8 @@ async def provision_organization(
             "lastUsedAt": None,
             "status": "active"
         })
+        
+        batch.commit()
         
         # Write SOC2 Audit Log
         log_audit_event(
@@ -596,8 +600,8 @@ async def resend_org_invite(
     """
     Resend an invitation email and reset the expiry.
     """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can resend invites")
+    if current_user.get("role") != "admin" or current_user.get("orgId") != org_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: cross-tenant access denied or not an admin")
         
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -651,8 +655,8 @@ async def revoke_org_invite(
     """
     Revoke an active invite and decrement reserved seat.
     """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can revoke invites")
+    if current_user.get("role") != "admin" or current_user.get("orgId") != org_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: cross-tenant access denied or not an admin")
         
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
