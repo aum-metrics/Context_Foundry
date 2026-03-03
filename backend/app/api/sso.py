@@ -143,10 +143,9 @@ async def lookup_sso_by_domain(request: Request, domain: str):
             config_data = config_doc.to_dict() or {}
             
         if not results or not config_data.get("is_active"):
-            if not results:
-                # To perfectly mask, we execute a literal DB fetch instead of a sleep to match latency
-                _ = db.collection("sso_configs").document("fake_timing_mask").get()
-                
+            # To perfectly mask, we execute a literal DB fetch unconditionally on reject
+            # This normalizes the 1query + 1fetch latency of identical hardware latency across all rejections.
+            _ = db.collection("sso_configs").document("fake_timing_mask").get()
             fake_payload = {"org_id": "none", "provider": "none", "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()}
             return {
                 "success": True,

@@ -5,7 +5,6 @@ from core.firebase_config import db, app as firebase_app
 from firebase_admin import auth as firebase_auth
 from core.security import security, HTTPAuthorizationCredentials
 from api.audit import log_audit_event
-from api.audit import log_audit_event
 import datetime
 import logging
 import os

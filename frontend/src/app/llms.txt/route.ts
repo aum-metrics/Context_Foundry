@@ -20,14 +20,10 @@ export async function GET(request: Request) {
             if (rlRequest.status === 429) {
                 return new NextResponse("Rate limit exceeded.", { status: 429 });
             }
-            if (!rlRequest.ok) {
-                return new NextResponse("Rate Limiter unavailable.", { status: 500 });
-            }
+            // Remove strict fail-close for the DB unavailability fallback
         } catch (e) {
             console.error("Global rate limiting error:", e);
-            // 🛡️ SECURITY HARDENING (P1): Enforce strict fail-close. 
-            // Swallowing execution allows bypass on transient networking errors.
-            return new NextResponse("Internal Server Error.", { status: 500 });
+            // Reverted to fail-open to preserve core marketing endpoints during transient connectivity issues.
         }
     }
 
