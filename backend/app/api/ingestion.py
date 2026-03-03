@@ -180,7 +180,7 @@ async def parse_document(
         # --- ATOMIC BATCH PERSISTENCE ---
         if db:
             # Standardizing on 'latest' as the primary pointer for current context
-            manifest_id = f"manifest_{int(datetime.datetime.utcnow().timestamp())}"
+            manifest_id = f"manifest_{int(datetime.datetime.now(timezone.utc).timestamp())}"
             manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
             latest_ref = db.collection("organizations").document(orgId).collection("manifests").document("latest")
             
@@ -190,11 +190,11 @@ async def parse_document(
             @firestore.transactional
             def update_manifest(txn, m_ref, l_ref, data, vector, id_val, total_chunks):
                 # 1. Write Manifest with 24h TTL
-                expiry = datetime.datetime.utcnow() + timedelta(hours=24)
+                expiry = datetime.datetime.now(timezone.utc) + timedelta(hours=24)
                 txn.set(m_ref, {
                     "content": json.dumps(data),
                     "embedding": vector,
-                    "createdAt": datetime.datetime.utcnow(),
+                    "createdAt": datetime.datetime.now(timezone.utc),
                     "expiresAt": expiry,
                     "version": id_val,
                     "totalChunks": total_chunks
@@ -203,7 +203,7 @@ async def parse_document(
                 txn.set(l_ref, {
                     "content": json.dumps(data),
                     "embedding": vector,
-                    "createdAt": datetime.datetime.utcnow(),
+                    "createdAt": datetime.datetime.now(timezone.utc),
                     "expiresAt": expiry,
                     "version": id_val,
                     "totalChunks": total_chunks
@@ -221,7 +221,7 @@ async def parse_document(
                         "text": txt, 
                         "embedding": vec, 
                         "index": i,
-                        "expiresAt": datetime.datetime.utcnow() + timedelta(hours=24)
+                        "expiresAt": datetime.datetime.now(timezone.utc) + timedelta(hours=24)
                     })
                     if (i + 1) % 400 == 0:
                         batch.commit()

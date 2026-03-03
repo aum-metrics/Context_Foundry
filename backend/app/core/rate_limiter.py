@@ -36,7 +36,7 @@ async def check_rate_limit(api_key: str, endpoint: str, tier: str = 'growth'):
         return True
         
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         sanitized_endpoint = endpoint.replace("/", "_").replace(".", "_")
         doc_id = f"rl_{api_key[:15]}_{sanitized_endpoint}"
         

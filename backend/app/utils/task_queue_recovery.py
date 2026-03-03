@@ -51,7 +51,7 @@ class TaskQueueRecovery:
             logger.warning("TaskQueueRecovery: Firestore unavailable, skipping sweep.")
             return {"status": "skipped", "reason": "db_unavailable"}
 
-        stale_cutoff = datetime.utcnow() - timedelta(minutes=TaskQueueRecovery.STALE_THRESHOLD_MINUTES)
+        stale_cutoff = datetime.now(timezone.utc) - timedelta(minutes=TaskQueueRecovery.STALE_THRESHOLD_MINUTES)
         stats = {"scanned": 0, "stalled": 0, "retried": 0, "abandoned": 0, "failed_permanent": 0}
 
         try:
@@ -102,7 +102,7 @@ class TaskQueueRecovery:
                                     dlq_ref.set({
                                         "jobCollection": job_collection,
                                         "originalData": job_data,
-                                        "failedAt": datetime.utcnow(),
+                                        "failedAt": datetime.now(timezone.utc),
                                         "error": f"Exceeded max retries ({TaskQueueRecovery.MAX_RETRIES})",
                                         "status": "dead_letter"
                                     })
@@ -119,7 +119,7 @@ class TaskQueueRecovery:
                                         job_doc.reference.update({
                                             "status": "retrying",
                                             "retryCount": retry_count + 1,
-                                            "updatedAt": datetime.utcnow(),
+                                            "updatedAt": datetime.now(timezone.utc),
                                         })
                                         payload = job_data.get("payload", {})
                                         await retry_fn(org_id, job_collection, job_id, payload)
@@ -129,14 +129,14 @@ class TaskQueueRecovery:
                                         job_doc.reference.update({
                                             "status": "failed",
                                             "error": str(e),
-                                            "updatedAt": datetime.utcnow(),
+                                            "updatedAt": datetime.now(timezone.utc),
                                         })
                                         logger.error(f"Retry failed for {job_id}: {e}")
                                 else:
                                     # No retry function — mark as abandoned
                                     job_doc.reference.update({
                                         "status": "abandoned",
-                                        "updatedAt": datetime.utcnow(),
+                                        "updatedAt": datetime.now(timezone.utc),
                                         "error": "Stale job detected during recovery sweep; no retry handler registered",
                                     })
                                     stats["abandoned"] += 1
@@ -154,7 +154,7 @@ class TaskQueueRecovery:
                                     job_doc.reference.update({
                                         "status": "retrying",
                                         "retryCount": retry_count + 1,
-                                        "updatedAt": datetime.utcnow(),
+                                        "updatedAt": datetime.now(timezone.utc),
                                     })
                                     payload = job_data.get("payload", {})
                                     await retry_fn(org_id, job_collection, job_id, payload)
@@ -163,7 +163,7 @@ class TaskQueueRecovery:
                                     job_doc.reference.update({
                                         "status": "failed",
                                         "error": str(e),
-                                        "updatedAt": datetime.utcnow(),
+                                        "updatedAt": datetime.now(timezone.utc),
                                     })
                             elif retry_count >= TaskQueueRecovery.MAX_RETRIES:
                                 # Max retries exceeded — move to Dead Letter Queue
@@ -171,7 +171,7 @@ class TaskQueueRecovery:
                                 dlq_ref.set({
                                     "jobCollection": job_collection,
                                     "originalData": job_data,
-                                    "failedAt": datetime.utcnow(),
+                                    "failedAt": datetime.now(timezone.utc),
                                     "error": f"Exceeded max retries ({TaskQueueRecovery.MAX_RETRIES})",
                                     "status": "dead_letter"
                                 })

@@ -10,6 +10,7 @@ export default function TeamSettings() {
     const [members, setMembers] = useState<OrgUser[]>([]);
     const [loadingMembers, setLoadingMembers] = useState(true);
     const [inviteEmail, setInviteEmail] = useState("");
+    const [lastInvitedEmail, setLastInvitedEmail] = useState("");
     const [inviting, setInviting] = useState(false);
     const [inviteSuccess, setInviteSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export default function TeamSettings() {
                 }
             }
 
+            setLastInvitedEmail(inviteEmail);
             setInviteSuccess(true);
             setInviteEmail("");
             // If we have a URL to show, don't auto-reset the success state so the user can copy it
@@ -244,7 +246,7 @@ export default function TeamSettings() {
                                                 {copied ? "Copied!" : "Copy URL"}
                                             </button>
                                             <a
-                                                href={`mailto:${inviteEmail}?subject=Invitation to join ${organization.name}&body=You have been invited to join ${organization.name} on AUM Context Foundry.%0D%0A%0D%0AAccept your invitation here: ${encodeURIComponent(inviteUrl)}`}
+                                                href={`mailto:${lastInvitedEmail}?subject=Invitation to join ${organization.name}&body=You have been invited to join ${organization.name} on AUM Context Foundry.%0D%0A%0D%0AAccept your invitation here: ${encodeURIComponent(inviteUrl)}`}
                                                 className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center"
                                             >
                                                 Send Email

@@ -147,7 +147,7 @@ async def generate_api_key_endpoint(
             "keyHash": key_hash,
             "keyPrefix": key_prefix,
             "status": "active",
-            "createdAt": datetime.utcnow().isoformat(),
+            "createdAt": datetime.now(timezone.utc).isoformat(),
             "lastUsedAt": None
         }
         

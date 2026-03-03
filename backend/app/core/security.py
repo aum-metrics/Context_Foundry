@@ -126,7 +126,7 @@ def validate_api_key(credentials: HTTPAuthorizationCredentials = Depends(securit
             raise HTTPException(status_code=403, detail="API Key has been revoked")
 
         # Update last used timestamp (async fire-and-forget style)
-        key_doc.reference.update({"lastUsedAt": datetime.utcnow().isoformat()})
+        key_doc.reference.update({"lastUsedAt": datetime.now(timezone.utc).isoformat()})
 
         return {
             "uid": key_data.get("userId"),

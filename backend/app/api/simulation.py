@@ -390,7 +390,7 @@ async def _store_simulation_results(org_id: str, prompt: str, manifest_version: 
         # 1. Update Simulation Cache
         db.collection("organizations").document(org_id).collection("simulationCache").document(cache_key).set({
             "results": results,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "manifestVersion": manifest_version,
             "prompt": prompt
         })
@@ -405,7 +405,7 @@ async def _store_simulation_results(org_id: str, prompt: str, manifest_version: 
                 "hasHallucination": r["hasHallucination"],
                 "claimScore": r.get("claimScore"),
             } for r in results],
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "version": manifest_version,
         })
         logger.info(f"Background: Simulation results for cache key {cache_key} stored successfully.")
@@ -447,7 +447,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 cached_data = cached_doc.to_dict() or {}
                 # Return if not expired (e.g. 24h)
                 timestamp = cached_data.get("timestamp")
-                if timestamp and (datetime.utcnow() - timestamp.replace(tzinfo=None)) < timedelta(hours=24):
+                if timestamp and (datetime.now(timezone.utc) - timestamp.replace(tzinfo=None)) < timedelta(hours=24):
                     # Check subscription cache validity
                     org_doc_cache = db.collection("organizations").document(request.orgId).get()
                     org_plan_cache = org_doc_cache.to_dict().get("subscription", {}).get("planId", "explorer") if org_doc_cache.exists else "explorer"
@@ -703,7 +703,7 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
                 "top_p": 1.0,
                 "extraction_mode": "deterministic"
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     }
 
@@ -712,7 +712,7 @@ async def _cleanup_expired_cache(org_id: str):
     if not db:
         return
     try:
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
         expired = db.collection("organizations").document(org_id) \
                     .collection("simulationCache") \
                     .where("timestamp", "<", cutoff) \

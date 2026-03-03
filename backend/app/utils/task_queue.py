@@ -19,7 +19,7 @@ class FirestoreTaskQueue:
         try:
             db.collection("organizations").document(org_id).collection(collection).document(job_id).set({
                 "status": "queued",
-                "createdAt": datetime.utcnow(),
+                "createdAt": datetime.now(timezone.utc),
                 "payload": payload,
                 "workerId": f"worker-{uuid.uuid4().hex[:8]}"
             })
@@ -33,10 +33,10 @@ class FirestoreTaskQueue:
         try:
             update_data = {
                 "status": status,
-                "updatedAt": datetime.utcnow()
+                "updatedAt": datetime.now(timezone.utc)
             }
             if status == "completed":
-                update_data["completedAt"] = datetime.utcnow()
+                update_data["completedAt"] = datetime.now(timezone.utc)
                 update_data["result"] = result
             if error:
                 update_data["error"] = error

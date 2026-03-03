@@ -27,7 +27,7 @@ def log_audit_event(org_id: str, actor_id: str, event_type: str, resource_id: st
     try:
         audit_ref = db.collection("organizations").document(org_id).collection("auditLogs")
         audit_ref.add({
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "actorId": actor_id,
             "eventType": event_type,
             "resourceId": resource_id,

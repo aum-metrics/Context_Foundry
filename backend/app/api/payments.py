@@ -142,7 +142,7 @@ async def create_subscription_order(request: CreateSubscriptionRequest, auth: di
                 "currency": plan["currency"],
                 "status": "created",
                 "customerEmail": request.customerEmail,
-                "createdAt": datetime.utcnow(),
+                "createdAt": datetime.now(timezone.utc),
             })
 
         return {
@@ -191,7 +191,7 @@ async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get
             except Exception as e:
                 logger.warning(f"Could not fetch planId for order {request.razorpay_order_id}, defaulting to growth: {e}")
 
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             db.collection("organizations").document(request.orgId).update({
                 "subscription.planId": plan_id,
                 "subscription.status": "active",
@@ -269,7 +269,7 @@ async def generate_payment_link(request: PaymentLinkRequest, auth: dict = Depend
                 "amount": amount,
                 "status": "sent",
                 "customerEmail": request.customerEmail,
-                "createdAt": datetime.utcnow(),
+                "createdAt": datetime.now(timezone.utc),
             })
 
         return {
@@ -335,7 +335,7 @@ async def razorpay_webhook(request: Request):
                         logger.info(f"♻️ Webhook Idempotency: Payment {p_id} already processed for {org_id}")
                         return True
                     
-                    now = datetime.utcnow()
+                    now = datetime.now(timezone.utc)
                     transaction.update(org_ref, {
                         "subscription.planId": p_plan,
                         "subscription.status": "active",

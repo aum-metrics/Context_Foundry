@@ -209,7 +209,7 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
 
             # Store weekly snapshot
             db.collection("organizations").document(org_id).collection("weeklySnapshots").add({
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(timezone.utc),
                 "domainStability": result["domainStability"],
                 "driftRate": result["driftRate"],
                 "modelAverages": result.get("modelAverages", {}),
@@ -230,6 +230,6 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
     return {
         "status": "completed",
         "orgsCrawled": len(crawl_results),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": crawl_results,
     }

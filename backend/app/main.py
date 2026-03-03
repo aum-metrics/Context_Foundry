@@ -44,6 +44,58 @@ logger = logging.getLogger("AUM-API")
 logger.info("🚀 Initializing AUM Analytics API...")
 
 # ============================================================================
+# APP LIFESPAN
+# ============================================================================
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events (Startup and Shutdown)"""
+    logger.info("\n" + "="*60)
+    logger.info("🚀 AUM ANALYTICS API STARTUP - v2.2.0-hardened")
+    logger.info("="*60)
+    
+    # Check Required Environment Variables
+    required_secrets = [
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "RAZORPAY_KEY_ID",
+        "RAZORPAY_KEY_SECRET"
+    ]
+    missing = [s for s in required_secrets if not os.getenv(s)]
+    if missing:
+        if os.getenv("ENV", "development") == "production":
+            logger.critical(f"❌ MISSING MISSION-CRITICAL SECRETS IN PRODUCTION: {', '.join(missing)}")
+            logger.critical("🛑 APPLICATION SHUTDOWN INITIATED — cannot run prod without all keys.")
+            import sys
+            sys.exit(1)
+        else:
+            logger.warning(f"⚠️  Missing secrets (degraded mode): {', '.join(missing)}")
+            logger.warning("⚠️  Endpoints requiring these keys will return HTTP 503 instead of crashing.")
+    
+    # Check environment
+    from core.config import settings
+    logger.info(f"Environment: {settings.ENV}")
+    logger.info(f"Debug: {settings.DEBUG}")
+    logger.info(f"JWT Configured: {bool(settings.JWT_SECRET)}")
+    logger.info(f"Supabase Configured: {bool(settings.SUPABASE_URL)}")
+    
+    logger.info("\n✅ API Ready on http://0.0.0.0:8000")
+    logger.info("📖 Docs on http://0.0.0.0:8000/api/docs")
+    
+    # Initialize Periodic Background Poller for Stalled Jobs
+    logger.info("⚙️ Initializing Periodic Job Recovery Poller (5m interval)")
+    # _periodic_job_recovery is defined further down, but will be mapped at runtime
+    task = asyncio.create_task(_periodic_job_recovery())
+    logger.info("="*60 + "\n")
+    
+    yield # App runs here
+    
+    logger.info("🛑 Shutting down AUM Analytics API...")
+    task.cancel()
+
+# ============================================================================
 # CREATE FASTAPI APP
 # ============================================================================
 
@@ -53,6 +105,7 @@ app = FastAPI(
     version="2.2.0-hardened",
     docs_url="/api/docs" if settings.ENV != "production" else None,
     redoc_url="/api/redoc" if settings.ENV != "production" else None,
+    lifespan=lifespan,
 )
 
 logger.info("✅ FastAPI app created")
@@ -224,50 +277,8 @@ async def health_check():
     }
 
 # ============================================================================
-# LIFECYCLE EVENTS
+# BACKGROUND WORKERS
 # ============================================================================
-
-@app.on_event("startup")
-async def on_startup():
-    """Application startup"""
-    logger.info("\n" + "="*60)
-    logger.info("🚀 AUM ANALYTICS API STARTUP - v2.2.0-hardened")
-    logger.info("="*60)
-    
-    # Check Required Environment Variables
-    required_secrets = [
-        "OPENAI_API_KEY",
-        "GEMINI_API_KEY",
-        "ANTHROPIC_API_KEY",
-        "RAZORPAY_KEY_ID",
-        "RAZORPAY_KEY_SECRET"
-    ]
-    missing = [s for s in required_secrets if not os.getenv(s)]
-    if missing:
-        if os.getenv("ENV", "development") == "production":
-            logger.critical(f"❌ MISSING MISSION-CRITICAL SECRETS IN PRODUCTION: {', '.join(missing)}")
-            logger.critical("🛑 APPLICATION SHUTDOWN INITIATED — cannot run prod without all keys.")
-            import sys
-            sys.exit(1)
-        else:
-            logger.warning(f"⚠️  Missing secrets (degraded mode): {', '.join(missing)}")
-            logger.warning("⚠️  Endpoints requiring these keys will return HTTP 503 instead of crashing.")
-    
-    # Check environment
-    from core.config import settings
-    logger.info(f"Environment: {settings.ENV}")
-    logger.info(f"Debug: {settings.DEBUG}")
-    logger.info(f"JWT Configured: {bool(settings.JWT_SECRET)}")
-    logger.info(f"Supabase Configured: {bool(settings.SUPABASE_URL)}")
-    
-    logger.info("\n✅ API Ready on http://0.0.0.0:8000")
-    logger.info("📖 Docs on http://0.0.0.0:8000/api/docs")
-    
-    # Initialize Periodic Background Poller for Stalled Jobs
-    logger.info("⚙️ Initializing Periodic Job Recovery Poller (5m interval)")
-    asyncio.create_task(_periodic_job_recovery())
-    
-    logger.info("="*60 + "\n")
 
 
 async def _periodic_job_recovery():
@@ -287,10 +298,6 @@ async def _periodic_job_recovery():
             logger.error(f"⚠️ Periodic Task Recovery failed: {e}")
 
 
-@app.on_event("shutdown")
-async def on_shutdown():
-    """Application shutdown"""
-    logger.info("🛑 Shutting down AUM Analytics API...")
 
 # ============================================================================
 # RUN LOCALLY

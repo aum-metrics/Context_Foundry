@@ -151,6 +151,7 @@ export default function LoginPage() {
                                             const data = await res.json();
                                             targetOrg = data.organization_id;
                                             provider = data.provider || "google";
+                                        } else {
                                             // Fallback to standard Google popup if SSO lookup fails
                                             const authProvider = new GoogleAuthProvider();
                                             await signInWithPopup(auth, authProvider);

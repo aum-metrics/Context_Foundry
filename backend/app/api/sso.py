@@ -343,7 +343,7 @@ async def sso_callback(code: str, state: str, request: Request):
                 "email": email,
                 "orgId": org_id,
                 "role": "member",
-                "joinedAt": datetime.utcnow().isoformat()
+                "joinedAt": datetime.now(timezone.utc).isoformat()
             })
         else:
             current_org = user_doc.to_dict().get("orgId")

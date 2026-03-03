@@ -41,7 +41,7 @@ async def reset_billing_quotas(force_all: bool = False, _: bool = Depends(verify
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
         
-    today = datetime.utcnow().day
+    today = datetime.now(timezone.utc).day
     reset_count = 0
     error_count = 0
     

@@ -111,7 +111,12 @@ function AcceptInviteContent() {
                         <div className="flex flex-col gap-3 pt-4">
                             {!user && (
                                 <button
-                                    onClick={() => router.push(`/login?redirect=/invite/${orgId}`)}
+                                    onClick={() => {
+                                        const queryParams = new URLSearchParams();
+                                        if (inviteId) queryParams.set("inviteId", inviteId);
+                                        const destination = `/invite/${orgId}?${queryParams.toString()}`;
+                                        router.push(`/login?redirect=${encodeURIComponent(destination)}`);
+                                    }}
                                     className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-600/20"
                                 >
                                     Login to Continue

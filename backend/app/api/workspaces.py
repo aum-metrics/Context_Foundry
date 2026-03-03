@@ -97,7 +97,7 @@ async def provision_organization(
                 "email": email,
                 "orgId": org_id,
                 "role": role,
-                "joinedAt": datetime.utcnow().isoformat()
+                "joinedAt": datetime.now(timezone.utc).isoformat()
             }
             user_ref.set(user_payload)
             placeholder_doc.reference.delete()
@@ -106,7 +106,7 @@ async def provision_organization(
             invite_id = placeholder_uid.replace("invited_", "")
             invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
             if invite_ref.get().exists:
-                 invite_ref.update({"status": "accepted", "acceptedAt": datetime.utcnow().isoformat(), "acceptedByUid": uid})
+                 invite_ref.update({"status": "accepted", "acceptedAt": datetime.now(timezone.utc).isoformat(), "acceptedByUid": uid})
             
             log_audit_event(
                 org_id=org_id,
@@ -123,7 +123,7 @@ async def provision_organization(
             }
             
         # Generates a new Organization ID
-        new_org_id = f"org_{int(datetime.utcnow().timestamp())}_{secrets.token_urlsafe(6)}"
+        new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{secrets.token_urlsafe(6)}"
         
         # Mints the B2B Gateway API Key for this new tenant
         b2b_api_key = f"aum_{secrets.token_urlsafe(32)}"
@@ -140,8 +140,8 @@ async def provision_organization(
                 "status": "active",
                 "simsThisCycle": 0,
                 "maxSimulations": 3, # Explorer default
-                "currentPeriodStart": datetime.utcnow(),
-                "currentPeriodEnd": datetime.utcnow()
+                "currentPeriodStart": datetime.now(timezone.utc),
+                "currentPeriodEnd": datetime.now(timezone.utc)
             },
             "apiKeys": {
                 # These are NOT the user's B2B key. 
@@ -150,7 +150,7 @@ async def provision_organization(
                 "gemini": "internal_platform_managed",
                 "anthropic": "internal_platform_managed"
             },
-            "createdAt": datetime.utcnow()
+            "createdAt": datetime.now(timezone.utc)
         }
         
         # 1. Create Organization
@@ -170,7 +170,7 @@ async def provision_organization(
             "keyHash": hashed_key,
             "orgId": new_org_id,
             "name": "Default B2B Gateway Key",
-            "createdAt": datetime.utcnow(),
+            "createdAt": datetime.now(timezone.utc),
             "lastUsedAt": None,
             "status": "active"
         })
@@ -218,11 +218,11 @@ async def create_workspace(
         "owner_email": user_email,
         "organization_id": request.organization_id,
         "is_public": request.is_public,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
         "member_count": 1,
         "analysis_count": 0,
-        "last_activity": datetime.utcnow().isoformat()
+        "last_activity": datetime.now(timezone.utc).isoformat()
     }
     
     # Store workspace to Firestore
@@ -236,7 +236,7 @@ async def create_workspace(
             db.collection("workspaces").document(workspace_id).collection("members").document(user_email.replace("@", "_at_")).set({
                 "user_email": user_email,
                 "role": "owner",
-                "joined_at": datetime.utcnow().isoformat()
+                "joined_at": datetime.now(timezone.utc).isoformat()
             })
         except Exception as e:
             logger.error(f"Failed to save workspace to Firestore: {e}")
@@ -392,14 +392,14 @@ async def invite_member(
         doc.reference.update({
             "members": current_members,
             "member_count": len(current_members),
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat()
         })
         
         doc.reference.collection("members").document(request.email.replace("@", "_at_")).set({
             "user_email": request.email,
             "role": request.role,
             "invited_by": user_email,
-            "joined_at": datetime.utcnow().isoformat()
+            "joined_at": datetime.now(timezone.utc).isoformat()
         })
     except Exception as e:
         logger.error(f"Invite error: {e}")
@@ -518,7 +518,7 @@ async def add_org_member(
         "email": invite_email,
         "role": role,
         "invitedBy": uid,
-        "invitedAt": datetime.utcnow().isoformat(),
+        "invitedAt": datetime.now(timezone.utc).isoformat(),
         "status": "pending"
     })
 
@@ -605,11 +605,11 @@ async def accept_org_invite(
         "email": email,
         "orgId": org_id,
         "role": invite_data.get("role", "member"),
-        "joinedAt": datetime.utcnow().isoformat()
+        "joinedAt": datetime.now(timezone.utc).isoformat()
     }, merge=True)
     
     # Mark invite as accepted
-    batch.update(invite_ref, {"status": "accepted", "acceptedAt": datetime.utcnow().isoformat()})
+    batch.update(invite_ref, {"status": "accepted", "acceptedAt": datetime.now(timezone.utc).isoformat()})
     
     # 🛡️ SEAT INVARIANT (P1): We already incremented seat during invite-create 
     # to lock the slot. Doing it here again would double-increment.
@@ -664,7 +664,7 @@ async def remove_member(
             doc.reference.update({
                 "members": current_members,
                 "member_count": len(current_members),
-                "updated_at": datetime.utcnow().isoformat()
+                "updated_at": datetime.now(timezone.utc).isoformat()
             })
             doc.reference.collection("members").document(email.replace("@", "_at_")).delete()
         except Exception as e:
@@ -712,7 +712,7 @@ async def update_workspace(
     if user_email != workspace["owner_email"]:
         raise HTTPException(status_code=403, detail="Only workspace owner can update settings")
     
-    update_data = {"updated_at": datetime.utcnow().isoformat()}
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if request.name is not None:
         update_data["name"] = request.name
         workspace["name"] = request.name
