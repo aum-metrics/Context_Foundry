@@ -9,9 +9,10 @@ from fastapi.responses import RedirectResponse
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
 import logging
-from datetime import datetime, timedelta
-import httpx
+from datetime import datetime, timezone, timedelta
 import secrets
+import jwt
+import os
 from firebase_admin import auth as firebase_auth
 from core.firebase_config import app as firebase_app
 
@@ -143,11 +144,22 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         if not config_data.get("is_active"):
             raise HTTPException(status_code=404, detail="SSO for this domain is currently disabled")
 
+        provider = config_data.get("provider")
+        
+        # Security Hardening (P1): Mint short-lived opaque intent token instead of leaking tenant data
+        jwt_key = os.getenv("SSO_ENCRYPTION_KEY", "aum-context-foundry-secure-key32-fallback-dev")
+        payload = {
+            "org_id": config_doc.id,
+            "provider": provider,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5)
+        }
+        intent_token = jwt.encode(payload, jwt_key, algorithm="HS256")
+
         return {
             "success": True,
-            "organization_id": config_doc.id,
-            "provider": config_data.get("provider"),
-            "provider_name": SSO_PROVIDERS.get(config_data.get("provider"), {}).get("name", "Enterprise IDP")
+            "intent_token": intent_token,
+            # We ONLY return the aesthetic friendly name to show on the login button, no IDs
+            "provider_name": SSO_PROVIDERS.get(provider, {}).get("name", "Enterprise IDP")
         }
     except HTTPException:
         raise
@@ -197,16 +209,26 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
         "provider": request.provider
     }
 
-@router.get("/login/{provider}")
-async def sso_provider_login(provider: str, org: str):
+@router.get("/login")
+async def sso_provider_login(intent: str):
     """
-    Redirect user to Identity Provider for SSO Login.
+    Redirect user to Identity Provider for SSO Login using an opaque intent token.
     """
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
     
-    if provider not in SSO_PROVIDERS:
-        raise HTTPException(status_code=400, detail="Unsupported SSO provider")
+    jwt_key = os.getenv("SSO_ENCRYPTION_KEY", "aum-context-foundry-secure-key32-fallback-dev")
+    try:
+        payload = jwt.decode(intent, jwt_key, algorithms=["HS256"])
+        org = payload.get("org_id")
+        provider = payload.get("provider")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="SSO login session expired, please try again")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid SSO intent")
+
+    if not org or not provider or provider not in SSO_PROVIDERS:
+        raise HTTPException(status_code=400, detail="Invalid SSO configuration")
         
     try:
         doc = db.collection("sso_configs").document(org).get()

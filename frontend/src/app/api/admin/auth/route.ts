@@ -61,3 +61,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Authentication failed" }, { status: 500 });
     }
 }
+
+export async function DELETE() {
+    try {
+        const cookieStore = await cookies();
+        cookieStore.delete("aum_admin_session");
+        cookieStore.delete("X-Admin-Token");
+
+        return NextResponse.json({
+            success: true,
+            message: "Admin session securely terminated."
+        });
+    } catch (_error) {
+        return NextResponse.json({ success: false, error: "Failed to terminate session" }, { status: 500 });
+    }
+}

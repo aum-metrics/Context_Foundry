@@ -577,14 +577,12 @@ async def add_org_member(
     return {
         "success": True, 
         "message": f"Invitation created for {invite_email}",
-        "inviteUrl": invite_url,
         "member": {
             "uid": placeholder_uid,
             "email": invite_email,
             "role": role,
             "orgId": org_id,
             "status": "invited_pending_auth"
-        }
         }
     }
 

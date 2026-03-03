@@ -13,8 +13,6 @@ export default function TeamSettings() {
     const [inviting, setInviting] = useState(false);
     const [inviteSuccess, setInviteSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
 
 
 
@@ -71,8 +69,6 @@ export default function TeamSettings() {
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setInviteUrl(null);
-        setCopied(false);
 
         if (organization.activeSeats >= 25) {
             setError("You have reached the maximum cap of 25 enterprise seats.");
@@ -114,18 +110,11 @@ export default function TeamSettings() {
 
                 // Force a reload of the organization context if parent-level sync is needed
                 // (Direct mutation removed per review findings)
-
-                if (data.inviteUrl) {
-                    setInviteUrl(data.inviteUrl);
-                }
             }
 
             setInviteSuccess(true);
             setInviteEmail("");
-            // If we have a URL to show, don't auto-reset the success state so the user can copy it
-            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
-                setTimeout(() => setInviteSuccess(false), 3000);
-            }
+            setTimeout(() => setInviteSuccess(false), 5000);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to provision access.");
         }
@@ -249,57 +238,35 @@ export default function TeamSettings() {
                                 <button
                                     type="submit"
                                     disabled={inviting || inviteSuccess || organization.activeSeats >= (organization.subscriptionTier === 'scale' ? 25 : organization.subscriptionTier === 'growth' ? 5 : 1)}
-                                    className={`w-full py-3 rounded-lg text-sm font-medium transition-colors flex justify-center items-center ${(inviteSuccess && !inviteUrl) ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/50' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 disabled:opacity-50'}`}
+                                    className={`w-full py-3 rounded-lg text-sm font-medium transition-colors flex justify-center items-center ${inviteSuccess ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/50' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 disabled:opacity-50'}`}
                                 >
-                                    {inviting ? "Provisioning..." : (inviteSuccess && !inviteUrl) ? <><Check className="w-4 h-4 mr-2" /> Invitation Sent</> : "Send Invite Link"}
+                                    {inviting ? "Provisioning..." : inviteSuccess ? <><Check className="w-4 h-4 mr-2" /> Invitation Dispatched</> : "Send Invite"}
                                 </button>
 
-                                {inviteSuccess && inviteUrl && (
-                                    <div className="mt-4 p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 animate-fade-in">
-                                        <p className="text-xs font-medium text-emerald-800 dark:text-emerald-400 mb-2 flex items-center">
+                                {inviteSuccess && (
+                                    <div className="mt-4 p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 animate-fade-in text-center">
+                                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400 mb-2 flex items-center justify-center">
                                             <Check className="w-4 h-4 mr-1" />
-                                            Invitation created successfully!
+                                            Invitation Dispatched!
                                         </p>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
-                                            Send this secure link to the invited user:
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 block">
+                                            A secure access email has been sent to the user automatically.
                                         </p>
-                                        <div className="flex items-center space-x-2">
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={inviteUrl}
-                                                className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/50 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500 text-slate-700 dark:text-slate-300"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(inviteUrl);
-                                                    setCopied(true);
-                                                    setTimeout(() => setCopied(false), 2000);
-                                                }}
-                                                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
-                                            >
-                                                {copied ? "Copied!" : "Copy URL"}
-                                            </button>
-                                        </div>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setInviteSuccess(false);
-                                                setInviteUrl(null);
-                                            }}
-                                            className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                                            onClick={() => setInviteSuccess(false)}
+                                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
                                         >
                                             Invite another member
                                         </button>
                                     </div>
                                 )}
-
-                                <p className="text-center text-xs text-slate-500 px-2 leading-relaxed">
-                                    Inviting a user will automatically grant them access to <b>{organization.name}</b>'s isolated datasets.<br />
-                                    <span className="text-amber-500/80 italic mt-1 block">(Note: In demo mode, this provisions a simulated seat.)</span>
-                                </p>
                             </div>
+
+                            <p className="text-center text-xs text-slate-500 px-2 mt-6 leading-relaxed">
+                                Inviting a user will automatically grant them access to <b>{organization.name}</b>'s isolated datasets.<br />
+                                <span className="text-amber-500/80 italic mt-1 block">(Note: In demo mode, this provisions a simulated seat.)</span>
+                            </p>
                         </form>
                     </div>
                 </div>
