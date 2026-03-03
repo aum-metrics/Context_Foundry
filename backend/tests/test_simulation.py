@@ -7,11 +7,9 @@ client = TestClient(app, base_url="http://localhost")
 
 
 @patch("api.simulation.verify_user_org_access")
-@patch("api.simulation.anthropic")
-@patch("api.simulation.genai")
 @patch("api.simulation.OpenAI")
 @patch("api.simulation.db")
-def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mock_verify):
+def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
     """
     Test the evaluate-query endpoint for initiating multi-model simulations.
     """
