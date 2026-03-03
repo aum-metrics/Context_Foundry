@@ -5,6 +5,8 @@ from core.firebase_config import db, app as firebase_app
 from firebase_admin import auth as firebase_auth
 from core.security import security, HTTPAuthorizationCredentials
 from api.audit import log_audit_event
+from api.audit import log_audit_event
+import datetime
 import logging
 import os
 
@@ -37,7 +39,8 @@ async def verify_admin(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        decoded_token = firebase_auth.verify_id_token(token, app=firebase_app)
+        # Use verify_session_cookie to ensure token was minted by server
+        decoded_token = firebase_auth.verify_session_cookie(token, check_revoked=True, app=firebase_app)
         if decoded_token.get("role") == "admin" or decoded_token.get("admin") is True:
             log_audit_event(
                 org_id="system_admin",
@@ -56,6 +59,38 @@ async def verify_admin(
         logger.error(f"Admin auth failure: {e}")
         raise HTTPException(status_code=401, detail="Invalid admin session")
 
+
+@router.post("/mint-session")
+async def mint_admin_session(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
+    """
+    Exchanges a valid Firebase client ID token for a secure HTTPOnly Session Cookie.
+    Used exclusively by the frontend Admin Auth route to harden the session.
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Missing ID token")
+        
+    id_token = credentials.credentials
+    try:
+        # Verify the ID token first to ensure it's valid and has admin claims
+        decoded_claims = firebase_auth.verify_id_token(id_token, app=firebase_app)
+        if decoded_claims.get("role") != "admin" and not decoded_claims.get("admin"):
+            raise HTTPException(status_code=403, detail="Forbidden: Admin access required to mint session")
+            
+        # Create the session cookie (expires in 24 hours)
+        expires_in = datetime.timedelta(days=1)
+        session_cookie = firebase_auth.create_session_cookie(id_token, expires_in=expires_in, app=firebase_app)
+        
+        return {"success": True, "session_cookie": session_cookie}
+    except firebase_auth.InvalidIdTokenError:
+        raise HTTPException(status_code=401, detail="Invalid ID token provided")
+    except Exception as e:
+        logger.error(f"Minting session failed: {e}")
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail="Failed to create secure session")
 
 @router.get("/orgs")
 async def list_organizations(

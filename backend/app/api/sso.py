@@ -18,6 +18,7 @@ from core.firebase_config import app as firebase_app
 from core.config import settings
 from core.firebase_config import db
 from core.security import get_auth_context
+from core.limiter import limiter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -116,7 +117,8 @@ async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_con
 
 
 @router.get("/lookup")
-async def lookup_sso_by_domain(domain: str):
+@limiter.limit("5/minute")
+async def lookup_sso_by_domain(request: Request, domain: str):
     """
     Public endpoint to lookup SSO configuration by email domain.
     Used by login page to resolve orgId.
