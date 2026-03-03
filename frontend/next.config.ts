@@ -11,8 +11,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
 
 const nextConfig: NextConfig = {
   eslint: {
-    // Warnings should not fail production builds; run lint separately in CI
-    ignoreDuringBuilds: true,
+    // Lint errors will now fail production builds (enforced in CI too)
+    ignoreDuringBuilds: false,
   },
   async rewrites() {
     /**

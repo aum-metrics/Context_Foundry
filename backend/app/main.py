@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
     ]
     missing = [s for s in required_secrets if not os.getenv(s)]
     if missing:
-        if os.getenv("ENV", "development") == "production":
+        if settings.ENV == "production":
             logger.critical(f"❌ MISSING MISSION-CRITICAL SECRETS IN PRODUCTION: {', '.join(missing)}")
             logger.critical("🛑 APPLICATION SHUTDOWN INITIATED — cannot run prod without all keys.")
             import sys
