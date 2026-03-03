@@ -75,14 +75,24 @@ AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate
                         },
                     });
                 }
-            } else {
-                console.warn(`Manifest proxy failed with status ${response.status} for org ${orgId}`);
             }
+
+            // Non-OK or empty response: fail with 503 instead of serving hardcoded fallback
+            console.warn(`Manifest proxy failed with status ${response.status} for org ${orgId}`);
+            return new NextResponse(
+                "Service temporarily unavailable. Tenant manifest could not be retrieved.",
+                { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+            );
         } catch (e) {
             console.error("Error fetching manifest via proxy:", e);
+            return new NextResponse(
+                "Service temporarily unavailable. Tenant manifest could not be retrieved.",
+                { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+            );
         }
     }
 
+    // Only serve the default manifesto when no orgId is provided (marketing landing page)
     return new NextResponse(defaultManifesto, {
         status: 200,
         headers: {

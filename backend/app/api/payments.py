@@ -13,7 +13,7 @@ import os
 import logging
 import hmac
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -180,9 +180,9 @@ async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get
             raise HTTPException(status_code=400, detail="Invalid payment signature")
 
         # Update org subscription in Firestore
+        plan_id = "growth"  # default before DB lookup
         payments = None
         if db:
-            plan_id = "growth"
             try:
                 # Find the pending payment record to get the planId
                 payments = db.collection("organizations").document(request.orgId).collection("payments").where("orderId", "==", request.razorpay_order_id).get()
