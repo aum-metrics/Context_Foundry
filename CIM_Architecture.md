@@ -139,7 +139,7 @@ Limit check queries the `manifests` collection document count (not `documents`).
 5. Grade:
    > 85   → "high_fidelity"
    60–85  → "minor_drift"  
-   < 60   → "critical_drift"
+   < 60   → "drift_detected"
 ```
 
 ### Caching
