@@ -1,4 +1,4 @@
-name: CI — Lint & Smoke
+name: CI — Lint, Test & Verify
 
 on:
   push:
@@ -23,16 +23,23 @@ jobs:
       - run: npm ci
       - run: npx next lint
 
-  backend-syntax:
-    name: Backend Syntax Check
+  backend-test:
+    name: Backend Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Compile all .py files
-        run: find backend/app -name '*.py' -exec python -c "import py_compile, sys; py_compile.compile(sys.argv[1], doraise=True)" {} \;
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax check (all .py files)
+        run: find app -name '*.py' -exec python -c "import py_compile, sys; py_compile.compile(sys.argv[1], doraise=True)" {} \;
       - name: Smoke test (import check)
-        working-directory: backend
         run: python test_main.py
+      - name: Run pytest suite
+        working-directory: backend/app
+        run: python -m pytest ../tests/ -q --tb=short
