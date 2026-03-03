@@ -10,7 +10,6 @@ export default function TeamSettings() {
     const [members, setMembers] = useState<OrgUser[]>([]);
     const [loadingMembers, setLoadingMembers] = useState(true);
     const [inviteEmail, setInviteEmail] = useState("");
-    const [lastInvitedEmail, setLastInvitedEmail] = useState("");
     const [inviting, setInviting] = useState(false);
     const [inviteSuccess, setInviteSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -121,7 +120,6 @@ export default function TeamSettings() {
                 }
             }
 
-            setLastInvitedEmail(inviteEmail);
             setInviteSuccess(true);
             setInviteEmail("");
             // If we have a URL to show, don't auto-reset the success state so the user can copy it
@@ -134,7 +132,37 @@ export default function TeamSettings() {
         setInviting(false);
     };
 
+    const handleResend = async (uid: string) => {
+        const inviteId = uid.replace("pending_", "").replace("invited_", "");
+        if (!inviteId) return;
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch(`/api/workspaces/${organization.id}/invites/${inviteId}/resend`, {
+                method: "POST",
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Failed to resend");
+            alert("Invite resent successfully.");
+        } catch (_err) {
+            alert("Failed to resend invite.");
+        }
+    };
 
+    const handleRevoke = async (uid: string) => {
+        const inviteId = uid.replace("pending_", "").replace("invited_", "");
+        if (!inviteId || !confirm("Are you sure you want to revoke this invite?")) return;
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch(`/api/workspaces/${organization.id}/invites/${inviteId}`, {
+                method: "DELETE",
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Failed to revoke");
+            setMembers(members.filter(m => m.uid !== uid));
+        } catch (_err) {
+            alert("Failed to revoke invite.");
+        }
+    };
 
     return (
         <div className="w-full h-full animate-fade-in font-sans">
@@ -171,10 +199,18 @@ export default function TeamSettings() {
                                             <p className="text-xs text-slate-500">{member.uid === orgUser.uid ? "You" : "Seat Active"}</p>
                                         </div>
                                     </div>
-                                    <span className={`px-2 py-1 text-xs rounded-full uppercase tracking-wider ${member.role === 'admin' ? 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
-                                        {member.role === 'admin' ? <Shield className="w-3 h-3 inline mr-1" /> : null}
-                                        {member.role}
-                                    </span>
+                                    <div className="flex items-center space-x-3">
+                                        <span className={`px-2 py-1 text-xs rounded-full uppercase tracking-wider ${member.role === 'admin' ? 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                            {member.role === 'admin' ? <Shield className="w-3 h-3 inline mr-1" /> : null}
+                                            {member.role}
+                                        </span>
+                                        {member.status?.includes("pending") && (
+                                            <div className="flex items-center space-x-3 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
+                                                <button onClick={() => handleResend(member.uid)} className="text-xs text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors">Resend</button>
+                                                <button onClick={() => handleRevoke(member.uid)} className="text-xs text-rose-500 hover:text-rose-600 font-medium transition-colors">Revoke</button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -245,12 +281,6 @@ export default function TeamSettings() {
                                             >
                                                 {copied ? "Copied!" : "Copy URL"}
                                             </button>
-                                            <a
-                                                href={`mailto:${lastInvitedEmail}?subject=Invitation to join ${organization.name}&body=You have been invited to join ${organization.name} on AUM Context Foundry.%0D%0A%0D%0AAccept your invitation here: ${encodeURIComponent(inviteUrl)}`}
-                                                className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center"
-                                            >
-                                                Send Email
-                                            </a>
                                         </div>
                                         <button
                                             type="button"

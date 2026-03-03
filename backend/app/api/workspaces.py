@@ -5,12 +5,20 @@ Team-centric collaborative workspaces for data analysis
 Core of the "Figma for Data" experience
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import logging
 import secrets
+import os
+
+from core.config import settings
+from core.firebase_config import db
+from core.security import get_auth_context, get_current_user, verify_user_org_access
+from api.audit import log_audit_event
+from google.cloud import firestore
+from utils.email_service import send_invite_email
 
 from core.config import settings
 from core.firebase_config import db
@@ -469,6 +477,7 @@ async def list_org_members(
 async def add_org_member(
     org_id: str,
     request: dict,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_auth_context)
 ):
     """
@@ -514,11 +523,13 @@ async def add_org_member(
     batch = db.batch()
     
     invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document()
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     batch.set(invite_ref, {
         "email": invite_email,
         "role": role,
         "invitedBy": uid,
         "invitedAt": datetime.now(timezone.utc).isoformat(),
+        "expiresAt": expires_at.isoformat(),
         "status": "pending"
     })
 
@@ -553,6 +564,16 @@ async def add_org_member(
         resource_id=invite_email,
         metadata={"role": role, "placeholder_uid": placeholder_uid, "invite_id": invite_id}
     )
+
+    # Trigger transactional email
+    background_tasks.add_task(
+        send_invite_email,
+        to_email=invite_email,
+        invite_url=invite_url,
+        org_name=org_data.get("name", "Workspace"),
+        inviter_name=current_user.get("email", "A Colleague")
+    )
+
     return {
         "success": True, 
         "message": f"Invitation created for {invite_email}",
@@ -564,7 +585,115 @@ async def add_org_member(
             "orgId": org_id,
             "status": "invited_pending_auth"
         }
+        }
     }
+
+@router.post("/{org_id}/invites/{invite_id}/resend")
+async def resend_org_invite(
+    org_id: str,
+    invite_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    Resend an invitation email and reset the expiry.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can resend invites")
+        
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+        
+    org_doc = db.collection("organizations").document(org_id).get()
+    if not org_doc.exists:
+        raise HTTPException(status_code=404, detail="Organization not found")
+        
+    org_data = org_doc.to_dict() or {}
+    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
+    invite_doc = invite_ref.get()
+    
+    if not invite_doc.exists:
+        raise HTTPException(status_code=404, detail="Invite not found")
+        
+    invite_data = invite_doc.to_dict() or {}
+    if invite_data.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Invite is no longer pending")
+
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    invite_ref.update({"expiresAt": expires_at.isoformat()})
+    
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    invite_url = f"{frontend_url}/invite/{org_id}?inviteId={invite_id}"
+    invite_email = invite_data.get("email")
+    
+    background_tasks.add_task(
+        send_invite_email,
+        to_email=invite_email,
+        invite_url=invite_url,
+        org_name=org_data.get("name", "Workspace"),
+        inviter_name=current_user.get("email", "A Colleague")
+    )
+
+    log_audit_event(
+        org_id=org_id,
+        actor_id=current_user.get("uid"),
+        event_type="member_invite_resend",
+        resource_id=invite_email,
+        metadata={"invite_id": invite_id}
+    )
+    
+    return {"success": True, "message": "Invite resent"}
+
+@router.delete("/{org_id}/invites/{invite_id}")
+async def revoke_org_invite(
+    org_id: str,
+    invite_id: str,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    Revoke an active invite and decrement reserved seat.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can revoke invites")
+        
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+        
+    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
+    invite_doc = invite_ref.get()
+    
+    if not invite_doc.exists:
+        raise HTTPException(status_code=404, detail="Invite not found")
+        
+    invite_data = invite_doc.to_dict() or {}
+    if invite_data.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Invite is no longer pending")
+
+    batch = db.batch()
+    # 1. Update invite status
+    batch.update(invite_ref, {"status": "revoked"})
+    
+    # 2. Free up the seat
+    from google.cloud import firestore
+    org_ref = db.collection("organizations").document(org_id)
+    batch.update(org_ref, {"activeSeats": firestore.Increment(-1)})
+    
+    # 3. Clean up placeholder user
+    placeholder_uid = f"invited_{invite_id}"
+    user_ref = db.collection("users").document(placeholder_uid)
+    batch.delete(user_ref)
+    
+    batch.commit()
+    
+    log_audit_event(
+        org_id=org_id,
+        actor_id=current_user.get("uid"),
+        event_type="member_invite_revoked",
+        resource_id=invite_data.get("email"),
+        metadata={"invite_id": invite_id}
+    )
+    
+    return {"success": True, "message": "Invite revoked"}
 
 
 @router.post("/{org_id}/accept-invite")
@@ -593,7 +722,13 @@ async def accept_org_invite(
     
     invite_data = invite_doc.to_dict() or {}
     if invite_data.get("status") != "pending" or invite_data.get("email") != email:
-        raise HTTPException(status_code=400, detail="Invalid or expired invitation")
+        raise HTTPException(status_code=400, detail="Invalid or mismatching invitation")
+
+    expires_at_str = invite_data.get("expiresAt")
+    if expires_at_str:
+        expires_at = datetime.fromisoformat(expires_at_str)
+        if datetime.now(timezone.utc) > expires_at:
+            raise HTTPException(status_code=400, detail="This invitation has expired")
 
     # 2. Atomic Transaction: Update user, mark invite complete, increment seats
     batch = db.batch()

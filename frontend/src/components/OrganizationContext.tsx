@@ -22,6 +22,7 @@ export interface OrgUser {
     email: string;
     orgId: string;
     role: "admin" | "member";
+    status?: string;
 }
 
 export interface OrganizationContextType {
