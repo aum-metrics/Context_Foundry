@@ -98,9 +98,19 @@ export default function TeamSettings() {
                     throw new Error(data.detail || "Failed to provision access");
                 }
 
-                // Add to local state (using temporary unique ID until properly synced)
-                const newUserId = `invited_${String(new Date().getTime())}`;
-                setMembers([...members, { uid: newUserId, email: inviteEmail, role: "member", orgId: organization.id }]);
+                const data = await response.json();
+
+                // Add to local state using the newly provisioned backend placeholder
+                if (data.member) {
+                    setMembers([...members, data.member]);
+                } else {
+                    const newUserId = `invited_${String(new Date().getTime())}`;
+                    setMembers([...members, { uid: newUserId, email: inviteEmail, role: "member", orgId: organization.id }]);
+                }
+
+                // Force a reload of the organization context to sync the Active Seats count
+                // (Optimistically increment first to avoid lag)
+                organization.activeSeats += 1;
             }
 
             setInviteSuccess(true);

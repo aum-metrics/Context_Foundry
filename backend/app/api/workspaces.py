@@ -449,9 +449,11 @@ async def add_org_member(
     if current_seats >= max_seats:
         raise HTTPException(status_code=403, detail=f"Seat limit reached for {plan} plan. Upgrade to add more members.")
 
-    # Create pending invite record in Firestore
+    # 1. Atomic Transaction: Create pending invite & placeholder user, increment org seats
+    batch = db.batch()
+    
     invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document()
-    invite_ref.set({
+    batch.set(invite_ref, {
         "email": invite_email,
         "role": role,
         "invitedBy": uid,
@@ -459,17 +461,42 @@ async def add_org_member(
         "status": "pending"
     })
 
-    # Seat increment is now deferred until the user accepts the invitation
-    # db.collection("organizations").document(org_id).update({"activeSeats": current_seats + 1})
+    # Optional: Create a placeholder user so they appear in members list immediately 
+    # (Matches frontend optimistic UI intent)
+    placeholder_uid = f"invited_{invite_ref.id}"
+    user_ref = db.collection("users").document(placeholder_uid)
+    batch.set(user_ref, {
+        "uid": placeholder_uid,
+        "email": invite_email,
+        "orgId": org_id,
+        "role": role,
+        "status": "invited_pending_auth"
+    })
+
+    # Seat increment is NOW immediate to prevent race condition abuse
+    org_ref = db.collection("organizations").document(org_id)
+    batch.update(org_ref, {"activeSeats": current_seats + 1})
+
+    batch.commit()
 
     log_audit_event(
         org_id=org_id,
         actor_id=uid,
         event_type="member_invited",
         resource_id=invite_email,
-        metadata={"role": role}
+        metadata={"role": role, "placeholder_uid": placeholder_uid}
     )
-    return {"success": True, "message": f"Invitation created for {invite_email}"}
+    return {
+        "success": True, 
+        "message": f"Invitation created for {invite_email}",
+        "member": {
+            "uid": placeholder_uid,
+            "email": invite_email,
+            "role": role,
+            "orgId": org_id,
+            "status": "invited_pending_auth"
+        }
+    }
 
 
 @router.post("/{org_id}/accept-invite")

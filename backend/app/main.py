@@ -11,9 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from core.config import settings
 from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse
 import logging
 import sys
 import os
+import asyncio
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -168,6 +170,7 @@ load_router("api.seo", "/api/seo", "SEO/GEO Audit")
 load_router("api.audit", "/api/audit", "SOC2 Audit Logs")
 load_router("api.competitor", "/api/competitor", "Competitor Monitoring")
 load_router("api.methods", "/api/methods", "Scoring Methodology")
+load_router("api.cron", "/api/cron", "Internal Cron Jobs")
 
 # ============================================================================
 # ADMIN DASHBOARD API (Admin SDK — bypasses Firestore client rules)
@@ -260,18 +263,28 @@ async def on_startup():
     logger.info("\n✅ API Ready on http://0.0.0.0:8000")
     logger.info("📖 Docs on http://0.0.0.0:8000/api/docs")
     
-    # Run task queue recovery sweep (catches stalled jobs from crashes)
-    try:
-        from utils.task_queue_recovery import TaskQueueRecovery
-        stats = await TaskQueueRecovery.sweep_stalled_jobs()
-        if stats.get("stalled", 0) > 0:
-            logger.warning(f"♻️ Task recovery found {stats['stalled']} stalled jobs: {stats}")
-        else:
-            logger.info("✅ Task queue recovery: no stalled jobs found")
-    except Exception as e:
-        logger.warning(f"⚠️ Task queue recovery sweep failed (non-fatal): {e}")
+    # Initialize Periodic Background Poller for Stalled Jobs
+    logger.info("⚙️ Initializing Periodic Job Recovery Poller (5m interval)")
+    asyncio.create_task(_periodic_job_recovery())
     
     logger.info("="*60 + "\n")
+
+
+async def _periodic_job_recovery():
+    """Perpetual background loop that sweeps for stalled jobs every 5 minutes."""
+    from utils.task_queue_recovery import TaskQueueRecovery
+    while True:
+        try:
+            # Wait 5 minutes before the next sweep
+            await asyncio.sleep(300) 
+            stats = await TaskQueueRecovery.sweep_stalled_jobs()
+            if stats.get("stalled", 0) > 0 or stats.get("retried", 0) > 0:
+                logger.info(f"♻️ Periodic Recovery: Found {stats['stalled']} stalled. Retried: {stats['retried']}. DLQ: {stats.get('failed_permanent', 0)}.")
+        except asyncio.CancelledError:
+            logger.info("🛑 Periodic Job Recovery Poller stopped.")
+            break
+        except Exception as e:
+            logger.error(f"⚠️ Periodic Task Recovery failed: {e}")
 
 
 @app.on_event("shutdown")

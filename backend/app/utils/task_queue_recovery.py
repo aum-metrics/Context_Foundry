@@ -97,16 +97,21 @@ class TaskQueueRecovery:
                                 retry_count = job_data.get("retryCount", 0)
 
                                 if retry_count >= TaskQueueRecovery.MAX_RETRIES:
-                                    # Max retries exceeded — mark as permanently failed
-                                    job_doc.reference.update({
-                                        "status": "failed_permanent",
-                                        "updatedAt": datetime.utcnow(),
+                                    # Max retries exceeded — move to Dead Letter Queue
+                                    dlq_ref = db.collection("organizations").document(org_id).collection("dead_letter_queue").document(job_id)
+                                    dlq_ref.set({
+                                        "jobCollection": job_collection,
+                                        "originalData": job_data,
+                                        "failedAt": datetime.utcnow(),
                                         "error": f"Exceeded max retries ({TaskQueueRecovery.MAX_RETRIES})",
+                                        "status": "dead_letter"
                                     })
+                                    # Delete from primary queue 
+                                    job_doc.reference.delete()
                                     stats["failed_permanent"] += 1
                                     logger.warning(
                                         f"Job {job_id} in {org_id}/{job_collection} permanently failed "
-                                        f"after {retry_count} retries"
+                                        f"and moved to DLQ."
                                     )
                                 elif retry_fn:
                                     # Attempt retry
@@ -142,6 +147,7 @@ class TaskQueueRecovery:
                             stats["scanned"] += 1
                             job_data = job_doc.to_dict() or {}
                             retry_count = job_data.get("retryCount", 0)
+                            job_id = job_doc.id
 
                             if retry_count < TaskQueueRecovery.MAX_RETRIES and retry_fn:
                                 try:
@@ -151,7 +157,7 @@ class TaskQueueRecovery:
                                         "updatedAt": datetime.utcnow(),
                                     })
                                     payload = job_data.get("payload", {})
-                                    await retry_fn(org_id, job_collection, job_doc.id, payload)
+                                    await retry_fn(org_id, job_collection, job_id, payload)
                                     stats["retried"] += 1
                                 except Exception as e:
                                     job_doc.reference.update({
@@ -160,10 +166,16 @@ class TaskQueueRecovery:
                                         "updatedAt": datetime.utcnow(),
                                     })
                             elif retry_count >= TaskQueueRecovery.MAX_RETRIES:
-                                job_doc.reference.update({
-                                    "status": "failed_permanent",
-                                    "updatedAt": datetime.utcnow(),
+                                # Max retries exceeded — move to Dead Letter Queue
+                                dlq_ref = db.collection("organizations").document(org_id).collection("dead_letter_queue").document(job_id)
+                                dlq_ref.set({
+                                    "jobCollection": job_collection,
+                                    "originalData": job_data,
+                                    "failedAt": datetime.utcnow(),
+                                    "error": f"Exceeded max retries ({TaskQueueRecovery.MAX_RETRIES})",
+                                    "status": "dead_letter"
                                 })
+                                job_doc.reference.delete()
                                 stats["failed_permanent"] += 1
 
                     except Exception as e:
@@ -177,6 +189,6 @@ class TaskQueueRecovery:
             f"TaskQueueRecovery sweep complete: "
             f"scanned={stats['scanned']}, stalled={stats['stalled']}, "
             f"retried={stats['retried']}, abandoned={stats['abandoned']}, "
-            f"failed_permanent={stats['failed_permanent']}"
+            f"dlq_items={stats['failed_permanent']}"
         )
         return {"status": "completed", **stats}

@@ -42,19 +42,6 @@ export default function SoMCommandCenter() {
     const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ domainStability: number, driftRate: number } | null>(null);
-    const [modelAverages, setModelAverages] = useState<Record<string, number>>({
-        "GPT-4o Mini": 92,
-        "Claude 3.5 Haiku": 75,
-        "Gemini 2.0 Flash": 70
-    });
-    const [radarData, setRadarData] = useState([
-        { subject: 'Consistency', A: 90, B: 70, C: 65, fullMark: 100 },
-        { subject: 'Factuality', A: 95, B: 80, C: 75, fullMark: 100 },
-        { subject: 'Sentiment', A: 85, B: 75, C: 80, fullMark: 100 },
-        { subject: 'Safety', A: 98, B: 90, C: 85, fullMark: 100 },
-        { subject: 'Authority', A: 88, B: 70, C: 60, fullMark: 100 },
-    ]);
-
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
 
@@ -112,11 +99,16 @@ export default function SoMCommandCenter() {
         () => fetchHistory(organization!.id)
     );
 
-    // Live sync for Dynamic Averages & Radar
-    useEffect(() => {
-        if (!historyEntries || historyEntries.length === 0) return;
+    // Memoized Calculations to prevent infinite re-renders
+    const modelAverages = useMemo(() => {
+        if (!historyEntries || historyEntries.length === 0) {
+            return {
+                "GPT-4o Mini": 92,
+                "Claude 3.5 Haiku": 75,
+                "Gemini 2.0 Flash": 70
+            };
+        }
 
-        // 1. Calculate Model Averages
         const modelSums: Record<string, { total: number, count: number }> = {};
         historyEntries.forEach(entry => {
             entry.results?.forEach(res => {
@@ -130,24 +122,42 @@ export default function SoMCommandCenter() {
         Object.keys(modelSums).forEach(model => {
             newAverages[model] = Math.round(modelSums[model].total / modelSums[model].count);
         });
-        if (Object.keys(newAverages).length > 0) setModelAverages(newAverages);
 
-        // 2. Derive Radar Data from the most recent simulation
+        // Mix in Batch Results if present
+        if (batchResult && (batchResult as any).modelAverages) {
+            return { ...newAverages, ...(batchResult as any).modelAverages };
+        }
+
+        return newAverages;
+    }, [historyEntries, batchResult]);
+
+    const radarData = useMemo(() => {
+        const fallback = [
+            { subject: 'Consistency', A: 90, B: 70, C: 65, fullMark: 100 },
+            { subject: 'Factuality', A: 95, B: 80, C: 75, fullMark: 100 },
+            { subject: 'Sentiment', A: 85, B: 75, C: 80, fullMark: 100 },
+            { subject: 'Safety', A: 98, B: 90, C: 85, fullMark: 100 },
+            { subject: 'Authority', A: 88, B: 70, C: 60, fullMark: 100 },
+        ];
+
+        if (!historyEntries || historyEntries.length === 0) return fallback;
+
         const latestEntry = historyEntries[0];
         if (latestEntry && latestEntry.results) {
             const gpt = latestEntry.results.find(r => r.model.includes("GPT"));
             const claude = latestEntry.results.find(r => r.model.includes("Claude"));
             const gemini = latestEntry.results.find(r => r.model.includes("Gemini"));
 
-            setRadarData([
+            return [
                 { subject: 'Consistency', A: gpt?.accuracy || 80, B: claude?.accuracy || 70, C: gemini?.accuracy || 60, fullMark: 100 },
                 { subject: 'Factuality', A: (gpt?.accuracy || 0) + 2, B: (claude?.accuracy || 0) - 5, C: gemini?.accuracy || 0, fullMark: 100 },
                 { subject: 'Sentiment', A: 85, B: 88, C: 82, fullMark: 100 },
                 { subject: 'Safety', A: 98, B: 95, C: 90, fullMark: 100 },
                 { subject: 'Authority', A: gpt?.accuracy || 85, B: (claude?.accuracy || 85) - 10, C: (gemini?.accuracy || 85) - 15, fullMark: 100 },
-            ]);
+            ];
         }
 
+        return fallback;
     }, [historyEntries]);
 
 
@@ -195,7 +205,6 @@ export default function SoMCommandCenter() {
                                 clearInterval(pollInterval);
                                 const result = statusData.summary || statusData.result;
                                 setBatchResult(result);
-                                if (result.modelAverages) setModelAverages(result.modelAverages);
                                 setBatchLoading(false);
                             } else if (statusData.status === "failed") {
                                 clearInterval(pollInterval);
@@ -211,7 +220,6 @@ export default function SoMCommandCenter() {
             else {
                 // Fallback direct response
                 setBatchResult(data);
-                if (data.modelAverages) setModelAverages(data.modelAverages);
                 setBatchLoading(false);
             }
         } catch (err) {
@@ -645,7 +653,7 @@ export default function SoMCommandCenter() {
                                     <div key={modelName}>
                                         <div className="flex justify-between text-sm mb-2">
                                             <span className="font-medium text-slate-900 dark:text-white">{modelName}</span>
-                                            <span className="text-indigo-600 dark:text-indigo-400 font-medium">{Math.round(score)}%</span>
+                                            <span className="text-indigo-600 dark:text-indigo-400 font-medium">{Math.round(score as number)}%</span>
                                         </div>
                                         <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                             <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 1, delay: i * 0.2, ease: "easeOut" }} className="h-full bg-indigo-500 rounded-full" style={{ opacity: 1 - (i * 0.2) }} />

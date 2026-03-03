@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 from core.security import get_auth_context, verify_user_org_access
 from openai import OpenAI
 from core.firebase_config import db
+from fastapi.responses import StreamingResponse
+import io
+import csv
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +292,18 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                  system_prompt: str, user_prompt: str, manifest_embedding: list,
                  claims: list, eps_div: float) -> dict:
     """Score a single model's response against the manifest."""
+    
+    # Standardize Model Names for Database Consistency
+    _model_mapping = {
+        "gpt-4o-mini": "GPT-4o Mini",
+        "gemini-2.0-flash": "Gemini 2.0 Flash",
+        "claude-3-5-haiku": "Claude 3.5 Haiku",
+        "searchgpt": "SearchGPT Pro (Sim)",
+        "perplexity": "Perplexity Pro (Sim)"
+    }
+    
+    normalized_name = _model_mapping.get(model_name.lower().strip(), model_name.strip())
+
     try:
         from core.config import settings
         if settings.ENV == "development" and not runner_key:
@@ -296,8 +311,8 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             import random
             accuracy = round(random.uniform(75, 98), 1)
             return {
-                "model": model_name,
-                "answer": f"This is a simulated response from {model_name} for the prompt: '{user_prompt}'. In a real environment, this would be generated using your API keys.",
+                "model": normalized_name,
+                "answer": f"This is a simulated response from {normalized_name} for the prompt: '{user_prompt}'. In a real environment, this would be generated using your API keys.",
                 "accuracy": accuracy,
                 "hasHallucination": accuracy < 80,
                 "claimResults": [{"claim": "Mock Claim 1", "verdict": "supported", "detail": "Simulated verification"}],
@@ -345,7 +360,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             has_drift = accuracy < 55
 
         return {
-            "model": model_name,
+            "model": normalized_name,
             "answer": answer,
             "accuracy": accuracy,
             "status": status,
@@ -359,7 +374,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
         }
     except Exception as e:
         return {
-            "model": model_name,
+            "model": normalized_name,
             "answer": "",
             "accuracy": 0,
             "hasHallucination": True,
@@ -735,3 +750,60 @@ async def run_simulation_api_v1(request: Request, bg_tasks: BackgroundTasks, sim
     # Pass execution directly to the master hardened simulation pipeline
     # The LCRS engine naturally inherits the atomic billing transactional locking from `run_simulation`
     return await run_simulation(sim_request, bg_tasks, auth)
+
+
+@router.get("/export/{orgId}")
+async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_context)):
+    """
+    Export the LCRS scoring history for an organization as a verifiable CSV.
+    Allows enterprises to audit the 60/40 blend mathematics independently.
+    """
+    if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], orgId):
+        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+        
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+        
+    try:
+        history_ref = db.collection("organizations").document(orgId).collection("scoringHistory").order_by("timestamp", direction="DESCENDING").limit(1000).get()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # CSV Headers
+        writer.writerow([
+            "Timestamp", "Manifest Version", "Prompt", "Model", 
+            "LCRS Accuracy %", "Hallucination Detected", "Claim Verification Score"
+        ])
+        
+        for doc in history_ref:
+            data = doc.to_dict()
+            timestamp = data.get("timestamp", "")
+            if hasattr(timestamp, "isoformat"):
+                timestamp = timestamp.isoformat()
+            
+            prompt = data.get("prompt", "")
+            version = data.get("version", "latest")
+            
+            # Write a row for each model's result in the simulation run
+            for result in data.get("results", []):
+                writer.writerow([
+                    timestamp,
+                    version,
+                    prompt,
+                    result.get("model", ""),
+                    result.get("accuracy", 0.0),
+                    "Yes" if result.get("hasHallucination") else "No",
+                    result.get("claimScore", "N/A")
+                ])
+                
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=lcrs_audit_{orgId}.csv"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to export scoring history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate CSV export")

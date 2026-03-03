@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, AlertCircle, RefreshCw, Beaker, Play, FileText, ChevronRight, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2 } from "lucide-react";
+import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, AlertCircle, RefreshCw, Beaker, Play, FileText, ChevronRight, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
@@ -142,6 +142,29 @@ export default function CoIntelligenceSimulator() {
         return "bg-rose-50 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20";
     };
 
+    const handleExportCSV = async () => {
+        if (!organization) return;
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const response = await fetch(`/api/simulation/export/${organization.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Export failed");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lcrs_audit_${organization.name.replace(/\s+/g, '_')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("CSV Export Failed:", error);
+        }
+    };
+
     return (
         <div className="w-full h-full flex flex-col space-y-6 animate-fade-in font-sans">
             <header className="mb-2">
@@ -212,12 +235,21 @@ export default function CoIntelligenceSimulator() {
 
                 {/* Right Panel: Multi-Model Results */}
                 <div className="lg:w-2/3 flex flex-col rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow-xl dark:shadow-2xl">
-                    <div className="bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-white/5 px-6 py-4">
-                        <h3 className="text-sm font-medium text-slate-900 dark:text-white flex items-center">
-                            <MessageSquare className="w-4 h-4 mr-2 text-amber-500" />
-                            Multi-Model Accuracy Comparison
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1">Same prompt, different AI models. See who gets your business right.</p>
+                    <div className="bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-white/5 px-6 py-4 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-sm font-medium text-slate-900 dark:text-white flex items-center">
+                                <MessageSquare className="w-4 h-4 mr-2 text-amber-500" />
+                                Multi-Model Accuracy Comparison
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">Same prompt, different AI models. See who gets your business right.</p>
+                        </div>
+                        <button
+                            onClick={handleExportCSV}
+                            className="flex items-center space-x-2 text-xs font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Export Audit CSV</span>
+                        </button>
                     </div>
 
                     <div className="flex-1 p-6 overflow-y-auto space-y-4">
