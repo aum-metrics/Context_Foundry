@@ -1,7 +1,8 @@
 # AUM Context Foundry: Frontend Implementation Guide
 
 **Target Audience:** Frontend Engineers, Interns
-**Prerequisites:** React, Next.js (App Router), Tailwind CSS, Framer Motion.
+**Prerequisites:** React, Next.js (App Router), CSS, Framer Motion.
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
@@ -56,21 +57,34 @@ console.log(organization.subscriptionTier) // "growth"
 
 ---
 
-## 4. UI Library & Styling Strategy (Tailwind)
+## 4. UI Library & Styling Strategy (Vanilla CSS)
 
-We do not write custom raw CSS in AUM Context Foundry unless absolutely necessary. We use **Tailwind CSS**.
+AUM Context Foundry uses a **custom CSS design system** defined in `frontend/src/app/globals.css`. We do NOT use Tailwind CSS.
+
+### The Design System (`globals.css`)
+The design system uses CSS custom properties (variables) for theming:
+```css
+:root {
+  --color-primary: #f59e0b;      /* Amber for primary actions */
+  --color-success: #10b981;       /* Emerald for success markers */
+  --color-bg-dark: #0f172a;       /* Slate-900 background */
+  --color-surface: #1e293b;       /* Slate-800 cards */
+  --radius: 0.75rem;              /* Consistent border radius */
+}
+```
 
 ### The "Look and Feel" (Dark Mode by Default)
 AUM Context Foundry is heavily biased toward Dark Mode for a premium, developer-centric aesthetic.
-*   **Backgrounds:** `bg-slate-900` or `bg-slate-950`.
-*   **Accents:** We use `amber-500` for primary actions (simulations, upgrades) and `emerald-500` for success markers.
-*   **Gradients:** Look at the landing page headers. We use heavily stylized Tailwind texts: `bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-500`.
+*   **Backgrounds:** Dark slate tones (`#0f172a`, `#1e293b`).
+*   **Accents:** Amber (`#f59e0b`) for primary actions (simulations, upgrades) and emerald (`#10b981`) for success markers.
+*   **Gradients:** Heavy use of `linear-gradient` for headers and accent elements.
 
 ### Building a New Component
 Whenever you build a new UI element:
-1. Make it completely responsive out of the box (`w-full md:w-1/2`).
-2. Add hover states to every button (`hover:bg-slate-800 transition-colors`).
-3. If it looks "flat" or "boring," you probably forgot to add a subtle border (`border border-slate-800`) or shadow.
+1. Use CSS custom properties from `globals.css` — never hardcode colors.
+2. Make it responsive using CSS Grid/Flexbox.
+3. Add hover states and transitions: `transition: all 0.2s ease`.
+4. If it looks "flat," add a subtle border or box-shadow.
 
 ---
 

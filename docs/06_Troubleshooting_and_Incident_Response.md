@@ -1,13 +1,14 @@
 # AUM Context Foundry: Troubleshooting & Incident Response
 
 **Target Audience:** L1/L2 Support Interns, Developers
-**Prerequisites:** Ability to read React error logs and FastAPI terminal tracebacks.
+**Prerequisites:** Access to Google Cloud Console (Firestore, Cloud Run).
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
 ## 1. Triage Mindset
 
-When a customer reports a bug, never guess. 
+When a customer reports a bug, never guess.
 You must ask yourself two questions immediately:
 1. Is this a **Frontend (React)** error or a **Backend (FastAPI)** error?
 2. Did the request return a HTTP code? (`4xx` = Auth/Validation issue. `5xx` = Server Crash).
@@ -27,7 +28,7 @@ You must ask yourself two questions immediately:
 *   **Fix:** The intern must add Optional Chaining (`?.`) to the frontend code: `organization?.allowedDomains?.map(...)`.
 
 ### 2.3 "I get a 403 Forbidden Error when running a simulation."
-*   **Diagnosis:** The backend bouncer caught them. 
+*   **Diagnosis:** The backend bouncer caught them.
 *   **Cause 1:** Their Firebase Token expired (it expires every 1 hour). Usually, the frontend invisibly refreshes it, but sometimes it hangs. Ask the user to hard-refresh (`Cmd+Shift+R`).
 *   **Cause 2:** They are trying to pass an `orgId` payload that does not match the `orgId` bound to their `uid` in the database.
 *   **Fix:** Check their `users/{uid}` document to verify their `orgId` matches exactly what they are requesting.
@@ -59,7 +60,7 @@ You must ask yourself two questions immediately:
 ### 4.2 The Dashboard Charts are "Flickering" or "Spinning Wildly"
 *   **Diagnosis:** Infinite React Render Loop.
 *   **Cause:** A developer added a `useEffect` hook that modifies a state variable, which in turn triggers the `useEffect` to fire again, 60 times a second.
-*   **Fix:** 
+*   **Fix:**
     1. Identify the rogue `useEffect` inside `SoMCommandCenter.tsx`.
     2. Add the proper dependency array at the bottom `[dependencyA, dependencyB]`.
     3. If deriving complex math (like LCRS averages), wrap it in a `useMemo(() => calculate(), [data])` so it only calculates once.
@@ -69,11 +70,12 @@ You must ask yourself two questions immediately:
 ## 5. Billing Incidents
 
 ### 5.1 "A customer bought Growth, but it still says Explorer!"
-*   **Cause:** The Razorpay/Stripe webhook failed to reach our production server.
+*   **Cause:** The Razorpay webhook failed to reach our production server.
 *   **Intern Fix:**
-    1. Verify the payment in the Stripe/Razorpay Dashboard.
-    2. If paid, manually open Firestore -> `organizations/{orgId}`.
+    1. Verify the payment in the Razorpay Dashboard.
+    2. If paid, manually open Firestore → `organizations/{orgId}`.
     3. Change `subscription.planId` to `"growth"`.
-    4. Change `subscription.maxSimulations` to `1000`.
+    4. Change `subscription.maxSimulations` to `100`.
+    5. Change `subscription.status` to `"active"`.
 
 *Proceed to Guide 07: Sales & Lead Onboarding Guide.*

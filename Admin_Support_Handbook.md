@@ -1,5 +1,5 @@
 # AUM Context Foundry — Admin Support Handbook
-**v5.1.0 | March 2026 | CONFIDENTIAL — Internal Operations Only**
+**v5.1.0-hardened | March 2026 | CONFIDENTIAL — Internal Operations Only**
 
 ---
 
@@ -96,25 +96,16 @@ Client-side access is restricted:
 
 ## 3. Rate Limiting & DDoS Protection
 
-### 3.1 Layers of Protection
+### 3.2 Rate Limiter Posture
 
-| Layer | Mechanism | Threshold |
-|-------|-----------|-----------|
-| IP-level | `slowapi` (in-process) | 5 req/sec per IP (configurable) |
-| Token-level | Firestore atomic transaction | Per-tier simulation quota |
-| Payload | FastAPI request size limit | 10MB per ingestion upload |
-| Webhook | HMAC signature validation | Reject on mismatch (Razorpay) |
-
-### 3.2 Configure Rate Limits
-In `backend/.env`:
-```
-RATE_LIMIT_PER_SECOND=5       # For /v1/run B2B endpoint
-```
-
-In `backend/app/core/rate_limiter.py`, adjust the `@limiter.limit()` decorator strings for each route:
-```python
-@limiter.limit("100/minute")   # Example: 100 requests per minute per IP
-```
+| Layer | Mechanism | Threshold | Failure Mode |
+|-------|-----------|-----------|-------------|
+| Global | `slowapi` (in-process) | 100 req/min per IP | `429 Too Many Requests` |
+| Crawler | Firestore-backed per-IP | 100 req/15min per IP | `503` (fail-closed) |
+| Edge (`/llms.txt`) | Frontend checks backend | Non-OK → blocked | `503` (fail-closed) |
+| Token-level | Firestore atomic transaction | Per-tier simulation quota | Quota exceeded error |
+| Payload | FastAPI request size limit | 10MB per ingestion upload | `413 Payload Too Large` |
+| Webhook | HMAC signature validation | Reject on mismatch | `401 Unauthorized` |
 
 ### 3.3 DDoS Response Protocol
 
@@ -140,9 +131,10 @@ In `backend/app/core/rate_limiter.py`, adjust the `@limiter.limit()` decorator s
 The platform uses a persistent task queue with a recovery worker.
 
 ### 4.1 Monitoring Job Health
-Check backend logs for `♻️ Task recovery` or `TaskQueueRecovery sweep complete`.
-- **Stalled Jobs**: Jobs in `processing` for >30m are automatically detected.
-- **Failures**: Jobs that fail 3 times are marked `failed_permanent`.
+Check backend logs for `♻️ Periodic Recovery` or `TaskQueueRecovery sweep complete`.
+- **Stalled Jobs**: Jobs in `processing` for >30m are automatically detected by the recovery worker.
+- **Failures**: Jobs that fail 3 times are marked `failed_permanent` (Dead Letter Queue).
+- **Recovery Worker**: Runs every 5 minutes via `asyncio.create_task()` in the FastAPI app lifespan.
 
 ### 4.2 Manual Recovery
 If the automated worker is disabled, you can trigger a sweep via:

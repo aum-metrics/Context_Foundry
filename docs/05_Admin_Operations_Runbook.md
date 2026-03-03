@@ -2,6 +2,7 @@
 
 **Target Audience:** Product Managers, Operations Interns, DevOps
 **Prerequisites:** Access to Google Cloud Console (Firestore, Cloud Run).
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
@@ -37,7 +38,7 @@ If a customer pays via wire transfer instead of Stripe, you must manually upgrad
        "status": "active"
    }
    ```
-3. Hit Save. The React frontend will instantly unlock the premium features on their dashboard via real-time websockets.
+3. Hit Save. The React frontend will pick up subscription changes on the next page load or component re-render via `OrganizationContext.tsx`.
 
 ---
 
@@ -69,9 +70,9 @@ When a Massive Enterprise (like Fortune 500 Bank) signs up, they will demand Sin
 2. Give them our **Callback URL**: `https://api.aumcontextfoundry.com/api/v1/sso/callback`
 3. They will give you two things: a **Client ID** and a **Client Secret**.
 4. You (or the enterprise admin) logs into the AUM Context Foundry Dashboard -> Settings -> SSO.
-5. Paste the ID and Secret. The backend will instantly encrypt the Secret using our `SSO_ENCRYPTION_KEY` via AES-128 before saving it to the database.
+5. Paste the ID and Secret. The backend will encrypt the Secret using our `SSO_ENCRYPTION_KEY` via **Fernet encryption** (32-byte key) before saving it to Firestore `sso_configs/{orgId}`.
 
-**Troubleshooting:** If SSO fails, it is almost always because the IT Admin forgot to whitelist our Callback URL in their system. Ask them to verify the redirect URI.
+**Troubleshooting:** If SSO fails, it is almost always because the IT Admin forgot to whitelist our Callback URL (`https://api.aumdatalabs.com/api/sso/callback`) in their system. Ask them to verify the redirect URI.
 
 ---
 
@@ -87,8 +88,9 @@ We run massive background jobs (like reading 1,000 pages of a competitor's websi
 ### How to Rescue a Crashed Job
 1. Edit the stalled job document.
 2. Change `status` from `"processing"` back to `"pending"`.
-3. The `apscheduler` loop in the backend will automatically discover it on the next 5-minute sweep and attempt to process it again.
-4. If it fails 3 times, the system will mark it `failed_permanent`.
+3. The background recovery worker (`task_queue_recovery.py`) runs every 5 minutes via `asyncio.create_task()` in the app lifespan and will automatically discover and re-queue it.
+4. If it fails 3 times, the system will mark it `failed_permanent` (Dead Letter Queue).
+5. Monitor recovery: `grep "♻️ Periodic Recovery" app.log`
 
 ---
 

@@ -2,6 +2,7 @@
 
 **Target Audience:** Security Engineers, DevOps Interns, Backend Developers
 **Prerequisites:** Understanding of NoSQL, JSON, and basic Identity Access Management (IAM).
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
@@ -97,14 +98,22 @@ During early development, engineers used a "mock token" (`mock-dev-token`) to by
 **The P0 Incident it Caused:** If the app was accidentally deployed with `ENV="development"`, anyone on the public internet could send `Authorization: Bearer mock-dev-token` and gain full admin access to the entire database.
 
 ### How We Fixed It (The Hardening)
-1. `backend/app/core/config.py` now forces `ENV = "production"` by default unless explicitly overridden locally.
-2. `security.py` now wraps the mock bypass in an explicit environment check:
+The mock token bypass is now **double-gated** and safe:
+
+1. `backend/app/core/config.py` defaults `ENV = "production"`. Mock auth requires `ENV=development`.
+2. `backend/app/core/config.py` defaults `ALLOW_MOCK_AUTH = False`. Mock auth requires this to be `True`.
+3. `security.py` checks BOTH conditions:
     ```python
-    if settings.ENV == "development" and token == "mock-dev-token":
-        return MOCK_USER
-    elif settings.ENV == "production" and token == "mock-dev-token":
-        raise HTTPException(status_code=403, detail="CRITICAL: Mock tokens disabled in production")
+    if token == "mock-dev-token":
+        if settings.ENV == "development" and allow_mock:
+            return MOCK_USER  # Only in explicit dev mode
+        else:
+            logger.critical("🛑 SECURITY BREACH ATTEMPT: mock-dev-token used in production")
+            raise HTTPException(status_code=401)
     ```
+4. In production, attempts to use mock tokens trigger a `CRITICAL` log entry and `401` rejection.
+5. The Pydantic `Settings.__init__` validator crashes if dev defaults for `JWT_SECRET` or `SSO_ENCRYPTION_KEY` are used in production.
+6. The startup gate in `main.py` crashes if any required API keys are missing in production.
 
 ---
 

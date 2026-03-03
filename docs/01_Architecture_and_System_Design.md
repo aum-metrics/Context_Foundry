@@ -2,6 +2,7 @@
 
 **Target Audience:** New Developers, Interns, and Solutions Architects
 **Prerequisites:** Basic knowledge of React, APIs, and Cloud Databases.
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
@@ -23,12 +24,14 @@ AUM Context Foundry is built on a modern, serverless **B2B SaaS Architecture**. 
 
 | Layer | Technology | Why we chose it (The "Rationale") |
 | :--- | :--- | :--- |
-| **Frontend Framework** | Next.js (React) 15 | Next.js provides App Router structural logic, blistering fast Server-Side Rendering (SSR) for SEO, and easy Vercel deployment. |
-| **Frontend Styling** | Tailwind CSS + Framer Motion | Tailwind gives us rapid, consistent styling. Framer Motion handles the dynamic UI animations (like radar charts and loading pulses) that make the app feel "premium". |
-| **Backend API Server** | FastAPI (Python 3.12) | AI integrations (OpenAI, Gemini, Anthropic) are natively built for Python. FastAPI is asynchronous, incredibly fast, and auto-generates our API documentation (Swagger). |
-| **Database** | Firebase / Firestore | A NoSQL document database. We chose it because it gives us real-time data syncing, built-in Authentication, and rapid prototyping capabilities without writing raw SQL migrations. |
-| **Identity & Auth** | Firebase Auth + Custom JWT | Handles email/password, magic links, and SSO integrations. It easily protects our backend endpoints via Bearer tokens. |
-| **Payments**| Razorpay (or Stripe) | Handled purely via webhook integrations to upgrade subscription tiers in Firestore securely. |
+| **Frontend Framework** | Next.js 15 (App Router) + React 19 | SSR for SEO, API route proxying to backend, edge deployment on Vercel. |
+| **Frontend Styling** | Vanilla CSS + Framer Motion | Custom CSS design system (`globals.css`) with CSS custom properties for theming. Framer Motion handles dynamic UI animations (radar charts, loading pulses). |
+| **Backend API Server** | FastAPI (Python 3.12) | AI integrations (OpenAI, Gemini, Anthropic) are natively built for Python. FastAPI is asynchronous, incredibly fast, and auto-generates our API documentation (Swagger, dev-only). |
+| **Database** | Firebase / Firestore | A NoSQL document database. Real-time data syncing, built-in Authentication, and rapid prototyping without SQL migrations. |
+| **Identity & Auth** | Firebase Auth + Custom JWT + API Keys | Firebase for user sessions, `aum_`-prefixed B2B API keys (SHA-256 hashed, stored in Firestore), enterprise SSO (OAuth2 via Fernet-encrypted client secrets). |
+| **Payments** | Razorpay | Server-to-server webhook integrations with HMAC signature verification (`hmac.compare_digest`). Subscription tiers upgraded atomically via Firestore transactions. |
+| **CI/CD** | GitHub Actions + Vercel | CI runs frontend lint + backend syntax/smoke + pytest on every push. Vercel auto-deploys frontend. |
+| **Rate Limiting** | SlowAPI + Firestore-backed per-IP | Global request throttle (100/min) + cross-region crawler protection (100/15min per IP). Fail-closed at both backend and edge. |
 
 ---
 
@@ -88,16 +91,31 @@ Firestore is NoSQL. We don't have tables; we have Collections and Documents. It 
 
 ## 5. Security & Isolation Fundamentals
 
-As an intern, you can break the platform if you do not understand these two rules:
+As an intern, you can break the platform if you do not understand these rules:
 
 ### Rule 1: Fail-Closed Design
 If an API request is missing parameters, or if a user accidentally sends a malformed token, the default action is **always** to reject the request (`403` or `401`). We never guess or assume context.
+
+- Rate limiter fails → `503` (not allow-through)
+- Database unavailable → org access denied (`return False`)
+- Missing production secrets → startup crash (`sys.exit(1)`)
+- Dev defaults in production → crash at config load (`ValueError`)
 
 ### Rule 2: API Keys are Radioactive
 We store OpenAI and Gemini keys belonging to our clients in Firebase (`organizations/{orgId}.apiKeys`).
 *   **Never print them:** Never add `print(org_data)` in a backend route, as it might write an API key to the server logs.
 *   **Always Redact:** The backend uses `.pop('apiKeys', None)` before sending any Organization data struct back to the frontend.
 *   **Firestore Rules:** The `firestore.rules` file mathematically prevents any user (even an authenticated `member` of the org) from directly querying the `apiKeys` field via the web UI. Only the backend can access it.
+
+### Rule 3: Mock Auth is Double-Gated
+Mock tokens (`mock-dev-token`) require BOTH conditions:
+1. `settings.ENV == "development"` (defaults to `production`)
+2. `settings.ALLOW_MOCK_AUTH == True` (defaults to `False`)
+
+In production, attempts to use mock tokens trigger a `CRITICAL` security log entry and `401` rejection. There is no code path that allows mock auth in production.
+
+### Rule 4: Single Source of Truth for Environment
+`settings.ENV` in `backend/app/core/config.py` is the only source of truth. No code uses `os.getenv("ENV")` independently.
 
 ---
 
@@ -120,7 +138,24 @@ Here is the exact framework you take:
 If you hear senior engineers throw around these terms, here is what they mean:
 
 *   **LCRS (Logical Contextual Representation Score):** Our proprietary formula. It's the 60/40 blend of semantic math (embeddings) and deterministic math (claim verification) that gives an AI a grade from 0-100%. Found in `backend/app/api/simulation.py`.
-*   **DLQ (Dead Letter Queue):** The graveyard for background tasks that crashed. Swept by the `apscheduler` in the ASGI loop. Found in `backend/app/utils/task_queue.py`.
-*   **Manifest (`llms.txt`):** The Context Document normalized into plain text for consumption by frontier AI models. Ground Truth. Found in `backend/app/api/ingestion.py`.
+*   **DLQ (Dead Letter Queue):** The graveyard for background tasks that crashed. Jobs that fail 3 times are marked `failed_permanent`. Found in `backend/app/utils/task_queue_recovery.py`.
+*   **CIM (Context Information Model):** The mathematical and semantic representation of an organization's verified ground truth — JSON-LD schema + 1536-dimensional embeddings. Found in `backend/app/api/ingestion.py`.
+*   **Manifest (`llms.txt`):** The CIM synthesized into AI-crawler-friendly plain text. Served at `/llms.txt?orgId=...`. Hardened: org-specific failures return 503 (no silent fallback).
+*   **ASoV (Agentic Share of Voice):** The competitive metric AUM tracks — what percentage of AI-generated answers represent your brand vs. competitors.
+
+---
+
+## 8. CI/CD Pipeline
+
+CI runs automatically via `.github/workflows/ci.yml` on every push to `main` and all PRs.
+
+| Stage | What It Checks |
+|-------|---------------|
+| Frontend Lint | `npx next lint` — ESLint errors in TypeScript/React |
+| Backend Syntax | `py_compile` on all `.py` files |
+| Backend Smoke | `python test_main.py` — FastAPI imports + router loads |
+| Backend Tests | `pytest` (10 tests) — simulation, ingestion, audit, competitor, RAG |
+
+Build policy: `ignoreDuringBuilds: false` in `next.config.ts` — lint errors fail production builds.
 
 *Proceed to Guide 02: Frontend Implementation Guide for UI-specific deep dives.*

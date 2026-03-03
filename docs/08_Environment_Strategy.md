@@ -1,6 +1,7 @@
 # Ultimate Environment Strategy: DEV ➡️ QA ➡️ PROD
 
 *Date: March 2026* | *Architectural Blueprint for AUM Context Foundry*
+*Last Updated: March 2026 | Reflects hardening passes 1-5*
 
 Running a B2B Enterprise SaaS application on a single database is a ticking time bomb. One wrong database migration or bad code push will instantly wipe out all customer data. 
 
@@ -97,6 +98,12 @@ ENV=production
 JWT_SECRET=super-secure-prod-secret-9999
 FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-adminsdk-prod.json
 ```
+
+> **IMPORTANT**: The backend uses `settings.ENV` (Pydantic Settings, loaded from `.env`) as the **single source of truth** for environment mode. No code uses `os.getenv("ENV")` independently. In production:
+> - Missing API keys → `sys.exit(1)` (hard crash at startup)
+> - Dev default for `JWT_SECRET` → `ValueError` crash
+> - Dev default for `SSO_ENCRYPTION_KEY` → `ValueError` crash
+> - Mock auth → blocked and security-logged regardless of `ALLOW_MOCK_AUTH`
 
 ### The CI/CD Pipeline (GitHub Actions)
 You will create a `.github/workflows/deploy.yml` file. 

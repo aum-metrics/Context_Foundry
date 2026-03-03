@@ -2,6 +2,7 @@
 
 **Target Audience:** Backend Engineers, DevOps, SecOps
 **Prerequisites:** Understanding of `.env` files, Google Secret Manager, and the FastAPI `pydantic_settings` module.
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
@@ -62,14 +63,40 @@ Payments follow the exact same isolation logic as AI keys, but the stakes are hi
 
 ## 4. Summary Checklist for Backend Deployment
 
-If you are a DevOps engineer deploying a new environment tomorrow, you must inject these 7 core secrets into the runtime container:
+If you are a DevOps engineer deploying a new environment tomorrow, you must inject these 9 core secrets into the runtime container:
 
 1.  `ENV` (String: "qa" or "production")
-2.  `JWT_SECRET` (A 64-character randomized cryptographic string)
-3.  `FIREBASE_SERVICE_ACCOUNT_PATH` (The JSON credential path)
-4.  `OPENAI_API_KEY`
-5.  `GEMINI_API_KEY`
-6.  `ANTHROPIC_API_KEY`
-7.  `RAZORPAY_KEY_SECRET`
+2.  `JWT_SECRET` (A 64-character randomized cryptographic string — **must differ from dev default or app crashes**)
+3.  `SSO_ENCRYPTION_KEY` (Fernet key — **must differ from dev default or app crashes**)
+4.  `FIREBASE_SERVICE_ACCOUNT_PATH` (The JSON credential path)
+5.  `OPENAI_API_KEY` (Platform-managed master key)
+6.  `GEMINI_API_KEY` (Platform-managed master key)
+7.  `ANTHROPIC_API_KEY` (Platform-managed master key)
+8.  `RAZORPAY_KEY_ID` (Payment processing)
+9.  `RAZORPAY_KEY_SECRET` (Payment verification + webhooks)
+
+**Optional but recommended:**
+- `RAZORPAY_WEBHOOK_SECRET` — HMAC verification for Razorpay server-to-server webhooks
+- `FRONTEND_URL` — For generating invite email links (defaults to `http://localhost:3000`)
+- `PAYMENT_CALLBACK_URL` — Razorpay payment completion redirect
+
+### Pydantic Validation (Defense in Depth)
+
+The `Settings.__init__` in `config.py` performs runtime validation:
+```python
+if self.ENV == "production":
+    if self.JWT_SECRET == "your-secret-key-change-in-production":
+        raise ValueError("JWT_SECRET must be changed in production!")
+    if self.SSO_ENCRYPTION_KEY == "aum-sso-encryption-dev-fallback1":
+        raise ValueError("SSO_ENCRYPTION_KEY must be changed in production!")
+```
+
+The startup lifespan in `main.py` then validates API keys:
+```python
+required = ["OPENAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"]
+missing = [s for s in required if not os.getenv(s)]
+if missing and settings.ENV == "production":
+    sys.exit(1)  # HARD CRASH
+```
 
 Once these are injected via the Cloud Console, the FastAPI `config.py` engine automatically parses and validates them on boot, establishing the secure Foundation for the Bouncer (`security.py`) and the Simulation Engine (`simulation.py`).

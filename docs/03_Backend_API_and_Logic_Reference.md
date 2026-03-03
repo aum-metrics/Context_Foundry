@@ -2,6 +2,7 @@
 
 **Target Audience:** Backend Engineers, System Operators, Interns
 **Prerequisites:** Python 3.12, FastAPI, basic understanding of concurrent programming (`asyncio`).
+**Last Updated:** March 2026 | Reflects hardening passes 1-5.
 
 ---
 
@@ -10,15 +11,39 @@
 Our backend is built on **FastAPI**. It is designed to be highly modular, asynchronous, and self-documenting.
 
 ### The Entry Point (`main.py`)
-Everything starts at `backend/app/main.py`. This file does three critical things:
+Everything starts at `backend/app/main.py`. This file does four critical things:
 1.  **CORS Configuration:** Defines which frontend domains are allowed to talk to us.
-2.  **Lifecycle Events:** Starts and stops the `apscheduler` background task loops when the server boots up or shuts down.
-3.  **Router Registration:** Pulls in all the separate API modules (like `simulation.py`, `workspaces.py`) and maps them to `/api/v1/...` URLs.
+2.  **Startup Secret Gate:** Checks for required environment variables. In production, missing secrets cause `sys.exit(1)`. In development, logs warnings.
+3.  **Lifecycle Events:** Uses `asynccontextmanager` lifespan to start the periodic job recovery worker and stop it on shutdown.
+4.  **Router Registration:** Uses a `load_router()` helper to dynamically import and mount all API modules with clean error handling.
 
 ### Directory Structure
-*   `app/api/`: Contains all the route handlers (the controllers). E.g., `sso.py`, `payments.py`.
-*   `app/core/`: Contains the foundational system logic. E.g., `security.py`, `config.py`, `firebase_config.py`.
-*   `app/utils/`: Contains helpers like the `task_queue.py` (DLQ logic).
+*   `app/api/`: Contains all the route handlers (15 modules):
+    *   `simulation.py` (810 lines) — LCRS engine + B2B API gateway
+    *   `ingestion.py` — Zero-retention PDF → CIM pipeline
+    *   `workspaces.py` — Org provisioning, members, invites, manifest, rate limiter
+    *   `payments.py` — Razorpay orders, verify, webhooks, payment links
+    *   `sso.py` — Enterprise SSO OAuth2 config + callback
+    *   `admin.py` — Admin dashboard endpoints (session cookie auth)
+    *   `api_keys.py` — B2B API key generate/revoke/list
+    *   `chatbot.py` — RAG-powered support chatbot
+    *   `seo.py` — Async SEO audit (Playwright-based)
+    *   `competitor.py` — Competitive displacement analysis
+    *   `batch_analysis.py` — Batch domain evaluation
+    *   `audit.py` — SOC2 audit log writer
+    *   `cron.py` — Internal scheduled task triggers (billing reset)
+    *   `methods.py` — Scoring methodology reference endpoint
+*   `app/core/`: Contains the foundational system logic:
+    *   `config.py` — Pydantic Settings (single ENV source of truth)
+    *   `security.py` — Auth: `get_current_user`, `get_auth_context`, `verify_user_org_access`, `validate_api_key`
+    *   `firebase_config.py` — Firebase Admin SDK initialization
+    *   `limiter.py` — SlowAPI global rate limiter config
+    *   `rate_limiter.py` — Firestore-backed per-IP rate limiting
+    *   `logging_config.py` — Structured logging with file rotation
+*   `app/utils/`: Contains helpers:
+    *   `task_queue.py` — Async task queue + DLQ logic
+    *   `task_queue_recovery.py` — Stalled job sweep + retry (5-min interval)
+    *   `email_service.py` — Transactional email sender (invites)
 
 ---
 
@@ -118,3 +143,44 @@ Sometimes we need to run jobs that take 10 minutes (like scraping 50 competitor 
 4.  **The DLQ:** If the job crashes (e.g., a website blocks our scraper), the worker increments the `attempts` counter. If `attempts > 3`, the job is marked `failed_permanent`. This is our Dead Letter Queue. It prevents broken jobs from infinitely crashing the server loop.
 
 *Proceed to Guide 04: Database & Security Model.*
+
+---
+
+## 6. Rate Limiting Architecture
+
+The platform has two rate limiting layers:
+
+### Layer 1: Global Rate Limiter (SlowAPI)
+Configured in `core/limiter.py`, applied globally:
+- 100 requests/minute per IP
+- Applied to all routes via `SlowAPIMiddleware`
+
+### Layer 2: Firestore-Backed Per-IP Limiter
+For the public `/llms.txt` endpoint:
+- `POST /api/workspaces/llms-rate-limit` checks IP against Firestore counters
+- 100 requests per 15-minute window per IP
+- **Fail-closed**: Exception → `503` (never allows through on failure)
+- Frontend edge also fail-closed: non-OK backend response → `503`
+
+---
+
+## 7. Test Suite (`backend/tests/`)
+
+All tests use `conftest.py` which automatically:
+1. **Mocks Firestore** via `MagicMock()` — no real DB needed
+2. **Enables mock auth** — sets `ENV=development` + `ALLOW_MOCK_AUTH=True`
+3. **Cleans up** — clears FastAPI dependency overrides after each test
+
+| Test File | What It Tests |
+|-----------|---------------|
+| `test_simulation.py` | LCRS endpoint (happy + unhappy + 60/40 math) |
+| `test_ingestion.py` | `recursive_split` algorithm + parse endpoint |
+| `test_competitor.py` | Displacement endpoint + auth rejection |
+| `test_audit.py` | Audit log write + retrieval |
+| `test_rag_logic.py` | Cosine similarity math + scoring |
+
+Run:
+```bash
+cd backend/app && python -m pytest ../tests/ -q --tb=short
+# Expected: 10 passed
+```

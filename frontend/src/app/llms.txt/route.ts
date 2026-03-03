@@ -21,11 +21,16 @@ export async function GET(request: Request) {
                 return new NextResponse("Rate limit exceeded.", { status: 429 });
             }
             // Backend rate limiter is fail-closed (returns 503 on error).
-            // Non-429 responses are allowed through for marketing route availability.
+            // Block on any non-OK limiter response to enforce end-to-end rate limiting.
+            if (!rlRequest.ok) {
+                console.warn(`Rate limiter returned ${rlRequest.status} — blocking request (fail-closed).`);
+                return new NextResponse("Service temporarily unavailable.", { status: 503 });
+            }
         } catch (e) {
             console.error("Global rate limiting error:", e);
-            // Backend limiter unavailable — allow marketing route to continue serving.
-            // Tenant-specific requests (with orgId) are separately hardened below.
+            // Network-level failure reaching backend — block to maintain fail-closed posture.
+            // This prevents abuse when the backend is completely unreachable.
+            return new NextResponse("Service temporarily unavailable.", { status: 503 });
         }
     }
 

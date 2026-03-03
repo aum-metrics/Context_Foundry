@@ -1,5 +1,5 @@
 # AUM Context Foundry — Enterprise Technical Specification
-**v5.1.0 | March 2026**
+**v5.1.0-hardened | March 2026**
 
 ---
 
@@ -97,6 +97,8 @@ Scale:    500 simulations/cycle
 Enterprise: Unlimited / Custom
 ```
 Transaction is skipped in `ENV=development` for local testing.
+
+> **Note:** `settings.ENV` in `config.py` is the single source of truth for environment mode. Production startup gate hard-crashes on missing API keys.
 
 ### Cache
 SHA-256 hash of `(orgId + prompt + manifestVersion)` is used as a cache key stored in `organizations/{orgId}/simulationCache`. Cache TTL: 24 hours. Bypassed for Explorer plan users on new prompts.
@@ -313,4 +315,4 @@ See `Admin_Support_Handbook.md` for the complete variable reference.
 
 ---
 
-*AUM Data Labs — AUM Context Foundry Enterprise Technical Specification v5.1.0*
+*AUM Data Labs — AUM Context Foundry Enterprise Technical Specification v5.1.0-hardened*
