@@ -148,7 +148,7 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         provider = config_data.get("provider")
         
         # Security Hardening (P1): Mint short-lived opaque intent token instead of leaking tenant data
-        jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.SECRET_KEY)
+        jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
         payload = {
             "org_id": config_doc.id,
             "provider": provider,
@@ -196,7 +196,7 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
             from cryptography.fernet import Fernet
             import base64
             import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(settings.SECRET_KEY.encode()[:32].ljust(32, b'0')).decode())
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(settings.JWT_SECRET.encode()[:32].ljust(32, b'0')).decode())
             f = Fernet(key)
             config_data["client_secret"] = f.encrypt(config_data["client_secret"].encode()).decode()
         db.collection("sso_configs").document(request.organization_id).set(config_data)
@@ -221,7 +221,7 @@ async def sso_provider_login(intent: str):
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
     
-    jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.SECRET_KEY)
+    jwt_key = os.getenv("SSO_ENCRYPTION_KEY", settings.JWT_SECRET)
     try:
         payload = jwt.decode(intent, jwt_key, algorithms=["HS256"])
         org = payload.get("org_id")
@@ -300,7 +300,7 @@ async def sso_callback(code: str, state: str, request: Request):
             from cryptography.fernet import Fernet
             import base64
             import os
-            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"aum-context-foundry-secure-key32").decode())
+            key = os.getenv("SSO_ENCRYPTION_KEY", base64.urlsafe_b64encode(settings.JWT_SECRET.encode()[:32].ljust(32, b'0')).decode())
             f = Fernet(key)
             client_secret = f.decrypt(client_secret.encode()).decode()
 

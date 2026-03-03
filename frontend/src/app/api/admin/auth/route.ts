@@ -12,7 +12,7 @@ export async function POST(request: Request) {
         if (token) {
             // First, call our own backend to mint the session cookie.
             // (We have to do this because the Firebase Admin SDK is in Python)
-            const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/mint-session`, {
+            const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/mint-session`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -10,7 +10,7 @@ export async function GET() {
     }
 
     try {
-        const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/verify-session`, {
+        const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/verify-session`, {
             method: 'GET',
             headers: {
                 'X-Admin-Token': token

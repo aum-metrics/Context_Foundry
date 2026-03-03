@@ -996,13 +996,6 @@ async def get_org_profile(
         logger.error(f"Failed to fetch org profile: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/health")
-async def workspaces_health():
-    """Health check for workspaces service"""
-    return {"status": "healthy", "service": "workspaces"}
-
-# NOTE: /health is now defined BEFORE /{workspace_id} to avoid route shadowing
-
 @router.get("/{org_id}/manifest")
 async def get_public_manifest(org_id: str):
     """
