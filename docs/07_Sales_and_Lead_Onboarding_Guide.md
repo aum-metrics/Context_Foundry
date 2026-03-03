@@ -23,7 +23,7 @@ When an intern gets on a call with a lead, they must adapt the pitch depending o
 
 ### Persona 2: The CTO / CISO (Chief Security Officer)
 *   **What they care about:** Data Privacy, API Security, SOC2 Compliance.
-*   **How you pitch them:** *"CTO, our architecture is built on a paranoid 'Fail-Closed' trust model. We offer Bring-Your-Own-Key (BYOK) for LLMs so your data never touches our billing accounts. Our Firestore Rules mathematically prevent raw data exfiltration, and we integrate natively with your Okta/SAML SSO."*
+*   **How you pitch them:** *"CTO, our architecture is built on a paranoid 'Fail-Closed' trust model. Our Firestore Rules mathematically prevent raw data exfiltration, and we integrate natively with your Okta/SAML SSO. We handle all the API provisioning and scaling so your teams don't have to manage keys."*
 
 ### Persona 3: Legal & Compliance
 *   **What they care about:** Liability, Audit trails, SLA verification.

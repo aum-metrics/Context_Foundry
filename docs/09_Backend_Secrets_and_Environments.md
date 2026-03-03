@@ -5,21 +5,14 @@
 
 ---
 
-## 1. The Two Modes of API Key Management
+## 1. Platform-Managed API Keys
 
-Context Foundry interacts with OpenAI, Anthropic, and Gemini. A single simulation run costs API credits. To handle billing and permissions across environments, the backend operates in two distinct modes:
+Context Foundry interacts with OpenAI, Anthropic, and Gemini. A single simulation run costs API credits. To handle billing and permissions securely across environments, the backend operates entirely on **Platform-Managed Keys**.
 
-### Mode A: BYOK (Bring Your Own Key)
-Enterprise clients (e.g., Fortune 500 banks) refuse to let their data touch our billing accounts. They want to use their own OpenAI keys.
-1. The client pastes their key into our React UI.
-2. It saves to the Firestore database at `organizations/{orgId}/apiKeys`.
-3. The FastAPI `simulation.py` grabs their specific key from the DB and uses it.
-*Security Note:* This key is strictly redacted via `.pop("apiKeys")` before the backend ever sends payload data back to the frontend to prevent browser leaks.
+We do not support Bring-Your-Own-Key (BYOK). All simulation runs are billed to our central corporate accounts, and we bill the client a flat subscription fee in return.
 
-### Mode B: Platform Managed (The SaaS Default)
-For regular tier customers (Explorer, Growth), we pay for the AI credits and bill them a flat subscription fee.
-1. In Firestore, their `apiKeys` map is set to `"internal_platform_managed"`.
-2. When the simulation engine sees this string, it intercepts it and injects the **Global Master Keys** loaded into the server's environment memory.
+1. Organizations in Firestore do not store raw LLM API keys. 
+2. The FastAPI `simulation.py` engine seamlessly injects the **Global Master Keys** loaded into the server's environment memory.
 
 ---
 
