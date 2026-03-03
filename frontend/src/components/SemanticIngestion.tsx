@@ -9,11 +9,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, CheckCircle, Database, Server, Hexagon, Shield, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2 } from "lucide-react";
+import { FileText, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2 } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
-import { db } from "@/lib/firestorePaths";
-import { doc, getDoc } from "firebase/firestore";
 
 const VectorCloud = () => {
     return (

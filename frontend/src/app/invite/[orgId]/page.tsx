@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { CheckCircle, AlertCircle, Loader2, Home } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
-export default function AcceptInvitePage() {
+import { Suspense } from "react";
+
+function AcceptInviteContent() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const orgId = params.orgId as string;
+    const inviteId = searchParams.get("inviteId");
     const router = useRouter();
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
     const [message, setMessage] = useState("");
@@ -27,6 +31,13 @@ export default function AcceptInvitePage() {
 
         const acceptInvite = async () => {
             try {
+                // P0 Fix: Ensure inviteId is present before attempting accept
+                if (!inviteId) {
+                    setStatus("error");
+                    setMessage("Invitation ID is missing. Please use the link from your invitation email.");
+                    return;
+                }
+
                 // If user not logged in, we can't accept via backend yet
                 if (!auth.currentUser) {
                     setStatus("error");
@@ -41,7 +52,7 @@ export default function AcceptInvitePage() {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({}) // Backend currently infers context
+                    body: JSON.stringify({ inviteId }) // P0 Fix: Send the required inviteId
                 });
 
                 if (response.ok) {
@@ -61,7 +72,7 @@ export default function AcceptInvitePage() {
         if (user) {
             acceptInvite();
         }
-    }, [orgId, user]);
+    }, [orgId, inviteId, user]);
 
     return (
         <div className="flex h-screen bg-slate-50 dark:bg-slate-950 items-center justify-center p-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent">
@@ -117,5 +128,17 @@ export default function AcceptInvitePage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function AcceptInvitePage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+            </div>
+        }>
+            <AcceptInviteContent />
+        </Suspense>
     );
 }

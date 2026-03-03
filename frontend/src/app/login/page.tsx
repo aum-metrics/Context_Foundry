@@ -134,7 +134,12 @@ export default function LoginPage() {
                                     setError("Please enter your corporate email to initiate SSO.");
                                     return;
                                 }
-                                router.push(`/api/login?provider=google&domain=${domain}`);
+                                // P0 Fix: Correct route is /api/sso/login/{provider}
+                                // Needs an 'org' parameter. For the demo, we assume the user is trying to login to 'aum-core' or another known org if not specified.
+                                // If redirected from an invite, we might have it already.
+                                const searchParams = new URLSearchParams(window.location.search);
+                                const targetOrg = searchParams.get("orgId") || "aum-core";
+                                window.location.href = `/api/sso/login/google?org=${targetOrg}`;
                             }}
                             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-slate-200 dark:border-white/10 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
                         >

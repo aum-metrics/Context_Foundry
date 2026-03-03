@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Search, Database } from 'lucide-react';
-import Image from 'next/image';
+import { Search, Database } from 'lucide-react';
 import { Logo } from './Logo';
 
 export default function ProductDemoVideo() {
     const [currentStep, setCurrentStep] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
 
-    const steps: { id: number; title: string; subtitle: string; icon: any; image: string; }[] = [
+    const steps: { id: number; title: string; subtitle: string; icon: React.ElementType; image: string; }[] = [
         {
             id: 0,
             title: "Global ASoV Dashboard",
@@ -63,8 +62,8 @@ export default function ProductDemoVideo() {
                     >
                         <div
                             className={`absolute inset-0 bg-gradient-to-br transition-opacity duration-[10s] opacity-90 group-hover:opacity-100 ${currentStep === 0 ? 'from-indigo-900/40 via-purple-900/20 to-black' :
-                                    currentStep === 1 ? 'from-emerald-900/40 via-teal-900/20 to-black' :
-                                        'from-amber-900/40 via-orange-900/20 to-black'
+                                currentStep === 1 ? 'from-emerald-900/40 via-teal-900/20 to-black' :
+                                    'from-amber-900/40 via-orange-900/20 to-black'
                                 }`}
                         />
                     </motion.div>

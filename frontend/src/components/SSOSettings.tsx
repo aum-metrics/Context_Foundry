@@ -93,7 +93,7 @@ export default function SSOSettings() {
                 const err = await resp.json();
                 setMessage({ type: "error", text: err.detail || "Configuration failed" });
             }
-        } catch (err) {
+        } catch (_err) {
             setMessage({ type: "error", text: "Failed to configure SSO" });
         }
         setConfiguring(false);
@@ -196,8 +196,8 @@ export default function SSOSettings() {
                                 key={provider.id}
                                 onClick={() => setSelectedProvider(provider.id)}
                                 className={`p-3 rounded-lg border text-sm text-left transition-colors ${selectedProvider === provider.id
-                                        ? "border-indigo-500 bg-indigo-500/10 text-white"
-                                        : "border-white/10 text-slate-400 hover:border-white/20"
+                                    ? "border-indigo-500 bg-indigo-500/10 text-white"
+                                    : "border-white/10 text-slate-400 hover:border-white/20"
                                     }`}
                             >
                                 <span className="text-lg">{provider.icon}</span>

@@ -32,7 +32,7 @@ interface ModelResult {
 
 export default function CoIntelligenceSimulator() {
     const { organization, orgUser } = useOrganization();
-    const { checkout, isScriptLoading } = useRazorpay();
+    useRazorpay();
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
     const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
