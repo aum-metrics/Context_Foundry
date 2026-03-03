@@ -81,7 +81,7 @@ def test_get_org_audit_logs(mock_db, mock_sec_db):
     # Happy Path - user belongs to test_org
     app.dependency_overrides[get_auth_context] = make_auth_override("test_user_123")
     response = client.get("/api/audit/logs/test_org", headers={"Authorization": "Bearer mock-dev-token"})
-    assert response.status_code == 200, response.text
+    assert response.status_code == 200, f"Status {response.status_code}: {response.text}"
     data = response.json()
     assert len(data) == 1
     assert data[0]["eventType"] == "test_event"

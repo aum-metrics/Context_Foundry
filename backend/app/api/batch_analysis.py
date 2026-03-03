@@ -70,7 +70,7 @@ async def _execute_batch_calculation(request: BatchSimulationRequest):
     return {
         "status": "completed_with_errors" if has_errors else "completed",
         "domainStability": round(avg_accuracy, 1),
-        "hallucinationRate": round((drift_count / total_checks * 100) if total_checks else 0, 1),
+        "driftRate": round((drift_count / total_checks * 100) if total_checks else 0, 1),
         "modelAverages": {m: round(sum(s)/len(s), 1) for m, s in model_scores.items()},
         "totalChecks": total_checks,
         "results": formatted_results,
@@ -92,6 +92,13 @@ async def run_batch_simulation(
     uid = current_user.get("uid")
     if not verify_user_org_access(uid, request.orgId):
         raise HTTPException(status_code=403, detail="Unauthorized")
+
+    # Entitlement Check: Batch Analysis requires Growth or Scale
+    org_doc = db.collection("organizations").document(request.orgId).get()
+    if org_doc.exists:
+        plan = org_doc.to_dict().get("subscription", {}).get("planId", "explorer")
+        if plan not in ["growth", "scale", "enterprise"]:
+            raise HTTPException(status_code=403, detail="Batch Analysis requires a Growth or Scale plan.")
 
     job_id = str(uuid.uuid4())
     FirestoreTaskQueue.register_job(request.orgId, "batchJobs", job_id, request.model_dump())

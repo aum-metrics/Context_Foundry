@@ -178,6 +178,7 @@ async def parse_document(
         
         # --- ATOMIC BATCH PERSISTENCE ---
         if db:
+            # Standardizing on 'latest' as the primary pointer for current context
             manifest_id = f"manifest_{int(datetime.datetime.utcnow().timestamp())}"
             manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
             latest_ref = db.collection("organizations").document(orgId).collection("manifests").document("latest")

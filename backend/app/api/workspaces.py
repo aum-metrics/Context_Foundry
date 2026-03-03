@@ -455,8 +455,8 @@ async def add_org_member(
         "status": "pending"
     })
 
-    # Increment seat count
-    db.collection("organizations").document(org_id).update({"activeSeats": current_seats + 1})
+    # Seat increment is now deferred until the user accepts the invitation
+    # db.collection("organizations").document(org_id).update({"activeSeats": current_seats + 1})
 
     log_audit_event(
         org_id=org_id,
@@ -670,7 +670,7 @@ async def get_public_manifest(org_id: str):
         raise HTTPException(status_code=503, detail="Database unconfigured")
         
     try:
-        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("default").get()
+        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
         if manifest_doc.exists:
             data = manifest_doc.to_dict() or {}
             content = data.get("content")

@@ -85,6 +85,13 @@ async def run_seo_audit(
     if not verify_user_org_access(uid, request.orgId):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
+    # Entitlement Check: SEO Audits require Growth or Scale
+    org_doc = db.collection("organizations").document(request.orgId).get()
+    if org_doc.exists:
+        plan = org_doc.to_dict().get("subscription", {}).get("planId", "explorer")
+        if plan not in ["growth", "scale", "enterprise"]:
+            raise HTTPException(status_code=403, detail="SEO Readiness Audits require a Growth or Scale plan.")
+
     job_id = str(uuid.uuid4())
     FirestoreTaskQueue.register_job(request.orgId, "seoJobs", job_id, request.model_dump())
     

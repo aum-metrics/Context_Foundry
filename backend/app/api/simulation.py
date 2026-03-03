@@ -538,9 +538,9 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
             
             manifest_version = request.manifestVersion
             if manifest_version == "latest":
-                latest_ref = db.collection("organizations").document(request.orgId).collection("manifests").document("latest").get()
-                if latest_ref.exists:
-                    manifest_version = latest_ref.to_dict().get("version", "latest")
+                latest_doc = db.collection("organizations").document(request.orgId).collection("manifests").document("latest").get()
+                if latest_doc.exists:
+                    manifest_version = latest_doc.to_dict().get("version", "latest")
 
             # --- PHASE 8: NATIVE VECTOR SEARCH (O(log N)) ---
             # REQUIRES: Firestore Vector Index on 'embedding' field
@@ -667,7 +667,7 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
 
     locked_models = []
     if org_plan == "explorer":
-        locked_models = ["GPT-4o Mini", "Claude 3.5 Haiku"]
+        locked_models = ["Claude 3.5 Haiku", "Gemini 2.0 Flash"]
 
     return {
         "results": results,

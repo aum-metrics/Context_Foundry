@@ -49,6 +49,12 @@ env/
 venv/
 ENV/
 
+# Test reports
+playwright-report/
+test-results/
+.pytest_cache/
+htmlcov/
+
 # Others
 .DS_Store
 .dataconnect

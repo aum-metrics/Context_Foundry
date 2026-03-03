@@ -85,7 +85,7 @@ def test_process_markdown(mock_db, mock_openai, mock_sec_db):
         data={"orgId": "test_org"},
         files={"file": ("test.pdf", b"dummy pdf content", "application/pdf")}
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 200, f"Status {response.status_code}: {response.text}"
 
     # Unhappy Path — user belongs to different org
     mock_user_doc.to_dict.return_value = {"orgId": "hacker"}

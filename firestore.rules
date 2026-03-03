@@ -27,16 +27,28 @@ service cloud.firestore {
       // Basic org info access
       allow read: if belongsToOrg(orgId);
       
-      // Admin might need to update org settings (limited for now)
+      // Admin might need to update org settings
       allow write: if belongsToOrg(orgId) && getUserData().role == 'admin';
 
-      // Recursively allow access to all subcollections if user belongs to org
-      match /{allSubcollections=**} {
-        allow read, write: if belongsToOrg(orgId);
-      }
+      // Jobs and Manifests: Any org member can read/write (needed for FE interaction)
+      match /batchJobs/{jobId} { allow read, write: if belongsToOrg(orgId); }
+      match /seoJobs/{jobId} { allow read, write: if belongsToOrg(orgId); }
+      match /manifests/{docId} { allow read, write: if belongsToOrg(orgId); }
+
+      // Sensitive Subcollections: Read-only for members, No write except via backend
+      match /api_keys/{key} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /payments/{pay} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /audit_logs/{log} { allow read: if belongsToOrg(orgId); allow write: if false; }
+      match /pendingInvites/{inv} { allow read: if belongsToOrg(orgId); allow write: if false; }
     }
 
-    // Public Assets (if any)
+    // Leads/Contact Funnel: Allow public write, Admin only read
+    match /leads/{leadId} {
+      allow create: if true;
+      allow read: if isSignedIn() && getUserData().role == 'admin';
+    }
+
+    // Public Assets
     match /public/{doc=**} {
       allow read: if true;
     }

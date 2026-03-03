@@ -31,7 +31,7 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mo
     mock_org_doc.exists = True
     mock_org_doc.to_dict.return_value = {
         "apiKeys": {"openai": "sk-mock"},
-        "subscription": {"maxSimulations": 50, "planId": "starter"}
+        "subscription": {"maxSimulations": 50, "planId": "growth"}
     }
 
     mock_manifest_doc = MagicMock()
@@ -95,7 +95,7 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_genai, mock_anthropic, mo
         headers={"Authorization": "Bearer mock-dev-token"},
         json={"orgId": "test_org", "manifestVersion": "latest", "prompt": "Test query"}
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 200, f"Status {response.status_code}: {response.text}"
     data = response.json()
     assert "results" in data
 

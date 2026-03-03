@@ -71,7 +71,7 @@ For deep knowledge graph access, use /llms-full.txt.`;
             if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
                 await new Promise(r => setTimeout(r, 1500));
             } else if (organization) {
-                await setDoc(doc(db, "organizations", organization.id, "manifests", "default"), {
+                await setDoc(doc(db, "organizations", organization.id, "manifests", "latest"), {
                     content: content,
                     updatedAt: serverTimestamp()
                 });

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     Automatically loads from .env and validates types.
     """
     APP_NAME: str = "AUM Context Foundry"
-    ENV: str = "development"  # production, development, testing
+    ENV: str = "production"  # production, development, testing
     DEBUG: bool = False
     
     # CORS & Hosts
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "your-secret-key-change-in-production" # Default for Dev
     JWT_ALGORITHM: str = "HS256"
     JWT_EXP_MINUTES: int = 10080  # 7 days
-    ALLOW_MOCK_AUTH: bool = True # Allowed in Dev by default
+    ALLOW_MOCK_AUTH: bool = False # Disabled by default for production safety
     
     # Provider Keys
     OPENAI_API_KEY: Optional[str] = None

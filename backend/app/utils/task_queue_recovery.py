@@ -31,7 +31,7 @@ class TaskQueueRecovery:
     MAX_RETRIES = 3
 
     # Collections that contain background job sub-collections
-    JOB_COLLECTIONS = ["batch_jobs", "seo_jobs"]
+    JOB_COLLECTIONS = ["batchJobs", "seoJobs"]
 
     @staticmethod
     async def sweep_stalled_jobs(

@@ -407,10 +407,10 @@ export default function SoMCommandCenter() {
                     )}
                     <button
                         onClick={runBatchStabilityCheck}
-                        disabled={batchLoading || !["scale", "enterprise"].includes(organization?.subscriptionTier || "")}
-                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
+                        disabled={batchLoading || !["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "")}
+                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
                     >
-                        {["scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
+                        {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
                             <>
                                 <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
                                 {batchLoading ? 'Analyzing...' : 'Run Batch Analysis'}
@@ -418,7 +418,7 @@ export default function SoMCommandCenter() {
                         ) : (
                             <>
                                 <Lock className="w-3 h-3 mr-2 text-slate-500" />
-                                Enterprise Only
+                                Growth/Scale Only
                             </>
                         )}
                     </button>
@@ -552,10 +552,10 @@ export default function SoMCommandCenter() {
                             <Globe className="w-4 h-4 mr-2 text-emerald-500" />
                             SEO + GEO Readiness Audit
                         </h2>
-                        {organization?.subscriptionTier === "starter" ? (
+                        {organization?.subscriptionTier === "explorer" ? (
                             <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
                                 <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth or Enterprise plan.</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth or Scale plan.</p>
                                 <button
                                     onClick={() => {
                                         setUpgradeFeatureName("SEO & GEO Readiness Audits");

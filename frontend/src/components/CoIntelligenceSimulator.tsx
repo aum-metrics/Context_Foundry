@@ -63,7 +63,7 @@ export default function CoIntelligenceSimulator() {
         const fetchData = async () => {
             try {
                 const orgRef = doc(db, "organizations", organization.id);
-                const manifestDoc = await getDoc(doc(orgRef, "manifests", "default"));
+                const manifestDoc = await getDoc(doc(orgRef, "manifests", "latest"));
                 if (manifestDoc.exists() && manifestDoc.data().content) {
                     setManifestVersions([{ id: "latest", name: "Current Context" }, { id: "v1_baseline", name: "V1 Baseline (Earlier)" }]);
                 } else {

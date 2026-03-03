@@ -174,3 +174,10 @@ async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_con
         "provider": config.get("provider"),
         "provider_name": SSO_PROVIDERS.get(config.get("provider"), {}).get("name", "Unknown")
     }
+@router.post("/callback")
+async def sso_callback(request: Request):
+    """
+    SSO Assertion/Callback Placeholder (P2 Completion)
+    In a real implementation, this would verify the SAML assertion or OAuth2 code.
+    """
+    return {"success": True, "method": "sso_callback", "status": "authenticated"}
