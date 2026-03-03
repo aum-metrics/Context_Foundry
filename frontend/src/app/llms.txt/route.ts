@@ -20,10 +20,12 @@ export async function GET(request: Request) {
             if (rlRequest.status === 429) {
                 return new NextResponse("Rate limit exceeded.", { status: 429 });
             }
-            // Remove strict fail-close for the DB unavailability fallback
+            // Backend rate limiter is fail-closed (returns 503 on error).
+            // Non-429 responses are allowed through for marketing route availability.
         } catch (e) {
             console.error("Global rate limiting error:", e);
-            // Reverted to fail-open to preserve core marketing endpoints during transient connectivity issues.
+            // Backend limiter unavailable — allow marketing route to continue serving.
+            // Tenant-specific requests (with orgId) are separately hardened below.
         }
     }
 
