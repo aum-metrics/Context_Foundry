@@ -1,10 +1,6 @@
-# backend/app/api/admin.py
-"""
-ADMIN API — Server-side endpoints for the admin dashboard.
-Uses Firebase Admin SDK (bypasses Firestore client security rules).
-Auth: Verified by X-Admin-Token header matching the admin session cookie value.
-"""
-
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+from typing import Optional, Any
 from core.firebase_config import db, app as firebase_app
 from firebase_admin import auth as firebase_auth
 from core.security import security, HTTPAuthorizationCredentials
@@ -14,17 +10,37 @@ import os
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-async def verify_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def verify_admin(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
     """
     Verify the request comes from an authenticated Firebase user with 'admin' claim.
+    Supports standard Bearer token and X-Admin-Token header/cookie fallback.
     """
-    token = credentials.credentials
+    token = None
+    
+    # 1. Check Bearer Token
+    if credentials:
+        token = credentials.credentials
+    
+    # 2. Check X-Admin-Token Header
+    if not token:
+        token = request.headers.get("X-Admin-Token")
+    
+    # 3. Check X-Admin-Token Cookie
+    if not token:
+        token = request.cookies.get("X-Admin-Token")
+        
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
     try:
         decoded_token = firebase_auth.verify_id_token(token, app=firebase_app)
+        # Check for role or admin claim
         if decoded_token.get("role") == "admin" or decoded_token.get("admin") is True:
             return decoded_token
         
-        # Audit log for unauthorized access attempt
         logger.warning(f"🚫 Unauthorized Admin Access Attempt: {decoded_token.get('email', 'unknown')}")
         raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
     except Exception as e:

@@ -64,7 +64,7 @@ export default function SoMCommandCenter() {
         if (!organization) return;
         const fetchCompetitors = async () => {
             try {
-                let token = await auth.currentUser?.getIdToken();
+                const token = await auth.currentUser?.getIdToken();
                 if (!token) return;
                 const res = await fetch(`/api/competitor/displacement/${organization.id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -166,7 +166,7 @@ export default function SoMCommandCenter() {
         if (!organization) return;
         setBatchLoading(true);
         try {
-            let token = await auth.currentUser?.getIdToken();
+            const token = await auth.currentUser?.getIdToken();
 
             if (!token) throw new Error("Authentication required.");
 
@@ -264,7 +264,7 @@ export default function SoMCommandCenter() {
                         return;
                     }
                     try {
-                        let currentToken = await auth.currentUser?.getIdToken() || undefined;
+                        const currentToken = await auth.currentUser?.getIdToken() || undefined;
                         const statusRes = await fetch(`/api/seo/audit/status/${organization.id}/${data.jobId}`, {
                             headers: { 'Authorization': `Bearer ${currentToken}` }
                         });

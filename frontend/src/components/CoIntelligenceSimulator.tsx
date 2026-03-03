@@ -87,7 +87,7 @@ export default function CoIntelligenceSimulator() {
         setLoading(true);
 
         try {
-            let token = await auth.currentUser?.getIdToken();
+            const token = await auth.currentUser?.getIdToken();
 
             if (!token) throw new Error("Authentication required to run simulations.");
 

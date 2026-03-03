@@ -145,7 +145,7 @@ export default function SemanticIngestion() {
             formData.append('orgId', organization.id);
         }
 
-        let token = await auth.currentUser?.getIdToken() || undefined;
+        const token = await auth.currentUser?.getIdToken() || undefined;
         if (!token) throw new Error("Authentication required for secure ingestion.");
 
         const response = await fetch('/api/ingestion/parse', {

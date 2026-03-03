@@ -16,6 +16,7 @@ from core.config import settings
 from core.firebase_config import db
 from core.security import get_auth_context, get_current_user, verify_user_org_access
 from api.audit import log_audit_event
+from google.cloud import firestore
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -436,7 +437,18 @@ async def list_org_members(
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
     try:
+        members = []
         users_stream = db.collection("users").where("orgId", "==", org_id).stream()
+        for doc in users_stream:
+            user_data = doc.to_dict() or {}
+            members.append({
+                "uid": doc.id,
+                "email": user_data.get("email", ""),
+                "role": user_data.get("role", "member"),
+                "orgId": org_id,
+                "status": user_data.get("status", "active")
+            })
+
         # Also fetch pending invitations
         invites_stream = db.collection("organizations").document(org_id).collection("pendingInvites").where("status", "==", "pending").stream()
         for doc in invites_stream:
@@ -465,8 +477,10 @@ async def add_org_member(
     Admin SDK write bypasses client Firestore security rules.
     """
     uid = current_user.get("uid")
-    if not verify_user_org_access(uid, org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized")
+    # 🛡️ SECURITY HARDENING (P1): Only admins can invite members
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can invite members")
+        
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
@@ -583,9 +597,9 @@ async def accept_org_invite(
     # Mark invite as accepted
     batch.update(invite_ref, {"status": "accepted", "acceptedAt": datetime.utcnow().isoformat()})
     
-    # Increment active seats
-    org_ref = db.collection("organizations").document(org_id)
-    batch.update(org_ref, {"activeSeats": firestore.Increment(1)})
+    # 🛡️ SEAT INVARIANT (P1): We already incremented seat during invite-create 
+    # to lock the slot. Doing it here again would double-increment.
+    # No further increment needed here.
     
     batch.commit()
     

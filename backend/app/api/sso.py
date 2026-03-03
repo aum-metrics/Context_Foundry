@@ -11,6 +11,7 @@ from pydantic import BaseModel
 import logging
 from datetime import datetime, timedelta
 import httpx
+import secrets
 from firebase_admin import auth as firebase_auth
 from core.firebase_config import app as firebase_app
 
@@ -77,6 +78,38 @@ async def list_sso_providers():
             } for provider_id, config in SSO_PROVIDERS.items()
         ]
     }
+
+@router.get("/status/{organization_id}")
+async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_context)):
+    """
+    Check the current SSO configuration status for an organization.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+
+    from core.security import verify_user_org_access
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, organization_id):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    try:
+        doc = db.collection("sso_configs").document(organization_id).get()
+        if not doc.exists:
+            return {
+                "configured": False,
+                "provider": None,
+                "is_active": False
+            }
+        
+        config = doc.to_dict() or {}
+        return {
+            "configured": True,
+            "provider": config.get("provider"),
+            "is_active": config.get("is_active", False)
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch SSO status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch status")
 
 @router.post("/configure")
 async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth_context)):

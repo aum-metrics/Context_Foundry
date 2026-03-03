@@ -86,7 +86,7 @@ export default function SupportChatbot() {
         let response = "";
 
         try {
-            let token = await auth.currentUser?.getIdToken();
+            const token = await auth.currentUser?.getIdToken();
 
             if (!token || !organization?.id) {
                 response = "Please authenticate and select an organization to use the AI Context Assistant.";
