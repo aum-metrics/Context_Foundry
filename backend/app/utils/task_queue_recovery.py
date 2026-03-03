@@ -14,7 +14,7 @@ Usage:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Callable, Dict, Any
 from core.firebase_config import db
 

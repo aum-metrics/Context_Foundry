@@ -7,7 +7,7 @@ Description: SOC2 Compliant Audit Logging for sensitive tenant operations.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from core.firebase_config import db
 from core.security import get_current_user
 import logging

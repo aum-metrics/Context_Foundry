@@ -15,7 +15,7 @@ import numpy as np
 import hashlib
 import asyncio
 from fastapi import Depends, BackgroundTasks
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
