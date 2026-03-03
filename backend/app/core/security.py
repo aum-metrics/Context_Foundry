@@ -158,16 +158,20 @@ def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(securit
     # 2. Try Firebase ID Token
     try:
         user_info = get_current_user(credentials)
-        # Fetch the orgId for this user
+        # Fetch the orgId and role for this user
         org_id = None
+        role = None
         if db:
             user_doc = db.collection("users").document(user_info["uid"]).get()
             if user_doc.exists:
-                org_id = user_doc.to_dict().get("orgId")
+                user_data = user_doc.to_dict() or {}
+                org_id = user_data.get("orgId")
+                role = user_data.get("role", "member")
         
         return {
             "uid": user_info["uid"],
             "orgId": org_id,
+            "role": role,
             "type": "session",
             "email": user_info.get("email")
         }

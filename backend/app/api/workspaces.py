@@ -477,6 +477,13 @@ async def add_org_member(
     Admin SDK write bypasses client Firestore security rules.
     """
     uid = current_user.get("uid")
+    user_org_id = current_user.get("orgId")
+
+    # 🛡️ SECURITY HARDENING (P1): Verify inviter belongs to the specific org they are inviting to
+    if user_org_id != org_id:
+        logger.warning(f"🛡 Cross-tenant attempt: User {uid} (org: {user_org_id}) tried to invite to {org_id}")
+        raise HTTPException(status_code=403, detail="Cross-tenant access denied")
+
     # 🛡️ SECURITY HARDENING (P1): Only admins can invite members
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admins can invite members")
@@ -528,8 +535,10 @@ async def add_org_member(
     })
 
     # Seat increment is NOW immediate to prevent race condition abuse
+    # Seat increment is NOW atomic and concurrent-safe
+    from google.cloud import firestore
     org_ref = db.collection("organizations").document(org_id)
-    batch.update(org_ref, {"activeSeats": current_seats + 1})
+    batch.update(org_ref, {"activeSeats": firestore.Increment(1)})
 
     batch.commit()
 

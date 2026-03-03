@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ENV: str = "production"  # production, development, testing
     DEBUG: bool = False
     API_V1_STR: str = "/api"
+    FRONTEND_URL: str = "http://localhost:3000" # fallback
     
     # CORS & Hosts
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "https://aumdatalabs.com"]

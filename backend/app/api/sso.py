@@ -97,15 +97,18 @@ async def get_sso_status(organization_id: str, auth: dict = Depends(get_auth_con
         if not doc.exists:
             return {
                 "configured": False,
+                "enabled": False,
                 "provider": None,
                 "is_active": False
             }
         
         config = doc.to_dict() or {}
+        is_active = config.get("is_active", False)
         return {
             "configured": True,
+            "enabled": is_active,  # Match frontend SSOSettings.tsx:9
             "provider": config.get("provider"),
-            "is_active": config.get("is_active", False)
+            "is_active": is_active
         }
     except Exception as e:
         logger.error(f"Failed to fetch SSO status: {e}")
@@ -183,7 +186,7 @@ async def sso_provider_login(provider: str, org: str):
         import urllib.parse
         params = {
             "client_id": config.get("client_id"),
-            "redirect_uri": f"{settings.API_V1_STR}/sso/callback",
+            "redirect_uri": f"{settings.FRONTEND_URL}/api/sso/callback",
             "response_type": "code",
             "scope": " ".join(provider_config["scopes"]),
             "state": f"{org}:{provider}:{secrets.token_urlsafe(16)}", # CSRF + Context
@@ -240,7 +243,7 @@ async def sso_callback(code: str, state: str, request: Request):
             tenant=config.get("tenant_id", "")
         )
         
-        redirect_uri = f"{settings.API_V1_STR}/sso/callback"
+        redirect_uri = f"{settings.FRONTEND_URL}/api/sso/callback"
         
         async with httpx.AsyncClient() as client:
             # Token Exchange

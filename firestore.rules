@@ -22,19 +22,15 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Organizations and their subcollections
+    // Organizations: Secure document access
     match /organizations/{orgId} {
-      allow read: if belongsToOrg(orgId);
+      // 🛡️ SECURITY HARDENING (P0): Direct document reads are denied to prevent apiKeys leaking.
+      // Members must interact via subcollections or backend-mediated APIs.
+      allow read: if false; 
       
-      // Specifically deny access to apiKeys field within the document if using client SDK
-      // (Though client SDK shouldn't be reading these fields anyway if they are sensitive)
-      // Note: resource.data.apiKeys will still be blocked by standard security best practices 
-      // when using the 'keys' subcollection, but if they are in the doc, we must be careful.
-      // A better way is to ensure sensitive fields are never in public docs.
-      // For now, we allow the read but ensure the backend is the only one serving keys.
-      
-      // Admin might need to update org settings
-      allow write: if belongsToOrg(orgId) && getUserData().role == 'admin';
+      // Admin might need to update org settings (kept for potential Administrative SDK use, 
+      // but client-side logic should move towards explicit subcollection updates)
+      allow write: if false;
 
       // Jobs and Manifests: Any org member can read/write (needed for FE interaction)
       // Jobs and Manifests: Backend/System only for mutations
