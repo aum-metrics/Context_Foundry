@@ -9,7 +9,7 @@ export default function Footer() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
                 <div className="max-w-xs">
                     <div className="font-bold text-xl mb-6 text-white tracking-tighter">
-                        AUM <span className="text-blue-500">CONTEXT</span>
+                        AUM <span className="text-blue-500">CONTEXT FOUNDRY</span>
                     </div>
                     <p className="text-sm text-gray-500 leading-relaxed">
                         The "Smoke Detector" for narrative drift. Ensuring enterprise brand fidelity in the agentic era.

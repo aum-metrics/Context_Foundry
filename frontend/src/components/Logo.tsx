@@ -65,7 +65,7 @@ export const Logo = ({
                         className={`font-black tracking-tighter whitespace-nowrap ${isDark ? 'text-white' : 'text-slate-900'}`}
                         style={{ fontSize: size * 0.72, lineHeight: 1 }}
                     >
-                        AUM <span className="text-blue-500">CONTEXT</span>
+                        AUM <span className="text-blue-500">CONTEXT FOUNDRY</span>
                     </div>
                 </div>
             )}
