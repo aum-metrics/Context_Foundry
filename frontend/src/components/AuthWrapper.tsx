@@ -13,8 +13,8 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
-
-    const isPublicPath = PUBLIC_PATHS.includes(pathname);
+    const normalizedPathname = pathname.replace(/\/$/, "") || "/";
+    const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname);
 
     useEffect(() => {
         // 🛡️ SECURITY HARDENING (P0): Block mock bypass in production entirely

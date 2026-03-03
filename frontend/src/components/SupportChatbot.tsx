@@ -90,6 +90,9 @@ export default function SupportChatbot() {
 
             if (!token || !organization?.id) {
                 response = "Please authenticate and select an organization to use the AI Context Assistant.";
+
+                // Prevent duplicate auth warnings
+                if (messages.length > 0 && messages[messages.length - 1].text === response) return;
             } else {
                 setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your AUM Context Foundry...", timestamp: new Date() }]);
 
