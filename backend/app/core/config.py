@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # Security
     JWT_SECRET: str = "your-secret-key-change-in-production" # Default for Dev
     SSO_ENCRYPTION_KEY: str = "aum-sso-encryption-dev-fallback1" # Dev default for Fernet encryption
+    SSO_JWT_SECRET: str = "aum-sso-jwt-intent-dev-fallback1" # Separated intent token key
     JWT_ALGORITHM: str = "HS256"
     JWT_EXP_MINUTES: int = 10080  # 7 days
     ALLOW_MOCK_AUTH: bool = False # 🛡️ SECURITY HARDENING (P0): Disabled by default, actively blocked in security.py if ENV=production
@@ -52,6 +53,8 @@ class Settings(BaseSettings):
                 raise ValueError("🚨 CRITICAL: JWT_SECRET must be changed in production!")
             if self.SSO_ENCRYPTION_KEY == "aum-sso-encryption-dev-fallback1":
                 raise ValueError("🚨 CRITICAL: SSO_ENCRYPTION_KEY must be changed in production!")
+            if self.SSO_JWT_SECRET == "aum-sso-jwt-intent-dev-fallback1":
+                raise ValueError("🚨 CRITICAL: SSO_JWT_SECRET must be changed in production!")
             self.DEBUG = False
         else:
             self.DEBUG = True

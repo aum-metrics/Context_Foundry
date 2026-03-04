@@ -68,12 +68,14 @@ If you are a DevOps engineer deploying a new environment tomorrow, you must inje
 1.  `ENV` (String: "qa" or "production")
 2.  `JWT_SECRET` (A 64-character randomized cryptographic string — **must differ from dev default or app crashes**)
 3.  `SSO_ENCRYPTION_KEY` (Fernet key — **must differ from dev default or app crashes**)
-4.  `FIREBASE_SERVICE_ACCOUNT_PATH` (The JSON credential path)
-5.  `OPENAI_API_KEY` (Platform-managed master key)
-6.  `GEMINI_API_KEY` (Platform-managed master key)
-7.  `ANTHROPIC_API_KEY` (Platform-managed master key)
-8.  `RAZORPAY_KEY_ID` (Payment processing)
-9.  `RAZORPAY_KEY_SECRET` (Payment verification + webhooks)
+4.  `SSO_JWT_SECRET` (HS256 key for signing transient SSO intent tokens)
+5.  `CRON_SECRET` (Header secret to prevent unauthorized billing/quota resets)
+6.  `FIREBASE_SERVICE_ACCOUNT_PATH` (The JSON credential path)
+7.  `OPENAI_API_KEY` (Platform-managed master key)
+8.  `GEMINI_API_KEY` (Platform-managed master key)
+9.  `ANTHROPIC_API_KEY` (Platform-managed master key)
+10. `RAZORPAY_KEY_ID` (Payment processing)
+11. `RAZORPAY_KEY_SECRET` (Payment verification + webhooks)
 
 **Optional but recommended:**
 - `RAZORPAY_WEBHOOK_SECRET` — HMAC verification for Razorpay server-to-server webhooks

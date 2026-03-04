@@ -149,7 +149,7 @@ async def lookup_sso_by_domain(request: Request, domain: str):
             fake_payload = {"org_id": "none", "provider": "none", "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()}
             return {
                 "success": True,
-                "intent_token": jwt.encode(fake_payload, settings.SSO_ENCRYPTION_KEY, algorithm="HS256"),
+                "intent_token": jwt.encode(fake_payload, settings.SSO_JWT_SECRET, algorithm="HS256"),
                 "provider_name": "Enterprise IDP"
             }
 
@@ -162,7 +162,7 @@ async def lookup_sso_by_domain(request: Request, domain: str):
             "provider": provider,
             "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
         }
-        intent_token = jwt.encode(payload, settings.SSO_ENCRYPTION_KEY, algorithm="HS256")
+        intent_token = jwt.encode(payload, settings.SSO_JWT_SECRET, algorithm="HS256")
 
         return {
             "success": True,
@@ -231,7 +231,7 @@ async def sso_provider_login(intent: str):
         raise HTTPException(status_code=503, detail="Database unavailable")
     
     try:
-        payload = jwt.decode(intent, settings.SSO_ENCRYPTION_KEY, algorithms=["HS256"])
+        payload = jwt.decode(intent, settings.SSO_JWT_SECRET, algorithms=["HS256"])
         org = payload.get("org_id")
         provider = payload.get("provider")
     except jwt.ExpiredSignatureError:

@@ -32,9 +32,11 @@ ENV=production
 
 # 2. Security Keys
 JWT_SECRET=your-secure-64-char-random-string
-API_ENCRYPTION_KEY=base64-url-safe-32-byte-key
-SSO_ENCRYPTION_KEY=base64-url-safe-32-byte-key
+API_ENCRYPTIONJWT_SECRET=production_jwt_signing_key_40_chars_min
+SSO_ENCRYPTION_KEY=production_sso_fernet_encryption_key_32_bytes
+SSO_JWT_SECRET=production_sso_intent_jwt_signing_key
 CRON_SECRET=super-secure-cron-trigger-key
+RESEND_API_KEY=re_your_resend_api_key_here
 
 # 3. Firebase Admin Credentials
 FIREBASE_SERVICE_ACCOUNT_PATH=/path/to/firebase-adminsdk.json

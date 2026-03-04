@@ -19,6 +19,8 @@
 | `RAZORPAY_WEBHOOK_SECRET` | YES (payments) | HMAC webhook signing secret | `...` |
 | `PAYMENT_CALLBACK_URL` | YES (payments) | Frontend URL for payment redirect | `https://aumcontextfoundry.com/dashboard` |
 | `SSO_ENCRYPTION_KEY` | YES (SSO) | Fernet key for encrypting SSO client secrets | `base64url-encoded 32-byte key` |
+| `SSO_JWT_SECRET` | YES (SSO) | HS256 key for signing transient SSO intent tokens | `secure-random-string` |
+| `RESEND_API_KEY` | YES (email) | Required for sending workspace invitations | `re_...` |
 | `CRON_SECRET` | YES (cron) | Bearer token for authenticating the billing cron | random 32+ char string |
 | `ENV` | NO | `development` or `production` (default: `production`) | `production` |
 | `ADMIN_SESSION_SECRET` | **YES** | Secret for signing admin session cookies | `random-string` |

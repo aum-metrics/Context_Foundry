@@ -319,8 +319,9 @@ You also need:
 | `SSO_ENCRYPTION_KEY` | Yes | Dev default (blocked in prod) | Fernet encryption key for SSO client secrets. **Must be changed in production** or app crashes at startup. |
 | `ALLOW_MOCK_AUTH` | No | `False` | Enables `mock-dev-token` bypass. **Blocked in production** regardless of this flag. |
 | `OPENAI_API_KEY` | ⚠️ | None | Required in production. Missing in dev → mock scoring mode. |
-| `GEMINI_API_KEY` | ⚠️ | None | Required in production. Missing in dev → mock scoring mode. |
-| `ANTHROPIC_API_KEY` | ⚠️ | None | Required in production. Missing in dev → mock scoring mode. |
+| `GEMINI_API_KEY` | ⚠️ | None | Google Gemini API Key |
+| `ANTHROPIC_API_KEY` | ⚠️ | None | Anthropic Claude API Key |
+| `RESEND_API_KEY` | ⚠️ | None | Resend API Key (Required for team workspace invitations) |
 | `RAZORPAY_KEY_ID` | ⚠️ | None | Required in production. Missing → payment endpoints return 503. |
 | `RAZORPAY_KEY_SECRET` | ⚠️ | None | Required in production. Used for order signing + webhook verification. |
 | `RAZORPAY_WEBHOOK_SECRET` | No | None | Webhook signature verification. Missing → webhooks rejected (fail-closed). |
@@ -590,7 +591,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/keys/generate` | Firebase JWT + org-verify | Generate B2B API key |
-| GET | `/api/keys/list/{orgId}` | Firebase JWT + org-verify | List API keys |
+| GET | `/api/keys/list/{orgId}` | Firebase JWT + org-verify | List API keys for the current user's organization |
 | POST | `/api/keys/revoke` | Firebase JWT + org-verify | Revoke API key |
 | POST | `/api/chatbot/query` | Firebase JWT | Ask RAG support chatbot |
 | POST | `/api/seo/audit` | Firebase JWT | Start async SEO audit |
@@ -735,6 +736,9 @@ Returns AuthContext: { uid, orgId, role, type, email }
 | apiKeys redaction | `.pop("apiKeys", None)` before any response | All workspace/simulation endpoints |
 | Payment webhooks | `hmac.compare_digest()` + idempotency checks | `api/payments.py` |
 | SSO secrets | Fernet encryption for OAuth2 client secrets | `api/sso.py` |
+| SSO_ENCRYPTION_KEY | Fernet key for encrypting OAuth2 client secrets |
+| SSO_JWT_SECRET | Symmetric key for signing SSO intent JSON Web Tokens |
+| CRON_SECRET | Secret bearer token required to invoke `/api/cron/reset-quotas` |
 | Rate limiting | SlowAPI global (100/min) + Firestore per-IP (100/15min) | `core/limiter.py`, `api/workspaces.py` |
 | Admin sessions | Firebase Server Session Cookie (not raw client token) | `frontend/src/app/api/admin/auth/route.ts` |
 | Mock auth guard | Double-gated: `ENV=development` AND `ALLOW_MOCK_AUTH=True` | `core/security.py` |
