@@ -150,7 +150,7 @@ const options = {
     key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
     amount: order.amount,
     currency: "INR",
-    name: "AUM Data Labs",
+    name: "AUM Context Foundry",
     description: `${tier} Subscription`,
     order_id: order.id,
     notes: {

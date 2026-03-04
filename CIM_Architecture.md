@@ -207,4 +207,4 @@ organizations/{orgId}/simulationCache/
 
 ---
 
-*AUM Data Labs — CIM Architecture v5.1.0*
+*AUM Context Foundry — CIM Architecture v5.1.0*

@@ -198,4 +198,4 @@ curl https://api.yourdomain.com/api/docs
 
 ---
 
-*AUM Data Labs — Production Readiness v5.1.0-hardened*
+*AUM Context Foundry — Production Readiness v5.1.0-hardened*

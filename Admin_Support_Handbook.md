@@ -234,4 +234,4 @@ git push origin v4.1.0
 
 ---
 
-*AUM Data Labs — Admin Support Handbook v5.1.0 | CONFIDENTIAL*
+*AUM Context Foundry — Admin Support Handbook v5.1.0 | CONFIDENTIAL*

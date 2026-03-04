@@ -1,6 +1,6 @@
 /**
  * Author: "Sambath Kumar Natarajan"
- * Org: "AUM Data Labs"
+ * Org: "AUM Context Foundry"
  * Product: "AUM Context Foundry"
  */
 "use client";

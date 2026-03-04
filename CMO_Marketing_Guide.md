@@ -163,4 +163,4 @@ AUM's three-layer story:
 
 ---
 
-*AUM Data Labs — CMO & Marketing Guide v5.1.0*
+*AUM Context Foundry — CMO & Marketing Guide v5.1.0*

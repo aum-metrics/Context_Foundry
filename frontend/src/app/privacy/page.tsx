@@ -1,6 +1,6 @@
 /**
  * Author: "Sambath Kumar Natarajan"
- * Org: "AUM Data Labs"
+ * Org: "AUM Context Foundry"
  * Product: "AUM Context Foundry"
  */
 "use client";
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
                 <section>
                     <h2 className="text-2xl font-medium mb-4">1. Zero-Retention Commitment</h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                        At AUM Data Labs, your proprietary corporate data is processed using our <strong>Zero-Retention Processing</strong> model. PDF binaries are read into volatile RAM buffers, extracted for semantic JSON-LD structures, and immediately purged. We do not cache or store unstructured proprietary documents on disk.
+                        At AUM Context Foundry, your proprietary corporate data is processed using our <strong>Zero-Retention Processing</strong> model. PDF binaries are read into volatile RAM buffers, extracted for semantic JSON-LD structures, and immediately purged. We do not cache or store unstructured proprietary documents on disk.
                     </p>
                 </section>
 

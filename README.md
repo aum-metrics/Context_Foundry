@@ -1,6 +1,6 @@
 # AUM Context Foundry
 
-> **Built by AUM Data Labs — v5.1.0-hardened**
+> **Built by AUM Context Foundry — v5.1.0-hardened**
 >
 > Enterprise-grade platform for evaluating and optimizing "Agentic Share of Voice" (ASoV)
 > across RAG-based Generative Engines (GPT-4o, Claude 3.5, Gemini 2.0).
@@ -907,4 +907,4 @@ To prevent narrative fragmentation during enterprise acquisition or technical au
 
 ---
 
-*Built by AUM Data Labs — AUM Context Foundry v5.1.0-hardened*
+*Built by AUM Context Foundry — AUM Context Foundry v5.1.0-hardened*

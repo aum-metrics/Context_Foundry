@@ -1,6 +1,6 @@
 # Author: "Sambath Kumar Natarajan"
 # Date: "26-Dec-2025"
-# Org: " Start-up/AUM Data Labs"
+# Org: " Start-up/AUM Context Foundry"
 # Product: "AUM Context Foundry"
 # Description: Dockerfile for Python GEO Backend Engine
 

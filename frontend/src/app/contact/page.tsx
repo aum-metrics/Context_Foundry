@@ -1,7 +1,7 @@
 /**
  * Author: "Sambath Kumar Natarajan"
  * Date: "26-Dec-2025"
- * Org: " Start-up/AUM Data Labs"
+ * Org: " Start-up/AUM Context Foundry"
  * Product: "AUM Context Foundry"
  * Description: Enterprise Contact Page.
  */
@@ -57,7 +57,7 @@ export default function ContactPage() {
                 >
                     <h1 className="text-5xl md:text-6xl font-light tracking-tighter mb-6 text-slate-900 dark:text-white">Get in Touch</h1>
                     <p className={`text-xl font-light max-w-2xl mx-auto ${textMuted}`}>
-                        Connect with AUM Data Labs to secure your Agentic SEO pipeline and monitor brand visibility in generative search.
+                        Connect with AUM Context Foundry to secure your Agentic SEO pipeline and monitor brand visibility in generative search.
                     </p>
                 </motion.div>
 
@@ -99,7 +99,7 @@ export default function ContactPage() {
                             <div>
                                 <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 mb-2">Headquarters</h3>
                                 <p className="text-lg text-slate-700 dark:text-slate-300">
-                                    AUM Data Labs<br />
+                                    AUM Context Foundry<br />
                                     Chennai, Tamil Nadu, India
                                 </p>
                             </div>

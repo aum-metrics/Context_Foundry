@@ -218,4 +218,4 @@ Your manifesto updates automatically whenever you upload a new document.
 
 ---
 
-*AUM Data Labs — Workflow Guide v5.0.0*
+*AUM Context Foundry — Workflow Guide v5.0.0*

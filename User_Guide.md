@@ -135,7 +135,7 @@ Navigate to **Settings → Team** to:
 > **Seat Limits**: Explorer: 1 seat. Growth: 5 seats. Scale: 25 seats. Enterprise: Unlimited.
 
 ### 6.1 Accepting an Invitation
-1. Check your email for an invitation from AUM Data Labs.
+1. Check your email for an invitation from AUM Context Foundry.
 2. Click the **Join Organization** link.
 3. Sign in or create an account to activate your seat.
 4. Your name will now appear as "Seat Active" in the team directory.
@@ -213,4 +213,4 @@ A: You'll see a clear "Limit Reached" message. You can upgrade immediately to co
 
 ---
 
-*AUM Data Labs — User Guide v5.1.0*
+*AUM Context Foundry — User Guide v5.1.0*

@@ -1,7 +1,7 @@
 /**
  * Author: "Sambath Kumar Natarajan"
  * Date: "23-Feb-2026"
- * Org: "AUM Data Labs"
+ * Org: "AUM Context Foundry"
  * Product: "AUM Context Foundry"
  * Description: Next.js Configuration with API Proxy Rewrites for all FastAPI routes.
  */

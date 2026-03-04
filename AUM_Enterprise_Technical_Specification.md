@@ -328,4 +328,4 @@ See `Admin_Support_Handbook.md` for the complete variable reference.
 
 ---
 
-*AUM Data Labs — AUM Context Foundry Enterprise Technical Specification v5.1.0-hardened*
+*AUM Context Foundry — AUM Context Foundry Enterprise Technical Specification v5.1.0-hardened*

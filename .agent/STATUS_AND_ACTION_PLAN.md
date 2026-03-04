@@ -1,4 +1,4 @@
-# AUM Data Labs - Current Status & Action Plan
+# AUM Context Foundry - Current Status & Action Plan
 
 ## ✅ Issues Fixed (Just Now)
 
@@ -91,7 +91,7 @@ const handlePayment = async (tier: string) => {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
         amount: order.amount,
         currency: "INR",
-        name: "AUM Data Labs",
+        name: "AUM Context Foundry",
         description: `${tier} Subscription`,
         order_id: order.id,
         notes: {

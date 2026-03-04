@@ -125,4 +125,4 @@ A: High. AUM features a persistent task queue with an automated recovery worker 
 
 ---
 
-*AUM Data Labs — FAQ v5.1.0*
+*AUM Context Foundry — FAQ v5.1.0*

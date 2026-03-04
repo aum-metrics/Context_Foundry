@@ -197,4 +197,4 @@ The `/llms.txt` public route uses a two-layer rate limiting strategy:
 
 ---
 
-*AUM Data Labs — Dev/Mock Path Inventory v5.1.0-hardened*
+*AUM Context Foundry — Dev/Mock Path Inventory v5.1.0-hardened*

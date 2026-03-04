@@ -124,4 +124,4 @@ Your LCRS score will tell you exactly how the AI ecosystem sees your brand right
 
 ---
 
-*AUM Data Labs — AUM Context Foundry v5.0.0 | March 2026*
+*AUM Context Foundry — AUM Context Foundry v5.0.0 | March 2026*

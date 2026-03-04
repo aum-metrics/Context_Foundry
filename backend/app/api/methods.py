@@ -1,7 +1,7 @@
 """
 Author: "Sambath Kumar Natarajan"
 Date: "02-Mar-2026"
-Org: "Start-up/AUM Data Labs"
+Org: "Start-up/AUM Context Foundry"
 Product: "AUM Context Foundry"
 Description: Public Transparency API - Methodology and Math for LCRS Scoring.
 """

@@ -1,6 +1,6 @@
 /**
  * Author: "Sambath Kumar Natarajan"
- * Org: "AUM Data Labs"
+ * Org: "AUM Context Foundry"
  * Product: "AUM Context Foundry"
  */
 "use client";
@@ -43,7 +43,7 @@ export default function TermsPage() {
                 </section>
 
                 <footer className="pt-12 border-t border-slate-200 dark:border-white/5">
-                    <p className="text-sm text-slate-500">&copy; 2025 AUM Data Labs. All rights reserved.</p>
+                    <p className="text-sm text-slate-500">&copy; 2025 AUM Context Foundry. All rights reserved.</p>
                 </footer>
             </main>
         </div>

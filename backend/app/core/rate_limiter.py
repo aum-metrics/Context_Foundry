@@ -1,6 +1,6 @@
 # backend/app/core/rate_limiter.py
 # Author: Sambath Kumar Natarajan
-# Company: AUM Data Labs
+# Company: AUM Context Foundry
 # Purpose: Rate limiting for API endpoints using Firestore
 
 from fastapi import HTTPException

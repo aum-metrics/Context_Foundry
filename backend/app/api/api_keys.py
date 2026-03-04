@@ -1,6 +1,6 @@
 # backend/app/api/api_keys.py
 # Author: Sambath Kumar Natarajan
-# Company: AUM Data Labs
+# Company: AUM Context Foundry
 # Purpose: API Key Management - Professional tier ONLY
 # Tiers: explorer, growth, scale (only growth and scale get API access)
 
