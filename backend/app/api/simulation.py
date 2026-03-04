@@ -513,6 +513,15 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
             raise HTTPException(status_code=500, detail="Billing verification failed.")
             
         if not success:
+            if org_plan == "explorer":
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "EXPLORER_LIMIT_REACHED",
+                        "message": "Your free report has been used. Upgrade to Growth to continue monitoring your brand.",
+                        "upgrade_url": "/dashboard?upgrade=true"
+                    }
+                )
             raise HTTPException(
                 status_code=402, 
                 detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."

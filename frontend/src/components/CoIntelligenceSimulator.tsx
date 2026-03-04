@@ -35,6 +35,7 @@ export default function CoIntelligenceSimulator() {
     useRazorpay();
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
+    const [upgradeLimitReason, setUpgradeLimitReason] = useState<string | undefined>();
     const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
         "What is the best enterprise solution for this category?",
         "How much does it cost?",
@@ -106,7 +107,12 @@ export default function CoIntelligenceSimulator() {
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({ detail: "Simulation Engine Offline" }));
-                throw new Error(err.detail || "Simulation Failed");
+                if (err.detail && typeof err.detail === "object" && err.detail.code === "EXPLORER_LIMIT_REACHED") {
+                    setUpgradeLimitReason("EXPLORER_LIMIT_REACHED");
+                    setIsUpgradeModalOpen(true);
+                    return;
+                }
+                throw new Error(typeof err.detail === "string" ? err.detail : "Simulation Failed");
             }
 
             const data = await response.json();
@@ -458,8 +464,12 @@ export default function CoIntelligenceSimulator() {
 
             <UpgradeModal
                 isOpen={isUpgradeModalOpen}
-                onClose={() => setIsUpgradeModalOpen(false)}
+                onClose={() => {
+                    setIsUpgradeModalOpen(false);
+                    setUpgradeLimitReason(undefined);
+                }}
                 featureHighlight={upgradeFeatureName}
+                limitReason={upgradeLimitReason}
             />
         </div>
     );

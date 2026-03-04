@@ -18,7 +18,7 @@ def test_seo_audit_submission(mock_db, mock_verify):
 
     mock_org_doc = MagicMock()
     mock_org_doc.exists = True
-    mock_org_doc.to_dict.return_value = {"subscription": {"planId": "growth"}}
+    mock_org_doc.to_dict.return_value = {"subscription": {"planId": "scale"}}
     mock_db.collection.return_value.document.return_value.get.return_value = mock_org_doc
     mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.set = MagicMock()
 

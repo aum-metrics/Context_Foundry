@@ -62,6 +62,10 @@ async def reset_billing_quotas(force_all: bool = False, _: bool = Depends(verify
             # 3. No cycleAnchor defined (default to 1st of month)
             cycle_anchor = sub.get("cycleAnchor", 1)
             
+            plan = sub.get("planId", "explorer")
+            if plan == "explorer":
+                continue # Explorer is one-time, not monthly reset
+            
             should_reset = force_all or (cycle_anchor == today)
             
             if should_reset and sub.get("simsThisCycle", 0) > 0:

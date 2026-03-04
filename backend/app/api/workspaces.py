@@ -142,7 +142,9 @@ async def provision_organization(
                 "planId": "explorer",
                 "status": "active",
                 "simsThisCycle": 0,
-                "maxSimulations": 3, # Explorer default
+                "maxSimulations": 1, # Set one free report
+                "billingPeriod": "once",
+                "activatedAt": datetime.now(timezone.utc).isoformat(),
                 "currentPeriodStart": datetime.now(timezone.utc),
                 "currentPeriodEnd": datetime.now(timezone.utc)
             },

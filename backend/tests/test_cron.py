@@ -17,7 +17,7 @@ def test_reset_quotas_dev_mode_no_secret(mock_db):
     mock_org = MagicMock()
     mock_org.id = "org_1"
     mock_org.to_dict.return_value = {
-        "subscription": {"simsThisCycle": 5, "cycleAnchor": 1}
+        "subscription": {"simsThisCycle": 5, "cycleAnchor": 1, "planId": "growth"}
     }
     mock_db.collection.return_value.stream.return_value = [mock_org]
     mock_db.batch.return_value = MagicMock()
@@ -35,7 +35,7 @@ def test_reset_quotas_force_all(mock_db):
     mock_org = MagicMock()
     mock_org.id = "org_1"
     mock_org.to_dict.return_value = {
-        "subscription": {"simsThisCycle": 50, "cycleAnchor": 15}
+        "subscription": {"simsThisCycle": 50, "cycleAnchor": 15, "planId": "growth"}
     }
     mock_db.collection.return_value.stream.return_value = [mock_org]
     mock_batch = MagicMock()

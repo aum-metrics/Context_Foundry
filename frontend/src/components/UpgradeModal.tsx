@@ -9,9 +9,10 @@ interface UpgradeModalProps {
     isOpen: boolean;
     onClose: () => void;
     featureHighlight?: string;
+    limitReason?: string;
 }
 
-export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Features" }: UpgradeModalProps) {
+export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Features", limitReason }: UpgradeModalProps) {
     const { organization, orgUser } = useOrganization();
     const { checkout, isScriptLoading } = useRazorpay();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -71,12 +72,26 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                 <Logo size={64} showText={false} />
                             </div>
 
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
-                                Unlock {featureHighlight}
-                            </h2>
-                            <p className="text-slate-500 dark:text-slate-400 mb-8">
-                                You're currently on the Starter plan. Upgrade to the Growth plan to unlock the full power of AUM Context Foundry.
-                            </p>
+                            {limitReason === "EXPLORER_LIMIT_REACHED" ? (
+                                <div className="mb-4">
+                                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
+                                        You've seen your brand's AI score.
+                                    </h2>
+                                    <p className="text-slate-500 dark:text-slate-400">
+                                        Your free report is complete. To monitor monthly, track competitors,
+                                        and get alerted when AI misrepresents your brand — upgrade to Growth.
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
+                                        Unlock {featureHighlight}
+                                    </h2>
+                                    <p className="text-slate-500 dark:text-slate-400 mb-8">
+                                        You're currently on the Starter plan. Upgrade to the Growth plan to unlock the full power of AUM Context Foundry.
+                                    </p>
+                                </>
+                            )}
 
                             {/* Features List */}
                             <div className="space-y-4 mb-8">
@@ -120,7 +135,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                         : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40"
                                         }`}
                                 >
-                                    {isProcessing ? "Processing..." : isScriptLoading ? "Loading Secure Checkout..." : "Pay with Razorpay"}
+                                    {isProcessing ? "Processing..." : isScriptLoading ? "Loading Secure Checkout..." : limitReason === "EXPLORER_LIMIT_REACHED" ? "Start Monitoring My Brand" : "Pay with Razorpay"}
                                 </button>
                             </div>
 

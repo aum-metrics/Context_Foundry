@@ -761,9 +761,9 @@ Every security gate defaults to **deny**:
 
 | Tier | Seats | Simulations/mo | Batch Analysis | Price | Plan ID |
 |------|-------|----------------|----------------|-------|---------|
-| Explorer | 1 | 3 | ✗ | Free | `explorer` |
-| Growth | 5 | 100 | ✓ | $79/mo (₹6,600) | `growth` |
-| Scale | 25 | 500 | ✓ | $249/mo (₹20,800) | `scale` |
+| Explorer | 1 | 1 (one-time report) | ✗ | Free | `explorer` |
+| Growth   | 5 | 100/month | ✓ | $79/mo | `growth` |
+| Scale    | Unlimited | 500/month | ✓ | $249/mo | `scale` |
 | Enterprise | Custom | Unlimited | ✓ | Custom | `enterprise` |
 
 ### Payment Flow

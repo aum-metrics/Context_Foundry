@@ -51,22 +51,22 @@ PLANS = {
         "name": "Explorer",
         "amount": 0,
         "currency": "INR",
-        "period": "monthly",
-        "description": "3 simulations/mo, 1 document ingestion, basic ASoV score",
+        "period": "once",
+        "description": "1 simulation run, 1 document ingestion, basic ASoV score",
     },
     "growth": {
         "name": "Growth",
         "amount": 660000,  # ~$79/mo
         "currency": "INR",
         "period": "monthly",
-        "description": "All 3 models, 100 simulations/mo, /llms.txt deploy",
+        "description": "All 3 models, 100 simulations/month, /llms.txt deploy",
     },
     "scale": {
         "name": "Scale",
         "amount": 2080000,  # ~$249/mo
         "currency": "INR",
         "period": "monthly",
-        "description": "500 simulations/mo, priority queue, batch domain analysis",
+        "description": "500 simulations/month, priority queue, batch domain analysis",
     },
 }
 
