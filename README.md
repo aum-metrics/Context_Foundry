@@ -66,8 +66,8 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 |-----------|---------------|
 | Unit tests | 61 tests (simulation, ingestion, competitor, audit, RAG math, SSO, org provisioning) |
 | Integration tests | Tested end-to-end logically over local emulators |
-| UI Smoke Tests | Playwright spec covering Dashboard routing via mock-auth bypass |
-| CI | Frontend Next.js Build + Playwright Smoke + Backend syntax + pytest suite |
+| End-to-End Specs | Playwright spec covering Dashboard, Auth, and Business Route Mounts (SSO/Admin) via mock-auth |
+| CI | Frontend Next.js Build + Playwright E2E + Backend syntax + pytest suite |
 
 ### LCRS Methodology & Proprietary Heuristic
 
@@ -865,27 +865,43 @@ For technical diligence and auditing purposes, please note the following residua
 
 ---
 
-## 20. Documentation Index
+## 20. Documentation Index (Diligence Data Room)
 
-| Document | Audience | Content |
-|----------|----------|---------|
-| [README.md](./README.md) | Everyone | This file — complete system overview |
-| [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) | DevOps, Acquirers | Deployment checklist, runtime posture |
-| [DEV_MOCK_PATHS.md](./DEV_MOCK_PATHS.md) | Security, Acquirers | Mock path inventory with guards |
-| [docs/01_Architecture_and_System_Design.md](./docs/01_Architecture_and_System_Design.md) | New Developers | Deep-dive architecture, data flow, Firestore schema |
-| [docs/02_Frontend_Implementation_Guide.md](./docs/02_Frontend_Implementation_Guide.md) | Frontend Engineers | React components, state management, hooks |
-| [docs/03_Backend_API_and_Logic_Reference.md](./docs/03_Backend_API_and_Logic_Reference.md) | Backend Engineers | FastAPI patterns, LCRS math, transactions |
-| [docs/04_Database_and_Security.md](./docs/04_Database_and_Security.md) | All Engineers | Firestore rules, auth flow, multi-tenancy |
-| [docs/05_Admin_Operations_Runbook.md](./docs/05_Admin_Operations_Runbook.md) | Operators | Admin panel usage, user management |
-| [docs/06_Troubleshooting_and_Incident_Response.md](./docs/06_Troubleshooting_and_Incident_Response.md) | Support | Common issues, incident playbook |
-| [docs/07_Sales_and_Lead_Onboarding_Guide.md](./docs/07_Sales_and_Lead_Onboarding_Guide.md) | Sales | Demo script, onboarding flow |
-| [docs/08_Environment_Strategy.md](./docs/08_Environment_Strategy.md) | DevOps | DEV → QA → PROD isolation |
-| [docs/09_Backend_Secrets_and_Environments.md](./docs/09_Backend_Secrets_and_Environments.md) | DevOps, SecOps | Secret management, key rotation |
-| [AUM_Enterprise_Technical_Specification.md](./AUM_Enterprise_Technical_Specification.md) | Acquirers | Enterprise-grade technical spec |
-| [Admin_Support_Handbook.md](./Admin_Support_Handbook.md) | Support Teams | Admin operations reference |
-| [Context_Foundry_Admin_Runbook.md](./Context_Foundry_Admin_Runbook.md) | Operators | Operational procedures |
-| [User_Guide.md](./User_Guide.md) | End Users | Product usage guide |
-| [FAQ.md](./FAQ.md) | Everyone | Frequently asked questions |
+To prevent narrative fragmentation during enterprise acquisition or technical auditing, the documentation suite is strictly centralized here. This represents the single authoritative truth index for the AUM Context Foundry platform.
+
+### Tier 1: System Architecture & Core Specs
+| Document | Audience | Scope |
+|----------|----------|-------|
+| `README.md` (Current) | Acquirers | Absolute system overview, maturity matrix, unified routing truths |
+| `AUM_Enterprise_Technical_Specification.md` | Tech DD | High-level business logic, edge/backend proxy architecture |
+| `docs/01_Architecture_and_System_Design.md` | Engineering | Database ERDs, async task queuing, ingestion pipeline dataflows |
+| `CIM_Architecture.md` | AI/Data Sci | Deep-dive on the Context Information Model and vector ingestion |
+
+### Tier 2: Production Ops & Security (The Runbooks)
+| Document | Audience | Scope |
+|----------|----------|-------|
+| `PRODUCTION_READINESS.md` | DevSecOps | Pre-flight secret gating, Cloud Run configuration, SOC2 auditing |
+| `Context_Foundry_Admin_Runbook.md` | Lead Ops | The canonical operational guide for tenant seeding and SSO config |
+| `docs/04_Database_and_Security.md` | Security | Firebase RBAC rules, fail-closed rate limiters, token validation |
+| `docs/08_Environment_Strategy.md` | DevOps | Multi-project isolation (DEV → QA → PROD) and CI integrity |
+| `docs/09_Backend_Secrets_and_Environments.md` | SecOps | Secret rotation policies for `SSO_JWT_SECRET` and Fernet keys |
+
+### Tier 3: Engineering implementation Handbooks
+| Document | Audience | Scope |
+|----------|----------|-------|
+| `docs/02_Frontend_Implementation_Guide.md` | React Devs | App Router structural boundaries, Context providers, Hook usage |
+| `docs/03_Backend_API_and_Logic_Reference.md` | Python Devs | FastAPI patterns, Pydantic strict-models, LCRS math functions |
+| `Admin_Support_Handbook.md` | Support | Resolving member invitation races, Razorpay webhook stalls |
+| `DEV_MOCK_PATHS.md` | Security | Exhaustive map of development bypasses (hard-blocked in prod) |
+
+### Tier 4: User & GTM Materials
+| Document | Audience | Scope |
+|----------|----------|-------|
+| `User_Guide.md` | End Users | Step-by-step UI orientation for enterprise clients |
+| `User_Side_Product_Document.md` | Marketing | Public-facing capability summaries |
+| `Workflow_for_users.md` | Sales | Linear walk-through of the "Aha!" moment (upload to manifest) |
+| `FAQ.md` | All | Objections handling for typical client technical questions |
+| `CMO_Marketing_Guide.md` | GTM | Pitch positioning Context Foundry against standard SEO |
 
 ---
 

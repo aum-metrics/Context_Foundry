@@ -53,4 +53,25 @@ test.describe('AUM Context Foundry E2E Tests', () => {
         // Accuracy chart header should be visible
         await expect(page.locator('text=Accuracy Over Time')).toBeVisible();
     });
+
+    test('Business Route Proofs - Command Center & Settings (Mock Auth)', async ({ page }) => {
+        // Authenticate via mock bypass
+        await page.goto('/dashboard?mock=true');
+        await page.waitForLoadState('domcontentloaded');
+
+        // Verify Command Center tab mounts
+        const commandTab = page.locator('button', { hasText: 'Command Center' });
+        await commandTab.click();
+        await expect(page.locator('text=Share of Mind (SoM) Monitoring')).toBeVisible();
+
+        // Verify Team Settings tab mounts
+        const teamTab = page.locator('button', { hasText: 'Team Settings' });
+        await teamTab.click();
+        await expect(page.locator('text=Manage Members')).toBeVisible();
+
+        // Verify SSO Strategy tab mounts
+        const ssoTab = page.locator('button', { hasText: 'SSO Strategy' });
+        await ssoTab.click();
+        await expect(page.locator('text=Enterprise SSO Configuration')).toBeVisible();
+    });
 });
