@@ -27,7 +27,7 @@ If a customer emails support: *"I cannot access the Scale features!"*
    * Is `simsThisCycle` greater than `maxSimulations`? (If so, they are locked out because they hit their quota).
 
 ### 2.2 Manually Upgrading a Customer
-If a customer pays via wire transfer instead of Stripe, you must manually upgrade them.
+If a customer pays via wire transfer instead of Razorpay, you must manually upgrade them.
 1. Open their `organizations/{orgId}` document.
 2. Edit the `subscription` mapping:
    ```json

@@ -46,7 +46,7 @@ This is the mission-critical environment.
 
 ---
 
-## 3. Implementation Breakdown: Payment Keys (Stripe/Razorpay)
+## 3. Implementation Breakdown: Payment Keys (Razorpay)
 
 Payments follow the exact same isolation logic as AI keys, but the stakes are higher.
 

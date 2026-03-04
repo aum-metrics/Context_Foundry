@@ -29,10 +29,10 @@ Firebase projects act as the absolute boundary for your database (`Firestore`) a
 
 *Why?* If an engineer accidentally runs a script that deletes the `organizations` collection in DEV, it only deletes fake data in `aum-context-foundry-dev`. The PROD database is cryptographically unreachable.
 
-### Step 2: Create 3 Sets of Stripe/Razorpay Keys
+### Step 2: Create 3 Sets of Razorpay Keys
 You must never process a real $500 payment when testing a new feature.
-*   **QA:** Use Stripe's "Test Mode" API keys.
-*   **PROD:** Use Stripe's "Live Mode" API keys.
+*   **QA:** Use Razorpay's "Test Mode" API keys.
+*   **PROD:** Use Razorpay's "Live Mode" API keys.
 
 ---
 
@@ -141,6 +141,6 @@ Here is how a single code change moves securely through the environments.
 To achieve this tomorrow, you need:
 - [ ] 3 Firebase Projects (Dev, QA, Prod).
 - [ ] 3 Sets of Firebase Admin SDK JSON keys.
-- [ ] 3 Sets of Stripe/Razorpay keys (2 Test Mode, 1 Live Mode).
+- [ ] 3 Sets of Razorpay keys (2 Test Mode, 1 Live Mode).
 - [ ] 2 Vercel Environments (Preview, Production).
 - [ ] 2 Google Cloud Run Services (`api-qa`, `api-prod`).

@@ -55,13 +55,13 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 | **Enterprise SSO** | ✅ Production | Okta/Azure AD/Google, Fernet-encrypted secrets, CSRF-protected. |
 | **Payments (Razorpay)** | ✅ Production | India (INR) only. No Stripe/USD integration. |
 | **Support Chatbot** | ⚠️ Functional | RAG over latest manifest only (no multi-doc). Conversation memory limited to last 4 messages. |
-| **Competitor Displacement** | ⚠️ Demo | Single GPT-4o-mini call with crafted prompt. Not a systematic monitoring pipeline. |
-| **SEO Audit** | ⚠️ Stub | Playwright scrapes page but scoring is hardcoded (`overallScore: 70`). Not production analytics. |
+| **Competitor Displacement** | ⚠️ Read-Only API | Module active, but UI dashboard currently binds to cached regional snapshots. Not a systematic monitoring pipeline. |
+| **SEO Depth Scoring** | ⚠️ Phase 1 Limits | Current scoring evaluates structural markup via basic checks. Needs deep crawler. Hardcoded (`overallScore: 70`). Not production analytics. |
 | **Batch Stability** | ⚠️ Manual | Works but requires manual cron setup. No automated weekly scheduling infrastructure. |
 | **Email Delivery** | ⚠️ Conditional | Silent no-op unless `RESEND_API_KEY` is configured. Invitations silently swallowed by default. |
 | **Help Center** | ❌ Not Built | "In progress — check back soon" placeholder. |
-| **Status Page** | ❌ Not Built | Route exists but no content. |
-| **Global Payments (USD/Stripe)** | ❌ Not Built | Only Razorpay (India-centric). |
+| **System Status Center** | ❌ Omitted | Relying on SLA alerting channels (e.g. BetterStack) rather than embedded component. |
+| **Global Payments (USD)** | ❌ Pending Compliance Review | V1 Regional focus on INR/Razorpay checkout module only. |
 | **Multi-Document Explorer** | ❌ UX Gap | Explorer users hit a hard 1-doc cap with a 403 error (no graceful upgrade prompt). |
 
 ### Test Coverage

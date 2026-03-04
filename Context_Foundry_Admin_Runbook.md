@@ -50,7 +50,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=aum-context-foundry-prod.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=aum-context-foundry-prod
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXT_PUBLIC_API_URL=https://api.aumcontextfoundry.com
 ```
 
 ---
@@ -104,7 +104,7 @@ The tenant IT admin must provide:
 ### How-To: Configure SSO for a Tenant
 1. User navigates to **Settings -> Security & SSO**.
 2. Submits the credentials. CF encrypts the `Client Secret` using `SSO_ENCRYPTION_KEY` via Fernet AES-128 before saving to `sso_configs/{orgId}`.
-3. **Callback URI:** The IT Admin MUST whitelist `https://api.yourdomain.com/v1/sso/callback` in their IdP (Okta/Azure).
+3. **Callback URI:** The IT Admin MUST whitelist `https://api.aumcontextfoundry.com/v1/sso/callback` in their IdP (Okta/Azure).
 
 ---
 
@@ -130,7 +130,7 @@ Every time an AI simulation runs, the `@firestore.transactional` lock increments
 ### How-To: Resetting Quotas Monthly
 You must invoke the automated Cron endpoint on the 1st of the month:
 ```bash
-curl -X POST https://api.yourdomain.com/api/cron/reset-quotas \
+curl -X POST https://api.aumcontextfoundry.com/api/cron/reset-quotas \
      -H "x-cron-secret: super-secure-cron-trigger-key"
 ```
 *Note: This utilizes a background queue. It will asynchronously batch-reset 500 orgs per sweep to avoid Firestore timeout limits.*
@@ -160,7 +160,7 @@ If jobs (e.g., scraping competitor sites) fail, they enter the DLQ (Dead Letter 
 ### Issue 1: LCRS Simulation Returns "Simulation Engine Unavailable"
 * **Cause 1:** Org `apiKeys` are missing or invalid.
 * **Cause 2:** Organization has reached its simulation quota limit (`402`).
-* **Fix:** Tell the client to supply valid keys in Settings, or upgrade their Subscription Tier via the Stripe portal.
+* **Fix:** Tell the client to supply valid keys in Settings, or upgrade their Subscription Tier via the billing portal.
 
 ### Issue 2: Frontend Throws "CORS Error" on Login
 * **Cause:** Firebase `authDomain` is not matching the deployment origin.

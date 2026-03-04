@@ -68,10 +68,10 @@ def test_lcrs_claim_weight_dominance():
     assert lcrs_high_claims > lcrs_high_semantic
 
 
-@pytest.mark.asyncio
 @patch("core.rate_limiter.db")
-async def test_rate_limiter_check_rate_limit(mock_db):
+def test_rate_limiter_check_rate_limit(mock_db):
     """Test the core rate limiter function."""
+    import asyncio
     from core.rate_limiter import check_rate_limit
 
     mock_doc = MagicMock()
@@ -82,8 +82,8 @@ async def test_rate_limiter_check_rate_limit(mock_db):
     }
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
 
-    # check_rate_limit is async
-    result = await check_rate_limit("aum_test_key_123", "simulation", "growth")
+    # check_rate_limit is async, run it reliably without pytest plugins
+    result = asyncio.run(check_rate_limit("aum_test_key_123", "simulation", "growth"))
     assert result is True
 
 
