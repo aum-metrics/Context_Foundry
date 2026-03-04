@@ -440,9 +440,9 @@ export default function LandingPage() {
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
                             <Link href="/login" className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm">
-                                Start 7-Day Trial
+                                Upgrade to Growth
                             </Link>
-                            <p className="text-center text-xs text-slate-400 mt-4">7-day trial, then $79/mo. Cancel anytime.</p>
+                            <p className="text-center text-xs text-slate-400 mt-4">Cancel anytime.</p>
                         </motion.div>
 
                         {/* SCALE */}
@@ -470,9 +470,9 @@ export default function LandingPage() {
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Agency SLA</li>
                             </ul>
                             <Link href="/contact" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
-                                Start 7-Day Trial
+                                Contact Us
                             </Link>
-                            <p className="text-center text-xs text-slate-400 mt-4">7-day trial. Custom Agency SLA available.</p>
+                            <p className="text-center text-xs text-slate-400 mt-4">Custom Agency SLA available.</p>
                         </motion.div>
                     </div>
                 </section>
