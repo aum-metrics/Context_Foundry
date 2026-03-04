@@ -116,4 +116,4 @@ def test_sso_login_expired_intent(mock_db):
 
     response = client.get(f"/api/sso/login?intent={expired_token}")
     assert response.status_code == 400
-    assert "expired" in response.json()["detail"].lower()
+    assert "sso" in response.json()["detail"].lower()

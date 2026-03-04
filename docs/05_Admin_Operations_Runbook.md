@@ -67,12 +67,12 @@ When a Massive Enterprise (like Fortune 500 Bank) signs up, they will demand Sin
 
 ### The Handshake Process
 1. Tell the Enterprise IT Admin to create an Application in their Okta/Azure portal.
-2. Give them our **Callback URL**: `https://api.aumcontextfoundry.com/api/v1/sso/callback`
+2. Give them our **Callback URL**: `https://api.aumcontextfoundry.com/api/sso/callback`
 3. They will give you two things: a **Client ID** and a **Client Secret**.
 4. You (or the enterprise admin) logs into the AUM Context Foundry Dashboard -> Settings -> SSO.
 5. Paste the ID and Secret. The backend will encrypt the Secret using our `SSO_ENCRYPTION_KEY` via **Fernet encryption** (32-byte key) before saving it to Firestore `sso_configs/{orgId}`.
 
-**Troubleshooting:** If SSO fails, it is almost always because the IT Admin forgot to whitelist our Callback URL (`https://api.aumdatalabs.com/api/sso/callback`) in their system. Ask them to verify the redirect URI.
+**Troubleshooting:** If SSO fails, it is almost always because the IT Admin forgot to whitelist our Callback URL (`https://api.aumcontextfoundry.com/api/sso/callback`) in their system. Ask them to verify the redirect URI.
 
 ---
 
