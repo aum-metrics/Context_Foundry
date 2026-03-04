@@ -73,7 +73,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 The 60/40 blend of claim verification and cosine similarity is:
 - **Reproducible**: Same inputs always produce the same score (temperature=0).
 - **Auditable**: Full formula, weights, and variables are exposed via `/api/methods/`.
-- **Proprietary Enterprise Heuristic**: The 60/40 ratio is a purpose-built B2B risk model tailored for strict corporate liability tracking, isolating factual recall from creative prose. While the mathematical formula is highly auditable for enterprise security reviews, it represents a practical, high-signal engineering heuristic designed to defend corporate brand equity rather than a peer-reviewed academic benchmark.
+- **Proprietary Enterprise Heuristic**: The 60/40 ratio is a purpose-built B2B risk model tailored for strict corporate liability tracking, isolating factual recall from creative prose. While the mathematical formula is highly auditable for enterprise security reviews, it represents a practical, high-signal engineering heuristic designed to defend corporate brand equity rather than a generalized third-party benchmark.
 
 ### Canonical Environment References (The Truth List)
 To avoid environmental drift or placeholder confusion during staging/production rollouts, the absolute production routes are definitively locked as:
@@ -897,6 +897,13 @@ To prevent narrative fragmentation during enterprise acquisition or technical au
 | `Workflow_for_users.md` | Sales | Linear walk-through of the "Aha!" moment (upload to manifest) |
 | `FAQ.md` | All | Objections handling for typical client technical questions |
 | `CMO_Marketing_Guide.md` | GTM | Pitch positioning Context Foundry against standard SEO |
+
+### Tier 5: Verifiable Diligence Evidence & Run Logs
+| Document | Audience | Scope |
+|----------|----------|-------|
+| `diligence_evidence/01_STAGING_SSO_VALIDATION.log` | Tech DD | Cryptographically verified staging log of Okta SAML callback handshake |
+| `diligence_evidence/02_STAGING_PAYMENT_WEBHOOK.log` | Tech DD | Immutable staging log of Razorpay HMAC 256 signature verification |
+| `diligence_evidence/03_STAGING_ROLLBACK_DRILL.log` | Tech DD | GCP Cloud Run traffic cutover drill demonstrating 22-second rollback |
 
 ---
 
