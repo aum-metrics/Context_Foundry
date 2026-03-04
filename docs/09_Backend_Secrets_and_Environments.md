@@ -6,17 +6,14 @@
 
 ---
 
-## 1. API Key Architecture (Platform vs BYOK)
+## 1. Platform-Managed API Keys
 
-AUM Context Foundry interacts with OpenAI, Anthropic, and Gemini. To handle billing and permissions securely across environments, the backend operates on a hybrid model:
+AUM Context Foundry interacts with OpenAI, Anthropic, and Gemini. A single simulation run costs API credits. To handle billing and permissions securely across environments, the backend operates entirely on **Platform-Managed Keys**.
 
-**1. Bring-Your-Own-Key (BYOK) - Enterprise Tiers:**
-Organizations can store their own LLM API keys. These are written to `organizations/{orgId}.apiKeys`.
-*   **Crucial Security Guard:** To prevent frontend key leakage, the backend explicitly executes an `.pop("apiKeys", None)` redaction lock on the server side prior to returning workspace profiles.
-*   **Routing:** The FastAPI `simulation.py` engine checks if the tenant has a valid key override, and uses it for inference requests, preserving our internal Platform limits.
+We do not support Bring-Your-Own-Key (BYOK). All simulation runs are billed to our central corporate accounts, and we bill the client a flat subscription fee in return.
 
-**2. Platform-Managed Keys - Growth/Explorer Tiers:**
-If a tenant has no keys, the engine automatically defaults to using the **Global Master Keys** loaded into the server's backend environment memory.
+1. Organizations in Firestore do not store raw LLM API keys. 
+2. The FastAPI `simulation.py` engine seamlessly injects the **Global Master Keys** loaded into the server's environment memory.
 
 ---
 

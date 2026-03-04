@@ -33,7 +33,6 @@ This is the exact structure of our production database.
 *   **Purpose:** The Tenant. All billing, settings, and historical data descend from here.
 *   **Fields:**
     *   `name` (string)
-    *   `apiKeys` (object) - *Extremely sensitive. Contains `OPENAI_API_KEY`, etc.*
     *   `subscription` (object) - *Contains `planId`, `simsThisCycle`, `status`.*
 *   **Subcollection: `/manifests/{manifestId}`**
     *   Contains the vector embeddings and raw text of the uploaded Context Documents.
@@ -54,7 +53,7 @@ The `firestore.rules` file sits directly on Google Cloud. Even if our Python bac
 **Core Rules:**
 1.  **Authentication:** You must have a valid JWT token. `request.auth != null`.
 2.  **Tenant Isolation:** You can only read `organizations/{orgId}` if your JWT token proves you belong to that `orgId`.
-3.  **Role Access:** If you are a `member` (not an `admin`), the rules **physically block** you from reading or writing the `apiKeys` and `payments` subcollections.
+3.  **Role Access:** If you are a `member` (not an `admin`), the rules **physically block** you from reading or writing the `payments` subcollections.
 
 **Example of our Enterprise Rule:**
 ```javascript
@@ -69,25 +68,7 @@ match /organizations/{orgId} {
 }
 ```
 
----
 
-## 4. API Key Protection (Redaction)
-
-If a company trusts us with their $100,000/month OpenAI API key, we must protect it like nuclear launch codes.
-
-### The Threat
-A frontend intern writes `console.log(organization)` in `TeamSettings.tsx`. If the backend sent the raw organization JSON, that intern just leaked the client's OpenAI key to the browser console.
-
-### The Backend Redaction Lock
-Every time a Python route fetches an organization document, it MUST redact the keys before calling `return`.
-
-```python
-org_data = org_doc.to_dict()
-api_keys = org_data.pop("apiKeys", {}) # Extracts the keys into memory, removes them from the dict
-
-# Now it is safe to return org_data to the React frontend.
-return org_data 
-```
 
 ---
 

@@ -681,10 +681,6 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
     "currentPeriodEnd": "2026-03-01T00:00:00Z",
     "paymentId": "pay_abc123",
     "activatedAt": "2026-01-15T00:00:00Z"
-  },
-  "apiKeys": {         // ⚠️ NEVER exposed to frontend — always .pop("apiKeys", None)
-    "openai": "sk-...",
-    "gemini": "AIza..."
   }
 }
 ```
