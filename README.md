@@ -837,7 +837,25 @@ Every security gate defaults to **deny**:
 
 ---
 
-## 19. Documentation Index
+## 19. Deployment Runbooks & Security Posture
+
+AUM Context Foundry is designed for enterprise-grade deployment. Extensive documentation is provided for operations, security, and production readiness.
+
+### Essential Operations Manuals
+- **[Production Readiness & Security Posture](PRODUCTION_READINESS.md)**: Deep-dive into our fail-closed security model, startup secret gating, and the exact deployment checklist required to pass security diligence.
+- **[Platform Master Runbook](Context_Foundry_Admin_Runbook.md)**: Procedures for platform seeding, tenant onboarding, SSO configuration, and billing enforcement.
+- **[Database & Security](docs/04_Database_and_Security.md)**: Explains the Firestore RBAC rules and API key redaction layers.
+- **[Environment Isolation Strategy](docs/08_Environment_Strategy.md)**: The required architecture for safe SDLC (Dev -> QA -> Prod) using isolated Firebase projects.
+
+### ⚠️ Known Limitations & Residual Risks (Transparency Disclosure)
+For technical diligence and auditing purposes, please note the following residual behaviors:
+1. **Dependency-Driven Degraded Features**: The system relies on optional dependencies (`playwright` for SEO, `anthropic` for Claude 3.5). While the `development` environment will gracefully degrade and provide mock data if these are uninstalled, the `production` gate now strictly requires them. However, a malformed production container deployment lacking `requirements.txt` execution could result in degraded behavior (e.g., fallback logic or silent feature skips). This is a deployment diligence tracking item.
+2. **Minor Test Hygiene Warnings**: The backend pytest suite passes 100% of its assertions natively. However, depending on the local python environment (`pytest` vs `pytest-asyncio` plugin versions), minor third-party collection warnings (e.g. `DeprecationWarning`) might appear in test stdout. These do not affect pass/fail status but may be noted during extreme diligence reviews.
+3. **Rate Limiting Edge Behavior**: The `llms.txt` edge route rate limiting currently only blocks `429` responses from the backend, allowing other error codes to pass through the edge cache. 
+
+---
+
+## 20. Documentation Index
 
 | Document | Audience | Content |
 |----------|----------|---------|
