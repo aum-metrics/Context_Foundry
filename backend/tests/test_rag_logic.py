@@ -8,10 +8,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
 import pytest
 from unittest.mock import MagicMock, patch
 
-# Mock imports that might fail in test env
-sys.modules["core.firebase_config"] = MagicMock()
-sys.modules["core.security"] = MagicMock()
-
 def test_rag_semantic_chunking_logic():
     """
     Test that the semantic chunking logic correctly splits text 
@@ -21,7 +17,9 @@ def test_rag_semantic_chunking_logic():
     raw_text = "A" * 5000 + "B" * 5000 + "C" * 5000
     
     # Mocking the ingestion logic locally for testing
-    from api.ingestion import parse_document
+    # Since we only test the algorithm, we can safely mock the dependencies before importing
+    with patch.dict("sys.modules", {"core.firebase_config": MagicMock(), "core.security": MagicMock()}):
+        from api.ingestion import parse_document
     
     # This is a unit test of the chunking algorithm logic
     # In a real scenario, we'd extract the chunking part into a utility function

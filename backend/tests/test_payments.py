@@ -47,7 +47,7 @@ def test_create_order_happy_path(mock_db, mock_razorpay, mock_verify):
     response = client.post(
         "/api/payments/create-order",
         headers={"Authorization": "Bearer mock-dev-token"},
-        json={"orgId": "test_org", "planId": "growth", "customerEmail": "test@example.com"}
+        json={"orgId": "mock-org-123", "planId": "growth", "customerEmail": "test@example.com"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -72,7 +72,7 @@ def test_verify_payment_invalid_signature(mock_db, mock_razorpay, mock_verify):
             "razorpay_order_id": "order_fake",
             "razorpay_payment_id": "pay_fake",
             "razorpay_signature": "bad_sig",
-            "orgId": "test_org"
+            "orgId": "mock-org-123"
         }
     )
     # Should fail — either 400 or 500
@@ -98,7 +98,7 @@ def test_get_payment_status(mock_db, mock_verify):
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
 
     response = client.get(
-        "/api/payments/status/test_org",
+        "/api/payments/status/mock-org-123",
         headers={"Authorization": "Bearer mock-dev-token"}
     )
     assert response.status_code == 200
@@ -112,7 +112,7 @@ def test_get_payment_status_unauthorized(mock_db, mock_verify):
     """Test status endpoint rejects unauthorized users."""
     mock_verify.return_value = False
     response = client.get(
-        "/api/payments/status/test_org",
+        "/api/payments/status/mock-org-123",
         headers={"Authorization": "Bearer mock-dev-token"}
     )
     assert response.status_code == 403

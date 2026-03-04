@@ -92,27 +92,26 @@ def test_list_org_members_unauthorized(mock_verify):
 @patch("api.workspaces.db")
 def test_get_org_profile_redacted(mock_db):
     """Test org profile endpoint redacts apiKeys."""
-    # Profile uses current_user.get("orgId") != org_id, not verify_user_org_access
-    # Override the auth dependency to include orgId
     from core.security import get_auth_context
+    from main import app
     app.dependency_overrides[get_auth_context] = lambda: {
         "uid": "mock-dev-uid",
         "email": "mock@dev.local",
         "type": "session",
-        "orgId": "test_org"
+        "orgId": "mock-org-123"
     }
-
     mock_doc = MagicMock()
     mock_doc.exists = True
     mock_doc.to_dict.return_value = {
         "name": "Test Org",
+        "orgId": "mock-org-123", # Crucial for get_auth_context users query
         "apiKeys": {"openai": "sk-secret"},
         "subscription": {"planId": "growth"}
     }
     mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
 
     response = client.get(
-        "/api/workspaces/test_org/profile",
+        "/api/workspaces/mock-org-123/profile",
         headers={"Authorization": "Bearer mock-dev-token"}
     )
     assert response.status_code == 200

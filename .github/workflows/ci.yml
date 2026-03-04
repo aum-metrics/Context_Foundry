@@ -41,5 +41,5 @@ jobs:
       - name: Smoke test (import check)
         run: python test_main.py
       - name: Run pytest suite
-        working-directory: backend/app
-        run: python -m pytest ../tests/ -q --tb=short
+        working-directory: backend
+        run: PYTHONPATH=app python -m pytest tests/ -q --tb=short

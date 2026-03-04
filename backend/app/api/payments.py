@@ -108,7 +108,6 @@ async def get_plans(auth: dict = Depends(get_current_user)):
 async def create_subscription_order(request: CreateSubscriptionRequest, auth: dict = Depends(get_current_user)):
     """Creates a Razorpay order for a subscription payment."""
     # Verify user owns the org they're purchasing for
-    from core.security import verify_user_org_access
     uid = auth.get("uid")
     if not verify_user_org_access(uid, request.orgId):
         raise HTTPException(status_code=403, detail="Unauthorized: you don't belong to this organization")

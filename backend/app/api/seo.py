@@ -37,7 +37,22 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
         from core.config import settings
         is_dev = settings.ENV == "development"
 
-        if not PLAYWRIGHT_AVAILABLE or is_dev:
+        if not PLAYWRIGHT_AVAILABLE:
+            if not is_dev:
+                logger.error("Playwright is missing in production environment!")
+                return {
+                    "url": request.url, "seoScore": 0, "geoScore": 0, "overallScore": 0,
+                    "checks": [{"check": "System Error", "status": "fail", "detail": "Playwright dependencies missing on server"}],
+                    "recommendation": "System error: Cannot perform SEO audit.",
+                }
+            logger.info(f"🧪 Dev-mode: Providing mock SEO audit for {request.url} (Missing Playwright)")
+            await asyncio.sleep(2)
+            return {
+                "url": request.url, "seoScore": 85, "geoScore": 75, "overallScore": 80,
+                "checks": [{"check": "Mock Result", "status": "pass", "detail": "Simulated"}],
+                "recommendation": "Mock result for development mode.",
+            }
+        elif is_dev:
             logger.info(f"🧪 Dev-mode: Providing mock SEO audit for {request.url}")
             await asyncio.sleep(2)
             return {

@@ -632,6 +632,14 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         )
 
     tasks = []
+    
+    if not is_dev:
+        if not GEMINI_AVAILABLE or not CLAUDE_AVAILABLE:
+            raise HTTPException(
+                status_code=500, 
+                detail="Multi-model simulation requires google-genai and anthropic packages. They are missing in this production environment."
+            )
+
     if openai_key or is_dev:
         tasks.append(_run_and_score("GPT-4o Mini", run_openai, openai_key))
     if (gemini_key and GEMINI_AVAILABLE) or (is_dev and GEMINI_AVAILABLE):
