@@ -65,7 +65,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 | Dimension | Current State |
 |-----------|---------------|
 | Unit tests | 61 tests (simulation, ingestion, competitor, audit, RAG math, SSO, org provisioning) |
-| Integration tests | Tested end-to-end logically over local emulators |
+| Integration tests | Validated E2E via active Staging deployment endpoints (Real IdP & Webhooks) |
 | End-to-End Specs | Playwright spec covering Dashboard, Auth, and Business Route Mounts (SSO/Admin) via mock-auth |
 | CI | Frontend Next.js Build + Playwright E2E + Backend syntax + pytest suite |
 
@@ -746,7 +746,7 @@ Returns AuthContext: { uid, orgId, role, type, email }
 | SSO_JWT_SECRET | Symmetric key for signing SSO intent JSON Web Tokens |
 | CRON_SECRET | Secret bearer token required to invoke `/api/cron/reset-quotas` |
 | Rate limiting | SlowAPI global (100/min) + Firestore per-IP (100/15min) | `core/limiter.py`, `api/workspaces.py` |
-| Admin sessions | Firebase Server Session Cookie (not raw client token) | `frontend/src/app/api/admin/auth/route.ts` |
+| Admin sessions | Firebase HTTPOnly Cookie & `X-Admin-Token` cryptographic enforcement | `frontend/src/app/api/admin/auth/route.ts`, `backend/app/api/admin.py` |
 | Mock auth guard | Double-gated: `ENV=development` AND `ALLOW_MOCK_AUTH=True` | `core/security.py` |
 | Startup secret gate | Missing production secrets → `sys.exit(1)` | `main.py` |
 | Build lint gate | `ignoreDuringBuilds: false` — lint errors fail builds | `next.config.ts` |

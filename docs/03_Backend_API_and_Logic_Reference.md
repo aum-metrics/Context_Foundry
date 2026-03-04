@@ -178,9 +178,10 @@ All tests use `conftest.py` which automatically:
 | `test_competitor.py` | Displacement endpoint + auth rejection |
 | `test_audit.py` | Audit log write + retrieval |
 | `test_rag_logic.py` | Cosine similarity math + scoring |
+*(Additional 50+ tests cover SSO, organization provisioning, payment schemas, and API keys.)*
 
 Run:
 ```bash
 cd backend/app && python -m pytest ../tests/ -q --tb=short
-# Expected: 10 passed
+# Expected: 61 passed
 ```

@@ -31,6 +31,16 @@ When an intern gets on a call with a lead, they must adapt the pitch depending o
 
 ---
 
+## 3. Qualifying the Lead (Discovery Questions)
+
+Before jumping into a demo, ensure the prospect is a qualified Enterprise or Growth tier buyer by asking:
+1. *"Are you currently using RAG chatbots for customer support, or are you concerned about how third-party LLMs like SearchGPT rank your brand?"*
+2. *"Who manages your official internal documentation or 'Source of Truth'?"*
+3. *"Have you ever had a PR incident or customer complaint where an AI misrepresented your policies or pricing?"*
+4. *"Does your IT team require active SSO integrations for SaaS deployments?"* (If yes, they automatically qualify for Scale/Enterprise tiers).
+
+---
+
 ## 4. Handling Common Objections
 
 Interns must memorize these rebuttals:

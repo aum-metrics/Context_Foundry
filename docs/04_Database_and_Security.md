@@ -129,6 +129,15 @@ Firestore does not scan tables (O(n)). It uses massive indexing trees (O(log n))
 
 ### The Fix
 When it fails, the error message in the terminal will include a blue URL. 
-Click that URL. It will take you to the Google Cloud Console and automatically build the exact index you need. It takes about 3 minutes to compile.
+Click that URL to automatically build the exact index. 
+
+### Mandatory Production Indexes (`firestore.indexes.json`)
+You must deploy the composite indexes via `firebase deploy --only firestore:indexes` before going live. The most critical one is the Team Invitation auto-join query:
+
+**Collection**: `users`
+- Field: `email` (Ascending)
+- Field: `status` (Ascending)
+
+Without this index, the backend will fail with a `FailedPrecondition` when users attempt to accept team invites (`/api/workspaces/provision`), causing silent failures in production.
 
 *Proceed to Guide 05: Administrator & Operations Runbook.*
