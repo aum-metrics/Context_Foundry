@@ -62,12 +62,11 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 ### Test Coverage
 
-| Dimension | Current State |
-|-----------|---------------|
-| Unit tests | 61 tests (simulation, ingestion, competitor, audit, RAG math, SSO, org provisioning) |
-| Integration tests | Validated E2E via active Staging deployment endpoints (Real IdP & Webhooks) |
-| End-to-End Specs | Playwright spec covering Dashboard, Auth, and Business Route Mounts (SSO/Admin) via mock-auth |
-| CI | Frontend Next.js Build + Playwright E2E + Backend syntax + pytest suite |
+| Dimension | Scope & Evidence Level |
+|-----------|------------------------|
+| Unit & Integration (Backend) | 61 tests validating LCRS math, DB transactions, and module routing. Verified continuously via GitHub Actions. |
+| UI Smoke Tests (Frontend) | Playwright Next.js build verification, testing DOM mounts and UI routing via auth-bypass. Verified via GitHub Actions. |
+| External E2E (Webhooks/SSO) | Manually gated prior to release (see `PRODUCTION_READINESS.md`). CI explicitly avoids third-party sandbox integration (Razorpay/IdP) to prevent artifact drift. |
 
 ### LCRS Methodology & Proprietary Heuristic
 
