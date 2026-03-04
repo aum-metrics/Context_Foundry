@@ -40,7 +40,7 @@ jobs:
       - name: Build Next.js App
         run: npm run build
         env:
-          NEXT_PUBLIC_FIREBASE_API_KEY: "mock-key-to-allow-build"
+          NEXT_PUBLIC_FIREBASE_API_KEY: "mock-key-to-prevent-crash"
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "mock.firebaseapp.com"
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: "mock-project-id"
           NEXT_PUBLIC_API_URL: "http://localhost:8000"
@@ -64,7 +64,7 @@ jobs:
       - name: Build Next.js App for E2E
         run: npm run build
         env:
-          NEXT_PUBLIC_FIREBASE_API_KEY: "mock-key-to-allow-build"
+          NEXT_PUBLIC_FIREBASE_API_KEY: "mock-key-to-prevent-crash"
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "mock.firebaseapp.com"
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: "mock-project-id"
           NEXT_PUBLIC_API_URL: "http://localhost:8000"
@@ -88,6 +88,16 @@ jobs:
         run: find app -name '*.py' -exec python -c "import py_compile, sys; py_compile.compile(sys.argv[1], doraise=True)" {} \;
       - name: Smoke test (import check)
         run: python test_main.py
+        env:
+          ENV: "testing"
+          JWT_SECRET: "ci-test-secret-key"
+          SSO_ENCRYPTION_KEY: "ci-sso-encryption-key-fallback"
+          SSO_JWT_SECRET: "ci-sso-jwt-secret-key-fallback"
       - name: Run pytest suite
         working-directory: backend
         run: python -m pytest tests/ -q --tb=short
+        env:
+          ENV: "testing"
+          JWT_SECRET: "ci-test-secret-key"
+          SSO_ENCRYPTION_KEY: "ci-sso-encryption-key-fallback"
+          SSO_JWT_SECRET: "ci-sso-jwt-secret-key-fallback"

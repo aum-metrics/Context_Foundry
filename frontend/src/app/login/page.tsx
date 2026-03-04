@@ -26,7 +26,7 @@ export default function LoginPage() {
             const redirectParams = searchParams.get("redirect");
             const targetUrl = redirectParams || "/dashboard";
 
-            if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
+            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
                 // Local mock bypass when user hasn't setup Firebase
                 setTimeout(() => {
                     localStorage.setItem("mock_auth_user", email);

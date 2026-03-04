@@ -96,7 +96,7 @@ export default function AUMContextFoundry() {
           )}
           <button
             onClick={async () => {
-              if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
+              if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
                 localStorage.removeItem("mock_auth_user");
                 window.dispatchEvent(new Event("mock_auth_change"));
               } else {

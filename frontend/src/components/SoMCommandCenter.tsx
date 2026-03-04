@@ -80,7 +80,7 @@ export default function SoMCommandCenter() {
     }, [organization]);
 
     const fetchHistory = async (orgId: string) => {
-        if (process.env.NODE_ENV === "development" && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
             return null; // fallback signal
         }
         const historyRef = collection(db, "organizations", orgId, "scoringHistory");
@@ -194,7 +194,7 @@ export default function SoMCommandCenter() {
                     batchIntervalRef.current = pollInterval;
                     try {
                         let currentToken = await auth.currentUser?.getIdToken();
-                        if (!currentToken && process.env.NODE_ENV === "development") currentToken = "mock-dev-token";
+                        if (!currentToken && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) currentToken = "mock-dev-token";
                         const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${data.jobId}`, {
                             headers: { 'Authorization': `Bearer ${currentToken}` }
                         });

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Logo } from '@/components/Logo';
 import { Shield, Sparkles, Target, Zap } from 'lucide-react';
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export const metadata = {
     title: 'About | AUM Context Foundry',
@@ -10,6 +12,8 @@ export const metadata = {
 export default function AboutPage() {
     return (
         <div className="min-h-screen bg-[#020202] text-white selection:bg-indigo-500/30">
+            <Navbar />
+
             {/* HER0 SECTION */}
             <section className="relative pt-32 pb-20 overflow-hidden">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
@@ -114,6 +118,8 @@ export default function AboutPage() {
                     </div>
                 </div>
             </section>
+
+            <Footer />
         </div>
     );
 }

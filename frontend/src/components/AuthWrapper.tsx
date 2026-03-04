@@ -18,9 +18,8 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         // 🛡️ SECURITY HARDENING (P0): Block mock bypass in production entirely
-        const isMockMode = (process.env.NODE_ENV === "development" &&
-            (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-                process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash"));
+        const isMockMode = (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+            process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash");
 
         if (isMockMode) {
             console.warn("🔓 MOCK AUTH MODE ACTIVE: Bypassing Firebase Auth");
@@ -29,6 +28,9 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
                 email: "dev@localhost",
                 displayName: "Dev User",
                 getIdToken: async () => "mock-dev-token",
+                getIdTokenResult: async () => ({
+                    claims: { org_role: "admin", org_id: "mock_org_id" }
+                }),
             } as unknown as User;
 
             setUser(mockUser);

@@ -10,13 +10,13 @@ test.describe('AUM Context Foundry E2E Tests', () => {
     test('Landing Page - should load and display core messaging', async ({ page }) => {
         // Verify Title and Hero exist
         const heroText = page.locator('h1');
-        await expect(heroText).toContainText('Your Brand', { timeout: 10000 });
-        await expect(heroText).toContainText('Correctly Cited by AI');
+        await expect(heroText).toContainText('Protect', { timeout: 10000 });
+        await expect(heroText).toContainText('AI Search Revenue');
 
         // Verify Logo exists
         const logo = page.locator('text=AUM').first();
         await expect(logo).toBeVisible();
-        await expect(logo).toContainText('CONTEXT');
+        await expect(logo).toContainText('Context');
     });
 
     test('Landing Page - Theme Toggle', async ({ page }) => {
@@ -60,18 +60,18 @@ test.describe('AUM Context Foundry E2E Tests', () => {
         await page.waitForLoadState('domcontentloaded');
 
         // Verify Command Center tab mounts
-        const commandTab = page.locator('button', { hasText: 'Command Center' });
+        const commandTab = page.locator('button', { hasText: 'Dashboard (SoM)' });
         await commandTab.click();
-        await expect(page.locator('text=Share of Mind (SoM) Monitoring')).toBeVisible();
+        await expect(page.locator('text=Platform Health Status')).toBeVisible();
 
-        // Verify Team Settings tab mounts
-        const teamTab = page.locator('button', { hasText: 'Team Settings' });
-        await teamTab.click();
-        await expect(page.locator('text=Manage Members')).toBeVisible();
+        // Verify Manifest tab mounts
+        const manifestTab = page.locator('button', { hasText: 'Agent Manifest' });
+        await manifestTab.click();
+        await expect(page.locator('text=Agent Manifest Generator')).toBeVisible();
 
-        // Verify SSO Strategy tab mounts
-        const ssoTab = page.locator('button', { hasText: 'SSO Strategy' });
-        await ssoTab.click();
-        await expect(page.locator('text=Enterprise SSO Configuration')).toBeVisible();
+        // Verify Simulator tab mounts
+        const simTab = page.locator('button', { hasText: 'Co-Intelligence' });
+        await simTab.click();
+        await expect(page.locator('text=RAG Fidelity Monitoring')).toBeVisible();
     });
 });
