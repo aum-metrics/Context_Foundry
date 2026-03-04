@@ -66,15 +66,23 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 |-----------|---------------|
 | Unit tests | 61 tests (simulation, ingestion, competitor, audit, RAG math, SSO, org provisioning) |
 | Integration tests | Tested end-to-end logically over local emulators |
-| E2E tests | Playwright E2E Spec covering Auth, Dashboard, Routing |
-| CI | Frontend Next.js Build + E2E Playwright + Backend syntax + pytest suite |
+| UI Smoke Tests | Playwright spec covering Dashboard routing via mock-auth bypass |
+| CI | Frontend Next.js Build + Playwright Smoke + Backend syntax + pytest suite |
 
-### Methodology Candor (LCRS)
+### LCRS Methodology & Proprietary Heuristic
 
 The 60/40 blend of claim verification and cosine similarity is:
 - **Reproducible**: Same inputs always produce the same score (temperature=0).
 - **Auditable**: Full formula, weights, and variables are exposed via `/api/methods/`.
-- **Not academically validated**: The 60/40 ratio is an engineering design choice, not derived from published research. There is no ablation study or peer-reviewed paper backing this specific weighting. A sophisticated buyer or their counsel may challenge this. The `methods.py` endpoint and docs are transparent about what it is — a practical scoring heuristic, not a peer-reviewed metric.
+- **Proprietary Enterprise Heuristic**: The 60/40 ratio is a purpose-built B2B risk model tailored for strict corporate liability tracking, isolating factual recall from creative prose. While the mathematical formula is highly auditable for enterprise security reviews, it represents a practical, high-signal engineering heuristic designed to defend corporate brand equity rather than a peer-reviewed academic benchmark.
+
+### Canonical Environment References (The Truth List)
+To avoid environmental drift or placeholder confusion during staging/production rollouts, the absolute production routes are definitively locked as:
+- **Platform Root**: `https://aumcontextfoundry.com`
+- **Frontend App**: `https://app.aumcontextfoundry.com`
+- **Backend API Server**: `https://api.aumcontextfoundry.com`
+- **SSO Callback URI (Identity Providers)**: `https://api.aumcontextfoundry.com/api/sso/callback`
+- **Payment Webhook (Razorpay)**: `https://api.aumcontextfoundry.com/api/payments/webhook`
 
 ---
 
