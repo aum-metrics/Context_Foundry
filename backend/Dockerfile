@@ -10,6 +10,9 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
+# Ensure Python can resolve modules inside the inner /app/app directory
+ENV PYTHONPATH=/app/app
+
 # Install system dependencies required for PyPDF and ML models
 RUN apt-get update && apt-get install -y \
     build-essential \
