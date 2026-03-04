@@ -165,6 +165,6 @@ Do not just hide the button. Show the button, but add a visual lock icon and tri
     </button>
 )}
 ```
-The `<UpgradeModal />` handles the Razorpay/Stripe checkout session automatically via the `useRazorpay()` hook.
+The `<UpgradeModal />` handles the Razorpay checkout session automatically via the `useRazorpay()` hook.
 
 *Proceed to Guide 03: Backend API & Logic Reference.*

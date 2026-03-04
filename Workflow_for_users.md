@@ -10,7 +10,7 @@
 **Result**: Organization provisioned, first simulation ready to run.
 
 ```
-1. Navigate to [YOUR_FRONTEND_URL]
+1. Navigate to https://aumcontextfoundry.com
 2. Click "Sign Up" → Enter business email + password
 3. Verify email (check inbox)
 4. First login triggers auto-provisioning:
@@ -81,7 +81,7 @@
 1. Navigate to "Agent Manifest" in the sidebar
 2. View the auto-generated manifesto content
 3. Copy the shareable URL:
-   [YOUR_FRONTEND_URL]/llms.txt?orgId=your_org_id
+   https://aumcontextfoundry.com/llms.txt?orgId=your_org_id
 4. (Optional) Submit to AI crawler indexing services
 ```
 
@@ -152,7 +152,7 @@ Your manifesto updates automatically whenever you upload a new document.
 2. Copy your aum_... key (shown once at provision time; regenerate if lost)
 3. Make API calls:
 
-   POST [YOUR_BACKEND_URL]/v1/run
+   POST https://api.aumcontextfoundry.com/v1/run
    Authorization: Bearer aum_your_key
    Content-Type: application/json
 

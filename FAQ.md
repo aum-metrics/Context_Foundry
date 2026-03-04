@@ -45,7 +45,7 @@ Only members of your organization (verified by Firestore user lookup). Backend u
 No. AUM provides platform-managed inference keys for all plans. You start running simulations immediately after sign-up with zero configuration. All keys are automatically redacted from API responses to prevent leakage.
 
 **Q: How do I get started?**
-1. Sign up at [[YOUR_FRONTEND_URL]]([YOUR_FRONTEND_URL]).
+1. Sign up at [aumcontextfoundry.com](https://aumcontextfoundry.com).
 2. Upload a PDF document (product spec, FAQ, data sheet).
 3. Run your first simulation by typing a customer question.
 4. Read your LCRS score for each AI model.

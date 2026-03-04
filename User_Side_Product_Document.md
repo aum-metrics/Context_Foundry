@@ -108,7 +108,7 @@ STEP 3: FIX THE GAP
 
 ## Getting Started in 3 Minutes
 
-1. **Sign up** at [[YOUR_FRONTEND_URL]]([YOUR_FRONTEND_URL]) — no credit card required.
+1. **Sign up** at [aumcontextfoundry.com](https://aumcontextfoundry.com) — no credit card required.
 2. **Upload** your product one-pager or FAQ (PDF, < 10MB).
 3. **Run your first simulation** — type a question a customer would ask an AI about you.
 

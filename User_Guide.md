@@ -15,7 +15,7 @@ This guide covers everything you need to get started — from uploading your fir
 ## 1. Getting Started
 
 ### 1.1 Creating Your Account
-1. Go to [[YOUR_FRONTEND_URL]]([YOUR_FRONTEND_URL]).
+1. Go to [aumcontextfoundry.com](https://aumcontextfoundry.com).
 2. Click **Sign Up** and use your business email.
 3. Verify your email address.
 4. Your workspace is automatically created — **no credit card required** to start on the Explorer plan.
@@ -111,7 +111,7 @@ Shows displacement rate and competitive positioning across AI models.
 
 Every AUM account gets a dynamic **Agent Manifesto** — a machine-readable file at:
 ```
-[YOUR_FRONTEND_URL]/llms.txt?orgId=your_org_id
+https://aumcontextfoundry.com/llms.txt?orgId=your_org_id
 ```
 
 This is automatically indexed by AI crawlers (SearchGPT, Perplexity, Claude). It tells them:
@@ -155,7 +155,7 @@ Your **B2B API Key** (format: `aum_...`) is shown on the **API Keys** page. Use 
 
 ### Run a Simulation via API
 ```bash
-curl -X POST [YOUR_BACKEND_URL]/v1/run \
+curl -X POST https://api.aumcontextfoundry.com/v1/run \
   -H "Authorization: Bearer aum_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
