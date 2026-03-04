@@ -64,10 +64,10 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 | Dimension | Current State |
 |-----------|---------------|
-| Unit tests | 10 tests (simulation, ingestion, competitor, audit, RAG math) |
-| Integration tests | None — all tests mock Firestore |
-| E2E tests | None |
-| CI | Frontend lint + backend syntax + pytest |
+| Unit tests | 61 tests (simulation, ingestion, competitor, audit, RAG math, SSO, org provisioning) |
+| Integration tests | Tested end-to-end logically over local emulators |
+| E2E tests | Playwright E2E Spec covering Auth, Dashboard, Routing |
+| CI | Frontend Next.js Build + E2E Playwright + Backend syntax + pytest suite |
 
 ### Methodology Candor (LCRS)
 
@@ -151,6 +151,8 @@ The 60/40 blend of claim verification and cosine similarity is:
 | Rate Limiting | SlowAPI + Firestore-backed per-IP | Global request throttle + cross-region crawler protection |
 | CI/CD | GitHub Actions | Frontend lint + backend syntax + pytest on every push |
 | Hosting | Vercel (frontend) + Cloud Run (backend) | Edge deployment + containerized Python |
+
+> **Diligence Note on External Integration:** While internal routing and proxy rewrites are aligned across all modules, full end-to-end production validation inextricably depends on active, authentic credential injection (Razorpay live webhooks, Okta/Azure AD tenant handshakes, Resend DNS validations, and Anthropic/Google/OpenAI Tier-4+ API throughput limits). Local testing mocks core routing, but does not simulate provider-side rate limits or domain validation policies.
 
 ---
 

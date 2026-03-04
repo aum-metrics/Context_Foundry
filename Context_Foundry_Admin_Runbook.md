@@ -106,7 +106,7 @@ The tenant IT admin must provide:
 ### How-To: Configure SSO for a Tenant
 1. User navigates to **Settings -> Security & SSO**.
 2. Submits the credentials. CF encrypts the `Client Secret` using `SSO_ENCRYPTION_KEY` via Fernet AES-128 before saving to `sso_configs/{orgId}`.
-3. **Callback URI:** The IT Admin MUST whitelist `https://api.aumcontextfoundry.com/v1/sso/callback` in their IdP (Okta/Azure).
+3. **Callback URI:** The IT Admin MUST whitelist `https://api.aumcontextfoundry.com/api/sso/callback` in their IdP (Okta/Azure).
 
 ---
 
