@@ -45,7 +45,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <footer className="pt-12 border-t border-slate-200 dark:border-white/5">
-                    <p className="text-sm text-slate-500">Contact legal@AUMDataLabs.com for inquiries.</p>
+                    <p className="text-sm text-slate-500">Contact legal@aumcontextfoundry.com for inquiries.</p>
                 </footer>
             </main>
         </div>

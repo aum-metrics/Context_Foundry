@@ -255,7 +255,7 @@ async def generate_payment_link(request: PaymentLinkRequest, auth: dict = Depend
             "notes": {
                 "orgId": request.orgId,
             },
-            "callback_url": os.getenv("PAYMENT_CALLBACK_URL", "https://app.aumdatalabs.com/payment/success"),
+            "callback_url": os.getenv("PAYMENT_CALLBACK_URL", "https://app.aumcontextfoundry.com/payment/success"),
             "callback_method": "get",
         })
 

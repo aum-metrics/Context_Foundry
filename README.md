@@ -332,7 +332,7 @@ You also need:
 | `RAZORPAY_WEBHOOK_SECRET` | No | None | Webhook signature verification. Missing → webhooks rejected (fail-closed). |
 | `FIREBASE_SERVICE_ACCOUNT_PATH` | No | None | Path to Firebase Admin SDK JSON. Alternative: set `GOOGLE_APPLICATION_CREDENTIALS`. |
 | `FRONTEND_URL` | No | `http://localhost:3000` | Used for generating invite URLs in emails. |
-| `PAYMENT_CALLBACK_URL` | No | `https://app.aumdatalabs.com/payment/success` | Razorpay payment callback redirect. |
+| `PAYMENT_CALLBACK_URL` | No | `https://app.aumcontextfoundry.com/payment/success` | Razorpay payment callback redirect. |
 | `SUPABASE_URL` | No | None | Optional Supabase integration. |
 | `SUPABASE_KEY` | No | None | Optional Supabase integration. |
 
@@ -348,7 +348,7 @@ You also need:
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Yes | Firebase storage bucket |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase messaging sender ID |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Yes | Firebase app ID |
-| `NEXT_PUBLIC_API_BASE_URL` | Yes | Backend URL (e.g. `http://127.0.0.1:8000` for dev, `https://api.aumdatalabs.com` for prod) |
+| `NEXT_PUBLIC_API_BASE_URL` | Yes | Backend URL (e.g. `http://127.0.0.1:8000` for dev, `https://api.aumcontextfoundry.com` for prod) |
 | `NEXT_PUBLIC_API_URL` | No | Fallback for `NEXT_PUBLIC_API_BASE_URL` |
 
 ---

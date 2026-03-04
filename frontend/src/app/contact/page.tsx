@@ -74,8 +74,8 @@ export default function ContactPage() {
                             </div>
                             <div>
                                 <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 mb-2">Email</h3>
-                                <a href="mailto:hello@AUMDataLabs.com" className="text-xl font-medium hover:text-indigo-600 transition-colors">
-                                    hello@AUMDataLabs.com
+                                <a href="mailto:hello@aumcontextfoundry.com" className="text-xl font-medium hover:text-indigo-600 transition-colors">
+                                    hello@aumcontextfoundry.com
                                 </a>
                             </div>
                         </div>

@@ -131,7 +131,7 @@ async def generate_api_key_endpoint(
                 detail={
                     "error": "API keys are only available for Growth, Scale, and Enterprise subscribers",
                     "message": "Upgrade to a Professional or Enterprise plan to generate API keys. Available tiers: explorer, growth, scale, enterprise",
-                    "upgrade_url": "https://aumdatalabs.com/pricing"
+                    "upgrade_url": "https://aumcontextfoundry.com/pricing"
                 }
             )
         

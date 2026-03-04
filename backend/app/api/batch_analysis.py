@@ -20,7 +20,7 @@ from api.simulation import run_simulation, SimulationRequest
 from fastapi import BackgroundTasks
 
 async def evaluate_simulation(req: SimulationRequest):
-    return await run_simulation(req, BackgroundTasks(), {"uid": "batch_worker", "orgId": req.orgId, "email": "batch@aumdatalabs.com"})
+    return await run_simulation(req, BackgroundTasks(), {"uid": "batch_worker", "orgId": req.orgId, "email": "batch@aumcontextfoundry.com"})
 from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
 

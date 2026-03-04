@@ -10,7 +10,7 @@ export default function Footer() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
                 <div className="max-w-xs">
                     <Link href="/" className="inline-block mb-6">
-                        <Logo size={28} showText={true} theme="auto" />
+                        <Logo size={28} showText={true} theme="dark" />
                     </Link>
                     <p className="text-sm text-gray-500 leading-relaxed">
                         The "Smoke Detector" for narrative drift. Ensuring enterprise brand fidelity in the agentic era.
@@ -37,7 +37,7 @@ export default function Footer() {
                 </div>
             </div>
             <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex justify-between items-center">
-                <p className="text-xs text-gray-600">© 2026 AUM Data Labs Inc. All rights reserved.</p>
+                <p className="text-xs text-gray-600">© 2026 AUM CONTEXT FOUNDRY. All rights reserved.</p>
                 <div className="flex space-x-6">
                     <Link href="/privacy" className="text-xs text-gray-600 hover:text-white">Privacy Policy</Link>
                     <Link href="/terms" className="text-xs text-gray-600 hover:text-white">Terms of Service</Link>
