@@ -1,0 +1,35 @@
+AUM Context Foundry - One-Page Summary
+
+What it is
+AUM Context Foundry is an enterprise platform for measuring and improving how AI engines represent a company's facts. It ingests source-of-truth content, runs multi-model simulations, scores responses with LCRS, and publishes tenant-specific llms.txt manifests.
+
+Who it's for
+Primary persona: Enterprise GTM, product, and ops leaders who need AI answer quality control, brand-safe factual consistency, and auditability across AI channels.
+
+What it does
+- Ingests documents through a zero-retention semantic pipeline.
+- Simulates prompts across GPT, Claude, and Gemini via /api/simulation.
+- Scores responses with the LCRS methodology exposed at /api/methods.
+- Generates tenant manifests and serves dynamic /llms.txt output with rate limiting.
+- Manages organizations, members, invites, and workspace profiles.
+- Supports enterprise SSO configuration and callback handling.
+- Handles subscription payments and webhook verification via Razorpay.
+
+How it works (repo-based architecture)
+- Frontend: Next.js 15 App Router UI (dashboard, admin dashboard, login, methods, status).
+- API edge: Next.js rewrites proxy /api/* calls to FastAPI; Next API routes handle admin session flows.
+- Backend: FastAPI routers for simulation, ingestion, workspaces, payments, sso, admin, seo, chatbot, competitor, batch, audit, cron.
+- Data and auth: Firebase Auth for user identity and Firestore for organizations, manifests, scoring history, invites, API keys, jobs, rate limits, audit logs, and SSO configs.
+- Control flow: User action in frontend -> proxied backend API -> Firestore/LLM provider operations -> result returned to UI and persisted to tenant data.
+
+How to run (minimal)
+1. Backend: cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt.
+2. Create backend .env with ENV=development, ALLOW_MOCK_AUTH=True, JWT_SECRET, SSO_ENCRYPTION_KEY.
+3. Start backend: PYTHONPATH=app python3 app/main.py.
+4. Frontend: cd frontend && npm install.
+5. Create frontend .env.local with NEXT_PUBLIC_API_BASE_URL and Firebase public vars.
+6. Start frontend: npm run dev.
+7. Verify: open http://localhost:3000 and http://localhost:8000/api/docs.
+
+Notes
+- External E2E provider credentials and live webhook/IdP evidence: Not found in repo artifacts.
