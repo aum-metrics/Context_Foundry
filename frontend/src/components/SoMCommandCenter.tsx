@@ -36,7 +36,7 @@ interface SEOResult {
     recommendation: string;
 }
 
-export default function SoMCommandCenter() {
+export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (view: string) => void }) {
     const { organization } = useOrganization();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
     const [batchLoading, setBatchLoading] = useState(false);
@@ -471,7 +471,7 @@ export default function SoMCommandCenter() {
                                 </div>
                                 <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No Simulations Yet</h3>
                                 <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">Run your first comparison in the Simulator to unlock multi-model accuracy tracking over time.</p>
-                                <Link href="/" className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors shadow-lg shadow-indigo-500/20">Go to Simulator</Link>
+                                <button onClick={() => setActiveView && setActiveView("simulator")} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors shadow-lg shadow-indigo-500/20">Go to Simulator</button>
                             </motion.div>
                         ) : (
                             <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-[250px] sm:h-[300px] lg:h-[350px] w-full">

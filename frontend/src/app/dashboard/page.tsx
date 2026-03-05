@@ -117,7 +117,7 @@ export default function AUMContextFoundry() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none -translate-y-20"></div>
-        {activeView === "som" && <SoMCommandCenter />}
+        {activeView === "som" && <SoMCommandCenter setActiveView={setActiveView} />}
         {activeView === "ingestion" && <SemanticIngestion />}
         {activeView === "manifest" && <AgentManifest />}
         {activeView === "simulator" && <CoIntelligenceSimulator />}
