@@ -294,18 +294,10 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         }
     };
 
-    // Live sync for Historical Fidelity Chart instead of mocks
     useEffect(() => {
         if (!historyEntries || historyEntries.length === 0) {
-            setHistoricalData([
-                { date: '2/24', score: 82 },
-                { date: '2/25', score: 85 },
-                { date: '2/26', score: 84 },
-                { date: '2/27', score: 89 },
-                { date: '2/28', score: 91 },
-                { date: '3/01', score: 93 },
-                { date: '3/02', score: 94 },
-            ]);
+            // No real data yet — show empty state, not fake numbers
+            setHistoricalData([]);
             return;
         }
 
@@ -523,23 +515,31 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions.</p>
                     </div>
 
-                    {/* NEW: Historical Fidelity Trend Chart */}
+                    {/* NEW: Historical Narrative Fidelity Trend Chart */}
                     <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl">
                         <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
                             <TrendingUp className="w-4 h-4 mr-2 text-indigo-500" />
                             Historical Narrative Fidelity
                         </h2>
-                        <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={historicalData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                    <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} domain={[70, 100]} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} />
-                                    <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6, fill: '#818cf8', stroke: '#fff', strokeWidth: 2 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {historicalData.length === 0 ? (
+                            <div className="h-[250px] flex flex-col items-center justify-center text-center">
+                                <TrendingUp className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-3" />
+                                <p className="text-sm text-slate-500 dark:text-slate-400">No trend data yet.</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Run simulations to build your fidelity history.</p>
+                            </div>
+                        ) : (
+                            <div className="h-[250px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={historicalData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} domain={[70, 100]} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} />
+                                        <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6, fill: '#818cf8', stroke: '#fff', strokeWidth: 2 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
                     </div>
 
                     {/* SEO/GEO Audit Panel */}
@@ -548,7 +548,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                             <Globe className="w-4 h-4 mr-2 text-emerald-500" />
                             SEO + GEO Readiness Audit
                         </h2>
-                        {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "explorer") ? (
+                        {["growth", "scale"].includes(organization?.subscriptionTier || "explorer") ? (
                             <div className="flex space-x-3 mb-4">
                                 <input
                                     type="url"
@@ -569,7 +569,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         ) : (
                             <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
                                 <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO & GEO Audits require a Growth, Scale, or Enterprise plan.</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO &amp; GEO Audits require a Growth or Scale plan.</p>
                                 <button
                                     onClick={() => {
                                         setUpgradeFeatureName("SEO & GEO Readiness Audits");
@@ -629,14 +629,18 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                     <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                                         <motion.div
                                             initial={{ width: 0 }}
-                                            animate={{ width: `${comp.displacementRate * 4}%` }}
+                                            animate={{ width: `${Math.min(comp.displacementRate * 4, 100)}%` }}
                                             className="h-full bg-rose-500"
                                         />
                                     </div>
                                     <p className="text-[10px] text-slate-500">Key Displacement: {comp.strengths[0]}</p>
                                 </div>
                             )) : (
-                                <p className="text-xs text-slate-500 text-center py-4">Analyzing market presence...</p>
+                                <div className="flex flex-col items-center text-center py-6 space-y-2">
+                                    <ArrowUpRight className="w-6 h-6 text-slate-300 dark:text-slate-700" />
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">No competitor data yet.</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500">Upload a document in Data Ingestion to enable live competitor analysis grounded in your business context.</p>
+                                </div>
                             )}
                         </div>
                     </div>

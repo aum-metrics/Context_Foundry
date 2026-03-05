@@ -68,21 +68,54 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
 
     if not api_key:
         if is_dev:
-            return {"competitors": [
-                {"name": "Competitor Alpha (Simulated)", "displacementRate": 12.4, "strengths": ["Pricing", "API Docs"], "weaknesses": ["Security Claims"]},
-                {"name": "Competitor Beta (Simulated)", "displacementRate": 8.2, "strengths": ["Market Presence"], "weaknesses": ["Technical Accuracy"]},
-                {"name": "Competitor Gamma (Simulated)", "displacementRate": 4.1, "strengths": ["Legacy Reputation"], "weaknesses": ["Agentic Readiness"]}
-            ]}
+            # No manifest yet — return empty rather than fake data
+            return {"competitors": []}
         raise HTTPException(status_code=402, detail="OpenAI API key missing for this organization")
+
+    # --- FETCH MANIFEST FOR CONTEXT GROUNDING ---
+    manifest_content = ""
+    if db:
+        try:
+            manifests = db.collection("organizations").document(org_id) \
+                          .collection("manifests") \
+                          .order_by("createdAt", direction="DESCENDING") \
+                          .limit(1).stream()
+            latest = next(manifests, None)
+            if latest:
+                doc_data = latest.to_dict() or {}
+                # Use the llms.txt markdown content as the grounding context
+                manifest_content = doc_data.get("content", "")
+                if not manifest_content:
+                    # Fallback: serialize schemaData
+                    schema = doc_data.get("schemaData", {})
+                    if schema:
+                        manifest_content = json.dumps(schema)
+        except Exception as e:
+            logger.warning(f"Could not fetch manifest for competitor context: {e}")
+
+    # If no manifest has been uploaded yet, return empty — don't hallucinate
+    if not manifest_content:
+        return {"competitors": []}
         
     try:
         client = OpenAI(api_key=api_key)
         prompt = f"""You are analyzing AI recommendation engines (like ChatGPT and Perplexity).
-What are the top 3 competitors to '{org_name}' that an AI would likely recommend instead? If '{org_name}' is generic, use general SaaS competitors.
+
+The company is called '{org_name}'. Based on their actual business context below, identify the top 3 real, specific competitors that an AI engine would likely recommend INSTEAD of '{org_name}' when users search for similar products or services.
+
+<BusinessContext>
+{manifest_content[:4000]}
+</BusinessContext>
+
+Rules:
+- Only name REAL companies that operate in the SAME specific industry shown by the context above.
+- Do NOT invent placeholders or use generic AI/SaaS tools unless the company is actually in that space.
+- Base displacement rates on realistic market share data for that specific industry.
+
 Provide a JSON response with a 'competitors' array. Each item MUST have:
-- 'name': competitor name
-- 'displacementRate': estimated percentage (0.0 to 15.0) of times they are recommended over {org_name}
-- 'strengths': array of 1-2 words explaining their advantage (e.g. ['Pricing', 'API'])
+- 'name': real competitor company name
+- 'displacementRate': estimated percentage (0.0 to 25.0) of times they are recommended over {org_name}
+- 'strengths': array of 1-2 words explaining their advantage (e.g. ['Pricing', 'Scale'])
 - 'weaknesses': array of 1-2 words explaining their weakness
 
 Return ONLY valid JSON."""
@@ -100,6 +133,4 @@ Return ONLY valid JSON."""
         
     except Exception as e:
         logger.error(f"Competitor displacement generation failed: {e}")
-        return {"competitors": [
-            {"name": "Generation Failed", "displacementRate": 0.0, "strengths": ["API Error"], "weaknesses": [str(e)[:15]]}
-        ]}
+        return {"competitors": []}
