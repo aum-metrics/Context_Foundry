@@ -58,23 +58,25 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         if "uid" in decoded_token and "id" not in decoded_token:
             decoded_token["id"] = decoded_token["uid"]
         return decoded_token
-    except auth.ExpiredIdTokenError:
+    except auth.ExpiredIdTokenError as e:
+        logger.error(f"Auth Signature Failure (Expired): {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except auth.InvalidIdTokenError:
+    except auth.InvalidIdTokenError as e:
+        logger.error(f"Auth Signature Failure (Invalid Token - First 15 chars: {token[:15]}...): {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token signature",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
-        logger.error(f"Authentication failure: {e}")
+        logger.error(f"Authentication failure (Unknown - First 15 chars: {token[:15]}...): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during authentication check",
+            detail=f"Internal server error during authentication check: {str(e)}",
         )
 
 def verify_user_org_access(uid: str, target_org_id: str) -> bool:
