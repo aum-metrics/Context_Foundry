@@ -52,7 +52,7 @@ export default function LegalPage() {
 
                         <div>
                             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">4. Free Tier Limits</h3>
-                            <p>The free Explorer Tier is limited to one (1) active user seat per organization and three (3) LCRS simulations per month. Upgrading to a paid commercial tier (Growth or Scale) is required to add more collaborative seats, API access, and higher compute limits.</p>
+                            <p>The free Explorer Tier is limited to one (1) simulation run and one (1) document ingestion total, with no team seats available. Upgrading to a paid commercial tier (Growth or Scale) is required to add team seats, unlimited document ingestion, and higher compute limits.</p>
                         </div>
 
                         <div>
