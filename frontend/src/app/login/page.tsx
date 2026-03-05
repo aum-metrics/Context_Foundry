@@ -14,6 +14,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSignUp, setIsSignUp] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -106,9 +107,28 @@ export default function LoginPage() {
                         </div>
                     </div>
 
+                    {isSignUp && (
+                        <div className="flex items-start gap-3 pt-1">
+                            <input
+                                id="terms-checkbox"
+                                type="checkbox"
+                                checked={termsAccepted}
+                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+                            />
+                            <label htmlFor="terms-checkbox" className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed cursor-pointer">
+                                I agree to the{" "}
+                                <a href="/legal" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:text-indigo-400 underline underline-offset-2">
+                                    Terms & Conditions
+                                </a>
+                                {" "}and Usage Policy.
+                            </label>
+                        </div>
+                    )}
+
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || (isSignUp && !termsAccepted)}
                         className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 flex justify-center items-center shadow-lg shadow-indigo-600/20"
                     >
                         {loading ? (
@@ -187,7 +207,7 @@ export default function LoginPage() {
 
                 <div className="mt-6 text-center">
                     <button
-                        onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+                        onClick={() => { setIsSignUp(!isSignUp); setError(null); setTermsAccepted(false); }}
                         className="text-sm text-indigo-500 hover:text-indigo-400 transition-colors"
                     >
                         {isSignUp ? "Already have an account? Sign In" : "New here? Create an Account"}

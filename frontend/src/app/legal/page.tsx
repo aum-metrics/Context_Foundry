@@ -1,4 +1,6 @@
 import { FileText, Shield, CreditCard, Box } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export const metadata = {
     title: "Legal & Policies | AUM Context Foundry",
@@ -8,6 +10,7 @@ export const metadata = {
 export default function LegalPage() {
     return (
         <div className="min-h-screen bg-white dark:bg-[#050505] selection:bg-cyan-500/30 font-sans">
+            <Navbar />
             {/* Minimalist Hero */}
             <div className="pt-32 pb-20 px-6 sm:px-12 lg:px-24 max-w-7xl mx-auto border-b border-slate-200 dark:border-white/5">
                 <div className="flex items-center text-cyan-500 font-semibold tracking-wider uppercase text-sm mb-6">
@@ -119,6 +122,7 @@ export default function LegalPage() {
                     Contact Legal Team
                 </a>
             </div>
+            <Footer />
         </div>
     );
 }
