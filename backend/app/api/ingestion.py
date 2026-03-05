@@ -168,7 +168,13 @@ async def parse_document(
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
             
-        prompt = f"Extract structured JSON-LD mapping from document. Keep it context-agnostic (e.g., Core Entities, Key Claims, Methodologies if academic; Products, Pricing if commercial).\\n\\n<Doc>\\n{doc_sample}\\n</Doc>"
+        prompt = (
+            "You are a semantic extraction engine. Extract a structured JSON-LD schema from the document below. "
+            "Be strictly faithful to the document content — do NOT invent, hallucinate, or use placeholder data.\n"
+            "The schema type and fields must reflect the actual document: use 'ScholarlyArticle' or 'SoftwareApplication' for research/tech PDFs, not 'ProductCatalog'.\n"
+            "Only include entities, claims, and attributes that are explicitly stated in the document.\n\n"
+            f"<Doc>\n{doc_sample}\n</Doc>"
+        )
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="gpt-4o-mini",
@@ -178,7 +184,13 @@ async def parse_document(
         schema_vector = client.embeddings.create(input=[json.dumps(schema_data)], model="text-embedding-3-small").data[0].embedding
         
         # Markdown Manifest Generation (llms.txt)
-        manifest_prompt = f"Generate a concise, authoritative 'llms.txt' markdown protocol manifest based purely on this document. Focus on Core Identity, Technical Setup or Methodologies, and Key Claims. Start with '# [Entity/Document Name] - AI Protocol Manifest'. Do NOT hallucinate information.\\n\\n<Doc>\\n{doc_sample}\\n</Doc>"
+        manifest_prompt = (
+            "Generate a concise, authoritative 'llms.txt' markdown protocol manifest based PURELY on the document below.\n"
+            "Focus only on what the document explicitly states: Core Identity, Methodology, Key Findings or Claims.\n"
+            "Start with '# [Entity/Document Name] - AI Protocol Manifest'.\n"
+            "DO NOT hallucinate, invent, or include any information not present in the document.\n\n"
+            f"<Doc>\n{doc_sample}\n</Doc>"
+        )
         manifest_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": manifest_prompt}],
             model="gpt-4o-mini"
