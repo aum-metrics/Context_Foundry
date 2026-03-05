@@ -53,22 +53,64 @@ export default function CoIntelligenceSimulator() {
 
     useEffect(() => {
         if (!organization) return;
-        setDynamicPrompts([
-            `What is the core offering of ${organization.name}?`,
-            `What is the pricing model for ${organization.name}?`,
-            `Does ${organization.name} offer API integration?`,
-            `Compare ${organization.name} against competitors.`
-        ]);
-        setActivePrompt(`What is the core offering of ${organization.name}?`);
 
         const fetchData = async () => {
             try {
                 const orgRef = doc(db, "organizations", organization.id);
                 const manifestDoc = await getDoc(doc(orgRef, "manifests", "latest"));
+
                 if (manifestDoc.exists() && manifestDoc.data().content) {
+                    const manifestContent: string = manifestDoc.data().content || "";
                     setManifestVersions([{ id: "latest", name: "Current Context" }, { id: "v1_baseline", name: "V1 Baseline (Earlier)" }]);
+
+                    // Generate context-aware prompts from the manifest
+                    const token = await auth.currentUser?.getIdToken();
+                    if (token) {
+                        try {
+                            const res = await fetch("/api/simulation/suggest-prompts", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                                body: JSON.stringify({ orgId: organization.id, manifestSnippet: manifestContent.slice(0, 2000) }),
+                            });
+                            if (res.ok) {
+                                const d = await res.json();
+                                if (d.prompts && d.prompts.length > 0) {
+                                    setDynamicPrompts(d.prompts);
+                                    setActivePrompt(d.prompts[0]);
+                                    return;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Prompt suggestion API failed, using manifest-derived fallback:", e);
+                        }
+                    }
+
+                    // Fallback: derive prompts from manifest headings/content
+                    const lines = manifestContent.split("\n").filter((l: string) => l.trim().startsWith("##") || l.trim().startsWith("-")).slice(0, 8);
+                    const topics = lines.map((l: string) => l.replace(/^#+\s*/, "").replace(/^-\s*/, "").trim()).filter((l: string) => l.length > 5).slice(0, 3);
+                    const fallbackPrompts = topics.length >= 2 ? [
+                        `What is ${organization.name}'s core business and key offerings?`,
+                        `What does the document say about ${topics[0]}?`,
+                        topics.length > 1 ? `How does ${organization.name} approach ${topics[1]}?` : `What are ${organization.name}'s main differentiators?`,
+                        `Compare ${organization.name} against its main competitors.`
+                    ] : [
+                        `What is ${organization.name}'s core business and key offerings?`,
+                        `What are the key facts and figures in this document?`,
+                        `What are ${organization.name}'s main strengths according to this document?`,
+                        `Compare ${organization.name} against its main competitors.`
+                    ];
+                    setDynamicPrompts(fallbackPrompts);
+                    setActivePrompt(fallbackPrompts[0]);
                 } else {
                     setManifestVersions([{ id: "latest", name: "Current Context" }]);
+                    // No manifest yet — show generic but sensible prompts
+                    setDynamicPrompts([
+                        `What is ${organization.name}'s core business?`,
+                        `What are ${organization.name}'s key products or services?`,
+                        `What are ${organization.name}'s main strengths?`,
+                        `Compare ${organization.name} against its main competitors.`
+                    ]);
+                    setActivePrompt(`What is ${organization.name}'s core business?`);
                 }
             } catch (e) {
                 console.error("Manifest fetch error:", e);

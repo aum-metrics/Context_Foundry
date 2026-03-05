@@ -9,9 +9,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2 } from "lucide-react";
+import { FileText, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2, RefreshCw } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
+import { db } from "@/lib/firestorePaths";
+import { doc, getDoc } from "firebase/firestore";
 
 const VectorCloud = () => {
     return (
@@ -72,7 +74,24 @@ export default function SemanticIngestion() {
     const [logs, setLogs] = useState<string[]>([]);
 
     useEffect(() => {
-        // Semantic Ingestion logic initialization
+        if (!organization?.id) return;
+        // Load existing manifest from Firestore so JSON-LD persists across navigation
+        const loadExistingManifest = async () => {
+            try {
+                const manifestDoc = await getDoc(doc(db, "organizations", organization.id, "manifests", "latest"));
+                if (manifestDoc.exists()) {
+                    const data = manifestDoc.data();
+                    if (data.schemaData || data.rawText) {
+                        setSchemaData(JSON.stringify(data.schemaData || {}, null, 2));
+                        setRawText(data.rawText || "");
+                        setStep("editor");
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not load existing manifest:", e);
+            }
+        };
+        loadExistingManifest();
     }, [organization]);
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -301,9 +320,17 @@ export default function SemanticIngestion() {
                                     <h3 className="text-sm font-medium text-white flex items-center">
                                         <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-400" /> Verified JSON-LD Schema
                                     </h3>
-                                    <button className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1.5 rounded-md transition-colors font-medium border border-emerald-500/20">
-                                        Approve & Deploy
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => { setStep("upload"); setSchemaData(null); setRawText(null); }}
+                                            className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-md transition-colors font-medium border border-slate-600 flex items-center gap-1.5"
+                                        >
+                                            <RefreshCw className="w-3 h-3" /> Re-upload
+                                        </button>
+                                        <button className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1.5 rounded-md transition-colors font-medium border border-emerald-500/20">
+                                            Approve &amp; Deploy
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="p-5 flex-1 overflow-y-auto font-mono text-xs md:text-sm bg-slate-950 text-slate-300">
                                     <pre className="text-blue-300">

@@ -413,6 +413,86 @@ async def _store_simulation_results(org_id: str, prompt: str, manifest_version: 
         logger.error(f"Failed to store background simulation data: {e}")
 
 
+
+class SuggestPromptsRequest(BaseModel):
+    orgId: str
+    manifestSnippet: Optional[str] = None
+
+@router.post("/suggest-prompts")
+async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(get_auth_context)):
+    """
+    Generates 4 context-aware simulation test prompts grounded in the org's manifest.
+    """
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], request.orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized")
+    else:
+        if auth.get("orgId") != request.orgId:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    org_name = "the company"
+    manifest_content = request.manifestSnippet or ""
+
+    if db:
+        try:
+            org_doc = db.collection("organizations").document(request.orgId).get()
+            if org_doc.exists:
+                org_data = org_doc.to_dict() or {}
+                org_name = org_data.get("name", org_name)
+                key = org_data.get("apiKeys", {}).get("openai", None)
+                if key and key != "internal_platform_managed":
+                    api_key = key
+                elif key == "internal_platform_managed":
+                    api_key = os.getenv("OPENAI_API_KEY")
+
+            if not manifest_content:
+                manifest_doc = db.collection("organizations").document(request.orgId) \
+                                 .collection("manifests").document("latest").get()
+                if manifest_doc.exists:
+                    manifest_content = (manifest_doc.to_dict() or {}).get("content", "")[:2000]
+        except Exception as e:
+            logger.warning(f"Could not fetch org data for suggest-prompts: {e}")
+
+    # Fallback prompts if no LLM key or no manifest
+    fallback = [
+        f"What is {org_name}'s core business and key offerings?",
+        f"What are the key facts and figures in this document?",
+        f"What are {org_name}'s main strengths according to this document?",
+        f"Compare {org_name} against its main competitors.",
+    ]
+
+    if not api_key or not manifest_content:
+        return {"prompts": fallback}
+
+    try:
+        client = OpenAI(api_key=api_key)
+        prompt = f"""You are helping test how well AI models know the company '{org_name}'.
+Based on the following business context, generate exactly 4 specific, factual test questions that would be relevant to ask an AI about this company's actual business. These should NOT be generic SaaS questions.
+
+<Context>
+{manifest_content[:2000]}
+</Context>
+
+Rules:
+- Each question should probe a specific, real aspect of this company based only on what's in the context above.
+- Do NOT ask about pricing, API integration, or software features unless those are clearly in the context.
+- Return ONLY a JSON object: {{"prompts": ["question1", "question2", "question3", "question4"]}}"""
+
+        completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            temperature=0.3
+        )
+        result = json.loads(completion.choices[0].message.content)
+        prompts = result.get("prompts", fallback)
+        return {"prompts": prompts[:4]}
+    except Exception as e:
+        logger.warning(f"Suggest-prompts LLM call failed: {e}")
+        return {"prompts": fallback}
+
+
 @router.post("/run")
 async def run_simulation(request: SimulationRequest, background_tasks: BackgroundTasks, auth: dict = Depends(get_auth_context)):
     """
