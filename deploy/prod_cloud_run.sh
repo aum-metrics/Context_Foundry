@@ -166,7 +166,7 @@ if [[ "${ALLOW_UNAUTHENTICATED}" != "true" ]]; then
 fi
 
 # Use custom delimiter to safely pass JSON arrays in env vars.
-ENV_VARS="^@@^ENV=production@@ALLOW_MOCK_AUTH=false@@FRONTEND_URL=https://${APP_DOMAIN}@@PAYMENT_CALLBACK_URL=https://${APP_DOMAIN}/payment/success@@CORS_ORIGINS=[\"https://${APP_DOMAIN}\",\"https://${API_DOMAIN}\"]@@TRUSTED_HOSTS=[\"${API_DOMAIN}\",\"${APP_DOMAIN}\",\"localhost\",\"127.0.0.1\"]"
+ENV_VARS="^@@^ENV=production@@ALLOW_MOCK_AUTH=false@@FRONTEND_URL=https://${APP_DOMAIN}@@PAYMENT_CALLBACK_URL=https://${APP_DOMAIN}/payment/success@@CORS_ORIGINS=[\"https://${APP_DOMAIN}\",\"https://${API_DOMAIN}\"]@@TRUSTED_HOSTS=[\"${API_DOMAIN}\",\"${APP_DOMAIN}\",\"localhost\",\"127.0.0.1\"]@@FIREBASE_SERVICE_ACCOUNT_PATH=/secrets/firebase/google-credentials.json"
 
 OPTIONAL_SECRETS=""
 if gcloud secrets describe "${SECRET_RAZORPAY_WEBHOOK_SECRET}" >/dev/null 2>&1; then
@@ -179,7 +179,7 @@ if gcloud secrets describe "${SECRET_RESEND_API_KEY}" >/dev/null 2>&1; then
   OPTIONAL_SECRETS+=",RESEND_API_KEY=${SECRET_RESEND_API_KEY}:latest"
 fi
 
-SET_SECRETS="JWT_SECRET=${SECRET_JWT_SECRET}:latest,SSO_ENCRYPTION_KEY=${SECRET_SSO_ENCRYPTION_KEY}:latest,SSO_JWT_SECRET=${SECRET_SSO_JWT_SECRET}:latest,OPENAI_API_KEY=${SECRET_OPENAI_API_KEY}:latest,GEMINI_API_KEY=${SECRET_GEMINI_API_KEY}:latest,ANTHROPIC_API_KEY=${SECRET_ANTHROPIC_API_KEY}:latest,RAZORPAY_KEY_ID=${SECRET_RAZORPAY_KEY_ID}:latest,RAZORPAY_KEY_SECRET=${SECRET_RAZORPAY_KEY_SECRET}:latest${OPTIONAL_SECRETS}"
+SET_SECRETS="JWT_SECRET=${SECRET_JWT_SECRET}:latest,SSO_ENCRYPTION_KEY=${SECRET_SSO_ENCRYPTION_KEY}:latest,SSO_JWT_SECRET=${SECRET_SSO_JWT_SECRET}:latest,OPENAI_API_KEY=${SECRET_OPENAI_API_KEY}:latest,GEMINI_API_KEY=${SECRET_GEMINI_API_KEY}:latest,ANTHROPIC_API_KEY=${SECRET_ANTHROPIC_API_KEY}:latest,RAZORPAY_KEY_ID=${SECRET_RAZORPAY_KEY_ID}:latest,RAZORPAY_KEY_SECRET=${SECRET_RAZORPAY_KEY_SECRET}:latest,/secrets/firebase/google-credentials.json=firebase-admin-sdk-json:latest${OPTIONAL_SECRETS}"
 
 echo "==> Deploying Cloud Run service"
 gcloud run deploy "${SERVICE_NAME}" \

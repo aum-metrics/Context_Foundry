@@ -168,7 +168,7 @@ async def parse_document(
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
             
-        prompt = f"Extract structured JSON-LD mapping from document... Focus on Organizations, Products, Pricing, Capabilities.\n\n<Doc>\n{doc_sample}\n</Doc>"
+        prompt = f"Extract structured JSON-LD mapping from document. Keep it context-agnostic (e.g., Core Entities, Key Claims, Methodologies if academic; Products, Pricing if commercial).\\n\\n<Doc>\\n{doc_sample}\\n</Doc>"
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="gpt-4o-mini",
@@ -177,6 +177,14 @@ async def parse_document(
         schema_data = json.loads(completion.choices[0].message.content)
         schema_vector = client.embeddings.create(input=[json.dumps(schema_data)], model="text-embedding-3-small").data[0].embedding
         
+        # Markdown Manifest Generation (llms.txt)
+        manifest_prompt = f"Generate a concise, authoritative 'llms.txt' markdown protocol manifest based purely on this document. Focus on Core Identity, Technical Setup or Methodologies, and Key Claims. Start with '# [Entity/Document Name] - AI Protocol Manifest'. Do NOT hallucinate information.\\n\\n<Doc>\\n{doc_sample}\\n</Doc>"
+        manifest_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": manifest_prompt}],
+            model="gpt-4o-mini"
+        )
+        llms_txt_content = manifest_completion.choices[0].message.content
+
         # --- ATOMIC BATCH PERSISTENCE ---
         if db:
             # Standardizing on 'latest' as the primary pointer for current context
@@ -188,29 +196,24 @@ async def parse_document(
             transaction = db.transaction()
             
             @firestore.transactional
-            def update_manifest(txn, m_ref, l_ref, data, vector, id_val, total_chunks):
+            def update_manifest(txn, m_ref, l_ref, data, vector, id_val, total_chunks, manifest_md):
                 # 1. Write Manifest with 24h TTL
                 expiry = datetime.datetime.now(timezone.utc) + timedelta(hours=24)
-                txn.set(m_ref, {
-                    "content": json.dumps(data),
+                doc_payload = {
+                    "content": manifest_md,
+                    "schemaData": data,
                     "embedding": vector,
                     "createdAt": datetime.datetime.now(timezone.utc),
                     "expiresAt": expiry,
                     "version": id_val,
                     "totalChunks": total_chunks
-                })
+                }
+                txn.set(m_ref, doc_payload)
                 # 2. Write Latest with same TTL
-                txn.set(l_ref, {
-                    "content": json.dumps(data),
-                    "embedding": vector,
-                    "createdAt": datetime.datetime.now(timezone.utc),
-                    "expiresAt": expiry,
-                    "version": id_val,
-                    "totalChunks": total_chunks
-                })
+                txn.set(l_ref, doc_payload)
                 return True
 
-            success = update_manifest(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, len(chunks))
+            success = update_manifest(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
             
             # Explicit batching for chunks to bypass 500-op limit on transactions
             if success:
@@ -230,7 +233,12 @@ async def parse_document(
 
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="document_ingestion", resource_id=manifest_id, metadata={"chunks": len(chunks)})
             
-        return schema_data
+        return {
+            "rawText": raw_text[:20000], 
+            "schemaData": schema_data, 
+            "markdownManifest": llms_txt_content
+        }
+
         
     except Exception as e:
         logger.error(f"Ingestion Pipeline Failed: {e}")

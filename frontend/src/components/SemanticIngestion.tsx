@@ -65,6 +65,7 @@ export default function SemanticIngestion() {
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
     const [isDragging, setIsDragging] = useState(false);
     const [schemaData, setSchemaData] = useState<string | null>(null);
+    const [rawText, setRawText] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Processing simulation logs
@@ -104,6 +105,7 @@ export default function SemanticIngestion() {
         setStep("processing");
         setLogs([]);
         setSchemaData(null);
+        setRawText(null);
 
         setLogs(prev => [...prev, `Initiating secure ingestion for: ${file.name}`]);
         setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
@@ -159,7 +161,8 @@ export default function SemanticIngestion() {
         }
 
         // Update UI state with extracted JSON-LD
-        setSchemaData(JSON.stringify(result, null, 2));
+        setSchemaData(JSON.stringify(result.schemaData || result, null, 2));
+        setRawText(result.rawText || "No text extracted.");
         setLogs(prev => [...prev, "SUCCESS: Structured JSON-LD generated."]);
 
         // Move to editor view
@@ -285,19 +288,10 @@ export default function SemanticIngestion() {
                                     <h3 className="text-sm font-medium text-slate-900 dark:text-white flex items-center">
                                         <FileText className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" /> Raw Extracted Text
                                     </h3>
-                                    <span className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md">1,042 words</span>
+                                    <span className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md">Parsed via PyMuPDF</span>
                                 </div>
-                                <div className="p-5 flex-1 overflow-y-auto text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
-                                    <p className="mb-4">
-                                        The {organization?.name || 'Enterprise'} CRM is a comprehensive suite designed to optimize sales workflows. Unlike previous versions, the V5 rollout integrates perfectly with LLM ecosystems...
-                                    </p>
-                                    <p className="mb-4 bg-rose-500/10 border-l-2 border-rose-500 pl-3">
-                                        <span className="text-rose-400 block text-xs font-sans uppercase mb-1">Adversarial Flag: Marketing Fluff Detected</span>
-                                        "It is simply the best product on the market and guarantees 100% ROI in the first day."
-                                    </p>
-                                    <p>
-                                        Pricing starts at $99/user/month for the professional tier, and offers real-time pipeline forecasting via our proprietary ML models.
-                                    </p>
+                                <div className="p-5 flex-1 overflow-y-auto text-xs font-mono text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap break-words">
+                                    {rawText || "Validating document extraction..."}
                                 </div>
                             </div>
 

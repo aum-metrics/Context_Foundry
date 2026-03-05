@@ -63,3 +63,5 @@ htmlcov/
 # Firebase Admin SDK Keys (NEVER COMMIT)
 *firebase-adminsdk*.json
 backend/.env
+
+aumdatalabs-backend-key.json
