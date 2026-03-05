@@ -20,14 +20,15 @@ def initialize_firebase():
 
         if not firebase_admin._apps:
             cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
+            firebase_project_id = os.getenv("FIREBASE_PROJECT_ID", "aumdatalabs-bb691")
             
             if cred_path and Path(cred_path).exists():
                 cred = credentials.Certificate(cred_path)
-                app = firebase_admin.initialize_app(cred)
-                logger.info("✅ Firebase Admin SDK initialized with service account.")
+                app = firebase_admin.initialize_app(cred, options={'projectId': firebase_project_id})
+                logger.info(f"✅ Firebase Admin SDK initialized with service account for project: {firebase_project_id}")
             else:
-                app = firebase_admin.initialize_app()
-                logger.info("✅ Firebase Admin SDK initialized with default credentials.")
+                app = firebase_admin.initialize_app(options={'projectId': firebase_project_id})
+                logger.info(f"✅ Firebase Admin SDK initialized with default credentials for project: {firebase_project_id}")
         
         db = firestore.client()
         return db
