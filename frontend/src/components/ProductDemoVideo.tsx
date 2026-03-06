@@ -224,7 +224,7 @@ export default function ProductFlowShowcase() {
                                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40"></div>
                             </div>
                             <div className="px-4 py-1 rounded bg-white/5 border border-white/5 text-[10px] font-mono text-slate-500 w-64 text-center">
-                                platform.aumcontextfoundry.com
+                                aumcontextfoundry.com/platform
                             </div>
                             <div className="w-10"></div>
                         </div>
