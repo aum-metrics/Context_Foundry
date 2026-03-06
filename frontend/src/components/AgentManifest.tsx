@@ -92,7 +92,7 @@ export default function AgentManifest() {
                 >
                     {deploying ? (
                         <span className="flex items-center">
-                            <Server className="w-4 h-4 mr-2 animate-bounce" /> Deploying to Edge...
+                            <Server className="w-4 h-4 mr-2 animate-bounce" /> Publishing...
                         </span>
                     ) : deployed ? (
                         <span className="flex items-center">
@@ -100,7 +100,7 @@ export default function AgentManifest() {
                         </span>
                     ) : (
                         <span className="flex items-center">
-                            <Server className="w-4 h-4 mr-2" /> Deploy to Edge
+                            <Server className="w-4 h-4 mr-2" /> Publish llms.txt
                         </span>
                     )}
                 </button>
@@ -173,7 +173,7 @@ export default function AgentManifest() {
                     >
                         <Check className="w-5 h-5 mr-3" />
                         <div>
-                            <p className="font-semibold text-sm">Successfully deployed to edge CDN.</p>
+                            <p className="font-semibold text-sm">Successfully published to Edge API.</p>
                             <p className="text-xs text-emerald-500/70 mt-1">LLM crawlers will now index the updated context.</p>
                         </div>
                     </motion.div>
