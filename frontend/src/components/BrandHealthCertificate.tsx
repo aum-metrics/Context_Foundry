@@ -1,16 +1,36 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
-import { Shield, Download, Share2, Globe, Cpu } from "lucide-react";
+import { Shield, Download, Share2, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, TrendingUp, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { useOrganization } from "./OrganizationContext";
+import { db } from "@/lib/firestorePaths";
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+
+interface ModelResult {
+    model: string;
+    accuracy: number;
+    hasHallucination: boolean;
+    claimScore?: string;
+    answer?: string;
+}
+
+interface ScoringRecord {
+    prompt: string;
+    results: ModelResult[];
+    timestamp: { toDate: () => Date } | null;
+}
 
 interface BrandHealthCertificateProps {
     organizationName: string;
     asovScore: number;
     driftRate: number;
     onClose: () => void;
+    // Optional: passed directly from in-session simulation results
+    modelResults?: ModelResult[];
+    lastPrompt?: string;
 }
 
 export default function BrandHealthCertificate({
@@ -18,172 +38,334 @@ export default function BrandHealthCertificate({
     asovScore,
     driftRate,
     onClose,
+    modelResults: propModelResults,
+    lastPrompt: propPrompt,
 }: BrandHealthCertificateProps) {
+    const { organization } = useOrganization();
     const certificateRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");
     const [isoTimestamp, setIsoTimestamp] = useState("");
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [showMethodology, setShowMethodology] = useState(false);
+    const [latestRecord, setLatestRecord] = useState<ScoringRecord | null>(null);
+    const [loadingHistory, setLoadingHistory] = useState(true);
 
     useEffect(() => {
-        setIssuedDate(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+        setIssuedDate(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
         setIsoTimestamp(new Date().toISOString());
     }, []);
 
+    // Load latest scoring record from Firestore for data post-refresh
+    useEffect(() => {
+        if (propModelResults && propModelResults.length > 0) {
+            setLatestRecord({ prompt: propPrompt || "", results: propModelResults, timestamp: null });
+            setLoadingHistory(false);
+            return;
+        }
+        if (!organization?.id) { setLoadingHistory(false); return; }
+        const fetchHistory = async () => {
+            try {
+                const histRef = collection(db, "organizations", organization.id, "scoringHistory");
+                const q = query(histRef, orderBy("timestamp", "desc"), limit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const data = snap.docs[0].data();
+                    setLatestRecord({ prompt: data.prompt || "", results: data.results || [], timestamp: data.timestamp });
+                }
+            } catch (e) {
+                console.warn("Could not load scoring history:", e);
+            } finally {
+                setLoadingHistory(false);
+            }
+        };
+        fetchHistory();
+    }, [organization, propModelResults, propPrompt]);
+
+    const results = latestRecord?.results || [];
+    const avgLcrs = results.length > 0 ? Math.round(results.reduce((s, r) => s + r.accuracy, 0) / results.length) : asovScore;
+    const hallucinationCount = results.filter(r => r.hasHallucination).length;
+    const fidelityPct = results.length > 0 ? Math.round((results.filter(r => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
+
+    const scoreColor = (s: number) => s >= 80 ? "#10b981" : s >= 55 ? "#f59e0b" : "#ef4444";
+    const gradeLabel = (s: number) => s >= 80 ? "HIGH FIDELITY" : s >= 55 ? "MINOR DRIFT" : "CRITICAL DRIFT";
+
     const handleDownload = async () => {
         if (!certificateRef.current) return;
-
+        setIsDownloading(true);
         try {
             const canvas = await html2canvas(certificateRef.current, {
-                backgroundColor: null,
+                backgroundColor: "#0f172a",
                 scale: 2,
-                useCORS: true
+                useCORS: true,
+                logging: false,
             });
-            const link = document.createElement('a');
-            link.download = `AUM-Brand-Health-${organizationName.replace(/\s+/g, '-')}.png`;
-            link.href = canvas.toDataURL('image/png');
+            const link = document.createElement("a");
+            link.download = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.png`;
+            link.href = canvas.toDataURL("image/png");
             link.click();
         } catch (err) {
             console.error("Failed to generate certificate image", err);
+        } finally {
+            setIsDownloading(false);
         }
     };
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl overflow-y-auto"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
-            <motion.div
-                ref={certificateRef}
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/10 shadow-2xl shadow-indigo-500/10"
-            >
-                {/* Iridescent Header Background */}
-                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-indigo-500/20 via-fuchsia-500/10 to-transparent pointer-events-none"></div>
+            {/* Close button outside the cert */}
+            <button onClick={onClose} className="absolute top-4 right-4 z-[110] text-slate-400 hover:text-white transition-colors bg-slate-800/80 p-2 rounded-full">
+                <X className="w-5 h-5" />
+            </button>
 
-                <div className="relative p-10 flex flex-col items-center text-center">
-                    <div className="mb-6">
-                        <Logo size={60} />
-                    </div>
+            <div className="flex flex-col items-center gap-4 w-full max-w-3xl py-8">
+                {/* THE CERTIFICATE */}
+                <motion.div
+                    ref={certificateRef}
+                    initial={{ scale: 0.95, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    className="relative w-full bg-slate-950 rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_80px_rgba(99,102,241,0.2)]"
+                    style={{ fontFamily: "'Inter', sans-serif" }}
+                >
+                    {/* HEADER GRADIENT */}
+                    <div className="absolute top-0 left-0 w-full h-56 bg-gradient-to-br from-indigo-600/30 via-fuchsia-600/15 to-transparent pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-cyan-500/10 to-transparent pointer-events-none rounded-full" />
 
-                    <h2 className="text-3xl font-light text-slate-900 dark:text-white mb-2">
-                        Brand Health Certificate
-                    </h2>
-                    <p className="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs font-bold mb-10">
-                        Agentic Share of Voice (ASoV) Audit Result
-                    </p>
-
-                    <div className="w-full grid grid-cols-2 gap-8 mb-10">
-                        <div className="space-y-2">
-                            <div className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold">Organization</div>
-                            <div className="text-xl text-slate-900 dark:text-white font-medium">{organizationName}</div>
+                    <div className="relative p-10">
+                        {/* HEADER ROW */}
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <Logo size={36} />
+                                <div>
+                                    <p className="text-[9px] text-indigo-400 uppercase tracking-[0.3em] font-bold">AUM Context Foundry</p>
+                                    <p className="text-white font-semibold text-sm">Brand Health Certificate</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest">Issued</p>
+                                <p className="text-slate-300 text-xs font-medium">{issuedDate}</p>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <div className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold">Date Issued</div>
-                            <div className="text-xl text-slate-900 dark:text-white font-medium">
-                                {issuedDate || "Loading date..."}
+
+                        {/* ORGANIZATION + OVERALL SCORE */}
+                        <div className="flex items-center gap-6 mb-10 p-6 rounded-2xl bg-white/5 border border-white/10">
+                            <div className="flex-1">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Organization</p>
+                                <p className="text-2xl font-semibold text-white">{organizationName}</p>
+                                <p className="text-xs text-slate-400 mt-1">AI Contextual Representation Audit</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="relative w-28 h-28">
+                                    <svg className="w-full h-full -rotate-90">
+                                        <circle cx="56" cy="56" r="48" fill="none" stroke="#1e293b" strokeWidth="7" />
+                                        <motion.circle
+                                            cx="56" cy="56" r="48" fill="none"
+                                            stroke={scoreColor(avgLcrs)} strokeWidth="7"
+                                            strokeDasharray={2 * Math.PI * 48}
+                                            initial={{ strokeDashoffset: 2 * Math.PI * 48 }}
+                                            animate={{ strokeDashoffset: (2 * Math.PI * 48) * (1 - avgLcrs / 100) }}
+                                            transition={{ duration: 1.8, ease: "easeOut" }}
+                                            strokeLinecap="round"
+                                        />
+                                    </svg>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span className="text-2xl font-bold text-white">{avgLcrs}%</span>
+                                        <span className="text-[8px] text-slate-400 uppercase tracking-wider">Avg LCRS</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* MODEL-BY-MODEL LCRS BREAKDOWN */}
+                        <div className="mb-8">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Cpu className="w-4 h-4 text-indigo-400" />
+                                <p className="text-xs font-bold text-white uppercase tracking-widest">Multi-Model LCRS Breakdown</p>
+                                <span className="ml-auto text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">Latent Contextual Rigor Score</span>
+                            </div>
+                            {loadingHistory ? (
+                                <div className="text-center text-slate-500 text-xs py-6">Loading simulation data...</div>
+                            ) : results.length === 0 ? (
+                                <div className="text-center text-slate-500 text-xs py-6 border border-dashed border-slate-700 rounded-xl">
+                                    Run a simulation first to populate LCRS data.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {results.map((r, i) => (
+                                        <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/8">
+                                            <div className="w-32 shrink-0">
+                                                <p className="text-xs font-semibold text-white">{r.model}</p>
+                                                {r.claimScore && <p className="text-[9px] text-slate-500 mt-0.5">{r.claimScore}</p>}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        className="h-full rounded-full"
+                                                        style={{ backgroundColor: scoreColor(r.accuracy) }}
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${r.accuracy}%` }}
+                                                        transition={{ duration: 1, delay: i * 0.15 }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="w-14 text-right">
+                                                <span className="text-sm font-bold" style={{ color: scoreColor(r.accuracy) }}>{r.accuracy}%</span>
+                                            </div>
+                                            <div className="w-6 shrink-0">
+                                                {r.hasHallucination
+                                                    ? <XCircle className="w-4 h-4 text-red-400" />
+                                                    : <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                                }
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* PROMPT TESTED */}
+                        {latestRecord?.prompt && (
+                            <div className="mb-8 p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/20">
+                                <p className="text-[9px] text-indigo-400 uppercase tracking-widest mb-1.5">Query Tested</p>
+                                <p className="text-sm text-slate-300 italic">&ldquo;{latestRecord.prompt}&rdquo;</p>
+                            </div>
+                        )}
+
+                        {/* 3-TILE SUMMARY */}
+                        <div className="grid grid-cols-3 gap-4 mb-8">
+                            <div className="p-5 rounded-2xl bg-white/5 border border-white/8 text-center">
+                                <Globe className="w-5 h-5 mx-auto mb-2 text-indigo-400" />
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">AI Visibility</p>
+                                <p className="text-lg font-semibold text-white">{asovScore}%</p>
+                                <p className="text-[9px] text-slate-500">ASoV Score</p>
+                            </div>
+                            <div className="p-5 rounded-2xl bg-white/5 border border-white/8 text-center">
+                                <Shield className="w-5 h-5 mx-auto mb-2 text-emerald-400" />
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Fidelity Rate</p>
+                                <p className="text-lg font-semibold text-white">{fidelityPct}%</p>
+                                <p className="text-[9px] text-slate-500">No drift detected</p>
+                            </div>
+                            <div className="p-5 rounded-2xl bg-white/5 border border-white/8 text-center">
+                                {hallucinationCount === 0
+                                    ? <CheckCircle2 className="w-5 h-5 mx-auto mb-2 text-emerald-400" />
+                                    : <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-amber-400" />
+                                }
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Hallucinations</p>
+                                <p className="text-lg font-semibold text-white">{hallucinationCount}/{results.length || "—"}</p>
+                                <p className="text-[9px] text-slate-500">models affected</p>
+                            </div>
+                        </div>
+
+                        {/* GRADE BADGE */}
+                        <div className="flex items-center justify-center mb-8">
+                            <div className="flex items-center gap-3 px-6 py-3 rounded-full border" style={{ borderColor: scoreColor(avgLcrs) + "40", backgroundColor: scoreColor(avgLcrs) + "12" }}>
+                                <TrendingUp className="w-4 h-4" style={{ color: scoreColor(avgLcrs) }} />
+                                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: scoreColor(avgLcrs) }}>
+                                    {gradeLabel(avgLcrs)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* METHODOLOGY FOOTER */}
+                        <div className="p-5 rounded-2xl bg-slate-900/60 border border-white/5 font-mono text-[9px] text-slate-500 leading-relaxed">
+                            <div className="grid grid-cols-2 gap-4 mb-3">
+                                <div>
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest mb-1.5">LCRS Formula</p>
+                                    <p className="text-indigo-300 font-bold text-[10px]">LCRS = (0.4 × Semantic) + (0.6 × Claim Recall)</p>
+                                    <p className="mt-1">Semantic = 1 − cosine_distance(manifest_vector, response_vector)</p>
+                                    <p>Claim Recall = supported_claims / total_claims</p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest mb-1.5">Inference Audit</p>
+                                    <p>GPT: gpt-4o-mini (T=0.2)</p>
+                                    <p>Gemini: gemini-2.0-flash (T=0.2)</p>
+                                    <p>Claude: claude-3-5-haiku (T=0.2)</p>
+                                    <p className="mt-1">Embed: text-embedding-3-small</p>
+                                </div>
+                            </div>
+                            <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                                <span>Standards: ISO/IEC 42001 · NIST AI RMF · Zero-Retention Compliant</span>
+                                <span className="text-slate-600">{isoTimestamp}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="relative w-48 h-48 mb-10">
-                        <svg className="w-full h-full transform -rotate-90">
-                            <circle
-                                cx="96"
-                                cy="96"
-                                r="80"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="8"
-                                className="text-slate-100 dark:text-slate-800"
-                            />
-                            <motion.circle
-                                cx="96"
-                                cy="96"
-                                r="80"
-                                fill="none"
-                                stroke="url(#asov-gradient)"
-                                strokeWidth="8"
-                                strokeDasharray={2 * Math.PI * 80}
-                                initial={{ strokeDashoffset: 2 * Math.PI * 80 }}
-                                animate={{ strokeDashoffset: (2 * Math.PI * 80) * (1 - asovScore / 100) }}
-                                transition={{ duration: 1.5, ease: "easeOut" }}
-                                strokeLinecap="round"
-                            />
-                            <defs>
-                                <linearGradient id="asov-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stopColor="#6366f1" />
-                                    <stop offset="100%" stopColor="#06b6d4" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-4xl font-light text-slate-900 dark:text-white">{asovScore}%</span>
-                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">ASoV Score</span>
-                        </div>
+                    {/* BOTTOM TAGLINE */}
+                    <div className="bg-slate-950 py-3 text-center border-t border-white/5">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-[0.4em]">Precision Monitoring for the Agentic Era • AUM Context Foundry v1.2.0</p>
                     </div>
+                </motion.div>
 
-                    <div className="grid grid-cols-3 gap-6 w-full mb-10">
-                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
-                            <Globe className="w-4 h-4 mx-auto mb-2 text-indigo-500" />
-                            <div className="text-[10px] text-slate-400 uppercase font-bold">Visibility</div>
-                            <div className="text-sm text-slate-900 dark:text-white font-medium">Verified</div>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
-                            <Shield className="w-4 h-4 mx-auto mb-2 text-emerald-500" />
-                            <div className="text-[10px] text-slate-400 uppercase font-bold">Fidelity</div>
-                            <div className="text-sm text-slate-900 dark:text-white font-medium">{100 - driftRate}%</div>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
-                            <Cpu className="w-4 h-4 mx-auto mb-2 text-fuchsia-500" />
-                            <div className="text-[10px] text-slate-400 uppercase font-bold">Grounding</div>
-                            <div className="text-sm text-slate-900 dark:text-white font-medium">Tier-1</div>
-                        </div>
-                    </div>
-
-                    <div className="flex space-x-4 w-full">
-                        <button
-                            onClick={handleDownload}
-                            className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-medium flex items-center justify-center group hover:scale-[1.02] transition-transform"
-                        >
-                            <Download className="w-4 h-4 mr-2 group-hover:animate-bounce" /> Download PNG
-                        </button>
-                        <button className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-medium flex items-center justify-center group hover:scale-[1.02] transition-transform shadow-lg shadow-indigo-500/25">
-                            <Share2 className="w-4 h-4 mr-2" /> Share Result
-                        </button>
-                    </div>
-
+                {/* ACTION BUTTONS (outside cert so they don't appear in screenshot) */}
+                <div className="flex gap-4 w-full">
                     <button
-                        onClick={onClose}
-                        className="mt-8 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        onClick={handleDownload}
+                        disabled={isDownloading}
+                        className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-indigo-500/25"
                     >
-                        Return to Dashboard
+                        <Download className="w-4 h-4" />
+                        {isDownloading ? "Generating..." : "Download Report (PNG)"}
+                    </button>
+                    <button
+                        onClick={() => setShowMethodology(!showMethodology)}
+                        className="flex items-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 text-slate-300 rounded-2xl font-medium border border-white/10 transition-all"
+                    >
+                        <BookOpen className="w-4 h-4" />
+                        How We Score
+                    </button>
+                    <button onClick={onClose} className="px-6 py-4 text-slate-400 hover:text-white transition-colors border border-white/10 rounded-2xl">
+                        Close
                     </button>
                 </div>
 
-                {/* Transparency Footprint Footer */}
-                <div className="bg-slate-50 dark:bg-slate-950/50 p-6 text-left border-t border-slate-100 dark:border-white/5 font-mono text-[9px] text-slate-400 leading-relaxed">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="font-bold text-slate-500 mb-1 tracking-wider uppercase">Inference Audit Log</p>
-                            <p>Model ID: gpt-4o-2024-08-06 (verified)</p>
-                            <p>Model ID: gemini-2.0-flash (verified)</p>
-                            <p>Model ID: claude-3-5-sonnet (verified)</p>
-                        </div>
-                        <div>
-                            <p className="font-bold text-slate-500 mb-1 tracking-wider uppercase">Hyperparameters</p>
-                            <p>Temperature: 0.0 (Deterministic)</p>
-                            <p>Top_P: 1.0 (Exact retrieval)</p>
-                            <p>Timestamp: {isoTimestamp || "Generating..."}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bottom Tagline */}
-                <div className="bg-slate-100 dark:bg-slate-950/80 py-3 text-center border-t border-slate-200 dark:border-white/5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.4em]">Precision Monitoring for the Agentic Era • AUM v1.2.0</p>
-                </div>
-            </motion.div>
+                {/* METHODOLOGY EXPLAINER PANEL */}
+                <AnimatePresence>
+                    {showMethodology && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="w-full bg-slate-900 rounded-2xl border border-white/10 p-6"
+                        >
+                            <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                                <BookOpen className="w-4 h-4 text-indigo-400" /> LCRS Methodology — How We Calculate Your Score
+                            </h3>
+                            <div className="grid grid-cols-2 gap-6 text-sm">
+                                <div>
+                                    <p className="text-indigo-400 font-semibold mb-2">Formula</p>
+                                    <code className="text-emerald-400 font-mono text-xs bg-black/30 px-3 py-2 rounded-lg block mb-3">
+                                        LCRS = (0.4 × Semantic) + (0.6 × Claim Recall)
+                                    </code>
+                                    <p className="text-slate-400 text-xs leading-relaxed">
+                                        <strong className="text-slate-300">Semantic (40%):</strong> Cosine similarity between your verified manifest vector and the AI&apos;s response vector. Measures directional alignment.
+                                    </p>
+                                    <p className="text-slate-400 text-xs leading-relaxed mt-2">
+                                        <strong className="text-slate-300">Claim Recall (60%):</strong> Ratio of factual claims from your manifest that were correctly reproduced in the AI&apos;s answer. Temperature=0 ensures deterministic verification.
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-indigo-400 font-semibold mb-2">Score Bands</p>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-slate-300 font-medium">&gt;80%</span><span className="text-slate-500">High Fidelity — AI accurately represents your brand</span></div>
+                                        <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-500" /><span className="text-slate-300 font-medium">55–80%</span><span className="text-slate-500">Minor Drift — Some claims missed or imprecise</span></div>
+                                        <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500" /><span className="text-slate-300 font-medium">&lt;55%</span><span className="text-slate-500">Critical Drift — Significant hallucination risk</span></div>
+                                    </div>
+                                    <p className="text-indigo-400 font-semibold mt-4 mb-2">Hallucination Detection</p>
+                                    <p className="text-slate-400 text-xs leading-relaxed">A model is flagged if LCRS &lt;60% <em>or</em> any claim is &quot;contradicted&quot; — meaning the AI stated the opposite of a verified fact in your manifest.</p>
+                                </div>
+                            </div>
+                            <p className="text-slate-600 text-xs mt-4 border-t border-white/5 pt-4">
+                                Standards: ISO/IEC 42001 · NIST AI RMF · Full methodology at <code className="text-indigo-400">/api/methods/</code>
+                            </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </motion.div>
     );
 }

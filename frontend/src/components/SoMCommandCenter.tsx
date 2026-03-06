@@ -717,6 +717,8 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         asovScore={avgScore}
                         driftRate={batchResult?.driftRate || 0}
                         onClose={() => setIsCertificateOpen(false)}
+                        modelResults={historyEntries && historyEntries.length > 0 ? [...historyEntries].reverse()[0]?.results : undefined}
+                        lastPrompt={historyEntries && historyEntries.length > 0 ? [...historyEntries].reverse()[0]?.prompt : undefined}
                     />
                 )}
             </AnimatePresence>
