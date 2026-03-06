@@ -970,7 +970,6 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
     if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], org_id):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    # 🛡️ DEMO MOCKING (P0): Fixed historical data for Lumina Analytics
     # 🛡️ DEMO MOCKING (P0): Fixed historical data for Sight Spectrum
     if org_id == "demo_org_id":
         history = [

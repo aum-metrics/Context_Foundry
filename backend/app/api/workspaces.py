@@ -970,11 +970,11 @@ async def get_org_profile(
     if current_user.get("orgId") != org_id:
         raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
 
-    # 🛡️ DEMO MOCKING (P0): Return Lumina Analytics for demo account
+    # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum for demo account
     if org_id == "demo_org_id":
         return {
             "id": "demo_org_id",
-            "name": "Lumina Analytics",
+            "name": "Sight Spectrum",
             "activeSeats": 1,
             "subscriptionTier": "scale",
             "status": "active",
