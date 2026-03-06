@@ -83,7 +83,7 @@ export default function BrandHealthCertificate({
     }, [organization, propModelResults, propPrompt]);
 
     const results = latestRecord?.results || [];
-    const avgLcrs = results.length > 0 ? Math.round(results.reduce((s, r) => s + r.accuracy, 0) / results.length) : asovScore;
+    const avgLcrs = results.length > 0 ? Math.round(results.reduce((s: number, r: ModelResult) => s + r.accuracy, 0) / results.length) : asovScore;
     const hallucinationCount = results.filter(r => r.hasHallucination).length;
     const fidelityPct = results.length > 0 ? Math.round((results.filter(r => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
 
@@ -281,7 +281,7 @@ export default function BrandHealthCertificate({
                                     <Shield className="w-5 h-5 mx-auto mb-2 text-emerald-500 dark:text-emerald-400" />
                                     <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Fidelity Rate</p>
                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{fidelityPct}%</p>
-                                    <p className="text-[9px] text-slate-500">No drift detected</p>
+                                    <p className="text-[9px] text-slate-500">{fidelityPct >= 80 ? "High Fidelity" : fidelityPct >= 55 ? "Drift detected" : "Critical drift"}</p>
                                 </div>
                                 <div className="p-4 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8 text-center shadow-sm dark:shadow-none">
                                     {hallucinationCount === 0
