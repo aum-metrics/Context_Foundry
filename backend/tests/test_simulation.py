@@ -56,26 +56,41 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
     mock_client = MagicMock()
     mock_openai.return_value = mock_client
 
-    # Mock embeddings
+    # Mock embeddings (Ensure 1536 dimensions for text-embedding-3-small)
     mock_embed = MagicMock()
     mock_embed.embedding = [0.1] * 1536
     mock_embed_response = MagicMock()
     mock_embed_response.data = [mock_embed]
     mock_client.embeddings.create.return_value = mock_embed_response
 
-    # Mock chat completions
-    mock_choice = MagicMock()
-    mock_choice.message.content = '["Claim 1 about the product"]'
-    mock_completion = MagicMock()
-    mock_completion.choices = [mock_choice]
-    mock_client.chat.completions.create.return_value = mock_completion
+    # Mock chat completions (Sequence: Extraction -> Answer -> Verification)
+    def mock_completion_side_effect(*args, **kwargs):
+        sys_prompt = kwargs.get('messages', [{}])[0].get('content', '')
+        
+        # 1. Verification step
+        if "Compare each claim" in sys_prompt:
+            mock_choice = MagicMock()
+            mock_choice.message.content = '{"results": [{"claim": "Claim 1 about the product", "verdict": "supported", "detail": "Mock explanation"}]}'
+            mock_resp = MagicMock()
+            mock_resp.choices = [mock_choice]
+            return mock_resp
+            
+        # 2. Extraction step
+        if "Extract standalone factual claims" in sys_prompt:
+            mock_choice = MagicMock()
+            mock_choice.message.content = '{"claims": ["Claim 1 about the product"]}'
+            mock_resp = MagicMock()
+            mock_resp.choices = [mock_choice]
+            return mock_resp
+            
+        # 3. Answer generation step
+        mock_choice = MagicMock()
+        mock_choice.message.content = "This is a mock answer from GPT."
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        return mock_resp
 
-    # Mock OpenAI runner
-    mock_run_choice = MagicMock()
-    mock_run_choice.message.content = "This is a mock answer from GPT."
-    mock_run_completion = MagicMock()
-    mock_run_completion.choices = [mock_run_choice]
-    mock_client.chat.completions.create.return_value = mock_run_completion
+    mock_client.chat.completions.create.side_effect = mock_completion_side_effect
 
     # Happy Path — user belongs to test_org
     response = client.post(
@@ -87,13 +102,20 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
     data = response.json()
     assert "results" in data
 
-    # Unhappy Path — user belongs to different org
+    # Unhappy Path — user belongs to different org (force session type to trigger auth check)
+    from core.security import get_auth_context
+    app.dependency_overrides[get_auth_context] = lambda: {"uid": "intruder_uid", "type": "session"}
     mock_verify.return_value = False
+    
     response = client.post(
         "/api/simulation/run",
         headers={"Authorization": "Bearer mock-dev-token"},
         json={"orgId": "test_org", "manifestVersion": "latest", "prompt": "Test query"}
     )
+    
+    # Restore override
+    app.dependency_overrides.clear()
+    
     assert response.status_code == 403, response.text
 
 

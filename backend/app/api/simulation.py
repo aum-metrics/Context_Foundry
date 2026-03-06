@@ -499,6 +499,18 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     Main LCRS Simulation Entry Point.
     Orchestrates Claim Extraction, Multi-Model Verification, and Divergence Scoring.
     """
+    from core.config import settings
+    is_dev = settings.ENV == "development"
+
+    # 🛡️ SECURITY HARDENING (P0): Strict authorization check
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], request.orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized")
+    else:
+        # API Key / Service Token must match orgId
+        if auth.get("orgId") != request.orgId:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+
     if is_dev and auth.get("type") == "session":
         logger.info(f"🧪 Dev-mode: Access granted to {request.orgId} for {auth['uid']}")
 
