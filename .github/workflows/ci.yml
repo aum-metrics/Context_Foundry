@@ -83,7 +83,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-ci.txt
       - name: Syntax check (all .py files)
         run: find app -name '*.py' -exec python -c "import py_compile, sys; py_compile.compile(sys.argv[1], doraise=True)" {} \;
       - name: Smoke test (import check)
