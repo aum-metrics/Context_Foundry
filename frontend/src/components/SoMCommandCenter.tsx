@@ -404,7 +404,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         ? Math.round(chartData.reduce((sum, d) => sum + ((d as { score: number }).score || 0), 0) / chartData.length)
         : 0;
 
-    const isCriticalDrift = (batchResult?.driftRate || 0) > 30;
+    const isCriticalDrift = (batchResult?.driftRate || 0) > 40;
 
     return (
         <div className={`w-full h-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'bg-rose-500/5 ring-4 ring-rose-500/20 ring-inset' : ''}`}>

@@ -158,6 +158,11 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --role="roles/secretmanager.secretAccessor" >/dev/null
 
 ########################################
+# GET SERVICE URL (for Trusted Hosts)
+########################################
+EXISTING_SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(status.url)' 2>/dev/null || echo "")
+
+########################################
 # DEPLOY CLOUD RUN
 ########################################
 AUTH_FLAG="--allow-unauthenticated"
@@ -166,7 +171,14 @@ if [[ "${ALLOW_UNAUTHENTICATED}" != "true" ]]; then
 fi
 
 # Use custom delimiter to safely pass JSON arrays in env vars.
-ENV_VARS="^@@^ENV=production@@ALLOW_MOCK_AUTH=false@@FRONTEND_URL=https://${APP_DOMAIN}@@PAYMENT_CALLBACK_URL=https://${APP_DOMAIN}/payment/success@@CORS_ORIGINS=[\"https://${APP_DOMAIN}\",\"https://${API_DOMAIN}\"]@@TRUSTED_HOSTS=[\"${API_DOMAIN}\",\"${APP_DOMAIN}\",\"localhost\",\"127.0.0.1\"]@@FIREBASE_SERVICE_ACCOUNT_PATH=/secrets/firebase/google-credentials.json"
+# Include EXISTING_SERVICE_URL in TRUSTED_HOSTS and CORS_ORIGINS for health checks and internal routing.
+EXTRA_HOSTS=""
+if [[ -n "${EXISTING_SERVICE_URL}" ]]; then
+  HOST_ONLY=$(echo "${EXISTING_SERVICE_URL}" | sed -E 's|https://||')
+  EXTRA_HOSTS=",\"${HOST_ONLY}\",\"${EXISTING_SERVICE_URL}\""
+fi
+
+ENV_VARS="^@@^ENV=production@@ALLOW_MOCK_AUTH=false@@FRONTEND_URL=https://${APP_DOMAIN}@@PAYMENT_CALLBACK_URL=https://${APP_DOMAIN}/payment/success@@CORS_ORIGINS=[\"https://${APP_DOMAIN}\",\"https://${API_DOMAIN}\"${EXTRA_HOSTS}]@@TRUSTED_HOSTS=[\"${API_DOMAIN}\",\"${APP_DOMAIN}\",\"localhost\",\"127.0.0.1\"${EXTRA_HOSTS}]@@FIREBASE_SERVICE_ACCOUNT_PATH=/secrets/firebase/google-credentials.json"
 
 OPTIONAL_SECRETS=""
 if gcloud secrets describe "${SECRET_RAZORPAY_WEBHOOK_SECRET}" >/dev/null 2>&1; then
@@ -214,7 +226,7 @@ if [[ "${CREATE_CRON_JOB}" == "true" ]]; then
         --schedule="0 0 * * *" \
         --uri="${SERVICE_URL}/api/cron/reset-quotas" \
         --http-method=POST \
-        --headers="Authorization=Bearer ${CRON_SECRET_VALUE}" >/dev/null
+        --update-headers="Authorization=Bearer ${CRON_SECRET_VALUE}" >/dev/null
     else
       echo "==> Creating Cloud Scheduler job aum-reset-quotas"
       gcloud scheduler jobs create http aum-reset-quotas \
