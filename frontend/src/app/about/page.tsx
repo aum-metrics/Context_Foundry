@@ -64,7 +64,7 @@ export default function AboutPage() {
                             </div>
                             <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Precision Measurement</h4>
                             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                                We don&apos;t guess. We run live, stateless Monte Carlo simulations across top-tier LLMs to objectively measure brand sentiment and visibility.
+                                We run deterministic, parallel queries across GPT-4o, Claude, and Gemini to objectively measure how accurately each model represents your brand.
                             </p>
                         </div>
 
