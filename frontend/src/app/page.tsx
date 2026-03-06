@@ -82,10 +82,10 @@ export default function LandingPage() {
                         className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6"
                     >
                         <Link href="/login" className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center transition-all shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 transform hover:-translate-y-1 glow-indigo">
-                            Request Strategic Audit <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            Start Private Audit <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
                         <a href="#demo" className="w-full sm:w-auto px-8 py-4 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 font-medium flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                            <Play className="w-5 h-5 mr-2 text-indigo-500" /> Watch Demo
+                            View Platform Flow
                         </a>
                     </motion.div>
                 </section>

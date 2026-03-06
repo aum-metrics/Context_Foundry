@@ -31,10 +31,12 @@ export default function ProductFlowShowcase() {
                     <div className="font-mono text-[10px] p-4 bg-black/40 rounded-xl border border-white/5 text-emerald-400/70">
                         {`{
   "@context": "https://schema.org",
-  "@type": "Product",
-  "name": "Lumina SaaS",
-  "offers": { "price": "49.00" }
-}`}
+  "@type": "Organization",
+  "name": "Sight Spectrum",
+  "url": "https://sightspectrum.com",
+  "description": "Enterprise AI & Cloud Transformation Solutions"
+}
+`}
                     </div>
                 </div>
             )
@@ -51,7 +53,7 @@ export default function ProductFlowShowcase() {
             preview: (
                 <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-mono text-indigo-400">
-                        <span>PROBE: "How much is Lumina?"</span>
+                        <span>PROBE: "What are Sight Spectrum's AI capabilities?"</span>
                         <span className="animate-pulse">RUNNING...</span>
                     </div>
                     <div className="space-y-2">
@@ -161,13 +163,13 @@ export default function ProductFlowShowcase() {
                     </div>
                     <div>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Platform Status</p>
-                        <p className="text-xs text-slate-900 dark:text-white font-medium">Viewing as: <span className="text-indigo-500">demo@aumcontextfoundry.com</span></p>
+                        <p className="text-xs text-slate-900 dark:text-white font-medium">Viewing as: <span className="text-indigo-500">internal-audit@sightspectrum.com</span></p>
                     </div>
                 </div>
                 <div className="hidden md:flex items-center gap-6">
                     <div className="flex flex-col items-end">
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Current Cycle</p>
-                        <p className="text-xs text-slate-900 dark:text-white font-medium text-right">March 2026 Audit</p>
+                        <p className="text-xs text-slate-900 dark:text-white font-medium text-right">Current Audit Cycle</p>
                     </div>
                 </div>
             </div>
