@@ -370,7 +370,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         for (const entry of (historyEntries || [])) {
             const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
             const label = ts.toLocaleDateString("en-US", { weekday: "short" });
-            const modelResult = entry.results?.find(r => r.model === targetModel);
+            const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => r.model === targetModel);
             if (modelResult) {
                 dataPoints.push({ name: label, score: modelResult.accuracy });
             }
