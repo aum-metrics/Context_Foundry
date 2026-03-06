@@ -23,13 +23,19 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
         if (isMockMode) {
             console.warn("🔓 MOCK AUTH MODE ACTIVE: Bypassing Firebase Auth");
+            const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+            const isDemoUser = savedMockUser === "demo@demo.com";
+
             const mockUser = {
-                uid: "mock_uid_dev",
-                email: "dev@localhost",
-                displayName: "Dev User",
-                getIdToken: async () => "mock-dev-token",
+                uid: isDemoUser ? "demo_uid" : "mock_uid_dev",
+                email: isDemoUser ? "demo@demo.com" : "dev@localhost",
+                displayName: isDemoUser ? "Demo Account" : "Dev User",
+                getIdToken: async () => isDemoUser ? "mock-demo-token" : "mock-dev-token",
                 getIdTokenResult: async () => ({
-                    claims: { org_role: "admin", org_id: "mock_org_id" }
+                    claims: {
+                        org_role: "admin",
+                        org_id: isDemoUser ? "demo_org_id" : "mock_org_id"
+                    }
                 }),
             } as unknown as User;
 

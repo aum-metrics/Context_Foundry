@@ -29,8 +29,13 @@ export default function LoginPage() {
 
             if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
                 // Local mock bypass when user hasn't setup Firebase
-                setTimeout(() => {
+                if (email === "demo@demo.com" && password === "testdemo") {
+                    localStorage.setItem("mock_auth_user", "demo@demo.com");
+                } else {
                     localStorage.setItem("mock_auth_user", email);
+                }
+
+                setTimeout(() => {
                     window.dispatchEvent(new Event("mock_auth_change"));
                     router.push(targetUrl);
                 }, 1000);

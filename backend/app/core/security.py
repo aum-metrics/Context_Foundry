@@ -34,13 +34,14 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     from core.config import settings
     allow_mock = getattr(settings, "ALLOW_MOCK_AUTH", False)
     
-    if token == "mock-dev-token":
+    if token in ["mock-dev-token", "mock-demo-token"]:
         if settings.ENV == "development" and allow_mock:
-            logger.info("🔓 Dev-mode: accepting mock token (ALLOW_MOCK_AUTH is ON)")
+            is_demo = token == "mock-demo-token"
+            logger.info(f"🔓 Dev-mode: accepting {token} (ALLOW_MOCK_AUTH is ON)")
             return {
-                "uid": "mock_uid_dev",
-                "email": "dev@localhost",
-                "orgId": "mock-org-123",
+                "uid": "demo_uid" if is_demo else "mock_uid_dev",
+                "email": "demo@demo.com" if is_demo else "dev@localhost",
+                "orgId": "demo_org_id" if is_demo else "mock-org-123",
                 "role": "admin"
             }
         else:
