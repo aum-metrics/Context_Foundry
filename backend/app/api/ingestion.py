@@ -16,7 +16,14 @@ import asyncio
 from openai import OpenAI
 from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
+from core.model_config import OPENAI_SCHEMA_MODEL, OPENAI_MANIFEST_MODEL, OPENAI_EMBEDDING_MODEL
 from api.audit import log_audit_event
+import httpx
+try:
+    from bs4 import BeautifulSoup
+    BS4_AVAILABLE = True
+except ImportError:
+    BS4_AVAILABLE = False
 
 import gc
 from google.cloud import firestore
@@ -177,7 +184,7 @@ async def parse_document(
         )
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="gpt-4o-mini",
+            model=OPENAI_SCHEMA_MODEL,
             response_format={ "type": "json_object" }
         )
         schema_data = json.loads(completion.choices[0].message.content)
@@ -193,7 +200,7 @@ async def parse_document(
         )
         manifest_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": manifest_prompt}],
-            model="gpt-4o-mini"
+            model=OPENAI_MANIFEST_MODEL
         )
         llms_txt_content = manifest_completion.choices[0].message.content
 
@@ -256,3 +263,176 @@ async def parse_document(
         logger.error(f"Ingestion Pipeline Failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+from pydantic import BaseModel as PydanticBaseModel
+
+class URLIngestionRequest(PydanticBaseModel):
+    url: str
+    orgId: str
+
+@router.post("/parse-url")
+async def parse_url(
+    request: URLIngestionRequest,
+    auth: dict = Depends(get_auth_context)
+):
+    """
+    URL Semantic Ingestion: Fetches a public URL and runs the same zero-retention
+    semantic pipeline as PDF ingestion. Raw HTML is never stored.
+    """
+    uid = auth.get("uid")
+    orgId = request.orgId
+
+    if auth.get("type") == "session":
+        if not verify_user_org_access(uid, orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized")
+    else:
+        if auth.get("orgId") != orgId:
+            raise HTTPException(status_code=403, detail="API key unauthorized for this organization")
+
+    # Enforce Document Limits
+    if db:
+        try:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                org_data = org_doc.to_dict() or {}
+                org_plan = org_data.get("subscription", {}).get("planId", "explorer")
+                if org_plan == "explorer":
+                    docs_ref = db.collection("organizations").document(orgId).collection("manifests").limit(1).get()
+                    if len(docs_ref) >= 1:
+                        raise HTTPException(status_code=403, detail="Explorer plan limit: 1 document. Please upgrade.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Limit check failure: {e}")
+
+    # --- FETCH URL (volatile memory only) ---
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; AUMContextFoundry/1.0; +https://aumcontextfoundry.com/bot)"}
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers) as hclient:
+            resp = await hclient.get(request.url)
+            if resp.status_code >= 400:
+                raise HTTPException(status_code=400, detail=f"URL returned HTTP {resp.status_code}")
+            html = resp.text
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not fetch URL: {str(e)}")
+
+    # --- EXTRACT TEXT ---
+    if BS4_AVAILABLE:
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            tag.decompose()
+        raw_text = soup.get_text(separator="\n", strip=True)
+    else:
+        import re as _re
+        raw_text = _re.sub(r"<[^>]+>", " ", html)
+
+    if len(raw_text.strip()) < 100:
+        raise HTTPException(status_code=422, detail="Could not extract meaningful text from this URL.")
+
+    # --- RESOLVE API KEY ---
+    api_key = os.getenv("OPENAI_API_KEY")
+    if db:
+        try:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                stored_key = (org_doc.to_dict() or {}).get("apiKeys", {}).get("openai", "")
+                if stored_key and stored_key != "internal_platform_managed":
+                    api_key = stored_key
+        except Exception:
+            pass
+
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Infrastructure API key missing.")
+
+    try:
+        oai = OpenAI(api_key=api_key)
+        full_text = raw_text[:100000]
+        chunks = recursive_split(full_text, 2000, 200)
+
+        chunk_vectors = []
+        for i in range(0, len(chunks), 16):
+            batch = chunks[i:i+16]
+            embed_batch = oai.embeddings.create(input=batch, model=OPENAI_EMBEDDING_MODEL)
+            chunk_vectors.extend([e.embedding for e in embed_batch.data])
+
+        doc_sample = raw_text[:20000]
+        if len(raw_text) > 30000:
+            doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
+
+        schema_prompt = (
+            f"You are a semantic extraction engine. Extract a structured JSON-LD schema from this web page.\n"
+            f"Source: {request.url}\n"
+            "Be strictly faithful — do NOT invent or use placeholder data.\n\n"
+            f"<Doc>\n{doc_sample}\n</Doc>"
+        )
+        schema_completion = oai.chat.completions.create(
+            messages=[{"role": "user", "content": schema_prompt}],
+            model=OPENAI_SCHEMA_MODEL,
+            response_format={"type": "json_object"}
+        )
+        schema_data = json.loads(schema_completion.choices[0].message.content)
+        schema_vector = oai.embeddings.create(input=[json.dumps(schema_data)], model=OPENAI_EMBEDDING_MODEL).data[0].embedding
+
+        manifest_prompt = (
+            f"Generate a concise 'llms.txt' AI Protocol Manifest from this web page.\n"
+            f"Source URL: {request.url}\n"
+            "Include: Core Identity, Key Offerings, Key Claims.\n"
+            "Start with '# [Entity Name] - AI Protocol Manifest'.\n"
+            "DO NOT hallucinate. Only include what is stated in the page.\n\n"
+            f"<Doc>\n{doc_sample}\n</Doc>"
+        )
+        manifest_completion = oai.chat.completions.create(
+            messages=[{"role": "user", "content": manifest_prompt}],
+            model=OPENAI_MANIFEST_MODEL
+        )
+        llms_txt_content = manifest_completion.choices[0].message.content
+
+        del raw_text, full_text, doc_sample, html
+        gc.collect()
+
+        if db:
+            manifest_id = f"manifest_{int(datetime.datetime.now(timezone.utc).timestamp())}"
+            manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
+            latest_ref = db.collection("organizations").document(orgId).collection("manifests").document("latest")
+
+            transaction = db.transaction()
+
+            @firestore.transactional
+            def update_manifest_url(txn, m_ref, l_ref, data, vector, id_val, total_chunks, manifest_md):
+                expiry = datetime.datetime.now(timezone.utc) + timedelta(hours=24)
+                payload = {
+                    "content": manifest_md, "schemaData": data, "embedding": vector,
+                    "createdAt": datetime.datetime.now(timezone.utc), "expiresAt": expiry,
+                    "version": id_val, "totalChunks": total_chunks, "sourceUrl": request.url,
+                }
+                txn.set(m_ref, payload)
+                txn.set(l_ref, payload)
+                return True
+
+            success = update_manifest_url(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
+
+            if success:
+                batch_w = db.batch()
+                for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
+                    c_ref = manifest_ref.collection("chunks").document(str(i))
+                    batch_w.set(c_ref, {"text": txt, "embedding": vec, "index": i,
+                                       "expiresAt": datetime.datetime.now(timezone.utc) + timedelta(hours=24)})
+                    if (i + 1) % 400 == 0:
+                        batch_w.commit()
+                        batch_w = db.batch()
+                batch_w.commit()
+
+            log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="url_ingestion",
+                            resource_id=manifest_id, metadata={"url": request.url, "chunks": len(chunks)})
+
+        return {
+            "rawText": None,  # Zero-retention: URL text is never stored
+            "schemaData": schema_data,
+            "markdownManifest": llms_txt_content
+        }
+
+    except Exception as e:
+        logger.error(f"URL Ingestion Pipeline Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

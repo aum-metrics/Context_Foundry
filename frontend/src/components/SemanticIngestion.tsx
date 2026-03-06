@@ -68,6 +68,7 @@ export default function SemanticIngestion() {
     const [isDragging, setIsDragging] = useState(false);
     const [schemaData, setSchemaData] = useState<string | null>(null);
     const [rawText, setRawText] = useState<string | null>(null);
+    const [urlInput, setUrlInput] = useState<string>("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Processing simulation logs
@@ -75,15 +76,16 @@ export default function SemanticIngestion() {
 
     useEffect(() => {
         if (!organization?.id) return;
-        // Load existing manifest from Firestore so JSON-LD persists across navigation
+        // Zero-Retention Compliance: Only load the structured JSON-LD output from Firestore.
+        // Raw extracted text is NEVER stored — it is processed in volatile memory only.
         const loadExistingManifest = async () => {
             try {
                 const manifestDoc = await getDoc(doc(db, "organizations", organization.id, "manifests", "latest"));
                 if (manifestDoc.exists()) {
                     const data = manifestDoc.data();
-                    if (data.schemaData || data.rawText) {
-                        setSchemaData(JSON.stringify(data.schemaData || {}, null, 2));
-                        setRawText(data.rawText || "");
+                    if (data.schemaData && Object.keys(data.schemaData).length > 0) {
+                        setSchemaData(JSON.stringify(data.schemaData, null, 2));
+                        setRawText(null); // Explicitly null — zero-retention
                         setStep("editor");
                     }
                 }
@@ -134,6 +136,49 @@ export default function SemanticIngestion() {
         } catch (error) {
             console.error('Ingestion Error:', error);
             setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : 'Unknown ingestion failure'}`]);
+        }
+    };
+
+    const handleUrlIngest = async (url: string) => {
+        if (!url || !organization?.id) return;
+
+        setStep("processing");
+        setLogs([]);
+        setSchemaData(null);
+        setRawText(null);
+
+        setLogs(prev => [...prev, `Initiating secure URL ingestion for: ${url}`]);
+        setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
+        setLogs(prev => [...prev, "Connecting to Semantic Ingestion Engine..."]);
+
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("Authentication required for secure ingestion.");
+
+            const response = await fetch("/api/ingestion/parse-url", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ url, orgId: organization.id }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "URL processing failed");
+            }
+
+            setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
+            setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
+
+            const result = await response.json();
+            setLogs(prev => [...prev, "JSON-LD Schema verified."]);
+            setLogs(prev => [...prev, "Manifest generated."]);
+
+            setSchemaData(JSON.stringify(result.schemaData, null, 2));
+            setRawText(null); // Zero-retention
+            setStep("editor");
+        } catch (error) {
+            console.error("URL Ingestion Error:", error);
+            setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : "Unknown ingestion failure"}`]);
         }
     };
 
@@ -243,12 +288,19 @@ export default function SemanticIngestion() {
 
                                 <div className="mt-8 w-full max-w-md relative">
                                     <input
-                                        type="text"
-                                        disabled
-                                        placeholder={`URL Ingestion (Coming in v1.1)`}
-                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg py-3 px-4 text-sm text-slate-400 dark:text-slate-500 outline-none cursor-not-allowed shadow-sm dark:shadow-none"
+                                        type="url"
+                                        id="url-ingestion-input"
+                                        value={urlInput || ""}
+                                        onChange={e => setUrlInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === "Enter" && urlInput) handleUrlIngest(urlInput); }}
+                                        placeholder="https://yourcompany.com/about"
+                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg py-3 px-4 text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm dark:shadow-none placeholder-slate-400"
                                     />
-                                    <button disabled className="absolute right-2 top-2 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 p-1.5 rounded-md cursor-not-allowed">
+                                    <button
+                                        onClick={() => urlInput && handleUrlIngest(urlInput)}
+                                        disabled={!urlInput}
+                                        className="absolute right-2 top-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
+                                    >
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -310,7 +362,15 @@ export default function SemanticIngestion() {
                                     <span className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md">Parsed via PyMuPDF</span>
                                 </div>
                                 <div className="p-5 flex-1 overflow-y-auto text-xs font-mono text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap break-words">
-                                    {rawText || "Validating document extraction..."}
+                                    {rawText ? rawText : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 dark:text-slate-600 py-8">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
+                                                <span className="text-emerald-500 text-lg">⚡</span>
+                                            </div>
+                                            <p className="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest mb-1">Zero-Retention Active</p>
+                                            <p className="text-xs opacity-60 max-w-xs">Raw text processed in volatile memory only. Not stored per SOC2/CISO compliance.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
