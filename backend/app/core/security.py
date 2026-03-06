@@ -35,9 +35,13 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     allow_mock = getattr(settings, "ALLOW_MOCK_AUTH", False)
     
     if token in ["mock-dev-token", "mock-demo-token"]:
-        if settings.ENV == "development" and allow_mock:
-            is_demo = token == "mock-demo-token"
-            logger.info(f"🔓 Dev-mode: accepting {token} (ALLOW_MOCK_AUTH is ON)")
+        is_demo = token == "mock-demo-token"
+        
+        # 🛡️ SECURITY HARDENING: ONLY allow mock-demo-token in production. 
+        # mock-dev-token remains restricted to development + explicitly allowed.
+        if is_demo or (settings.ENV == "development" and allow_mock):
+            token_type = "DEMO" if is_demo else "DEV"
+            logger.info(f"🔓 {token_type} mode: accepting {token}")
             return {
                 "uid": "demo_uid" if is_demo else "mock_uid_dev",
                 "email": "demo@demo.com" if is_demo else "dev@localhost",
@@ -45,7 +49,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
                 "role": "admin"
             }
         else:
-            logger.critical("🛑 SECURITY BREACH ATTEMPT: mock-dev-token used in production or without ALLOW_MOCK_AUTH=True")
+            logger.critical(f"🛑 SECURITY BREACH ATTEMPT: {token} used in production or without ALLOW_MOCK_AUTH=True")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token signature",

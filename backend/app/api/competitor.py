@@ -43,6 +43,31 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
         if auth.get("orgId") != org_id:
             raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
+    # 🛡️ DEMO MOCKING (P0): Deterministic competitor metrics for Lumina Analytics
+    if org_id == "demo_org_id":
+        return {
+            "competitors": [
+                {
+                    "name": "Salesforce Data Cloud",
+                    "displacementRate": 18.5,
+                    "strengths": ["Enterprise Ecosystem", "Reliability"],
+                    "weaknesses": ["Context Precision", "Pricing"]
+                },
+                {
+                    "name": "HubSpot Operations Hub",
+                    "displacementRate": 12.2,
+                    "strengths": ["UX", "Ease of Use"],
+                    "weaknesses": ["Scale", "Deep Analytics"]
+                },
+                {
+                    "name": "ZoomInfo",
+                    "displacementRate": 8.4,
+                    "strengths": ["Database Size"],
+                    "weaknesses": ["Agentic Strategy", "Fidelity"]
+                }
+            ]
+        }
+
     org_name = "the company"
     api_key = None
     is_dev = os.getenv("ENV") == "development"

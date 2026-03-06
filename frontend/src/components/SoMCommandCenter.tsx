@@ -79,17 +79,37 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     }, [organization]);
 
     const fetchHistory = async (orgId: string) => {
-        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
-            return null; // fallback signal
-        }
-        const historyRef = collection(db, "organizations", orgId, "scoringHistory");
-        const q = query(historyRef, orderBy("timestamp", "desc"), limit(20));
-        const snapshot = await getDocs(q);
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            // Handle mock/demo tokens in production if auth.currentUser is null
+            let effectiveToken = token;
+            if (!effectiveToken) {
+                const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
+                else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+            }
 
-        const entries: ScoringHistoryEntry[] = [];
-        snapshot.forEach(doc => entries.push(doc.data() as ScoringHistoryEntry));
-        entries.reverse(); // oldest first for chart
-        return entries;
+            if (!effectiveToken) return null;
+
+            const res = await fetch(`/api/simulation/history/${orgId}`, {
+                headers: { 'Authorization': `Bearer ${effectiveToken}` }
+            });
+            if (!res.ok) return null;
+
+            const data = await res.json();
+            const entries = (data.history || []).map((entry: any) => ({
+                ...entry,
+                // Ensure timestamp is compatible with existing chart logic (Date or {seconds})
+                timestamp: typeof entry.timestamp === 'string'
+                    ? { seconds: Math.floor(new Date(entry.timestamp).getTime() / 1000) }
+                    : entry.timestamp
+            }));
+
+            return entries.reverse(); // oldest first for chart
+        } catch (err) {
+            console.error("Failed to fetch history from API", err);
+            return null;
+        }
     };
 
     const { data: historyEntries, error: _error, isLoading: loading } = useSWR(
@@ -108,8 +128,8 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         }
 
         const modelSums: Record<string, { total: number, count: number }> = {};
-        historyEntries.forEach(entry => {
-            entry.results?.forEach(res => {
+        historyEntries.forEach((entry: ScoringHistoryEntry) => {
+            entry.results?.forEach((res: { model: string; accuracy: number }) => {
                 if (!modelSums[res.model]) modelSums[res.model] = { total: 0, count: 0 };
                 modelSums[res.model].total += res.accuracy;
                 modelSums[res.model].count += 1;
@@ -117,7 +137,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         });
 
         const newAverages: Record<string, number> = {};
-        Object.keys(modelSums).forEach(model => {
+        Object.keys(modelSums).forEach((model: string) => {
             newAverages[model] = Math.round(modelSums[model].total / modelSums[model].count);
         });
 
@@ -142,9 +162,9 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
         const latestEntry = historyEntries[0];
         if (latestEntry && latestEntry.results) {
-            const gpt = latestEntry.results.find(r => r.model.includes("GPT"));
-            const claude = latestEntry.results.find(r => r.model.includes("Claude"));
-            const gemini = latestEntry.results.find(r => r.model.includes("Gemini"));
+            const gpt = latestEntry.results.find((r: { model: string }) => r.model.includes("GPT"));
+            const claude = latestEntry.results.find((r: { model: string }) => r.model.includes("Claude"));
+            const gemini = latestEntry.results.find((r: { model: string }) => r.model.includes("Gemini"));
 
             return [
                 { subject: 'Consistency', A: gpt?.accuracy || 80, B: claude?.accuracy || 70, C: gemini?.accuracy || 60, fullMark: 100 },
@@ -165,14 +185,20 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         setBatchLoading(true);
         try {
             const token = await auth.currentUser?.getIdToken();
+            let effectiveToken = token;
+            if (!effectiveToken) {
+                const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
+                else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+            }
 
-            if (!token) throw new Error("Authentication required.");
+            if (!effectiveToken) throw new Error("Authentication required.");
 
             const response = await fetch('/api/batch/batch', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${effectiveToken}`
                 },
                 body: JSON.stringify({
                     orgId: organization.id,
@@ -193,7 +219,11 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     batchIntervalRef.current = pollInterval;
                     try {
                         let currentToken = await auth.currentUser?.getIdToken();
-                        if (!currentToken && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) currentToken = "mock-dev-token";
+                        if (!currentToken) {
+                            const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                            if (savedMockUser === "demo@demo.com") currentToken = "mock-demo-token";
+                            else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") currentToken = "mock-dev-token";
+                        }
                         const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${data.jobId}`, {
                             headers: { 'Authorization': `Bearer ${currentToken}` }
                         });
@@ -230,17 +260,21 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         if (!seoUrl || !organization) return;
         setSeoLoading(true);
         try {
-            let token = await auth.currentUser?.getIdToken();
-
-            // Mock bypass for development/demo mode
-            if (!token) {
-                token = await auth.currentUser?.getIdToken() || undefined;
+            const token = await auth.currentUser?.getIdToken();
+            let effectiveToken = token;
+            if (!effectiveToken) {
+                const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
+                else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
             }
-            const response = await fetch('/api/seo/audit', {
+
+            const endpoint = organization.id === "demo_org_id" ? '/api/seo/audit/mock' : '/api/seo/audit';
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${effectiveToken}`
                 },
                 body: JSON.stringify({ url: seoUrl, orgId: organization.id })
             });
@@ -301,12 +335,12 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         }
 
         const dayMap: Record<string, { score: number, count: number }> = {};
-        historyEntries.forEach(entry => {
+        historyEntries.forEach((entry: ScoringHistoryEntry) => {
             const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
             const label = ts.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
             if (entry.results && entry.results.length > 0) {
-                const totalAccuracy = entry.results.reduce((s, r) => s + r.accuracy, 0);
+                const totalAccuracy = entry.results.reduce((s: number, r: { accuracy: number }) => s + r.accuracy, 0);
                 const avg = totalAccuracy / entry.results.length;
 
                 if (!dayMap[label]) dayMap[label] = { score: 0, count: 0 };
@@ -350,7 +384,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         const risks: { id: number; model: string; text: string; severity: string }[] = [];
         let riskId = 1;
         for (const entry of historyEntries) {
-            for (const result of (entry.results || [])) {
+            for (const result of (entry.results || []) as { model: string; accuracy: number; hasHallucination: boolean }[]) {
                 // Hardened: Only surface risks with high confidence of drift
                 if (result.hasHallucination || result.accuracy < 60) {
                     risks.push({
@@ -700,7 +734,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 <span className="text-xs text-slate-500 uppercase">Data Source</span>
                                 <span className="text-xs text-emerald-400 flex items-center">
                                     <Activity className="w-3 h-3 mr-1" />
-                                    Firestore Live
+                                    AUM API Secured
                                 </span>
                             </div>
                         )}

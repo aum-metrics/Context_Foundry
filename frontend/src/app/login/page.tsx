@@ -27,13 +27,12 @@ export default function LoginPage() {
             const redirectParams = searchParams.get("redirect");
             const targetUrl = redirectParams || "/dashboard";
 
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
-                // Local mock bypass when user hasn't setup Firebase
-                if (email === "demo@demo.com" && password === "testdemo") {
-                    localStorage.setItem("mock_auth_user", "demo@demo.com");
-                } else {
-                    localStorage.setItem("mock_auth_user", email);
-                }
+            const isDemoLogin = email === "demo@demo.com" && password === "testdemo";
+            const isMockMode = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash";
+
+            if (isDemoLogin || isMockMode) {
+                // Local mock bypass when user hasn't setup Firebase OR is using demo account
+                localStorage.setItem("mock_auth_user", isDemoLogin ? "demo@demo.com" : email);
 
                 setTimeout(() => {
                     window.dispatchEvent(new Event("mock_auth_change"));

@@ -230,6 +230,15 @@ async def run_seo_audit(
     return {"status": "processing", "jobId": job_id, "message": "SEO Audit queued"}
 
 
+@router.post("/audit/mock")
+async def run_mock_seo_audit(request: SEOAuditRequest, auth: dict = Depends(get_current_user)):
+    """Immediate mock response for demo@demo.com"""
+    if request.orgId != "demo_org_id":
+        raise HTTPException(status_code=403, detail="Mock endpoint only for demo org")
+    
+    return {"status": "completed", "jobId": "demo_job_123", "message": "Audit complete"}
+
+
 @router.get("/audit/status/{org_id}/{job_id}")
 async def get_seo_status(
     org_id: str,
@@ -243,6 +252,24 @@ async def get_seo_status(
     uid = current_user.get("uid")
     if not verify_user_org_access(uid, org_id):
         raise HTTPException(status_code=403, detail="Unauthorized access")
+
+    if org_id == "demo_org_id":
+        return {
+            "status": "completed",
+            "jobId": job_id,
+            "url": "https://lumina-insight.com",
+            "seoScore": 92,
+            "geoScore": 88,
+            "overallScore": 90,
+            "checks": [
+                {"check": "Title Tag", "status": "pass", "detail": "Lumina Analytics | Enterprise Market Intelligence"},
+                {"check": "Meta Description", "status": "pass", "detail": "Secure AI-powered market intelligence for enterprises."},
+                {"check": "H1 Heading", "status": "pass", "detail": "Lumina Analytics"},
+                {"check": "Schema.org JSON-LD", "status": "pass", "detail": "Valid SoftwareApplication schema found"},
+                {"check": "AI Crawler Readiness", "status": "pass", "detail": "llms.txt detected and valid"}
+            ],
+            "recommendation": "Maintain your manifest at /llms.txt to ensure GPT-4o and Claude 3.5 continue indexing your verified identity."
+        }
 
     try:
         job_doc = db.collection("organizations").document(org_id).collection("seoJobs").document(job_id).get()

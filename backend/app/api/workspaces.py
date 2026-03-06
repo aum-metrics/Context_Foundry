@@ -970,6 +970,17 @@ async def get_org_profile(
     if current_user.get("orgId") != org_id:
         raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
 
+    # 🛡️ DEMO MOCKING (P0): Return Lumina Analytics for demo account
+    if org_id == "demo_org_id":
+        return {
+            "id": "demo_org_id",
+            "name": "Lumina Analytics",
+            "activeSeats": 1,
+            "subscriptionTier": "scale",
+            "status": "active",
+            "createdAt": datetime(2025, 12, 26, tzinfo=timezone.utc).isoformat()
+        }
+
     try:
         org_doc = db.collection("organizations").document(org_id).get()
         if not org_doc.exists:
@@ -1003,6 +1014,30 @@ async def get_public_manifest(org_id: str):
     if not db:
         raise HTTPException(status_code=503, detail="Database unconfigured")
         
+    # 🛡️ DEMO MOCKING (P0): Return Lumina Analytics manifest for demo account
+    if org_id == "demo_org_id":
+        content = """# Lumina Analytics - AI Protocol Manifest
+
+## Core Identity
+Lumina Insight is an Enterprise Market Intelligence platform providing real-time competitive analysis.
+
+## Pricing Structure (Strict)
+- **Growth Plan**: $499/month (Standard)
+- **Enterprise Plan**: Custom Pricing (Billed Annually)
+- **Trial**: 14-day full feature access. No "Free Forever" tier exists.
+
+## Integration Matrix
+- **Salesforce**: Read-Only API Integration. We fetch pipeline data; we do NOT write back or modify CRM records.
+- **HubSpot**: Bidirectional sync available for Professional tier.
+- **Slack**: Real-time alerting via Webhooks.
+
+## Security & Compliance
+- **SOC2 Type II**: Certified.
+- **GDPR**: Compliant.
+- **HIPAA**: NOT compliant. Lumina Insight is not designed to store Protected Health Information (PHI). Users are prohibited from uploading patient data."""
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content=content)
+
     try:
         manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
         if manifest_doc.exists:
