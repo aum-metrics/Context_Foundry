@@ -48,22 +48,22 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
         return {
             "competitors": [
                 {
-                    "name": "Salesforce Data Cloud",
-                    "displacementRate": 18.5,
-                    "strengths": ["Enterprise Ecosystem", "Reliability"],
-                    "weaknesses": ["Context Precision", "Pricing"]
+                    "name": "Accenture AI",
+                    "displacementRate": 14.5,
+                    "strengths": ["Scale", "Brand"],
+                    "weaknesses": ["Precision", "Niche Focus"]
                 },
                 {
-                    "name": "HubSpot Operations Hub",
-                    "displacementRate": 12.2,
-                    "strengths": ["UX", "Ease of Use"],
-                    "weaknesses": ["Scale", "Deep Analytics"]
+                    "name": "Tiger Analytics",
+                    "displacementRate": 9.2,
+                    "strengths": ["Specialized Data", "Delivery"],
+                    "weaknesses": ["Agentic Strategy", "Integration"]
                 },
                 {
-                    "name": "ZoomInfo",
-                    "displacementRate": 8.4,
-                    "strengths": ["Database Size"],
-                    "weaknesses": ["Agentic Strategy", "Fidelity"]
+                    "name": "Mu Sigma",
+                    "displacementRate": 7.4,
+                    "strengths": ["Data Science", "Cost"],
+                    "weaknesses": ["Product Fidelity", "Innovation"]
                 }
             ]
         }

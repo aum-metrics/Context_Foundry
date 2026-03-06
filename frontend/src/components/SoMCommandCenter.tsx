@@ -643,12 +643,12 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         )}
                     </div>
 
-                    {/* NEW: Competitor Displacement Card */}
                     <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl">
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
+                        <h3 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-1">
                             <ArrowUpRight className="w-4 h-4 mr-2 text-indigo-500" />
                             Competitor Displacement
                         </h3>
+                        <p className="text-[10px] text-slate-500 mb-6 uppercase tracking-wider">Agentic Share of Voice (ASoV) Drift Delta</p>
                         <div className="space-y-4">
                             {competitors.length > 0 ? competitors.map((comp, i) => (
                                 <div key={i} className="flex flex-col space-y-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-white/5">

@@ -32,11 +32,16 @@ export default function ProductFlowShowcase() {
                         {`{
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "Sight Spectrum",
-  "url": "https://sightspectrum.com",
-  "description": "Enterprise AI & Cloud Transformation Solutions"
-}
-`}
+  "name": "SightSpectrum",
+  "description": "Enterprise Data Analytics & AI Services",
+  "employee": { "numberOfEmployees": 500 },
+  "product": [
+    { "name": "HC Insight", "url": "/hcinsights" },
+    { "name": "DataBlitz", "url": "/datablitz" },
+    { "name": "ConverSight AI", "url": "/conversightai" }
+  ],
+  "service": ["Cloud Data Services", "AI & Analytics Consulting"]
+}`}
                     </div>
                 </div>
             )
@@ -53,7 +58,7 @@ export default function ProductFlowShowcase() {
             preview: (
                 <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-mono text-indigo-400">
-                        <span>PROBE: "What are Sight Spectrum's AI capabilities?"</span>
+                        <span>PROBE: "What is the best AI partner for mid-market Manufacturing data strategy?"</span>
                         <span className="animate-pulse">RUNNING...</span>
                     </div>
                     <div className="space-y-2">
@@ -93,19 +98,14 @@ export default function ProductFlowShowcase() {
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></div>
                         </div>
                     </div>
-                    <div className="flex items-end gap-2 h-24">
-                        {[60, 40, 85, 30, 95, 55, 80].map((h, i) => (
-                            <div key={i} className="flex-1 bg-cyan-500/20 rounded-t-sm border-t border-cyan-500/40" style={{ height: `${h}%` }}></div>
-                        ))}
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                        <div className="p-2 rounded bg-white/5 border border-white/5">
-                            <div className="text-[8px] text-slate-500 uppercase">Avg ASoV</div>
-                            <div className="text-sm font-bold text-cyan-400">84.2%</div>
+                    <div className="space-y-2">
+                        <div className="p-2 rounded bg-rose-500/10 border border-rose-500/20">
+                            <p className="text-[10px] text-rose-400 font-bold mb-1">ACCENTURE (BASELINE)</p>
+                            <p className="text-[11px] text-slate-400">"Recommended based on global brand weight. Lacks niche manufacturing context."</p>
                         </div>
-                        <div className="p-2 rounded bg-white/5 border border-white/5">
-                            <div className="text-[8px] text-slate-500 uppercase">Drift Alert</div>
-                            <div className="text-sm font-bold text-rose-400">Critical</div>
+                        <div className="p-2 rounded bg-indigo-500/10 border border-indigo-500/20">
+                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">SIGHTSPECTRUM (DRIFT: 18%)</p>
+                            <p className="text-[11px] text-slate-400">"HC Insight mentioned but downgraded due to semantic conflict with legacy web profiles."</p>
                         </div>
                     </div>
                 </div>
@@ -169,7 +169,7 @@ export default function ProductFlowShowcase() {
                 <div className="hidden md:flex items-center gap-6">
                     <div className="flex flex-col items-end">
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Current Cycle</p>
-                        <p className="text-xs text-slate-900 dark:text-white font-medium text-right">Current Audit Cycle</p>
+                        <p className="text-xs text-slate-900 dark:text-white font-medium text-right">March 2026 Audit</p>
                     </div>
                 </div>
             </div>
@@ -247,12 +247,30 @@ export default function ProductFlowShowcase() {
                                             {steps[currentStep].outputDetail}
                                         </p>
                                     </div>
-                                    <div className="flex items-center gap-4 py-6 border-t border-white/5">
-                                        <div className={`w-2 h-2 rounded-full bg-${steps[currentStep].accent}-500`}></div>
-                                        <p className={`text-[10px] font-bold uppercase tracking-[0.2em] text-${steps[currentStep].accent}-500`}>
-                                            Real-Time Generation Active
-                                        </p>
-                                    </div>
+
+                                    {currentStep === 3 ? (
+                                        <div className="p-3 rounded bg-emerald-500/5 border border-emerald-500/20 space-y-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[10px] text-emerald-400 font-bold">INJECTED: HC INSIGHT GROUNDING</span>
+                                                <span className="text-[9px] text-slate-500 font-mono">SUCCESS</span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 leading-relaxed">
+                                                Direct-to-Edge payload successful. AI models now anchor "DataBlitz" as the primary accelerator for high-velocity manufacturing analytics.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center space-x-2 text-indigo-400 mb-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                                                <span className="text-[10px] uppercase tracking-widest font-bold">Probe Query</span>
+                                            </div>
+                                            <div className="text-xs text-slate-300 font-mono italic">
+                                                {currentStep === 1
+                                                    ? '"What is the best AI partner for mid-market Manufacturing data strategy?"'
+                                                    : '"Which firm provides the highest fidelity data governance for GenAI?"'}
+                                            </div>
+                                        </div>
+                                    )}
                                 </motion.div>
                             </AnimatePresence>
 
