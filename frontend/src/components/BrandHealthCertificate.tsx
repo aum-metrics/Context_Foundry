@@ -332,7 +332,7 @@ export default function BrandHealthCertificate({
                                     </div>
                                 </div>
                                 <div className="pt-3 border-t border-slate-300 dark:border-white/5 flex items-center justify-between">
-                                    <span className="text-slate-500">Standards: ISO/IEC 42001 · NIST AI RMF · Zero-Retention</span>
+                                    <span className="text-slate-500">Aligned to: ISO/IEC 42001 · NIST AI RMF · Zero-Retention Architecture</span>
                                     <span className="text-slate-400 dark:text-slate-600">{isoTimestamp}</span>
                                 </div>
                             </div>

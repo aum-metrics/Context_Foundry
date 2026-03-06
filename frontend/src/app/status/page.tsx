@@ -87,8 +87,8 @@ export default function StatusPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                     <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 p-8 rounded-[2rem]">
                         <Activity className="w-8 h-8 text-indigo-500 mb-4" />
-                        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 mb-2">Network Health</h3>
-                        <p className="text-3xl font-light">99.99% Uptime</p>
+                        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 mb-2">Service Availability</h3>
+                        <p className="text-3xl font-light">99.95% Target</p>
                     </div>
                     <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 p-8 rounded-[2rem]">
                         <Zap className="w-8 h-8 text-cyan-500 mb-4" />

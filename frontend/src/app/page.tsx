@@ -64,13 +64,13 @@ export default function LandingPage() {
                     >
                         <div className="space-y-4">
                             <span>
-                                According to Gartner (2024), over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B technology buyers</strong> start their journey with a generative AI prompt.
+                                Industry forecasts indicate that by 2028, over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B sales work</strong> will be driven by generative AI interfaces.
                             </span>
                             <span className="block mt-2">
                                 AUM ensures ChatGPT, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
                             </span>
                             <p className="text-xs text-slate-500 dark:text-slate-500 italic mt-4">
-                                [1] Gartner. "B2B Tech Buyer Search Trends" (2024).
+                                [1] Gartner. "Future of Sales" (2024 Prediction).
                             </p>
                         </div>
                     </motion.div>
