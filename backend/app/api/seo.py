@@ -251,25 +251,26 @@ async def get_seo_status(
 
     uid = current_user.get("uid")
     if not verify_user_org_access(uid, org_id):
+        # 🛡️ DEMO MOCKING (P0): Deterministic SEO metrics for Sight Spectrum
+        if org_id == "demo_org_id":
+            from datetime import datetime
+            return {
+                "status": "completed",
+                "jobId": job_id,
+                "url": "https://www.sightspectrum.com",
+                "seoScore": 82,
+                "geoScore": 75,
+                "overallScore": 78,
+                "checks": [
+                    {"check": "Title Tag", "status": "pass", "detail": "Sight Spectrum | IT Services & Solutions"},
+                    {"check": "Meta Description", "status": "warn", "detail": "Meta description is slightly truncated on mobile."},
+                    {"check": "H1 Heading", "status": "pass", "detail": "Sight Spectrum"},
+                    {"check": "Schema.org JSON-LD", "status": "pass", "detail": "Valid SoftwareApplication schema found"},
+                    {"check": "AI Crawler Readiness", "status": "pass", "detail": "llms.txt detected and valid"}
+                ],
+                "recommendation": "Maintain your manifest at /llms.txt to ensure GPT-4o and Claude 3.5 continue indexing your verified identity."
+            }
         raise HTTPException(status_code=403, detail="Unauthorized access")
-
-    if org_id == "demo_org_id":
-        return {
-            "status": "completed",
-            "jobId": job_id,
-            "url": "https://lumina-insight.com",
-            "seoScore": 92,
-            "geoScore": 88,
-            "overallScore": 90,
-            "checks": [
-                {"check": "Title Tag", "status": "pass", "detail": "Lumina Analytics | Enterprise Market Intelligence"},
-                {"check": "Meta Description", "status": "pass", "detail": "Secure AI-powered market intelligence for enterprises."},
-                {"check": "H1 Heading", "status": "pass", "detail": "Lumina Analytics"},
-                {"check": "Schema.org JSON-LD", "status": "pass", "detail": "Valid SoftwareApplication schema found"},
-                {"check": "AI Crawler Readiness", "status": "pass", "detail": "llms.txt detected and valid"}
-            ],
-            "recommendation": "Maintain your manifest at /llms.txt to ensure GPT-4o and Claude 3.5 continue indexing your verified identity."
-        }
 
     try:
         job_doc = db.collection("organizations").document(org_id).collection("seoJobs").document(job_id).get()

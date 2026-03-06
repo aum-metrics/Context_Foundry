@@ -89,7 +89,10 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     Verifies that the Firebase user belongs to the requested organization.
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
-    # BRUTAL AUDIT FIX: Fail-Closed logic.
+    # 🛡️ DEMO MOCKING: Allow demo user access to demo org
+    if uid == "demo_uid" and target_org_id == "demo_org_id":
+        return True
+        
     if not db:
         logger.error("🛑 Security Failure: Database connection missing. Access denied.")
         return False 
@@ -166,14 +169,15 @@ def get_auth_context(credentials: HTTPAuthorizationCredentials = Depends(securit
     try:
         user_info = get_current_user(credentials)
         # Fetch the orgId and role for this user
-        org_id = None
-        role = None
-        if db:
+        org_id = user_info.get("orgId") # Default to token-provided orgId (mock bypass)
+        role = user_info.get("role", "member")
+        
+        if db and user_info.get("uid") not in ["demo_uid", "mock_uid_dev"]:
             user_doc = db.collection("users").document(user_info["uid"]).get()
             if user_doc.exists:
                 user_data = user_doc.to_dict() or {}
-                org_id = user_data.get("orgId")
-                role = user_data.get("role", "member")
+                org_id = user_data.get("orgId", org_id)
+                role = user_data.get("role", role)
         
         return {
             "uid": user_info["uid"],

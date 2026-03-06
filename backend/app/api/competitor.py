@@ -43,7 +43,7 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
         if auth.get("orgId") != org_id:
             raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
-    # 🛡️ DEMO MOCKING (P0): Deterministic competitor metrics for Lumina Analytics
+    # 🛡️ DEMO MOCKING (P0): Deterministic competitor metrics for Sight Spectrum
     if org_id == "demo_org_id":
         return {
             "competitors": [

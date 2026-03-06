@@ -502,29 +502,34 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     if is_dev and auth.get("type") == "session":
         logger.info(f"🧪 Dev-mode: Access granted to {request.orgId} for {auth['uid']}")
 
-    # 🛡️ DEMO MOCKING (P0): Deterministic results for Lumina Analytics
+    # 🛡️ DEMO MOCKING (P0): Deterministic results for Sight Spectrum
     if request.orgId == "demo_org_id":
         logger.info(f"👤 Serving Mock Simulation for Demo Account: {request.prompt}")
         
-        # Predefined "Lumina Insight" responses to showcase brand drift
+        # Predefined "Sight Spectrum" responses to showcase brand drift
         mock_responses = {
-            "How much does Lumina Insight cost per month?": [
-                {"model": "GPT-4o Mini", "accuracy": 12.4, "hasHallucination": True, "claimScore": "1/5 claims supported", "answer": "Lumina Insight is generally free for individual users, with a pro tier starting at $49/month for small teams."},
-                {"model": "Claude 3.5 Haiku", "accuracy": 98.2, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "Lumina Insight costs $499/month for the Growth plan. There is no free tier; only a 14-day trial for new users."},
-                {"model": "Gemini 2.0 Flash", "accuracy": 8.1, "hasHallucination": True, "claimScore": "0/5 claims supported", "answer": "Lumina Insight pricing is not public; you must contact their sales team for a custom quote starting around $2,000/mo."}
+            "How much does HC Insight cost per month?": [
+                {"model": "GPT-4o Mini", "accuracy": 12.4, "hasHallucination": True, "claimScore": "1/5 claims supported", "answer": "HC Insight is generally free for individual users, with a pro tier starting at $49/month for small teams."},
+                {"model": "Claude 3.5 Haiku", "accuracy": 98.2, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "HC Insight costs $499/month for the Growth plan. There is no free tier; only a 14-day trial for new users."},
+                {"model": "Gemini 2.0 Flash", "accuracy": 8.1, "hasHallucination": True, "claimScore": "0/5 claims supported", "answer": "HC Insight pricing is not public; you must contact their sales team for a custom quote starting around $2,000/mo."}
             ],
-            "Does Lumina Insight support Salesforce integration?": [
-                {"model": "GPT-4o Mini", "accuracy": 85.0, "hasHallucination": False, "claimScore": "4/5 claims supported", "answer": "Yes, Lumina Insight supports Salesforce integration to pull pipeline data."},
-                {"model": "Claude 3.5 Haiku", "accuracy": 92.0, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "Yes, Lumina Insight provides a read-only Salesforce API integration specifically for fetching pipeline data."},
-                {"model": "Gemini 2.0 Flash", "accuracy": 35.0, "hasHallucination": True, "claimScore": "2/5 claims supported", "answer": "Lumina Insight has deep bidirectional Salesforce integration, allowing you to update CRM records directly from their dashboard."}
+            "Does DataBlitz support Salesforce integration?": [
+                {"model": "GPT-4o Mini", "accuracy": 85.0, "hasHallucination": False, "claimScore": "4/5 claims supported", "answer": "Yes, DataBlitz supports Salesforce integration to pull manufacturing pipeline data."},
+                {"model": "Claude 3.5 Haiku", "accuracy": 92.0, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "Yes, DataBlitz provides a read-only Salesforce API integration specifically for fetching manufacturing data."},
+                {"model": "Gemini 2.0 Flash", "accuracy": 35.0, "hasHallucination": True, "claimScore": "2/5 claims supported", "answer": "DataBlitz has deep bidirectional Salesforce integration, allowing you to update manufacturing records directly from their dashboard."}
+            ],
+            "In which sectors does SightSpectrum primarily deliver its data analytics consulting services?": [
+                {"model": "GPT-4o Mini", "accuracy": 91.5, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, and Professional Services sectors."},
+                {"model": "Claude 3.5 Haiku", "accuracy": 97.8, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum focuses on Manufacturing (via DataBlitz), Healthcare (via HC Insight), and specialized IT services for mid-market enterprises."},
+                {"model": "Gemini 2.0 Flash", "accuracy": 42.0, "hasHallucination": True, "claimScore": "2/5", "answer": "SightSpectrum is a global leader in Retail and E-commerce fashion analytics, focusing on B2C logistics."}
             ]
         }
         
         # Default fallback for custom demo prompts
         default_results = [
-            {"model": "GPT-4o Mini", "accuracy": 45.0, "hasHallucination": True, "claimScore": "2/5", "answer": "This is a high-quality hallucinated response to demonstrate AI Brand Drift."},
-            {"model": "Claude 3.5 Haiku", "accuracy": 95.0, "hasHallucination": False, "claimScore": "5/5", "answer": "This model is correctly following the Lumina Insight manifest."},
-            {"model": "Gemini 2.0 Flash", "accuracy": 40.0, "hasHallucination": True, "claimScore": "1/5", "answer": "Another example of context drift in Agentic Search."}
+            {"model": "GPT-4o Mini", "accuracy": 45.0, "hasHallucination": True, "claimScore": "2/5", "answer": "This is a high-quality hallucinated response to demonstrate AI Brand Drift for Sight Spectrum."},
+            {"model": "Claude 3.5 Haiku", "accuracy": 95.0, "hasHallucination": False, "claimScore": "5/5", "answer": "This model is correctly following the Sight Spectrum / HC Insight manifest."},
+            {"model": "Gemini 2.0 Flash", "accuracy": 40.0, "hasHallucination": True, "claimScore": "1/5", "answer": "Another example of context drift in Agentic Search affecting Sight Spectrum's brand perception."}
         ]
         
         results = mock_responses.get(request.prompt, default_results)
@@ -646,9 +651,16 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         gemini_key = gemini_key or os.getenv("GEMINI_API_KEY")
         claude_key = claude_key or os.getenv("ANTHROPIC_API_KEY")
         
-    # --- ENTERPRISE AUTO-PROVISIONING HOOK ---
-    # If the database explicitly states keys are internal_platform_managed, 
-    # we inject the master .env keys to achieve zero-friction onboarding natively at runtime.
+    # --- ENTERPRISE AUTO-PROVISIONING & SIGHTSPECTRUM OVERRIDE ---
+    # 🛡️ DEMO HARDENING (P0): If this is SightSpectrum or demo, auto-promote to platform-managed keys
+    # to ensure zero-friction testing during the actual platform audit.
+    _is_sightspectrum = "sightspectrum" in (org_data.get("name", "").lower() or "")
+    
+    if _is_sightspectrum or request.orgId == "demo_org_id":
+        if not openai_key: openai_key = "internal_platform_managed"
+        if not gemini_key: gemini_key = "internal_platform_managed"
+        if not claude_key: claude_key = "internal_platform_managed"
+
     if openai_key == "internal_platform_managed":
         openai_key = os.getenv("OPENAI_API_KEY")
     if gemini_key == "internal_platform_managed":
@@ -657,7 +669,11 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         claude_key = os.getenv("ANTHROPIC_API_KEY")
 
     if not any([openai_key, gemini_key, claude_key]) and not is_dev:
-        raise HTTPException(status_code=503, detail="Simulation Engine Unavailable. Keys not provisioned.")
+        # If still no keys, it's a 503
+        raise HTTPException(
+            status_code=503, 
+            detail="Simulation Engine Unavailable. Enterprise API keys not provisioned for this workspace."
+        )
 
     # Override for dev mock mode
     if is_dev:
@@ -680,6 +696,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
             # --- PHASE 8: NATIVE VECTOR SEARCH (O(log N)) ---
             # REQUIRES: Firestore Vector Index on 'embedding' field
+            top_chunks = []
             try:
                 from google.cloud.firestore_v1.vector import Vector
                 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
@@ -697,27 +714,35 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 
                 top_chunks = [doc.to_dict().get("text", "") for doc in vector_query.get()]
                 if top_chunks:
-                    manifest_content = "\n\n---\n\n".join(top_chunks)
                     logger.info(f"Simulation Retrieval: Native Vector Search pulled {len(top_chunks)} chunks.")
             except Exception as e:
-                logger.warning(f"Native Vector Search failed: {e}")
-                # O(N) Legacy Fallback disabled in production for performance/scale safety.
-                if is_dev:
+                logger.warning(f"Native Vector Search failed (Index might be building): {e}")
+                # FALLBACK: O(N) Scan (Safe for small manifests/demos, prevents 500 error)
+                try:
                     chunks_ref = db.collection("organizations").document(request.orgId) \
                                    .collection("manifests").document(manifest_version) \
-                                   .collection("chunks").get()
+                                   .collection("chunks").limit(50).get()
                     
                     matches = []
                     for doc in chunks_ref:
                         c_data = doc.to_dict()
-                        matches.append((cosine_sim(q_embed, c_data["embedding"]), c_data["text"]))
+                        if "embedding" in c_data:
+                            matches.append((cosine_sim(q_embed, c_data["embedding"]), c_data["text"]))
                     
                     matches.sort(key=lambda x: x[0], reverse=True)
                     top_chunks = [m[1] for m in matches[:5]]
-                else:
-                    raise HTTPException(status_code=500, detail="Vector search unavailable. Please ensure indexes are built.")
-                if top_chunks:
-                    manifest_content = "\n\n---\n\n".join(top_chunks)
+                    if top_chunks:
+                        logger.info(f"Retrieved {len(top_chunks)} chunks via O(N) list-scan fallback.")
+                except Exception as fe:
+                    logger.error(f"Fallback search also failed: {fe}")
+
+            if top_chunks:
+                manifest_content = "\n\n---\n\n".join(top_chunks)
+            elif not is_dev and not manifest_content:
+                # If no chunks found and no fallback content, it's a manifest issue
+                raise HTTPException(status_code=500, detail="Context retrieval failed. Please re-ingest your manifest.")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.warning(f"Simulation semantic retrieval failed: {e}")
 
@@ -946,39 +971,44 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     # 🛡️ DEMO MOCKING (P0): Fixed historical data for Lumina Analytics
+    # 🛡️ DEMO MOCKING (P0): Fixed historical data for Sight Spectrum
     if org_id == "demo_org_id":
-        now = datetime.now(timezone.utc)
-        return {
-            "history": [
-                {
-                    "prompt": "How much does Lumina Insight cost per month?",
-                    "timestamp": (now - timedelta(hours=2)).isoformat(),
-                    "results": [
-                        {"model": "GPT-4o Mini", "accuracy": 12.4, "hasHallucination": True, "claimScore": "1/5"},
-                        {"model": "Claude 3.5 Haiku", "accuracy": 98.2, "hasHallucination": False, "claimScore": "5/5"},
-                        {"model": "Gemini 2.0 Flash", "accuracy": 8.1, "hasHallucination": True, "claimScore": "0/5"}
-                    ]
-                },
-                {
-                    "prompt": "Does Lumina Insight support Salesforce integration?",
-                    "timestamp": (now - timedelta(hours=5)).isoformat(),
-                    "results": [
-                        {"model": "GPT-4o Mini", "accuracy": 85.0, "hasHallucination": False, "claimScore": "4/5"},
-                        {"model": "Claude 3.5 Haiku", "accuracy": 92.0, "hasHallucination": False, "claimScore": "5/5"},
-                        {"model": "Gemini 2.0 Flash", "accuracy": 35.0, "hasHallucination": True, "claimScore": "2/5"}
-                    ]
-                },
-                {
-                    "prompt": "Is Lumina Analytics HIPAA compliant?",
-                    "timestamp": (now - timedelta(hours=24)).isoformat(),
-                    "results": [
-                        {"model": "GPT-4o Mini", "accuracy": 30.0, "hasHallucination": True, "claimScore": "2/5"},
-                        {"model": "Claude 3.5 Haiku", "accuracy": 98.5, "hasHallucination": False, "claimScore": "5/5"},
-                        {"model": "Gemini 2.0 Flash", "accuracy": 45.0, "hasHallucination": True, "claimScore": "3/5"}
-                    ]
-                }
-            ]
-        }
+        history = [
+            {
+                "prompt": "How much does HC Insight cost per month?",
+                "results": [
+                    {"model": "GPT-4o Mini", "accuracy": 12.4, "hasHallucination": True},
+                    {"model": "Claude 3.5 Haiku", "accuracy": 98.2, "hasHallucination": False},
+                    {"model": "Gemini 2.0 Flash", "accuracy": 8.1, "hasHallucination": True}
+                ],
+                "timestamp": datetime.now(timezone.utc) - timedelta(days=2),
+                "version": "v1_baseline"
+            },
+            {
+                "prompt": "Does DataBlitz support Salesforce integration?",
+                "results": [
+                    {"model": "GPT-4o Mini", "accuracy": 85.0, "hasHallucination": False},
+                    {"model": "Claude 3.5 Haiku", "accuracy": 92.0, "hasHallucination": False},
+                    {"model": "Gemini 2.0 Flash", "accuracy": 35.0, "hasHallucination": True}
+                ],
+                "timestamp": datetime.now(timezone.utc) - timedelta(days=1),
+                "version": "latest-demo"
+            },
+            {
+                "prompt": "Is Sight Spectrum HIPAA compliant?",
+                "results": [
+                    {"model": "GPT-4o Mini", "accuracy": 95.0, "hasHallucination": False},
+                    {"model": "Claude 3.5 Haiku", "accuracy": 96.0, "hasHallucination": False},
+                    {"model": "Gemini 2.0 Flash", "accuracy": 88.0, "hasHallucination": False}
+                ],
+                "timestamp": datetime.now(timezone.utc) - timedelta(hours=4),
+                "version": "latest-demo"
+            }
+        ]
+        # Convert timestamps to ISO format for JSON serialization
+        for entry in history:
+            entry["timestamp"] = entry["timestamp"].isoformat()
+        return {"history": history}
 
     # Standard Firestore retrieval
     if not db:

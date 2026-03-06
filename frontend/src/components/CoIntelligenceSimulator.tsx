@@ -409,15 +409,17 @@ export default function CoIntelligenceSimulator() {
 
                         {/* Detailed Responses */}
                         <AnimatePresence>
-                            {!byokError && modelResults.filter(r => !r.error).map((result, i) => (
+                            {!byokError && modelResults.map((result, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className={`rounded-2xl border p-5 ${result.hasHallucination
-                                        ? "bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-500/30"
-                                        : "bg-white border-slate-200 dark:bg-slate-900 dark:border-white/5"
+                                    className={`rounded-2xl border p-5 ${result.error
+                                        ? "bg-rose-50/50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-500/30"
+                                        : result.hasHallucination
+                                            ? "bg-amber-50/30 border-amber-200 dark:bg-amber-950/10 dark:border-amber-500/20"
+                                            : "bg-white border-slate-200 dark:bg-slate-900 dark:border-white/5"
                                         }`}
                                 >
                                     <div className="flex justify-between items-center mb-3 text-xs">
@@ -426,19 +428,26 @@ export default function CoIntelligenceSimulator() {
                                             {result.model}
                                         </span>
                                         <div className="flex items-center space-x-2">
-                                            <span className={`px-2 py-0.5 rounded border flex items-center ${result.accuracy > 85
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                                                : result.accuracy > 60
-                                                    ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
-                                                    : "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50"
-                                                }`}>
-                                                Accuracy: {result.accuracy}%
-                                                {result.hasHallucination && <AlertTriangle className="w-3 h-3 ml-1" />}
-                                            </span>
+                                            {result.error ? (
+                                                <span className="bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded flex items-center dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50">
+                                                    <XCircle className="w-3 h-3 mr-1" />
+                                                    Failed
+                                                </span>
+                                            ) : (
+                                                <span className={`px-2 py-0.5 rounded border flex items-center ${result.accuracy > 85
+                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                                    : result.accuracy > 60
+                                                        ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
+                                                        : "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50"
+                                                    }`}>
+                                                    Accuracy: {result.accuracy}%
+                                                    {result.hasHallucination && <AlertTriangle className="w-3 h-3 ml-1" />}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm mb-4">
-                                        {result.answer}
+                                    <p className={`leading-relaxed text-sm mb-4 ${result.error ? "text-rose-600 dark:text-rose-400 font-medium italic" : "text-slate-700 dark:text-slate-300"}`}>
+                                        {result.error ? `Error: ${result.error}` : result.answer}
                                     </p>
 
                                     {/* Transparency Footprint (Hardened Audit Check) */}
@@ -456,16 +465,18 @@ export default function CoIntelligenceSimulator() {
                                                 div: {result.metrics.semantic_divergence} / rec: {result.metrics.claim_recall}
                                             </div>
                                         )}
-                                        <button
-                                            onClick={() => {
-                                                const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | LCRS v1.2.0*`;
-                                                navigator.clipboard.writeText(md);
-                                            }}
-                                            className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"
-                                        >
-                                            <Code2 className="w-3 h-3 mr-1.5" />
-                                            Export MD
-                                        </button>
+                                        {!result.error && (
+                                            <button
+                                                onClick={() => {
+                                                    const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | LCRS v1.2.0*`;
+                                                    navigator.clipboard.writeText(md);
+                                                }}
+                                                className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"
+                                            >
+                                                <Code2 className="w-3 h-3 mr-1.5" />
+                                                Export MD
+                                            </button>
+                                        )}
                                     </div>
                                 </motion.div>
                             ))}

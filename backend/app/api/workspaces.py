@@ -1014,12 +1014,17 @@ async def get_public_manifest(org_id: str):
     if not db:
         raise HTTPException(status_code=503, detail="Database unconfigured")
         
-    # 🛡️ DEMO MOCKING (P0): Return Lumina Analytics manifest for demo account
+    # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum manifest for demo account
     if org_id == "demo_org_id":
-        content = """# Lumina Analytics - AI Protocol Manifest
+        content = """# Sight Spectrum - AI Protocol Manifest
 
 ## Core Identity
-Lumina Insight is an Enterprise Market Intelligence platform providing real-time competitive analysis.
+Sight Spectrum is a premier IT Services and Consulting firm. Our flagship products include:
+- **HC Insight**: A healthcare data platform.
+- **DataBlitz**: A manufacturing data accelerator.
+- **ConverSight AI**: An enterprise intelligence engine.
+
+Sight Spectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, and Professional Services sectors.
 
 ## Pricing Structure (Strict)
 - **Growth Plan**: $499/month (Standard)
@@ -1034,7 +1039,7 @@ Lumina Insight is an Enterprise Market Intelligence platform providing real-time
 ## Security & Compliance
 - **SOC2 Type II**: Certified.
 - **GDPR**: Compliant.
-- **HIPAA**: NOT compliant. Lumina Insight is not designed to store Protected Health Information (PHI). Users are prohibited from uploading patient data."""
+- **HIPAA**: Compliant via HC Insight grounding. Data is never stored on AUM servers."""
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse(content=content)
 
