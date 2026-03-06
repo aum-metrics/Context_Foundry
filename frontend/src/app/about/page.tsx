@@ -47,7 +47,7 @@ export default function AboutPage() {
                             Today, your customers aren&apos;t clicking links—they are asking an AI. If your brand context isn&apos;t perfectly structured, hallucination-resistant, and injected directly into the LLM&apos;s context window, <strong className="text-slate-900 dark:text-white">your competition will become the synthetic ground truth.</strong>
                         </p>
                         <p>
-                            We built AUM Context Foundry to give enterprise marketing, PR, and engineering teams a unified &quot;Smoke Detector&quot; for narrative drift. We simulate thousands of distinct user journeys through models like GPT-4o, Claude 3.5 Sonnet, and Gemini, mathematically scoring your Agentic Share of Voice (ASoV).
+                            We built AUM Context Foundry to give enterprise marketing, PR, and engineering teams a unified &quot;Smoke Detector&quot; for narrative drift. We run parallel queries across GPT-4o, Claude 3.5 Sonnet, and Gemini, mathematically scoring your Agentic Share of Voice (ASoV).
                         </p>
                     </div>
                 </div>
@@ -84,7 +84,7 @@ export default function AboutPage() {
                             </div>
                             <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Zero-Retention</h4>
                             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                                Your data stays yours. Our SOC2-compliant ingestion engine processes proprietary documents in volatile RAM and purges them instantly post-bedrock grounding.
+                                Your data stays yours. Our zero-retention ingestion engine processes proprietary documents in volatile RAM and purges them instantly after context extraction.
                             </p>
                         </div>
 

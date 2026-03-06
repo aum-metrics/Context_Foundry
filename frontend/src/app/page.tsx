@@ -220,7 +220,7 @@ export default function LandingPage() {
                                 Built for CISO-level compliance. Our <strong>Semantic Ingestion</strong> pipeline processes PDF binaries in volatile memory streams, ensuring zero proprietary data ever touches persistent disk.
                             </p>
                             <ul className="space-y-2 text-xs text-slate-500 dark:text-fuchsia-300/60">
-                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> SOC2/CISO Audit Ready</li>
+                                <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Audit Trail Included</li>
                                 <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Volatile Buffer Distillation</li>
                                 <li className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Verified JSON-LD Output</li>
                             </ul>
@@ -274,9 +274,9 @@ export default function LandingPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {[
                             { metric: '3', label: 'LLM Providers', sub: 'ChatGPT · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
-                            { metric: '99.99%', label: 'Uptime SLA', sub: 'Multi-region deployment', cls: 'text-emerald-600 dark:text-emerald-400' },
-                            { metric: '< 50ms', label: 'Scoring Latency', sub: 'Real-time analysis', cls: 'text-cyan-600 dark:text-cyan-400' },
-                            { metric: 'SOC2', label: 'Compliance Ready', sub: 'Zero-retention processing', cls: 'text-fuchsia-600 dark:text-fuchsia-400' },
+                            { metric: '☁️', label: 'Cloud-Native', sub: 'Google Cloud Run (Asia)', cls: 'text-emerald-600 dark:text-emerald-400' },
+                            { metric: '3x', label: 'Multi-Model', sub: 'Parallel LLM queries', cls: 'text-cyan-600 dark:text-cyan-400' },
+                            { metric: '🔒', label: 'Zero-Retention', sub: 'No raw data stored', cls: 'text-fuchsia-600 dark:text-fuchsia-400' },
                         ].map((item) => (
                             <motion.div
                                 key={item.label}
@@ -436,7 +436,7 @@ export default function LandingPage() {
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">100</strong> simulations/month</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> deploy to edge</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Download <code>/llms.txt</code> manifest</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
                             <Link href="/login" className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm">

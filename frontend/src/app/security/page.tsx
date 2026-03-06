@@ -76,28 +76,28 @@ export default function SecurityPage() {
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">01</div>
                                 <div>
                                     <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white mb-2">Volatile Ingestion Pipeline</h3>
-                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>PDFs are read as a non-persistent byte-stream directly into volatile RAM. We utilize memory-mapped file streams that bypass the operating system's temporary filesystem entirely to prevent forensic traces.</p>
+                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>PDFs are read as byte-streams directly into application memory. Raw document content is not written to disk at any point during processing.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-6 group">
                                 <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">02</div>
                                 <div>
                                     <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white mb-2">Deterministic Memory Disposal</h3>
-                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Upon extraction of the multi-model consensus JSON-LD, an explicit <code>GC.Collect()</code> trigger is issued to the runtime. This results in the final destruction of the ingestion buffer before the API response is even dispatched.</p>
+                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Upon extraction of the structured output, Python's garbage collection is invoked to release the ingestion buffers. This ensures raw content is cleared from memory before the API response is dispatched.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-6 group">
                                 <div className="w-12 h-12 rounded-2xl bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">03</div>
                                 <div>
                                     <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white mb-2">Cryptographic Metadata Scrubbing</h3>
-                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>All corporate signatures, PII, and internal document tracking IDs are scrubbed using high-entropy regex sanitizers before the manifestation is committed to the long-term vector tenancy.</p>
+                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Internal document metadata and tracking IDs are stripped during ingestion, so only the extracted semantic content is retained in the workspace.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-6 group">
                                 <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">04</div>
                                 <div>
                                     <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white mb-2">Multi-Tenant Subspace Isolation</h3>
-                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Your brand facts are stored in physically isolated Firestore instances. We do not support cross-tenant inference, ensuring your competitive moats are never utilized during common model training cycles.</p>
+                                    <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Each organization's data is stored in separate Firestore document collections, preventing any cross-tenant data access.</p>
                                 </div>
                             </div>
                         </div>
@@ -113,7 +113,7 @@ export default function SecurityPage() {
                     >
                         <h3 className="text-xl font-black uppercase tracking-tight mb-6 flex items-center gap-3 text-slate-900 dark:text-white">
                             <Server className="w-6 h-6 text-emerald-500" />
-                            SOC2 Compliance Audit
+                            Audit Logging
                         </h3>
                         <p className={`text-sm leading-relaxed font-light mb-6 ${textMuted}`}>
                             AUM maintains an immutable audit trail for all workspace actions. Every API request, user invitation, and manifest deployment is logged to a write-once ledger for regulatory compliance.
@@ -142,7 +142,7 @@ export default function SecurityPage() {
                             SHA-256 Key Security
                         </h3>
                         <p className={`text-sm leading-relaxed font-light mb-6 ${textMuted}`}>
-                            Authorization tokens are never stored in plain text. We utilize salted high-entropy SHA-256 hashing at rest. We provide rotation-on-demand for all automated ingest endpoints to minimize credential leakage window.
+                            Authorization tokens are hashed using SHA-256 before storage. API keys can be rotated on-demand from the dashboard to limit exposure windows.
                         </p>
                         <div className="flex items-center space-x-6">
                             <div className="flex flex-col">
@@ -166,7 +166,7 @@ export default function SecurityPage() {
                         </div>
                         <div className="p-8 rounded-[2rem] border border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/[0.01] hover:bg-white/60 dark:hover:bg-white/[0.03] transition-all">
                             <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Are logs/traces redacted?</h3>
-                            <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Yes. Our Zero-Retention pipeline automatically scrubs PII, API tokens, and corporate signatures from all application telemetry and tracing levels before they exit the VPC.</p>
+                            <p className={`text-sm leading-relaxed font-light ${textMuted}`}>Yes. Our pipeline does not include raw document content or API tokens in application logs.</p>
                         </div>
                         <div className="p-8 rounded-[2rem] border border-slate-200 dark:border-white/5 bg-white/40 dark:bg-white/[0.01] hover:bg-white/60 dark:hover:bg-white/[0.03] transition-all">
                             <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">What is the retention period?</h3>
@@ -192,7 +192,7 @@ export default function SecurityPage() {
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-6">
                         <button className="px-10 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-full transition-all font-bold shadow-lg shadow-rose-600/20 uppercase tracking-widest text-xs">Request Architecture Whitepaper</button>
-                        <button className="px-10 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white rounded-full transition-all font-bold uppercase tracking-widest text-xs">View SOC2 Report</button>
+                        <button className="px-10 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white rounded-full transition-all font-bold uppercase tracking-widest text-xs">Contact Security Team</button>
                     </div>
                 </motion.div>
             </main>

@@ -13,8 +13,8 @@ export default function MethodsPage() {
         // Mocking or fetching actual scientific methodology metadata
         setMethodology({
             version: "1.2.0",
-            standards: ["ISO/IEC 42001", "NIST AI RMF"],
-            lastAudited: "2024-12-20"
+            standards: [],
+            lastAudited: "2025-12-20"
         });
     }, []);
 
@@ -216,13 +216,13 @@ export default function MethodsPage() {
                     <div>
                         <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Inference Logging</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            Every LCRS score includes a unique audit-footprint of the exact Model ID and hyperparameters used during evaluation for SOC2/CISO documentation.
+                            Every LCRS score includes a unique audit-footprint of the exact Model ID and hyperparameters used during evaluation for reproducibility and compliance documentation.
                         </p>
                     </div>
                     <div>
                         <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">ISO Compliance</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            The Context Foundry framework is designed to align with ISO/IEC 42001 and the NIST AI Risk Management Framework (RMF) for enterprise readiness.
+                            The Context Foundry framework is designed with enterprise compliance requirements in mind. We maintain audit trails and zero-retention processing to support regulatory needs.
                         </p>
                     </div>
                 </div>

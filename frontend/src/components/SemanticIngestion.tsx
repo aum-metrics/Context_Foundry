@@ -369,7 +369,7 @@ export default function SemanticIngestion() {
                                                 <span className="text-emerald-500 text-lg">⚡</span>
                                             </div>
                                             <p className="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest mb-1">Zero-Retention Active</p>
-                                            <p className="text-xs opacity-60 max-w-xs">Raw text processed in volatile memory only. Not stored per SOC2/CISO compliance.</p>
+                                            <p className="text-xs opacity-60 max-w-xs">Raw text processed in volatile memory only. Not stored per our zero-retention policy.</p>
                                         </div>
                                     )}
                                 </div>
