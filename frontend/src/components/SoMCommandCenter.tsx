@@ -6,9 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, Search, Globe, Activity, ShieldAlert, ArrowUpRight, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
-import { db } from "@/lib/firestorePaths";
 import { auth } from "../lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useOrganization } from "./OrganizationContext";
 import { UpgradeModal } from "./UpgradeModal";
 import { Hexagon, Award } from "lucide-react";
@@ -97,9 +95,8 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             if (!res.ok) return null;
 
             const data = await res.json();
-            const entries = (data.history || []).map((entry: any) => ({
+            const entries = (data.history || []).map((entry: { timestamp: string | { seconds: number } }) => ({
                 ...entry,
-                // Ensure timestamp is compatible with existing chart logic (Date or {seconds})
                 timestamp: typeof entry.timestamp === 'string'
                     ? { seconds: Math.floor(new Date(entry.timestamp).getTime() / 1000) }
                     : entry.timestamp

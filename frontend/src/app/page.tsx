@@ -8,7 +8,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Play, ShieldCheck, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Webhook, Code2, Terminal, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
+import { ArrowRight, ShieldCheck, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import ProductFlowShowcase from "@/components/ProductDemoVideo";
