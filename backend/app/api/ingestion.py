@@ -307,6 +307,7 @@ async def parse_url(
 
     # --- FETCH URL (volatile memory only) ---
     raw_text = ""
+    html = None
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; AUMContextFoundry/1.0; +https://aumcontextfoundry.com/bot)"}
         async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as hclient:
@@ -398,7 +399,8 @@ async def parse_url(
         )
         llms_txt_content = manifest_completion.choices[0].message.content
 
-        del raw_text, full_text, doc_sample, html
+        # Zero-Retention: Overwrite volatile memory before GC
+        raw_text = full_text = doc_sample = html = None
         gc.collect()
 
         if db:
