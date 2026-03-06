@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Play, ShieldCheck, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Webhook, Code2, Terminal, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-import ProductDemoVideo from "@/components/ProductDemoVideo";
+import ProductFlowShowcase from "@/components/ProductDemoVideo";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -254,14 +254,14 @@ export default function LandingPage() {
 
                 {/* Demo Video Area */}
                 <section id="demo" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4">See the Foundry in Action</h2>
-                        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Watch how leading enterprises deploy their semantic facts directly to Agentic Search engines.</p>
+                    <div className="text-center mb-20 px-6">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 uppercase">The AUM Value Loop</h2>
+                        <p className="text-xl text-slate-500 max-w-2xl mx-auto font-light leading-relaxed">
+                            Watch how leading enterprises deploy their semantic facts directly to Agentic Search engines. High-fidelity brand protection in four steps.
+                        </p>
                     </div>
 
-                    <div className="relative max-w-5xl mx-auto">
-                        <ProductDemoVideo />
-                    </div>
+                    <ProductFlowShowcase />
                 </section>
 
                 {/* Trust & Capabilities Strip */}
