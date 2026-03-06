@@ -69,7 +69,7 @@ You'll be taken straight to the Dashboard.
 AUM runs your question through **GPT-4o, Claude 3.5, and Gemini 2.0** simultaneously and scores each response:
 
 ```
-LCRS Score = (60% × Factual Accuracy) + (40% × Semantic Alignment)
+LCRS Score = (60% × Claim Accuracy) + (40% × Semantic Alignment)
 ```
 
 | Score Range | Grade | What It Means |
@@ -155,7 +155,7 @@ Your **B2B API Key** (format: `aum_...`) is shown on the **API Keys** page. Use 
 
 ### Run a Simulation via API
 ```bash
-curl -X POST https://api.aumcontextfoundry.com/v1/run \
+curl -X POST https://api.aumcontextfoundry.com/api/simulation/v1/run \
   -H "Authorization: Bearer aum_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -172,15 +172,17 @@ curl -X POST https://api.aumcontextfoundry.com/v1/run \
     {
       "model": "gpt-4o",
       "response": "...",
-      "lcrsScore": 91.5,
-      "grade": "high_fidelity",
-      "claimsSupported": 4,
-      "claimsTotal": 4
+      "accuracy": 91.5,
+      "status": "high_fidelity",
+      "metrics": {
+        "semantic_divergence": 0.085,
+        "claim_recall": 1.0
+      }
     }
     ...
   ],
-  "lowestScore": 74.2,
-  "highestScore": 91.5
+  "prompt": "What is your data retention policy?",
+  "version": "latest"
 }
 ```
 

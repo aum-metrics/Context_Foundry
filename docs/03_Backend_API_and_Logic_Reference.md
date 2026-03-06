@@ -82,8 +82,8 @@ This is the crown jewel of the platform. If you touch this file, test it locally
 
 ### The 60/40 Math
 The LCRS (Logical Contextual Representation Score) grades AI model accuracy using two blended metrics:
-*   **60% Weight - Claim Verification (Reproducible):** Did the AI output include all the strictly required facts from the source Context Document? We use an `LLM-as-a-judge` sub-routine to evaluate this at `temperature=0` for consistent results. Note: "reproducible" means same inputs yield same outputs, not "academically validated."
-*   **40% Weight - Semantic Divergence (Vector Math):** We convert the AI's answer into a vector embedding and compare its cosine distance to the original Context Document's embedding. This catches "vibe" drift or subtle hallucinations.
+*   **60% Weight - Claim Accuracy (Reproducible):** Did the AI output include all the strictly required facts from the source Context Document? We use an `LLM-as-a-judge` sub-routine to evaluate this at `temperature=0` for consistent results. Note: "reproducible" means same inputs yield same outputs, not "academically validated."
+*   **40% Weight - Semantic Alignment (Vector Math):** We convert the AI's answer into a vector embedding and compare its cosine distance to the original Context Document's embedding. This catches "vibe" drift or subtle hallucinations.
 
 ### The Async Parallel Gather
 Usually, calling OpenAI takes 10 seconds. Calling Claude takes 8 seconds. Calling Gemini takes 7 seconds. 

@@ -305,71 +305,77 @@ export default function LandingPage() {
 
                 {/* API & Developer Platform Section */}
                 <section id="api" className="max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-white/5">
-                    <div className="grid md:grid-cols-2 gap-16 items-center">
-                        <div>
-                            <div className="inline-flex items-center space-x-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
-                                <Code2 className="w-3.5 h-3.5" />
-                                <span>API-First Architecture</span>
-                            </div>
-                            <h2 className="text-3xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white mb-6">
+                    <div className="flex flex-col lg:flex-row items-center gap-20">
+                        <div className="lg:w-1/2">
+                            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-8 text-slate-900 dark:text-white leading-[0.9]">
                                 The Verified Identity Router
                             </h2>
-                            <p className="text-slate-600 dark:text-slate-400 text-lg font-light leading-relaxed mb-8">
-                                AUM is not just a dashboard; it is core B2B data infrastructure. We provide the <strong className="font-medium text-slate-800 dark:text-slate-200">REST API layer</strong> that enterprise SEO and PR platforms license to bring Agentic Search insights directly into their native workflows.
+                            <p className="text-lg font-light text-slate-600 dark:text-slate-400 mb-10 leading-relaxed max-w-xl">
+                                AUM is not just a dashboard; it is core B2B data infrastructure. We provide the REST API layer that enterprise SEO and PR platforms license to bring Agentic Search insights directly into their native workflows.
                             </p>
 
-                            <ul className="space-y-6">
-                                <li className="flex items-start">
-                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mr-4">
-                                        <Webhook className="w-5 h-5 text-emerald-500" />
-                                    </div>
+                            <div className="space-y-8">
+                                <div className="flex gap-6 group">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">01</div>
                                     <div>
-                                        <h4 className="text-slate-900 dark:text-white font-medium mb-1">Zero-Retention Ingestion Webhooks</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Programmatically send proprietary corporate PDFs to our secure API. We flush from memory instantly and return perfectly structured semantic vectors.</p>
-                                    </div>
-                                </li>
-                                <li className="flex items-start">
-                                    <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 mr-4">
-                                        <Terminal className="w-5 h-5 text-cyan-500" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-slate-900 dark:text-white font-medium mb-1">ASoV & Context Drift Endpoints</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-light">Pull real-time mathematical scores (60/40 blend) for brand fidelity across ChatGPT, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 rounded-[2rem] blur-3xl opacity-50 dark:opacity-20 animate-pulse"></div>
-                            <div className="relative rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-xl p-8 shadow-2xl overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-50 transition-opacity">
-                                    <div className="flex space-x-2">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
-                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                                        <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">Zero-Retention Ingestion Webhooks</h3>
+                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Programmatically send proprietary corporate PDFs to our secure API. We flush from memory instantly and return perfectly structured semantic vectors.</p>
                                     </div>
                                 </div>
-                                <h4 className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">POST /api/simulation/v1/run</h4>
-                                <pre className="text-xs md:text-sm font-mono text-slate-600 dark:text-slate-300 overflow-hidden text-left bg-slate-50 dark:bg-black/30 p-4 rounded-xl border border-slate-200/50 dark:border-white/5">
-                                    <code className="text-indigo-600 dark:text-indigo-400">curl</code> -X POST https://api.aumcontextfoundry.com/api/simulation/v1/run \<br />
-                                    -H <span className="text-emerald-600 dark:text-emerald-400">"Authorization: Bearer sk-live-..."</span> \<br />
-                                    -d <span className="text-amber-600 dark:text-amber-400">{'{'}</span><br />
-                                    &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"brandId"</span>: <span className="text-emerald-600 dark:text-emerald-400">"org_2F3a..."</span>,<br />
-                                    &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"engines"</span>: [<span className="text-emerald-600 dark:text-emerald-400">"gpt-4o"</span>, <span className="text-emerald-600 dark:text-emerald-400">"perplexity"</span>],<br />
-                                    &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"query"</span>: <span className="text-emerald-600 dark:text-emerald-400">"What is their current pricing?"</span><br />
-                                    <span className="text-amber-600 dark:text-amber-400">{'}'}</span>
-                                </pre>
+                                <div className="flex gap-6 group">
+                                    <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">02</div>
+                                    <div>
+                                        <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">ASoV & Context Drift Endpoints</h3>
+                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time mathematical scores (60/40 blend) for brand fidelity across GPT-4o, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5">
-                                    <pre className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 overflow-hidden text-left">
-                                        {/* Response snippet (LCRS 60/40 logic) */}<br />
-                                        {'{'}<br />
-                                        &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"contextDrift"</span>: <span className="text-rose-500">32.4</span>,<br />
-                                        &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"claimVerification"</span>: <span className="text-emerald-600 dark:text-emerald-400">"0.89"</span>,<br />
-                                        &nbsp;&nbsp;<span className="text-cyan-600 dark:text-cyan-400">"semanticDistance"</span>: <span className="text-emerald-600 dark:text-emerald-400">"0.92"</span><br />
-                                        {'}'}
-                                    </pre>
+                        <div className="lg:w-1/2 w-full">
+                            <div className="bg-slate-900 rounded-3xl p-8 border border-white/10 shadow-2xl relative group overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4">
+                                    <div className="flex gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-rose-500/50" />
+                                        <div className="w-3 h-3 rounded-full bg-amber-500/50" />
+                                        <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
+                                    </div>
+                                </div>
+
+                                <div className="font-mono text-sm space-y-6">
+                                    <div>
+                                        <div className="text-slate-500 mb-2 uppercase tracking-widest text-[10px] font-bold">POST /api/simulation/v1/run</div>
+                                        <div className="text-emerald-400 whitespace-pre overflow-x-auto">
+                                            {`curl -X POST https://api.aumcontextfoundry.com/api/simulation/v1/run \\
+-H "Authorization: Bearer aum_..." \\
+-d {
+  "orgId": "org_2F3a...",
+  "prompt": "What is their current pricing?",
+  "manifestVersion": "latest"
+}`}
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-white/5">
+                                        <div className="text-slate-500 mb-2 uppercase tracking-widest text-[10px] font-bold">Response 200 OK</div>
+                                        <div className="text-indigo-400 whitespace-pre overflow-x-auto">
+                                            {`{
+  "results": [
+    {
+      "model": "gpt-4o",
+      "accuracy": 92.4,
+      "status": "high_fidelity",
+      "metrics": {
+        "semantic_divergence": 0.076,
+        "claim_recall": 1.0
+      }
+    }
+  ],
+  "prompt": "What is their current pricing?",
+  "version": "latest"
+}`}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -518,7 +524,7 @@ export default function LandingPage() {
 
             </main>
             <Footer />
-        </div>
+        </div >
     );
 }
 

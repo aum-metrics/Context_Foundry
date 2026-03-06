@@ -9,11 +9,11 @@ AUM is an infrastructure platform that measures and improves how AI models (Chat
 
 **Q: What is LCRS?**
 LCRS (Low-Latency Claim-based Reliability Scoring) is AUM's proprietary scoring methodology. It evaluates AI responses on a 0–100 scale:
-- **60% Factual Accuracy**: Verified claims against your uploaded ground-truth documents.
+- **60% Claim Accuracy**: Verified claims against your uploaded ground-truth documents.
 - **40% Semantic Fidelity**: Cosine similarity between AI response embedding and your brand's verified knowledge base.
 
 **Q: Which AI models does AUM test?**
-GPT-4o (OpenAI), Claude 3.5 Sonnet (Anthropic), and Gemini 2.0 Flash (Google). All three are evaluated simultaneously for each simulation.
+GPT-4o (OpenAI), Claude 3.5 (Anthropic), and Gemini 2.0 (Google). All three are evaluated simultaneously for each simulation.
 
 **Q: What is a "Context Information Model" (CIM)?**
 The CIM is the mathematical representation of your brand's verified knowledge base. It's built from documents you upload — PDFs, product specs, FAQs, etc. — and stored as vector embeddings. All simulations test AI responses against this model.
@@ -103,7 +103,7 @@ See the [B2B API section in the User Guide](./User_Guide.md).
 - Per-org simulation quotas enforced same as dashboard usage.
 
 **Q: Is the API versioned?**
-Yes. The public B2B API is at `/v1/run`. Internal dashboard APIs are at `/api/*`.
+Yes. The public B2B API is at `/api/simulation/v1/run`. Internal dashboard APIs are at `/api/*`.
 
 ---
 

@@ -39,7 +39,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 1. **Ingests** the document into a zero-retention semantic pipeline (no raw data persists).
 2. **Simulates** queries against GPT-4o, Claude, and Gemini simultaneously.
-3. **Scores** each AI's response using our LCRS (Logical Contextual Representation Score) — a 60/40 blend of claim verification and semantic fidelity.
+3. **Scores** each AI's response using our LCRS (Logical Contextual Representation Score) — a 60/40 blend of claim accuracy and semantic alignment.
 4. **Publishes** a verified `/llms.txt` manifesto that forces RAG agents (SearchGPT, Perplexity) to prioritize the company's ground truth.
 
 ### Feature Maturity Matrix
@@ -48,7 +48,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude, Gemini). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
+| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 3.5, Gemini 2.0). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
 | **Zero-Retention PDF Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. UI explicitly blocks raw data persistence. |
 | **Zero-Retention URL Ingestion** | ✅ Production | Live URL → DOM extraction → CIM pipeline. Raw HTML never stored on disk. |
 | **Identity Syndication (`/llms.txt`)**| ✅ Production | Dynamic per-tenant manifest. Fail-closed rate limiting. |
@@ -71,7 +71,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 ### LCRS Methodology & Proprietary Heuristic
 
-The 60/40 blend of claim verification and cosine similarity is:
+The 60/40 blend of claim accuracy and cosine similarity is:
 - **Reproducible**: Same inputs always produce the same score (temperature=0).
 - **Auditable**: Full formula, weights, and variables are exposed via `/api/methods/`.
 - **Proprietary Enterprise Heuristic**: The 60/40 ratio is a purpose-built B2B risk model tailored for strict corporate liability tracking, isolating factual recall from creative prose. While the mathematical formula is highly auditable for enterprise security reviews, it represents a practical, high-signal engineering heuristic designed to defend corporate brand equity rather than a generalized third-party benchmark.
@@ -518,8 +518,8 @@ Build policy: `ignoreDuringBuilds: false` in `next.config.ts` means **lint error
 The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducible fidelity scores:
 
 - **60% Claim Accuracy**: Atomic factual claims are extracted from AI responses using an LLM-as-a-judge sub-routine, then cross-verified against the organization's ground-truth document.
-- **40% Semantic Fidelity**: Cosine similarity between the embedded AI response and the Context Information Model (CIM) in 1536-dimensional space.
-- **Formula**: `LCRS = (0.6 * claim_accuracy) + (0.4 * (1 - cosine_distance))`
+- **40% Semantic Alignment**: Cosine similarity between the embedded AI response and the Context Information Model (CIM) in 1536-dimensional space.
+- **Formula**: `LCRS = (0.6 * claim_accuracy) + (0.4 * semantic_alignment)`
 - **Key functions**: `extract_claims()`, `verify_claims()`, `compute_divergence()`, `_score_model()`
 - **Parallel execution**: `asyncio.gather()` runs all 3 models simultaneously (~10s instead of ~25s).
 - **Methodology caveat**: The 60/40 weighting is an engineering design choice. It is not derived from ablation studies or peer-reviewed research. See the Methodology Candor section above.
