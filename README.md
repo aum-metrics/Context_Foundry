@@ -48,15 +48,16 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude, Gemini). 60/40 blend is reproducible and auditable. |
-| **Zero-Retention Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. |
-| **Identity Syndication (`/llms.txt`)** | ✅ Production | Dynamic per-tenant manifest. Fail-closed rate limiting. |
+| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude, Gemini). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
+| **Zero-Retention PDF Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. UI explicitly blocks raw data persistence. |
+| **Zero-Retention URL Ingestion** | ✅ Production | Live URL → DOM extraction → CIM pipeline. Raw HTML never stored on disk. |
+| **Identity Syndication (`/llms.txt`)**| ✅ Production | Dynamic per-tenant manifest. Fail-closed rate limiting. |
 | **B2B API Gateway** | ✅ Production | `aum_`-prefixed keys, SHA-256 hashed, tier-gated. |
 | **Enterprise SSO** | ✅ Production | Okta/Azure AD/Google, Fernet-encrypted secrets, CSRF-protected. |
 | **Payments (Razorpay)** | ✅ Production | Dedicated India (INR) regional routing enabled. |
 | **Support Chatbot** | ✅ Core Functional | RAG over latest manifest. Efficient low-latency context window. |
 | **Competitor Displacement** | ✅ Core Functional | Targeted displacement queries against primary competitors. |
-| **SEO Depth Scoring** | ✅ Core Functional | Structural markup evaluation optimized for LLM crawlers. |
+| **SEO & GEO Audit** | ✅ Production | `httpx` + `BeautifulSoup4` pipeline. Structural markup evaluation + LLM-based Generative Engine Optimization fidelity scoring against tenant manifest. |
 | **Batch Stability** | ✅ Core Functional | High-volume domain evaluation via asynchronous architecture. |
 | **Email Delivery** | ✅ Core Functional | Standardized transactional delivery via Resend. |
 
@@ -175,14 +176,14 @@ AUM/
 │   ├── app/
 │   │   ├── api/                        # All FastAPI route modules
 │   │   │   ├── simulation.py             # LCRS engine (810 lines) — crown jewel
-│   │   │   ├── ingestion.py              # Zero-retention PDF → CIM pipeline
+│   │   │   ├── ingestion.py              # Zero-retention PDF/URL → CIM pipeline
 │   │   │   ├── workspaces.py             # Org CRUD, members, invites, manifest, rate limiter
 │   │   │   ├── payments.py               # Razorpay order/verify/webhook/payment-link
 │   │   │   ├── sso.py                    # Enterprise SSO OAuth2 configure + callback
 │   │   │   ├── admin.py                  # Admin dashboard endpoints (session auth)
 │   │   │   ├── api_keys.py              # B2B API key generate/revoke/list
 │   │   │   ├── chatbot.py               # RAG-powered support chatbot
-│   │   │   ├── seo.py                   # Async SEO audit (Playwright-based)
+│   │   │   ├── seo.py                   # Async SEO/GEO audit (httpx + BS4)
 │   │   │   ├── competitor.py            # Competitive displacement analysis
 │   │   │   ├── batch_analysis.py        # Batch domain evaluation
 │   │   │   ├── audit.py                 # SOC2 audit log writer
@@ -397,7 +398,9 @@ PYTHONPATH=app python3 app/main.py
 ✅ Security middleware (CORS & TrustedHost) configured
 📡 Loading API routes...
 ✅ Loaded LCRS Simulation Engine     -> /api/simulation
+✅ Loaded Ingestion Pipeline         -> /api/ingestion
 ✅ Loaded Workspaces                 -> /api/workspaces
+✅ Loaded Methodology Tracker        -> /api/methods
 ...
 ✅ API Ready on http://0.0.0.0:8000
 📖 Docs on http://0.0.0.0:8000/api/docs
@@ -521,10 +524,15 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 - **Parallel execution**: `asyncio.gather()` runs all 3 models simultaneously (~10s instead of ~25s).
 - **Methodology caveat**: The 60/40 weighting is an engineering design choice. It is not derived from ablation studies or peer-reviewed research. See the Methodology Candor section above.
 
+### Centralized Model Versioning (`model_config.py`)
+- Single source of truth for all LLM/Embedding model endpoints.
+- Prevents version drift across LCRS engines, claim extractors, semantic chunking, and GEO scoring pipelines.
+- Supports Anthropic Claude 3.5, Gemini 2.0, and GPT-4o arrays.
+
 ### Zero-Retention Semantic Pipeline
-- Raw PDF uploaded → processed in volatile RAM via `PyMuPDF4LLM`.
+- Raw PDF or URL uploaded/fetched → processed in volatile RAM via `PyMuPDF4LLM` or `BeautifulSoup4`.
 - Chunked, embedded (`text-embedding-3-small`), synthesized into JSON-LD CIM.
-- Raw bytes explicitly flushed (`del content; gc.collect()`).
+- Raw bytes explicitly flushed (`del content; gc.collect()`). The frontend explicitly blocks storing this extracted text.
 - **24-Hour TTL**: All ingested manifests purged via `expiresAt` timestamps.
 
 ### Identity Syndication (`/llms.txt`)
@@ -556,6 +564,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | POST | `/api/simulation/v1/run` | API Key | B2B simulation gateway (rate-limited) |
 | GET | `/api/simulation/export/{orgId}` | Firebase JWT + org-verify | Export scoring history as CSV |
 | POST | `/api/ingestion/parse` | Firebase JWT | Zero-retention PDF ingestion |
+| POST | `/api/ingestion/parse-url` | Firebase JWT | Zero-retention URL ingestion |
 
 ### Workspace & Organization Management
 
@@ -611,6 +620,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 |--------|------|------|-------------|
 | GET | `/` | Public | Root info endpoint |
 | GET | `/api/health` | Public | Health check with Firestore connectivity |
+| GET | `/api/methods/` | Public | Transparent algorithmic breakdown of LCRS heuristics |
 | GET | `/llms.txt` | Public | Default marketing manifesto |
 | GET | `/llms.txt?orgId=xxx` | Public | Tenant-specific manifesto (503 on failure) |
 
@@ -648,6 +658,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | `AgentManifest` | llms.txt manifest — editor/viewer for tenant manifest content |
 | `AuthWrapper` | Auth state provider — Firebase listener, mock auth in dev |
 | `OrganizationContext` | React Context — org state, subscription, workspace info |
+| `BrandHealthCertificate` | AI Brand Intelligence Report — Firestore persisted stats, LCRS methodology, PNG export |
 
 ---
 
