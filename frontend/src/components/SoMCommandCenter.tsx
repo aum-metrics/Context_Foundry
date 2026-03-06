@@ -401,7 +401,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
     // Compute display values
     const avgScore = chartData.length > 0
-        ? Math.round(chartData.reduce((sum, d) => sum + ((d as { score: number }).score || 0), 0) / chartData.length)
+        ? Math.round(chartData.reduce((sum: number, d: { score: number }) => sum + (d.score || 0), 0) / chartData.length)
         : 0;
 
     const isCriticalDrift = (batchResult?.driftRate || 0) > 40;

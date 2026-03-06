@@ -84,14 +84,14 @@ export default function BrandHealthCertificate({
 
     const results = latestRecord?.results || [];
     const avgLcrs = results.length > 0 ? Math.round(results.reduce((s: number, r: ModelResult) => s + r.accuracy, 0) / results.length) : asovScore;
-    const hallucinationCount = results.filter(r => r.hasHallucination).length;
-    const fidelityPct = results.length > 0 ? Math.round((results.filter(r => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
+    const hallucinationCount = results.filter((r: ModelResult) => r.hasHallucination).length;
+    const fidelityPct = results.length > 0 ? Math.round((results.filter((r: ModelResult) => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
 
     const scoreColor = (s: number) => s >= 85 ? "#10b981" : s >= 65 ? "#f59e0b" : s >= 40 ? "#fb923c" : "#ef4444";
     const gradeLabel = (s: number) => s >= 85 ? "HIGH FIDELITY" : s >= 65 ? "MINOR DRIFT" : s >= 40 ? "SEVERE DRIFT" : "CRITICAL DRIFT";
 
     const getExecutiveSummary = (score: number, orgName: string) => {
-        const hCount = results.filter(r => r.hasHallucination).length;
+        const hCount = results.filter((r: ModelResult) => r.hasHallucination).length;
         const totalMod = results.length;
 
         if (score >= 85 && hCount === 0) {
@@ -228,7 +228,7 @@ export default function BrandHealthCertificate({
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {results.map((r, i) => (
+                                        {results.map((r: ModelResult, i: number) => (
                                             <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8 shadow-sm dark:shadow-none">
                                                 <div className="w-32 shrink-0">
                                                     <p className="text-xs font-semibold text-slate-900 dark:text-white">{r.model}</p>
