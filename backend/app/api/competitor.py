@@ -99,18 +99,17 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
         
     try:
         client = OpenAI(api_key=api_key)
-        prompt = f"""You are analyzing AI recommendation engines (like ChatGPT and Perplexity).
+        prompt = f"""You are analyzing AI recommendation engines for a company called '{org_name}'.
+Based on this company's actual business context:
 
-The company is called '{org_name}'. Based on their actual business context below, identify the top 3 real, specific competitors that an AI engine would likely recommend INSTEAD of '{org_name}' when users search for similar products or services.
-
-<BusinessContext>
+<Context>
 {manifest_content[:4000]}
-</BusinessContext>
+</Context>
 
-Rules:
-- Only name REAL companies that operate in the SAME specific industry shown by the context above.
-- Do NOT invent placeholders or use generic AI/SaaS tools unless the company is actually in that space.
-- Base displacement rates on realistic market share data for that specific industry.
+What are the top 3 real, specific competitors that an AI engine would likely 
+recommend INSTEAD of '{org_name}' when users ask about this industry?
+Only name real companies that operate in the same space as shown by the context above.
+Do NOT invent placeholders or use generic AI/SaaS tools unless the company is actually in that space.
 
 Provide a JSON response with a 'competitors' array. Each item MUST have:
 - 'name': real competitor company name

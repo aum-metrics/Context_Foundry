@@ -77,5 +77,4 @@ def test_get_competitor_displacement_no_api_key(mock_db, mock_verify):
     assert response.status_code == 200, response.text
     data = response.json()
     assert "competitors" in data
-    assert len(data["competitors"]) == 3
-    assert data["competitors"][0]["name"] == "Competitor Alpha (Simulated)"
+    assert len(data["competitors"]) == 0

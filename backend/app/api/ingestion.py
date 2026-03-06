@@ -306,30 +306,39 @@ async def parse_url(
             logger.warning(f"Limit check failure: {e}")
 
     # --- FETCH URL (volatile memory only) ---
+    raw_text = ""
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; AUMContextFoundry/1.0; +https://aumcontextfoundry.com/bot)"}
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers) as hclient:
-            resp = await hclient.get(request.url)
-            if resp.status_code >= 400:
-                raise HTTPException(status_code=400, detail=f"URL returned HTTP {resp.status_code}")
-            html = resp.text
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as hclient:
+            # 1. Primary: Use Jina Reader API to get clean Markdown (Handles JS-rendered sites like React)
+            jina_url = f"https://r.jina.ai/{request.url}"
+            jina_resp = await hclient.get(jina_url)
+            if jina_resp.status_code < 400 and len(jina_resp.text.strip()) > 100:
+                raw_text = jina_resp.text
+                logger.info(f"Successfully extracted {len(raw_text)} chars via Jina Reader.")
+            else:
+                # 2. Fallback: Direct Fetch + BeautifulSoup
+                logger.info("Jina Reader failed or returned empty. Falling back to direct HTML fetch.")
+                resp = await hclient.get(request.url)
+                if resp.status_code >= 400:
+                    raise HTTPException(status_code=400, detail=f"URL returned HTTP {resp.status_code}")
+                
+                html = resp.text
+                if BS4_AVAILABLE:
+                    soup = BeautifulSoup(html, "html.parser")
+                    for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                        tag.decompose()
+                    raw_text = soup.get_text(separator="\n", strip=True)
+                else:
+                    import re as _re
+                    raw_text = _re.sub(r"<[^>]+>", " ", html)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Could not fetch URL: {str(e)}")
-
-    # --- EXTRACT TEXT ---
-    if BS4_AVAILABLE:
-        soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-            tag.decompose()
-        raw_text = soup.get_text(separator="\n", strip=True)
-    else:
-        import re as _re
-        raw_text = _re.sub(r"<[^>]+>", " ", html)
+        raise HTTPException(status_code=400, detail=f"Could not extract Semantic text from URL: {str(e)}")
 
     if len(raw_text.strip()) < 100:
-        raise HTTPException(status_code=422, detail="Could not extract meaningful text from this URL.")
+        raise HTTPException(status_code=422, detail="Could not extract meaningful text from this URL. The site might block bots or require JavaScript rendering.")
 
     # --- RESOLVE API KEY ---
     api_key = os.getenv("OPENAI_API_KEY")

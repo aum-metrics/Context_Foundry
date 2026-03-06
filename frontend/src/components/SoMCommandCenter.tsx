@@ -394,10 +394,10 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     )}
                     <button
                         onClick={runBatchStabilityCheck}
-                        disabled={batchLoading || !["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "")}
-                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
+                        disabled={batchLoading || !["growth", "scale"].includes(organization?.subscriptionTier || "")}
+                        className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["growth", "scale"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
                     >
-                        {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
+                        {["growth", "scale"].includes(organization?.subscriptionTier || "") ? (
                             <>
                                 <Activity className={`w-3 h-3 mr-2 ${batchLoading ? 'animate-spin' : ''}`} />
                                 {batchLoading ? 'Analyzing...' : 'Run Batch Analysis'}

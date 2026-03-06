@@ -9,7 +9,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2, RefreshCw } from "lucide-react";
+import { FileText, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2, RefreshCw, Download } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
 import { db } from "@/lib/firestorePaths";
@@ -383,13 +383,29 @@ export default function SemanticIngestion() {
                                     </h3>
                                     <div className="flex items-center gap-2">
                                         <button
+                                            onClick={() => {
+                                                if (schemaData) {
+                                                    const blob = new Blob([schemaData], { type: "application/json" });
+                                                    const url = URL.createObjectURL(blob);
+                                                    const a = document.createElement("a");
+                                                    a.href = url;
+                                                    a.download = "verified_schema.json";
+                                                    a.click();
+                                                    URL.revokeObjectURL(url);
+                                                }
+                                            }}
+                                            className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-md transition-colors font-medium border border-slate-700 flex items-center gap-1.5"
+                                        >
+                                            <Download className="w-3 h-3" /> Download JSON
+                                        </button>
+                                        <button
                                             onClick={() => { setStep("upload"); setSchemaData(null); setRawText(null); }}
                                             className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-md transition-colors font-medium border border-slate-600 flex items-center gap-1.5"
                                         >
                                             <RefreshCw className="w-3 h-3" /> Re-upload
                                         </button>
                                         <button className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1.5 rounded-md transition-colors font-medium border border-emerald-500/20">
-                                            Approve &amp; Deploy
+                                            Approve &amp; Save
                                         </button>
                                     </div>
                                 </div>

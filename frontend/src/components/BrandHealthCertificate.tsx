@@ -3,7 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
-import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, TrendingUp, X } from "lucide-react";
+import { jsPDF } from "jspdf";
+import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, TrendingUp, X, FileText } from "lucide-react";
 import { Logo } from "./Logo";
 import { useOrganization } from "./OrganizationContext";
 import { db } from "@/lib/firestorePaths";
@@ -89,6 +90,12 @@ export default function BrandHealthCertificate({
     const scoreColor = (s: number) => s >= 80 ? "#10b981" : s >= 55 ? "#f59e0b" : "#ef4444";
     const gradeLabel = (s: number) => s >= 80 ? "HIGH FIDELITY" : s >= 55 ? "MINOR DRIFT" : "CRITICAL DRIFT";
 
+    const getExecutiveSummary = (score: number, orgName: string) => {
+        if (score >= 80) return `AUM Context Foundry certifies that ${orgName} maintains High Fidelity across LLM representations. AI agents accurately retrieve, synthesize, and present your core claims without introducing hallucinated artifacts or material data drift. Your unstructured data assets are currently well-optimized for AI consumption.`;
+        if (score >= 55) return `${orgName} exhibits Minor Data Drift across modern AI agents. While core capabilities are recognized, significant nuances are either omitted or mildly conflated with generic industry data. We recommend injecting clearer, verified Context Manifests to prevent further brand erosion in generative summaries.`;
+        return `WARNING: ${orgName} suffers from Critical Data Drift. Generative AI engines are currently hallucinating material facts, fabricating competitor displacements, or failing to retrieve your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
+    };
+
     const handleDownload = async () => {
         if (!certificateRef.current) return;
         setIsDownloading(true);
@@ -99,12 +106,16 @@ export default function BrandHealthCertificate({
                 useCORS: true,
                 logging: false,
             });
-            const link = document.createElement("a");
-            link.download = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [canvas.width / 2, canvas.height / 2]
+            });
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+            pdf.save(`AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`);
         } catch (err) {
-            console.error("Failed to generate certificate image", err);
+            console.error("Failed to generate certificate PDF", err);
         } finally {
             setIsDownloading(false);
         }
@@ -246,6 +257,17 @@ export default function BrandHealthCertificate({
                                     <p className="text-sm text-slate-700 dark:text-slate-300 italic">&ldquo;{latestRecord.prompt}&rdquo;</p>
                                 </div>
                             )}
+
+                            {/* EXECUTIVE INTERPRETATION */}
+                            <div className="mb-8 p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileText className="w-4 h-4 text-slate-400" />
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Executive Interpretation</p>
+                                </div>
+                                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                                    {getExecutiveSummary(avgLcrs, organizationName)}
+                                </p>
+                            </div>
 
                             {/* 3-TILE SUMMARY */}
                             <div className="grid grid-cols-3 gap-4 mb-8">

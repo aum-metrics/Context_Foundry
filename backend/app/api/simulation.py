@@ -535,10 +535,15 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                     # Explorer plans only serve cache for the exact same prompt.
                     is_paid_plan = org_plan_cache != "explorer"
                     is_same_prompt = request.prompt == cached_data.get("prompt")
-                    if is_paid_plan or is_same_prompt:
+                    cached_results = cached_data.get("results", [])
+                    
+                    # If upgraded to paid but cache only has 1 model, invalidate cache to run all models
+                    if is_paid_plan and len(cached_results) < 3:
+                        logger.info(f"Invalidating legacy single-model cache for upgraded {org_plan_cache} org {request.orgId}")
+                    elif is_paid_plan or is_same_prompt:
                         logger.info(f"Cache HIT for simulation {cache_key}. Serving redundant request for $0.00.")
                         return {
-                            "results": cached_data.get("results", []),
+                            "results": cached_results,
                             "version": request.manifestVersion,
                             "prompt": request.prompt,
                             "cached": True
