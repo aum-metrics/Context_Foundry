@@ -87,13 +87,23 @@ export default function BrandHealthCertificate({
     const hallucinationCount = results.filter(r => r.hasHallucination).length;
     const fidelityPct = results.length > 0 ? Math.round((results.filter(r => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
 
-    const scoreColor = (s: number) => s >= 80 ? "#10b981" : s >= 55 ? "#f59e0b" : "#ef4444";
-    const gradeLabel = (s: number) => s >= 80 ? "HIGH FIDELITY" : s >= 55 ? "MINOR DRIFT" : "CRITICAL DRIFT";
+    const scoreColor = (s: number) => s >= 85 ? "#10b981" : s >= 65 ? "#f59e0b" : s >= 40 ? "#fb923c" : "#ef4444";
+    const gradeLabel = (s: number) => s >= 85 ? "HIGH FIDELITY" : s >= 65 ? "MINOR DRIFT" : s >= 40 ? "SEVERE DRIFT" : "CRITICAL DRIFT";
 
     const getExecutiveSummary = (score: number, orgName: string) => {
-        if (score >= 80) return `AUM Context Foundry certifies that ${orgName} maintains High Fidelity across LLM representations. AI agents accurately retrieve, synthesize, and present your core claims without introducing hallucinated artifacts or material data drift. Your unstructured data assets are currently well-optimized for AI consumption.`;
-        if (score >= 55) return `${orgName} exhibits Minor Data Drift across modern AI agents. While core capabilities are recognized, significant nuances are either omitted or mildly conflated with generic industry data. We recommend injecting clearer, verified Context Manifests to prevent further brand erosion in generative summaries.`;
-        return `WARNING: ${orgName} suffers from Critical Data Drift. Generative AI engines are currently hallucinating material facts, fabricating competitor displacements, or failing to retrieve your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
+        const hCount = results.filter(r => r.hasHallucination).length;
+        const totalMod = results.length;
+
+        if (score >= 85 && hCount === 0) {
+            return `AUM Context Foundry certifies that ${orgName} maintains High Fidelity across LLM representations. AI agents accurately retrieve, synthesize, and present your core claims without introducing hallucinated artifacts. Your unstructured data assets are optimally RAG-ready.`;
+        }
+        if (score >= 65) {
+            return `${orgName} exhibits Minor Data Drift across modern AI agents. While core capabilities are recognized, some nuances are either omitted or mildly conflated. We recommend injecting clearer Context Manifests to prevent further brand erosion.`;
+        }
+        if (score >= 40) {
+            return `ALERT: ${orgName} is experiencing Severe Data Drift. ${hCount > 0 ? `Hallucinations detected in ${hCount}/${totalMod} tested models.` : "Material facts are being omitted or misattributed."} Generative engines are failing to recall specific product differentiators. Immediate semantic alignment is recommended.`;
+        }
+        return `WARNING: ${orgName} suffers from Critical Data Drift. Generative AI engines are currently hallucinating material facts${hCount > 0 ? ` across ${hCount}/${totalMod} models` : ""}, fabricating competitor displacements, or failing to retrieve your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
     };
 
     const handleDownload = async () => {
