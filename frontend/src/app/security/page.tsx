@@ -179,22 +179,6 @@ export default function SecurityPage() {
                     </div>
                 </section>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="bg-gradient-to-br from-rose-500/10 to-indigo-500/10 border border-rose-500/20 p-16 rounded-[3rem] text-center shadow-2xl backdrop-blur-xl relative overflow-hidden"
-                >
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-indigo-500"></div>
-                    <h3 className="text-3xl font-black tracking-tighter mb-6 text-slate-900 dark:text-white uppercase">CISO-Grade Brand Protection</h3>
-                    <p className={`mb-10 max-w-2xl mx-auto text-lg font-light leading-relaxed ${textMuted}`}>
-                        AUM is committed to the highest standards of data protection. Request our complete security whitepaper for a detailed breakdown of our zero-retention methodology.
-                    </p>
-                    <div className="flex flex-col sm:flex-row justify-center gap-6">
-                        <button className="px-10 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-full transition-all font-bold shadow-lg shadow-rose-600/20 uppercase tracking-widest text-xs">Request Architecture Whitepaper</button>
-                        <button className="px-10 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white rounded-full transition-all font-bold uppercase tracking-widest text-xs">Contact Security Team</button>
-                    </div>
-                </motion.div>
             </main>
 
             <Footer />
