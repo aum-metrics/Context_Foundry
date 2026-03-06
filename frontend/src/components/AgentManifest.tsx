@@ -1,18 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, FileCode, Server, RadioReceiver, FileDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { db } from "@/lib/firestorePaths";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { Copy, Check, FileCode, RadioReceiver, FileDown } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 
 export default function AgentManifest() {
     const { organization } = useOrganization();
     const [activeTab, setActiveTab] = useState<"llms.txt" | "llms-full.txt">("llms.txt");
     const [copied, setCopied] = useState(false);
-    const [deploying, setDeploying] = useState(false);
-    const [deployed, setDeployed] = useState(false);
 
     // Dynamic content generation
     const [manifestContent, setManifestContent] = useState<string>("Connecting to Ground Truth Directory...\nVerifying semantic index availability...");
@@ -50,25 +45,14 @@ export default function AgentManifest() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleDeploy = async () => {
-        setDeploying(true);
-        try {
-            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
-                await new Promise(r => setTimeout(r, 1500));
-            } else if (organization) {
-                await setDoc(doc(db, "organizations", organization.id, "manifests", "latest"), {
-                    content: content,
-                    updatedAt: serverTimestamp(),
-                    version: "latest"
-                });
-            }
-            setDeploying(false);
-            setDeployed(true);
-            setTimeout(() => setDeployed(false), 4000);
-        } catch (error) {
-            console.error("Deployment failed:", error);
-            setDeploying(false);
-        }
+    const handleDownloadTxt = () => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'llms.txt';
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -83,26 +67,10 @@ export default function AgentManifest() {
                 </div>
 
                 <button
-                    onClick={handleDeploy}
-                    disabled={deploying || deployed}
-                    className={`mt-4 md:mt-0 px-6 py-2.5 rounded-lg flex items-center font-medium transition-all ${deployed
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-none dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/50 dark:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                        : "bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_20px_rgba(192,38,211,0.3)] hover:scale-105"
-                        }`}
+                    onClick={handleDownloadTxt}
+                    className="mt-4 md:mt-0 px-6 py-2.5 rounded-lg flex items-center font-medium transition-all bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_20px_rgba(192,38,211,0.3)] hover:scale-105"
                 >
-                    {deploying ? (
-                        <span className="flex items-center">
-                            <Server className="w-4 h-4 mr-2 animate-bounce" /> Publishing...
-                        </span>
-                    ) : deployed ? (
-                        <span className="flex items-center">
-                            <Check className="w-4 h-4 mr-2" /> Live at <a href={`/llms.txt?orgId=${organization?.id}`} target="_blank" rel="noopener noreferrer" className="ml-1 underline underline-offset-2 hover:text-emerald-300">/llms.txt</a>
-                        </span>
-                    ) : (
-                        <span className="flex items-center">
-                            <Server className="w-4 h-4 mr-2" /> Publish llms.txt
-                        </span>
-                    )}
+                    <FileDown className="w-4 h-4 mr-2" /> Download llms.txt
                 </button>
             </header>
 
@@ -163,22 +131,6 @@ export default function AgentManifest() {
                 </div>
             </div>
 
-            <AnimatePresence>
-                {deployed && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="fixed bottom-10 right-10 bg-emerald-500/10 border border-emerald-500 text-emerald-400 px-6 py-4 rounded-xl shadow-[0_10px_40px_rgba(16,185,129,0.2)] backdrop-blur-md flex items-center z-50"
-                    >
-                        <Check className="w-5 h-5 mr-3" />
-                        <div>
-                            <p className="font-semibold text-sm">Successfully published to Edge API.</p>
-                            <p className="text-xs text-emerald-500/70 mt-1">LLM crawlers will now index the updated context.</p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

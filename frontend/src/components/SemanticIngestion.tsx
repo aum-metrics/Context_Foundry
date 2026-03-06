@@ -298,7 +298,7 @@ export default function SemanticIngestion() {
                                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg py-3 px-4 text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm dark:shadow-none placeholder-slate-400"
                                     />
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); urlInput && handleUrlIngest(urlInput); }}
+                                        onClick={(e) => { e.stopPropagation(); if (urlInput) handleUrlIngest(urlInput); }}
                                         disabled={!urlInput}
                                         className="absolute right-2 top-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
                                     >
