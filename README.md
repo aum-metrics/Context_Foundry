@@ -3,7 +3,7 @@
 > **Built by AUM Context Foundry — v5.1.0-hardened**
 >
 > Enterprise-grade platform for evaluating and optimizing "Agentic Share of Voice" (ASoV)
-> across RAG-based Generative Engines (GPT-4o, Claude 3.5, Gemini 2.0).
+> across RAG-based Generative Engines (GPT-4o, Claude 4.5 Sonnet, Gemini 3 Flash).
 
 ---
 
@@ -38,7 +38,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 **AUM Context Foundry solves this.** Companies upload their "source of truth" documents (pricing PDFs, feature lists, security white papers). Our platform then:
 
 1. **Ingests** the document into a zero-retention semantic pipeline (no raw data persists).
-2. **Simulates** queries against GPT-4o, Claude, and Gemini simultaneously.
+2. **Simulates** queries against GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash simultaneously.
 3. **Scores** each AI's response using our LCRS (Logical Contextual Representation Score) — a 60/40 blend of claim accuracy and semantic alignment.
 4. **Publishes** a verified `/llms.txt` manifesto that forces RAG agents (SearchGPT, Perplexity) to prioritize the company's ground truth.
 
@@ -48,7 +48,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 3.5, Gemini 2.0). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
+| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 4.5 Sonnet, Gemini 3 Flash). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
 | **Zero-Retention PDF Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. UI explicitly blocks raw data persistence. |
 | **Zero-Retention URL Ingestion** | ✅ Production | Live URL → DOM extraction → CIM pipeline. Raw HTML never stored on disk. |
 | **Identity Syndication (`/llms.txt`)**| ✅ Production | Dynamic per-tenant manifest. Fail-closed rate limiting. |
@@ -527,7 +527,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 ### Centralized Model Versioning (`model_config.py`)
 - Single source of truth for all LLM/Embedding model endpoints.
 - Prevents version drift across LCRS engines, claim extractors, semantic chunking, and GEO scoring pipelines.
-- Supports Anthropic Claude 3.5, Gemini 2.0, and GPT-4o arrays.
+- Supports Anthropic Claude 4.5 Sonnet, Gemini 3 Flash, and GPT-4o arrays.
 
 ### Zero-Retention Semantic Pipeline
 - Raw PDF or URL uploaded/fetched → processed in volatile RAM via `PyMuPDF4LLM` or `BeautifulSoup4`.

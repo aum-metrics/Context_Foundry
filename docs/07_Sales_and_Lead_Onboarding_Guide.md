@@ -9,7 +9,7 @@
 
 *   **The Hook:** Do you know what ChatGPT is saying about your brand right now?
 *   **The Problem:** Large Language Models (LLMs) hallucinate. If a customer asks Perplexity or Gemini about your refund policy, and the AI invents a "30-day no questions asked" policy that you don't actually have, your brand takes the financial and reputational hit.
-*   **The Solution:** AUM Context Foundry is a platform that allows you to upload your definitive "Source of Truth" (your pricing, policies, and products). We then run hundreds of automated, simulated conversations against ChatGPT, Claude, and Gemini to mathematically prove how accurately they represent your business. We score them using our proprietary LCRS logic.
+*   **The Solution:** AUM Context Foundry is a platform that allows you to upload your definitive "Source of Truth" (your pricing, policies, and products). We then run hundreds of automated, simulated conversations against GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash simultaneously to mathematically prove how accurately they represent your business. We score them using our proprietary LCRS logic.
 
 ---
 
@@ -46,7 +46,7 @@ Before jumping into a demo, ensure the prospect is a qualified Enterprise or Gro
 Interns must memorize these rebuttals:
 
 **Objection:** *"Why don't we just use ChatGPT directly to test it ourselves?"*
-**Rebuttal:** *"You could, but doing it manually doesn't scale and gives you no historical baseline. AUM Context Foundry runs concurrent multi-model evaluations (GPT-4o, Claude, Gemini simultaneously) and produces a reproducible LCRS score that combines semantic distance with factual claim verification. You get a single auditable number you can trend over time — not a one-off subjective assessment."*
+**Rebuttal:** *"You could, but doing it manually doesn't scale and gives you no historical baseline. AUM Context Foundry runs concurrent multi-model evaluations (GPT-4o, Claude 4.5 Sonnet, Gemini 3 Flash simultaneously) and produces a reproducible LCRS score that combines semantic distance with factual claim verification. You get a single auditable number you can trend over time — not a one-off subjective assessment."*
 
 > **Important: Do NOT describe LCRS as "scientifically proven," "academically validated," or "mathematically verified."** Describe it as "reproducible," "auditable," and "transparent." The methodology is honest and well-documented but has no peer-reviewed backing. Enterprise legal teams will check this.
 
@@ -70,7 +70,7 @@ Navigate to **Semantic Ingestion**.
 ### Step 2: The Multi-Model Simulation
 Navigate to **Co-Intelligence Simulator**.
 *   **Action:** Select the "Test Prompts" and hit "Run". Let the radar charts load.
-*   **Script:** *"We just asked GPT-4o, Claude 3.5, and Gemini the same exact question simultaneously. As you can see, Claude scored an 85% LCRS match, but Gemini hallucinated a feature in red. This is your blind spot."*
+*   **Script:** *"We just asked GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash the same exact question simultaneously. As you can see, Claude scored an 85% LCRS match, but Gemini hallucinated a feature in red. This is your blind spot."*
 
 ### Step 3: The Enterprise Upsell
 Navigate to **Settings -> Team & Security**.

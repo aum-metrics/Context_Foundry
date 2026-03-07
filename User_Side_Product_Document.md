@@ -22,7 +22,7 @@ AUM Context Foundry gives you the answer — and the tools to fix it.
 
 AUM Context Foundry is a **Brand Intelligence Platform** that:
 
-1. **Measures** how accurately GPT-4o, Claude, and Gemini represent your brand.
+1. **Measures** how accurately GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash represent your brand.
 2. **Injects** your verified ground truth directly into the AI ecosystem.
 3. **Monitors** your Agentic Share of Voice versus competitors.
 
@@ -31,7 +31,7 @@ AUM Context Foundry is a **Brand Intelligence Platform** that:
 ## Key Features
 
 ### 🔬 Co-Intelligence Simulator
-Run any customer question through GPT-4o, Claude 3.5, and Gemini 2.0 simultaneously. Get a mathematical LCRS score (0–100) for each model showing how accurately they represent your brand.
+Run any customer question through GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash simultaneously. Get a mathematical LCRS score (0–100) for each model showing how accurately they represent your brand.
 
 **What you see:**
 - Per-model LCRS score
