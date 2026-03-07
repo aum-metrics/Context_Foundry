@@ -11,6 +11,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "mock-app",
 };
 
+if (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash")) {
+  console.warn("⚠️ Firebase initialized with MOCK production keys. Auth will fail unless in Demo Mode.");
+}
+
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 // Auth ONLY

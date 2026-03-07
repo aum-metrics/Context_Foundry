@@ -96,9 +96,17 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         const fetchCompetitors = async () => {
             try {
                 const token = await auth.currentUser?.getIdToken();
-                if (!token) return;
+                let effectiveToken = token;
+                if (!effectiveToken) {
+                    const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                    if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
+                    else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+                }
+
+                if (!effectiveToken) return;
+
                 const res = await fetch(`/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Authorization': `Bearer ${effectiveToken}` }
                 });
                 if (res.ok) {
                     const data = await res.json();

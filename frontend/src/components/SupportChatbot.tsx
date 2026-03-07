@@ -87,8 +87,14 @@ export default function SupportChatbot() {
 
         try {
             const token = await auth.currentUser?.getIdToken();
+            let effectiveToken = token;
+            if (!effectiveToken) {
+                const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
+                else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+            }
 
-            if (!token || !organization?.id) {
+            if (!effectiveToken || !organization?.id) {
                 response = "Please authenticate and select an organization to use the AI Context Assistant.";
 
                 // Prevent duplicate auth warnings
@@ -100,7 +106,7 @@ export default function SupportChatbot() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
+                        "Authorization": `Bearer ${effectiveToken}`
                     },
                     body: JSON.stringify({
                         orgId: organization.id,

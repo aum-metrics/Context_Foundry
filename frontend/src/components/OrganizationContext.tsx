@@ -251,7 +251,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
         };
 
         fetchOrProvisionOrg();
-    }, [user, activeOrgId, refreshKey]);
+    }, [user, activeOrgId, refreshKey, activeManifestVersion]);
 
     // Reconcile version separately to break the dependency loop
     useEffect(() => {

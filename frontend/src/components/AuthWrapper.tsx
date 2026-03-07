@@ -18,6 +18,19 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+        /**
+         * 🛡️ DEMO MODE AUTHENTICATION BYPASS (Intentional)
+         * ------------------------------------------------
+         * This bypass allows the application to be explored using the 'demo@demo.com' user
+         * or via local development mock mode without requiring a functional Firebase connection.
+         * 
+         * Logic:
+         * 1. If 'mock_auth_user' in localStorage is 'demo@demo.com' -> High-privilege Demo access.
+         * 2. If 'NEXT_PUBLIC_ALLOW_MOCK_AUTH' is true -> Local development/testing access.
+         * 
+         * Security Note: This should be disabled or strictly gated in final production 
+         * releases unless a public-facing sandbox mode is explicitly required.
+         */
         const isDemoUser = savedMockUser === "demo@demo.com";
         const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
 

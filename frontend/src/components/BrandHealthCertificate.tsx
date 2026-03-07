@@ -93,6 +93,7 @@ export default function BrandHealthCertificate({
     const [showMethodology, setShowMethodology] = useState(false);
     const [latestRecord, setLatestRecord] = useState<ScoringRecord | null>(null);
     const [loadingHistory, setLoadingHistory] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setIssuedDate(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
@@ -110,11 +111,25 @@ export default function BrandHealthCertificate({
         const fetchHistory = async () => {
             try {
                 const token = await auth.currentUser?.getIdToken();
-                if (!token) return;
+                let effectiveToken = token;
+                if (!effectiveToken) {
+                    const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+                    if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
+                    else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+                }
+
+                if (!effectiveToken) {
+                    setLoadingHistory(false);
+                    return;
+                }
+
                 const response = await fetch(`/api/simulation/history/${organization.id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${effectiveToken}` }
                 });
-                if (!response.ok) return;
+                if (!response.ok) {
+                    setError("Failed to load historical data. Please check your connection.");
+                    return;
+                }
                 const data = await response.json();
                 const matchingHistory = (data.history || []).filter((entry: { version?: string }) => {
                     if (!activeManifestVersion || activeManifestVersion === "latest") return true;
@@ -126,6 +141,7 @@ export default function BrandHealthCertificate({
                 }
             } catch (e) {
                 console.warn("Could not load scoring history:", e);
+                setError("Network error loading report history.");
             } finally {
                 setLoadingHistory(false);
             }
@@ -278,6 +294,11 @@ export default function BrandHealthCertificate({
                                 </div>
                                 {loadingHistory ? (
                                     <div className="text-center text-slate-500 text-xs py-6">Loading simulation data...</div>
+                                ) : error ? (
+                                    <div className="text-center text-amber-500 text-xs py-6 border border-dashed border-amber-300 dark:border-amber-700/30 rounded-xl bg-amber-50/50 dark:bg-amber-500/5">
+                                        <AlertTriangle className="w-4 h-4 mx-auto mb-2" />
+                                        {error}
+                                    </div>
                                 ) : results.length === 0 ? (
                                     <div className="text-center text-slate-500 text-xs py-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
                                         Run a simulation first to populate LCRS data.
