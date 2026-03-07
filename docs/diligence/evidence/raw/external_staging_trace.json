@@ -1,0 +1,27 @@
+{
+    "timestamp": "2026-03-07T01:23:02Z",
+    "environment": "production",
+    "service_url": "https://aum-api-sgjqvkgxzq-as.a.run.app",
+    "endpoint": "/api/sso/lookup?domain=any.com",
+    "request": {
+        "method": "GET",
+        "headers": {
+            "User-Agent": "curl/8.6.0",
+            "Accept": "*/*"
+        }
+    },
+    "response": {
+        "status_line": "HTTP/2 200",
+        "headers": {
+            "content-type": "application/json",
+            "x-cloud-trace-context": "5e73705601e4f085834505c4dd56f1a8",
+            "server": "Google Frontend",
+            "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+        },
+        "body": {
+            "success": true,
+            "intent_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdfaWQiOiJub25lIiwicHJvdmlkZXIiOiJub25lIiwiZXhwIjoxNzcyODQ2ODgyLjQ1MDYwMn0.RGDq83hD-hwdX3Xw-pljodoYEahk5HZNZmVk9X-_vlA",
+            "provider_name": "Enterprise IDP"
+        }
+    }
+}

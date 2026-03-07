@@ -12,9 +12,10 @@ AUM Context Foundry is a production-grade B2B SaaS platform for LLM Brand Accura
 
 ### Verification Maturity & Proof Pack
 This document serves as a **Diligence Draft Pack**. We have transitioned from narrative-only claims to **Hard Artifact Verification**. 
-- **Level 1 (Narrative)**: Documentation of system behavior.
-- **Level 2 (Trace)**: Raw JSON request/response captures including HTTP status lines and headers.
-- **Level 3 (State)**: Verified database mutations and quota decrements (In Progress).
+- Level 1 (Narrative house): Documentation of system behavior.
+- Level 2 (Trace): Raw JSON request/response captures from local execution.
+- Level 3 (Identity): Domain-masked SSO intent traces.
+- Level 4 (Environment): Verified traces from the hosted **Google Cloud Run** environment.
 
 Current evidence artifacts are stored in the `evidence/raw/` directory with full cryptographic traces.
 
@@ -45,15 +46,16 @@ Located in [04_Database_and_Security.md](../04_Database_and_Security.md) and [PR
 
 ---
 
-## 4. Verification Proof (The Evidence Folder)
-The following artifacts provide immutable proof of system functionality under staging/production conditions.
+## 4. Internal Diligence Baseline (Local Traces)
+The following artifacts provide high-fidelity request/response traces captured in a controlled local execution environment. These serve as the baseline for staging/production parity.
 
 | Proof Point | Location | Description |
 |-------------|----------|-------------|
-| **Security Fail-Closed** | [security_fail_closed_proof.md](evidence/security_fail_closed_proof.md) | Proof of 503 rejection on database loss. |
-| **SSO Callback Integrity** | [sso_lookup_proof.md](evidence/sso_lookup_proof.md) | Verified domain-masked login initiation. |
-| **Payment Fulfillment** | [payment_webhook_proof.md](evidence/payment_webhook_proof.md) | HMAC-verified Razorpay order fulfillment logs. |
-| **Frontier API Contract** | [e2e_simulation_proof.md](evidence/e2e_simulation_proof.md) | Verified 3-model parallel simulation with LCRS scoring. |
+| **Security Fail-Closed** | [security_fail_closed_proof.md](evidence/security_fail_closed_proof.md) | **Verified 503** rejection on database loss. |
+| **SSO Identity Handshake** | [sso_identity_proof.md](evidence/sso_identity_proof.md) | Trace of domain-masked login intent generation. |
+| **Payment Fulfillment** | [payment_webhook_hmac_proof.md](evidence/payment_webhook_hmac_proof.md) | HMAC-verified Razorpay fulfillment logic. |
+| **Frontier API Contract** | [frontier_simulation_contract_proof.md](evidence/frontier_simulation_contract_proof.md) | **Local Baseline**: Parallel simulation contract trace. |
+| **Cloud Run Verification** | [external_staging_proof.md](evidence/external_staging_proof.md) | **Level 4**: Real trace from hosted `a.run.app` service. |
 
 ---
 

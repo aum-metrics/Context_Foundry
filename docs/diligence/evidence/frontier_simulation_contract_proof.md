@@ -1,7 +1,7 @@
-# Hard Evidence: Frontier Simulation Contract Proof
-**Scenario**: End-to-end verification of the 3-model parallel LCRS scoring engine for a non-demo staging organization.
+# Hard Evidence: Frontier Simulation Contract Proof (Local Baseline)
+**Scenario**: Local contract trace of the 3-model parallel LCRS scoring engine.
 **Captured**: 2026-03-07T01:19:15.179179+00:00
-**Status**: `HTTP/1.1 200 OK`
+**Status**: `HTTP/1.1 200 OK (Simulated Provider Path)`
 
 ## Raw Data Link
 [Source Trace (JSON)](raw/frontier_simulation_contract_proof_trace.json)
