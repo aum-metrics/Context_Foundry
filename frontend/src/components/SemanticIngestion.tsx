@@ -413,8 +413,15 @@ export default function SemanticIngestion() {
                                         >
                                             <RefreshCw className="w-3 h-3" /> Re-upload
                                         </button>
-                                        <button className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1.5 rounded-md transition-colors font-medium border border-emerald-500/20">
-                                            Approve &amp; Save
+                                        <button
+                                            onClick={() => {
+                                                window.dispatchEvent(new CustomEvent("aum_manifest_updated", {
+                                                    detail: { orgId: organization?.id, version: activeManifestVersion }
+                                                }));
+                                            }}
+                                            className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1.5 rounded-md transition-colors font-medium border border-emerald-500/20"
+                                        >
+                                            Approve &amp; Save ✓
                                         </button>
                                     </div>
                                 </div>

@@ -138,7 +138,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 if (userDocSnap.exists()) {
                     currentOrgUser = userDocSnap.data() as OrgUser;
                 } else {
-                    // Auto-provision via backend (handles B2B API keys, Org creation, and strict security)
+                    // Auto-provision via backend
                     if (user && typeof window !== 'undefined') {
                         const token = await user.getIdToken();
                         const response = await fetch("/api/workspaces/provision", {
@@ -153,7 +153,6 @@ export function OrganizationProvider({ children, user }: { children: React.React
                         }
                         const provisionData = await response.json();
 
-                        // Store provisioned B2B API key (shown once, user can retrieve from Settings)
                         if (provisionData.apiKey && typeof window !== 'undefined') {
                             localStorage.setItem('aum_b2b_api_key', provisionData.apiKey);
                         }
@@ -198,10 +197,6 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 }
 
                 setActiveOrgIdState(targetOrgId);
-                const manifestStorageKey = `${ACTIVE_MANIFEST_VERSION_KEY}:${targetOrgId}`;
-                if (typeof window !== "undefined") {
-                    setActiveManifestVersionState(localStorage.getItem(manifestStorageKey) || "latest");
-                }
 
                 // Fetch the Organization details via safe backend endpoint (P0 Hardening)
                 if (targetOrgId) {
@@ -224,11 +219,11 @@ export function OrganizationProvider({ children, user }: { children: React.React
                                 }
                             });
                             if (fallbackResponse.ok) {
-                            localStorage.removeItem(ACTIVE_ORG_OVERRIDE_KEY);
-                            setActiveOrgIdState(currentOrgUser.orgId);
-                            const fallbackOrgData = await fallbackResponse.json();
-                            setOrganization(fallbackOrgData);
-                            return;
+                                localStorage.removeItem(ACTIVE_ORG_OVERRIDE_KEY);
+                                setActiveOrgIdState(currentOrgUser.orgId);
+                                const fallbackOrgData = await fallbackResponse.json();
+                                setOrganization(fallbackOrgData);
+                                return;
                             }
                         }
                         throw new Error("Failed to load organization profile safely.");
@@ -243,15 +238,6 @@ export function OrganizationProvider({ children, user }: { children: React.React
                         const contextsData = await contextsResponse.json();
                         const contexts: AnalysisContext[] = contextsData.contexts || [];
                         setAnalysisContexts(contexts);
-                        const persistedVersion = typeof window !== "undefined" ? localStorage.getItem(manifestStorageKey) : null;
-                        const knownVersions = new Set(["latest", ...contexts.map((ctx) => ctx.version)]);
-                        const nextVersion = persistedVersion && knownVersions.has(persistedVersion)
-                            ? persistedVersion
-                            : (contextsData.latestVersion || contexts[0]?.version || "latest");
-                        setActiveManifestVersionState(nextVersion);
-                        if (typeof window !== "undefined") {
-                            localStorage.setItem(manifestStorageKey, nextVersion);
-                        }
                     } else {
                         setAnalysisContexts([]);
                     }
@@ -265,7 +251,26 @@ export function OrganizationProvider({ children, user }: { children: React.React
         };
 
         fetchOrProvisionOrg();
-    }, [user, activeOrgId, refreshKey, activeManifestVersion]);
+    }, [user, activeOrgId, refreshKey]);
+
+    // Reconcile version separately to break the dependency loop
+    useEffect(() => {
+        if (!activeOrgId || typeof window === "undefined") return;
+
+        const manifestStorageKey = `${ACTIVE_MANIFEST_VERSION_KEY}:${activeOrgId}`;
+        const persistedVersion = localStorage.getItem(manifestStorageKey);
+        const knownVersions = new Set(["latest", ...analysisContexts.map((ctx) => ctx.version)]);
+
+        // Find the best version to activate
+        const nextVersion = persistedVersion && knownVersions.has(persistedVersion)
+            ? persistedVersion
+            : (analysisContexts.find(ctx => ctx.isLatest)?.version || analysisContexts[0]?.version || "latest");
+
+        if (nextVersion !== activeManifestVersion) {
+            setActiveManifestVersionState(nextVersion);
+            localStorage.setItem(manifestStorageKey, nextVersion);
+        }
+    }, [analysisContexts, activeOrgId]);
 
     const isPlatformAdmin = orgUser?.role === "admin" && orgUser?.orgId === "system_admin_org";
     const activeContextName = analysisContexts.find((ctx) => ctx.version === activeManifestVersion)?.name

@@ -196,6 +196,7 @@ curl https://api.yourdomain.com/api/docs
 | Webhook forgery | Medium | `hmac.compare_digest` + idempotency | ✅ Implemented |
 | Stalled background jobs | Low | Auto-recovery sweep every 5 min, 3-strike DLQ | ✅ Active |
 | **Zero-Burn Cache Poisoning** | Low | SHA-256 hash collision protection + 24hr TTL validation | ✅ Active (v1.2.6) |
+| **Demo Mode Auth Bypass** | Medium | Intentional `localStorage` mock user bypass; Disable in production. | ✅ Documented |
 
 ---
 

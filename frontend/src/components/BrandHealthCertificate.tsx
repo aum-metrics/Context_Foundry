@@ -461,7 +461,7 @@ export default function BrandHealthCertificate({
                             className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-indigo-500/25"
                         >
                             <Download className="w-4 h-4" />
-                            {isDownloading ? "Generating..." : "Download Report (PNG)"}
+                            {isDownloading ? "Generating..." : "Download Report (PDF)"}
                         </button>
                         <button
                             onClick={() => setShowMethodology(!showMethodology)}
