@@ -183,5 +183,5 @@ All tests use `conftest.py` which automatically:
 Run:
 ```bash
 cd backend/app && python -m pytest ../tests/ -q --tb=short
-# Expected: 61 passed
+# Expected: 62 passed
 ```
