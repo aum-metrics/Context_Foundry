@@ -48,7 +48,8 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 4.5 Sonnet, Gemini 3 Flash). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
+| **LCRS Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash). 60/40 blend is reproducible and auditable. Centralized versioning via `model_config.py`. |
+| **Multi-model drift** | Medium | Periodic drift checks against Claude 4.5 Sonnet baseline | ✅ Implemented |
 | **Zero-Retention PDF Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. UI explicitly blocks raw data persistence. |
 | **Zero-Retention URL Ingestion** | ✅ Production | Live URL → DOM extraction → CIM pipeline. Raw HTML never stored on disk. |
 | **Identity Syndication (`/llms.txt`)**| ✅ Production | Dynamic per-tenant manifest. Fail-closed rate limiting. |

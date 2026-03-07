@@ -267,7 +267,7 @@ async def get_seo_status(
                 {"check": "Schema.org JSON-LD", "status": "pass", "detail": "Valid SoftwareApplication schema found"},
                 {"check": "AI Crawler Readiness", "status": "pass", "detail": "llms.txt detected and valid"}
             ],
-            "recommendation": "Maintain your manifest at /llms.txt to ensure GPT-4o and Claude 3.5 continue indexing your verified identity."
+            "recommendation": "Maintain your manifest at /llms.txt to ensure GPT-4o and Claude 4.5 Sonnet continue indexing your verified identity."
         }
 
     if not verify_user_org_access(uid, org_id):
