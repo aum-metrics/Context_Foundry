@@ -454,7 +454,7 @@ export default function CoIntelligenceSimulator() {
                                     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-x-4 gap-y-2">
                                         <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-widest font-semibold">
                                             <Shield className="w-3 h-3 mr-1.5 text-indigo-400" />
-                                            {result.model.includes('gpt') ? 'gpt-4o-2024-08-06' : result.model.includes('claude') ? 'claude-3-5-sonnet-latest' : 'gemini-1.5-flash'}
+                                            {result.model.includes('gpt') ? 'gpt-4o' : result.model.includes('claude') ? 'claude-sonnet-4-5' : 'gemini-3-flash'}
                                         </div>
                                         <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-widest font-semibold">
                                             <Zap className="w-3 h-3 mr-1.5 text-amber-400" />
