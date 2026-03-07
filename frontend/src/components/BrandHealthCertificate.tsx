@@ -190,11 +190,47 @@ export default function BrandHealthCertificate({
                 scale: 2,
                 useCORS: true,
                 logging: false,
-                width: 800, // Fixed width for consistent PDF layout
+                width: 800,
                 height: element.scrollHeight,
                 windowWidth: 800,
                 x: 0,
                 y: 0,
+                onclone: (clonedDoc) => {
+                    // NUCLEAR FIX v2: Scrub ANY mention of oklch/oklab from the clone's CSS
+                    const scrub = (str: string) => {
+                        if (!str) return str;
+                        // Replace oklch/oklab with a safe fallack (Indigo-400ish RGB: 129, 140, 248)
+                        return str.replace(/okl(ch|ab)\([^)]+\)/g, 'rgb(129, 140, 248)');
+                    };
+
+                    // 1. Scrub all <style> blocks
+                    const styleTags = clonedDoc.getElementsByTagName('style');
+                    for (let i = 0; i < styleTags.length; i++) {
+                        try {
+                            styleTags[i].innerHTML = scrub(styleTags[i].innerHTML);
+                        } catch (e) { /* ignore read-only styles */ }
+                    }
+
+                    // 2. Scrub all inline style attributes
+                    const allElements = clonedDoc.getElementsByTagName('*');
+                    for (let i = 0; i < allElements.length; i++) {
+                        const el = allElements[i] as HTMLElement;
+                        const styleAttr = el.getAttribute('style');
+                        if (styleAttr) {
+                            el.setAttribute('style', scrub(styleAttr));
+                        }
+
+                        // Handle icons/SVGs that might have oklch in fill/stroke attributes
+                        if (el.tagName === 'svg' || el.tagName === 'path' || el.tagName === 'circle') {
+                            ['fill', 'stroke'].forEach(attr => {
+                                const val = el.getAttribute(attr);
+                                if (val && (val.includes('oklch') || val.includes('oklab'))) {
+                                    el.setAttribute(attr, '#818cf8');
+                                }
+                            });
+                        }
+                    }
+                }
             });
 
             const imgData = canvas.toDataURL("image/png", 1.0);
@@ -215,7 +251,7 @@ export default function BrandHealthCertificate({
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log("PDF generated successfully using Clean Capture");
+            console.log("PDF generated successfully using Clean Capture (v1.2.13)");
         } catch (err) {
             console.error("Failed to generate certificate PDF:", err);
             window.alert("Failed to generate PDF. Please try again or take a screenshot.");

@@ -7,11 +7,13 @@ export const Logo = ({
     size = 32,
     showText = false,
     theme = 'dark', // 'dark' | 'light' | 'auto'
+    isCapture = false,
 }: {
     className?: string;
     size?: number;
     showText?: boolean;
     theme?: 'dark' | 'light' | 'auto';
+    isCapture?: boolean;
 }) => {
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => {
@@ -62,9 +64,13 @@ export const Logo = ({
                 <div className="flex flex-col justify-center">
                     <div
                         className={`font-black tracking-tighter whitespace-nowrap ${isDark ? 'text-white' : 'text-slate-900'}`}
-                        style={{ fontSize: size * 0.72, lineHeight: 1 }}
+                        style={{
+                            fontSize: size * 0.72,
+                            lineHeight: 1,
+                            color: isCapture ? (isDark ? '#ffffff' : '#0f172a') : undefined
+                        }}
                     >
-                        AUM <span className="text-indigo-600 dark:text-blue-400">Context Foundry</span>
+                        AUM <span style={{ color: isCapture ? (isDark ? '#818cf8' : '#4f46e5') : undefined }} className="text-indigo-600 dark:text-blue-400">Context Foundry</span>
                     </div>
                 </div>
             )}

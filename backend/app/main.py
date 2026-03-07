@@ -75,7 +75,6 @@ async def lifespan(app: FastAPI):
             logger.warning("⚠️  Endpoints requiring these keys will return HTTP 503 instead of crashing.")
     
     # Check environment
-    from core.config import settings
     logger.info(f"Environment: {settings.ENV}")
     logger.info(f"Debug: {settings.DEBUG}")
     logger.info(f"JWT Configured: {bool(settings.JWT_SECRET)}")
