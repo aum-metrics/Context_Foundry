@@ -8,8 +8,7 @@ import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, Boo
 import { Logo } from "./Logo";
 import { useOrganization } from "./OrganizationContext";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
-import { db } from "@/lib/firestorePaths";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 
 interface ModelResult {
     model: string;
@@ -69,12 +68,16 @@ export default function BrandHealthCertificate({
         if (!organization?.id) { setLoadingHistory(false); return; }
         const fetchHistory = async () => {
             try {
-                const histRef = collection(db, "organizations", organization.id, "scoringHistory");
-                const q = query(histRef, orderBy("timestamp", "desc"), limit(1));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    const data = snap.docs[0].data();
-                    setLatestRecord({ prompt: data.prompt || "", results: data.results || [], timestamp: data.timestamp });
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) return;
+                const response = await fetch(`/api/simulation/history/${organization.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                const record = (data.history || [])[0];
+                if (record) {
+                    setLatestRecord({ prompt: record.prompt || "", results: record.results || [], timestamp: record.timestamp || null });
                 }
             } catch (e) {
                 console.warn("Could not load scoring history:", e);

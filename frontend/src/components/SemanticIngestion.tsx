@@ -12,8 +12,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Box, UploadCloud, ChevronRight, Terminal as TerminalIcon, CheckCircle2, RefreshCw, Download } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
-import { db } from "@/lib/firestorePaths";
-import { doc, getDoc } from "firebase/firestore";
 
 const VectorCloud = () => {
     return (
@@ -80,14 +78,17 @@ export default function SemanticIngestion() {
         // Raw extracted text is NEVER stored — it is processed in volatile memory only.
         const loadExistingManifest = async () => {
             try {
-                const manifestDoc = await getDoc(doc(db, "organizations", organization.id, "manifests", "latest"));
-                if (manifestDoc.exists()) {
-                    const data = manifestDoc.data();
-                    if (data.schemaData && Object.keys(data.schemaData).length > 0) {
-                        setSchemaData(JSON.stringify(data.schemaData, null, 2));
-                        setRawText(null); // Explicitly null — zero-retention
-                        setStep("editor");
-                    }
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) return;
+                const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!manifestResp.ok) return;
+                const data = await manifestResp.json();
+                if (data.schemaData && Object.keys(data.schemaData).length > 0) {
+                    setSchemaData(JSON.stringify(data.schemaData, null, 2));
+                    setRawText(null); // Explicitly null — zero-retention
+                    setStep("editor");
                 }
             } catch (e) {
                 console.warn("Could not load existing manifest:", e);

@@ -17,6 +17,12 @@ logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
+
+def _is_platform_admin(user_data: dict | None) -> bool:
+    if not user_data:
+        return False
+    return user_data.get("role") == "admin" and user_data.get("orgId") == "system_admin_org"
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """
     Validates the Firebase JWT token from the Authorization header.
@@ -92,6 +98,8 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     from core.config import settings
     if settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False) and uid == "demo_uid" and target_org_id == "demo_org_id":
         return True
+    if settings.ENV == "development" and uid in ["mock_uid_dev", "mock-dev-uid"] and target_org_id == "mock-org-123":
+        return True
         
     if not db:
         logger.error("🛑 Security Failure: Database connection missing. Access denied.")
@@ -102,6 +110,9 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
         if getattr(user_doc, 'exists', False):
             user_data = user_doc.to_dict() or {}
             if user_data.get("orgId") == target_org_id:
+                return True
+            if _is_platform_admin(user_data):
+                logger.info(f"Platform admin {uid} granted delegated access to Org {target_org_id}")
                 return True
         
         logger.warning(f"🛡 Access Denied: User {uid} attempted to access Org {target_org_id}")

@@ -515,7 +515,7 @@ async def add_org_member(
     user_org_id = current_user.get("orgId")
 
     # 🛡️ SECURITY HARDENING (P1): Verify inviter belongs to the specific org they are inviting to
-    if user_org_id != org_id:
+    if not verify_user_org_access(uid, org_id):
         logger.warning(f"🛡 Cross-tenant attempt: User {uid} (org: {user_org_id}) tried to invite to {org_id}")
         raise HTTPException(status_code=403, detail="Cross-tenant access denied")
 
@@ -622,7 +622,7 @@ async def resend_org_invite(
     """
     Resend an invitation email and reset the expiry.
     """
-    if current_user.get("role") != "admin" or current_user.get("orgId") != org_id:
+    if current_user.get("role") != "admin" or not verify_user_org_access(current_user.get("uid"), org_id):
         raise HTTPException(status_code=403, detail="Unauthorized: cross-tenant access denied or not an admin")
         
     if not db:
@@ -677,7 +677,7 @@ async def revoke_org_invite(
     """
     Revoke an active invite and decrement reserved seat.
     """
-    if current_user.get("role") != "admin" or current_user.get("orgId") != org_id:
+    if current_user.get("role") != "admin" or not verify_user_org_access(current_user.get("uid"), org_id):
         raise HTTPException(status_code=403, detail="Unauthorized: cross-tenant access denied or not an admin")
         
     if not db:
@@ -990,8 +990,8 @@ async def get_org_profile(
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
-    # Verify user belongs to this org
-    if current_user.get("orgId") != org_id:
+    # Verify user belongs to this org or is an authorized platform admin
+    if not verify_user_org_access(current_user.get("uid"), org_id):
         raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
 
     # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum for demo account
@@ -1032,6 +1032,43 @@ async def get_org_profile(
         raise
     except Exception as e:
         logger.error(f"Failed to fetch org profile: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/{org_id}/manifest-data")
+async def get_manifest_data(
+    org_id: str,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    Secure manifest payload for authenticated workspace surfaces.
+    Returns both the human-readable manifest and structured schema evidence.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    if not verify_user_org_access(current_user.get("uid"), org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
+
+    try:
+        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        if not manifest_doc.exists:
+            raise HTTPException(status_code=404, detail="Manifest not found")
+
+        data = manifest_doc.to_dict() or {}
+        data.pop("apiKeys", None)
+        return {
+            "orgId": org_id,
+            "content": data.get("content", ""),
+            "schemaData": data.get("schemaData") or {},
+            "sourceUrl": data.get("sourceUrl"),
+            "updatedAt": data.get("updatedAt"),
+            "name": _extract_manifest_entity_name(data),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch manifest data for {org_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/{org_id}/manifest")

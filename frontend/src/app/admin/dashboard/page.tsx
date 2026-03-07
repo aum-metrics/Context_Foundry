@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import {
     LogOut, Building2, Key, Users, CreditCard,
     RefreshCw, Check, Search, AlertTriangle,
-    CheckCircle, XCircle, Send, RotateCcw, Activity
+    CheckCircle, XCircle, Send, RotateCcw, Activity, Sun, Moon, ExternalLink
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface OrgData {
     id: string;
@@ -75,6 +76,7 @@ function formatDateTimeLabel(value?: string | null) {
 
 export default function AdminDashboard() {
     const router = useRouter();
+    const { theme, toggleTheme } = useTheme();
     const [activeTab, setActiveTab] = useState<TabType>("organizations");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedOrg, setSelectedOrg] = useState<OrgData | null>(null);
@@ -360,6 +362,9 @@ export default function AdminDashboard() {
                     <button onClick={() => fetchOrgs(false)} className="text-slate-400 hover:text-amber-400 transition-colors" title="Refresh Data">
                         <RefreshCw className={`w-4 h-4 ${loadingOrgs ? "animate-spin" : ""}`} />
                     </button>
+                    <button onClick={toggleTheme} className="text-slate-400 hover:text-indigo-400 transition-colors" title="Toggle theme">
+                        {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    </button>
                     <button onClick={handleLogout} className="text-slate-400 hover:text-rose-400 transition-colors" title="Logout">
                         <LogOut className="w-4 h-4" />
                     </button>
@@ -429,7 +434,21 @@ export default function AdminDashboard() {
                                                 <td className="px-6 py-4 text-right text-sm text-slate-400">{org.members}/{org.seatLimit || 1}</td>
                                                 <td className="px-6 py-4 text-right text-sm text-slate-400">{org.simulations}</td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <button onClick={() => { setSelectedOrg(org); setActiveTab("payments"); }} className="text-xs text-amber-400 hover:text-amber-300">Manage →</button>
+                                                    <div className="flex items-center justify-end gap-4">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (typeof window !== "undefined") {
+                                                                    localStorage.setItem("aum_active_org_override", org.id);
+                                                                    window.open(`/dashboard?orgId=${encodeURIComponent(org.id)}`, "_blank");
+                                                                }
+                                                            }}
+                                                            className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1"
+                                                        >
+                                                            <ExternalLink className="w-3 h-3" />
+                                                            Open Workspace
+                                                        </button>
+                                                        <button onClick={() => { setSelectedOrg(org); setActiveTab("payments"); }} className="text-xs text-amber-400 hover:text-amber-300">Manage →</button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

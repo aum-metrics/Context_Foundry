@@ -14,8 +14,6 @@ import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { UpgradeModal } from "./UpgradeModal";
-import { db } from "@/lib/firestorePaths";
-import { doc, getDoc } from "firebase/firestore";
 
 interface ModelResult {
     model: string;
@@ -55,16 +53,19 @@ export default function CoIntelligenceSimulator() {
 
         const fetchData = async () => {
             try {
-                const orgRef = doc(db, "organizations", organization.id);
-                const manifestDoc = await getDoc(doc(orgRef, "manifests", "latest"));
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) throw new Error("Authentication required");
+                const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
 
-                if (manifestDoc.exists() && manifestDoc.data().content) {
-                    const manifestContent: string = manifestDoc.data().content || "";
+                if (manifestResp.ok) {
+                    const manifestData = await manifestResp.json();
+                    const manifestContent: string = manifestData.content || "";
                     setManifestVersions([{ id: "latest", name: "Current Context" }, { id: "v1_baseline", name: "V1 Baseline (Earlier)" }]);
 
                     // Generate context-aware prompts from the manifest
-                    const token = await auth.currentUser?.getIdToken();
-                    if (token) {
+                    if (token && manifestContent) {
                         try {
                             const res = await fetch("/api/simulation/suggest-prompts", {
                                 method: "POST",

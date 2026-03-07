@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Moon, Sun } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function AdminLoginPage() {
     const router = useRouter();
+    const { theme, toggleTheme } = useTheme();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +62,13 @@ export default function AdminLoginPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 text-slate-900 dark:text-slate-200">
+            <button
+                onClick={toggleTheme}
+                className="absolute right-6 top-6 rounded-full border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-3 text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors"
+                title="Toggle theme"
+            >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-xl border border-slate-200 dark:border-slate-800">
                 <div className="flex justify-center mb-6">
                     <Logo size={64} showText={false} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
@@ -13,10 +13,39 @@ import TeamSettings from "@/components/TeamSettings";
 import SSOSettings from "@/components/SSOSettings";
 import { auth } from "@/lib/firebase";
 
+interface AdminOrgOption {
+  id: string;
+  name: string;
+}
+
 export default function AUMContextFoundry() {
   const [activeView, setActiveView] = useState("som");
   const { theme, toggleTheme } = useTheme();
-  const { orgUser } = useOrganization();
+  const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId } = useOrganization();
+  const [adminOrgs, setAdminOrgs] = useState<AdminOrgOption[]>([]);
+
+  useEffect(() => {
+    if (!isPlatformAdmin) {
+      setAdminOrgs([]);
+      return;
+    }
+
+    const loadAdminOrgs = async () => {
+      try {
+        const resp = await fetch("/api/admin/orgs?page_size=100", { credentials: "include" });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const options = (data.orgs || [])
+          .map((org: { id: string; name: string }) => ({ id: org.id, name: org.name }))
+          .filter((org: AdminOrgOption) => org.id !== "system_admin_org");
+        setAdminOrgs(options);
+      } catch (error) {
+        console.error("Failed to load admin tenant options", error);
+      }
+    };
+
+    loadAdminOrgs();
+  }, [isPlatformAdmin]);
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 overflow-hidden font-sans transition-colors duration-300">
@@ -28,6 +57,26 @@ export default function AUMContextFoundry() {
             <div className="flex items-center space-x-3 mb-8">
               <Logo size={36} showText={true} theme="auto" />
             </div>
+            {isPlatformAdmin && (
+              <div className="mb-6">
+                <label className="block text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500 mb-2">
+                  Active Tenant
+                </label>
+                <select
+                  value={activeOrgId || "system_admin_org"}
+                  onChange={(e) => setActiveOrgId(e.target.value === "system_admin_org" ? null : e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-200 outline-none focus:border-indigo-500"
+                >
+                  <option value="system_admin_org">System Admin Org</option>
+                  {adminOrgs.map((org) => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+                  Workspace surfaces will operate on {organization?.name || "the selected tenant"}.
+                </p>
+              </div>
+            )}
           </div>
 
           <nav className="flex flex-col space-y-1.5 px-3">
