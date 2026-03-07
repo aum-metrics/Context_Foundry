@@ -29,7 +29,7 @@ interface ModelResult {
 }
 
 export default function CoIntelligenceSimulator() {
-    const { organization } = useOrganization();
+    const { organization, refreshKey, activeManifestVersion, analysisContexts, setActiveManifestVersion } = useOrganization();
     useRazorpay();
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
@@ -55,14 +55,17 @@ export default function CoIntelligenceSimulator() {
             try {
                 const token = await auth.currentUser?.getIdToken();
                 if (!token) throw new Error("Authentication required");
-                const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data`, {
+                const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
                 if (manifestResp.ok) {
                     const manifestData = await manifestResp.json();
                     const manifestContent: string = manifestData.content || "";
-                    setManifestVersions([{ id: "latest", name: "Current Context" }, { id: "v1_baseline", name: "V1 Baseline (Earlier)" }]);
+                    setManifestVersions([
+                        { id: "latest", name: "Current Context" },
+                        ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))
+                    ]);
 
                     // Generate context-aware prompts from the manifest
                     if (token && manifestContent) {
@@ -102,7 +105,7 @@ export default function CoIntelligenceSimulator() {
                     setDynamicPrompts(fallbackPrompts);
                     setActivePrompt(fallbackPrompts[0]);
                 } else {
-                    setManifestVersions([{ id: "latest", name: "Current Context" }]);
+                    setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
                     // No manifest yet — show generic but sensible prompts
                     setDynamicPrompts([
                         `What is ${organization.name}'s core business?`,
@@ -114,11 +117,15 @@ export default function CoIntelligenceSimulator() {
                 }
             } catch (e) {
                 console.error("Manifest fetch error:", e);
-                setManifestVersions([{ id: "latest", name: "Current Context" }]);
+                setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
             }
         };
         fetchData();
-    }, [organization]);
+    }, [organization, refreshKey, activeManifestVersion, analysisContexts]);
+
+    useEffect(() => {
+        setSelectedVersion(activeManifestVersion || "latest");
+    }, [activeManifestVersion]);
 
     const handleSimulate = async (promptText: string) => {
         if (!promptText || loading) return;
@@ -270,7 +277,10 @@ export default function CoIntelligenceSimulator() {
                             <span className="text-[10px] text-slate-500 uppercase tracking-widest">Context Version:</span>
                             <select
                                 value={selectedVersion}
-                                onChange={(e) => setSelectedVersion(e.target.value)}
+                                onChange={(e) => {
+                                    setSelectedVersion(e.target.value);
+                                    setActiveManifestVersion(e.target.value);
+                                }}
                                 className="text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded px-2 py-1 outline-none text-slate-600 dark:text-slate-300"
                             >
                                 {manifestVersions.map(v => (

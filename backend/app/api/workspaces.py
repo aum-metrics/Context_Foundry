@@ -5,7 +5,7 @@ Team-centric collaborative workspaces for data analysis
 Core of the "Figma for Data" experience
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request, Query
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
@@ -44,6 +44,19 @@ def _extract_manifest_entity_name(manifest_data: Dict[str, Any]) -> Optional[str
 def _is_placeholder_org_name(name: Optional[str]) -> bool:
     normalized = (name or "").strip().lower()
     return normalized in {"", "unnamed organization", "your company", "sightspectrum", "sight spectrum"}
+
+
+def _get_manifest_doc(org_id: str, version: str = "latest"):
+    org_ref = db.collection("organizations").document(org_id)
+    if version == "latest":
+        return org_ref.collection("manifests").document("latest").get()
+    return org_ref.collection("manifests").document(version).get()
+
+
+def _serialize_timestamp(value: Any) -> Optional[str]:
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value if isinstance(value, str) else None
 
 # Supabase has been deprecated. All workspace and member data is stored in Firestore.
 
@@ -980,6 +993,7 @@ async def get_workspace_activity(
 @router.get("/{org_id}/profile")
 async def get_org_profile(
     org_id: str,
+    version: str = Query("latest"),
     current_user: dict = Depends(get_auth_context)
 ):
     """
@@ -1011,8 +1025,8 @@ async def get_org_profile(
             raise HTTPException(status_code=404, detail="Organization not found")
         
         data = org_doc.to_dict() or {}
-        latest_manifest = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
-        manifest_data = latest_manifest.to_dict() if latest_manifest.exists else {}
+        manifest_doc = _get_manifest_doc(org_id, version)
+        manifest_data = manifest_doc.to_dict() if manifest_doc.exists else {}
         manifest_name = _extract_manifest_entity_name(manifest_data)
         current_name = data.get("name")
         resolved_name = manifest_name if manifest_name and _is_placeholder_org_name(current_name) else current_name
@@ -1026,7 +1040,9 @@ async def get_org_profile(
             "activeSeats": data.get("activeSeats", 0),
             "subscriptionTier": data.get("subscription", {}).get("planId", "explorer"),
             "status": data.get("subscription", {}).get("status", "active"),
-            "createdAt": data.get("createdAt")
+            "createdAt": data.get("createdAt"),
+            "manifestVersion": manifest_data.get("version", version),
+            "sourceUrl": manifest_data.get("sourceUrl"),
         }
     except HTTPException:
         raise
@@ -1038,6 +1054,7 @@ async def get_org_profile(
 @router.get("/{org_id}/manifest-data")
 async def get_manifest_data(
     org_id: str,
+    version: str = Query("latest"),
     current_user: dict = Depends(get_auth_context)
 ):
     """
@@ -1051,7 +1068,7 @@ async def get_manifest_data(
         raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
 
     try:
-        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        manifest_doc = _get_manifest_doc(org_id, version)
         if not manifest_doc.exists:
             raise HTTPException(status_code=404, detail="Manifest not found")
 
@@ -1062,7 +1079,8 @@ async def get_manifest_data(
             "content": data.get("content", ""),
             "schemaData": data.get("schemaData") or {},
             "sourceUrl": data.get("sourceUrl"),
-            "updatedAt": data.get("updatedAt"),
+            "updatedAt": data.get("updatedAt") or data.get("createdAt"),
+            "version": data.get("version", version),
             "name": _extract_manifest_entity_name(data),
         }
     except HTTPException:
@@ -1071,8 +1089,56 @@ async def get_manifest_data(
         logger.error(f"Failed to fetch manifest data for {org_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.get("/{org_id}/contexts")
+async def list_manifest_contexts(
+    org_id: str,
+    current_user: dict = Depends(get_auth_context)
+):
+    """
+    Return the manifest versions available for an organization.
+    These power the multi-company/multi-snapshot context switcher in the product.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    if not verify_user_org_access(current_user.get("uid"), org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
+
+    try:
+        manifests = db.collection("organizations").document(org_id).collection("manifests") \
+            .order_by("createdAt", direction="DESCENDING").limit(25).stream()
+
+        contexts = []
+        for manifest in manifests:
+            if manifest.id == "latest":
+                continue
+            data = manifest.to_dict() or {}
+            contexts.append({
+                "id": manifest.id,
+                "version": data.get("version", manifest.id),
+                "name": _extract_manifest_entity_name(data) or "Unnamed Context",
+                "sourceUrl": data.get("sourceUrl"),
+                "createdAt": _serialize_timestamp(data.get("createdAt")),
+            })
+
+        latest_doc = _get_manifest_doc(org_id, "latest")
+        latest_version = None
+        if latest_doc.exists:
+            latest_version = (latest_doc.to_dict() or {}).get("version")
+
+        return {
+            "contexts": [{
+                **ctx,
+                "isLatest": ctx["version"] == latest_version
+            } for ctx in contexts],
+            "latestVersion": latest_version,
+        }
+    except Exception as e:
+        logger.error(f"Failed to list manifest contexts: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 @router.get("/{org_id}/manifest")
-async def get_public_manifest(org_id: str):
+async def get_public_manifest(org_id: str, version: str = Query("latest")):
     """
     Public endpoint for llms.txt generation.
     Bypasses Firebase client rules to safely serve the organization's verified manifesto.
@@ -1110,7 +1176,7 @@ Sight Spectrum primarily delivers data analytics consulting to Manufacturing, He
         return PlainTextResponse(content=content)
 
     try:
-        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        manifest_doc = _get_manifest_doc(org_id, version)
         if manifest_doc.exists:
             data = manifest_doc.to_dict() or {}
             # 🛡️ Redact any potential keys in manifest metadata
@@ -1129,7 +1195,7 @@ Sight Spectrum primarily delivers data analytics consulting to Manufacturing, He
 
 
 @router.get("/{org_id}/manifest-full")
-async def get_public_full_manifest(org_id: str):
+async def get_public_full_manifest(org_id: str, version: str = Query("latest")):
     """
     Public endpoint for llms-full.txt generation.
     Returns the latest tenant manifest plus canonical schema evidence.
@@ -1138,7 +1204,7 @@ async def get_public_full_manifest(org_id: str):
         raise HTTPException(status_code=503, detail="Database unconfigured")
 
     try:
-        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        manifest_doc = _get_manifest_doc(org_id, version)
         if not manifest_doc.exists:
             raise HTTPException(status_code=404, detail="Manifest not found")
 

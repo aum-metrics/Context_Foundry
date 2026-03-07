@@ -5,7 +5,7 @@ import { Copy, Check, FileCode, RadioReceiver, FileDown } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 
 export default function AgentManifest() {
-    const { organization } = useOrganization();
+    const { organization, refreshKey, activeManifestVersion } = useOrganization();
     const [activeTab, setActiveTab] = useState<"llms.txt" | "llms-full.txt">("llms.txt");
     const [copied, setCopied] = useState(false);
     const [manifestContent, setManifestContent] = useState<Record<"llms.txt" | "llms-full.txt", string>>({
@@ -20,7 +20,7 @@ export default function AgentManifest() {
         async function fetchManifest(kind: "llms.txt" | "llms-full.txt") {
             try {
                 const path = kind === "llms-full.txt" ? "/llms-full.txt" : "/llms.txt";
-                const res = await fetch(`${path}?orgId=${orgId}`);
+                const res = await fetch(`${path}?orgId=${orgId}&version=${encodeURIComponent(activeManifestVersion)}`);
                 if (res.ok) {
                     const text = await res.text();
                     const nextValue = text.includes("<!DOCTYPE html>")
@@ -40,7 +40,7 @@ export default function AgentManifest() {
 
         fetchManifest("llms.txt");
         fetchManifest("llms-full.txt");
-    }, [organization?.id]);
+    }, [organization?.id, refreshKey, activeManifestVersion]);
 
     const content = manifestContent[activeTab];
 

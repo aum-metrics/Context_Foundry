@@ -5,7 +5,7 @@ Org: "Start-up/AUM Context Foundry"
 Product: "AUM Context Foundry"
 Description: Live Competitor Displacement Monitoring Engine.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Dict
 from pydantic import BaseModel
 from core.security import get_auth_context, verify_user_org_access
@@ -30,7 +30,7 @@ class CompetitorResponse(BaseModel):
     competitors: List[CompetitorProfile]
 
 @router.get("/displacement/{org_id}", response_model=CompetitorResponse)
-async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth_context)):
+async def get_competitor_displacement(org_id: str, version: str = Query("latest"), auth: dict = Depends(get_auth_context)):
     """
     Live Agentic Competitor Analysis:
     Runs a parallel LLM simulation to determine which competitors are most likely 
@@ -102,13 +102,11 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
     manifest_content = ""
     if db:
         try:
-            manifests = db.collection("organizations").document(org_id) \
+            manifest_doc = db.collection("organizations").document(org_id) \
                           .collection("manifests") \
-                          .order_by("createdAt", direction="DESCENDING") \
-                          .limit(1).stream()
-            latest = next(manifests, None)
-            if latest:
-                doc_data = latest.to_dict() or {}
+                          .document(version).get()
+            if manifest_doc.exists:
+                doc_data = manifest_doc.to_dict() or {}
                 # Use the llms.txt markdown content as the grounding context
                 manifest_content = doc_data.get("content", "")
                 if not manifest_content:

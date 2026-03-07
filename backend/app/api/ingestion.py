@@ -262,7 +262,9 @@ async def parse_document(
         return {
             "rawText": raw_text[:20000], 
             "schemaData": schema_data, 
-            "markdownManifest": llms_txt_content
+            "markdownManifest": llms_txt_content,
+            "version": manifest_id,
+            "sourceUrl": None,
         }
 
         
@@ -455,7 +457,9 @@ async def parse_url(
         return {
             "rawText": None,  # Zero-retention: URL text is never stored
             "schemaData": schema_data,
-            "markdownManifest": llms_txt_content
+            "markdownManifest": llms_txt_content,
+            "version": manifest_id,
+            "sourceUrl": request.url,
         }
 
     except Exception as e:

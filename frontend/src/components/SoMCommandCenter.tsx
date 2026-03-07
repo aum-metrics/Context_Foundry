@@ -42,18 +42,23 @@ function normalizeModelName(model: string): string {
     const aliases: Record<string, string> = {
         "gpt-4o": "GPT-4o",
         "gpt-4o-mini": "GPT-4o",
+        "gpt-4o mini": "GPT-4o",
         "gemini 1.5 flash": "Gemini 3 Flash",
         "gemini 2.0 flash": "Gemini 3 Flash",
         "gemini 2.5 flash": "Gemini 3 Flash",
+        "gemini 3 flash": "Gemini 3 Flash",
         "gemini-1.5-flash": "Gemini 3 Flash",
         "gemini-2.0-flash": "Gemini 3 Flash",
         "gemini-2.5-flash": "Gemini 3 Flash",
         "gemini-3-flash": "Gemini 3 Flash",
         "claude 3.5 sonnet": "Claude 4.5 Sonnet",
+        "claude 3.5 haiku": "Claude 4.5 Sonnet",
         "claude 4 sonnet": "Claude 4.5 Sonnet",
         "claude 4.5 sonnet": "Claude 4.5 Sonnet",
+        "claude 4.5": "Claude 4.5 Sonnet",
         "claude-3-5-sonnet": "Claude 4.5 Sonnet",
         "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet",
+        "claude-3-5-haiku": "Claude 4.5 Sonnet",
         "claude-sonnet-4-20250514": "Claude 4.5 Sonnet",
         "claude-sonnet-4-5": "Claude 4.5 Sonnet",
     };
@@ -62,7 +67,7 @@ function normalizeModelName(model: string): string {
 }
 
 export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (view: string) => void }) {
-    const { organization } = useOrganization();
+    const { organization, refreshKey, activeManifestVersion, activeContextName } = useOrganization();
     const { models } = useModelCatalog();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o");
     const [batchLoading, setBatchLoading] = useState(false);
@@ -75,6 +80,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     const [seoLoading, setSeoLoading] = useState(false);
     const [seoResult, setSeoResult] = useState<SEOResult | null>(null);
     const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+    const [currentManifestVersion, setCurrentManifestVersion] = useState<string | null>(null);
     const [historicalData, setHistoricalData] = useState<{ date: string; score: number }[]>([]);
     const [competitors, setCompetitors] = useState<{ name: string, displacementRate: number, strengths: string[], weaknesses: string[] }[]>([]);
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -91,7 +97,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             try {
                 const token = await auth.currentUser?.getIdToken();
                 if (!token) return;
-                const res = await fetch(`/api/competitor/displacement/${organization.id}`, {
+                const res = await fetch(`/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -103,7 +109,35 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             }
         };
         fetchCompetitors();
-    }, [organization]);
+    }, [organization, refreshKey, activeManifestVersion]);
+
+    useEffect(() => {
+        if (!organization?.id) {
+            setCurrentManifestVersion(null);
+            return;
+        }
+
+        const fetchManifestMeta = async () => {
+            try {
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) return;
+                const response = await fetch(`/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    setCurrentManifestVersion(null);
+                    return;
+                }
+                const data = await response.json();
+                setCurrentManifestVersion(data.version || null);
+            } catch (error) {
+                console.error("Failed to fetch manifest metadata", error);
+                setCurrentManifestVersion(null);
+            }
+        };
+
+        fetchManifestMeta();
+    }, [organization?.id, refreshKey, activeManifestVersion]);
 
     const fetchHistory = async (orgId: string) => {
         try {
@@ -139,22 +173,28 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     };
 
     const { data: historyEntries, error: _error, isLoading: loading } = useSWR(
-        organization ? `history-${organization.id}` : null,
+        organization ? `history-${organization.id}-${activeManifestVersion}-${refreshKey}` : null,
         () => fetchHistory(organization!.id)
     );
 
+    const filteredHistoryEntries = useMemo(() => {
+        if (!historyEntries) return historyEntries;
+        if (!currentManifestVersion) return historyEntries;
+        return historyEntries.filter((entry: { version?: string }) => entry.version === currentManifestVersion);
+    }, [historyEntries, currentManifestVersion]);
+
     // Memoized Calculations to prevent infinite re-renders
     const modelAverages = useMemo(() => {
-        if (!historyEntries || historyEntries.length === 0) {
+        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) {
             return {
-                "GPT-4o": 92,
-                "Gemini 3 Flash": 70,
-                "Claude 4.5 Sonnet": 75,
+                "GPT-4o": 0,
+                "Gemini 3 Flash": 0,
+                "Claude 4.5 Sonnet": 0,
             };
         }
 
         const modelSums: Record<string, { total: number, count: number }> = {};
-        historyEntries.forEach((entry: ScoringHistoryEntry) => {
+        filteredHistoryEntries.forEach((entry: ScoringHistoryEntry) => {
             entry.results?.forEach((res: { model: string; accuracy: number }) => {
                 const normalized = normalizeModelName(res.model || "Unknown");
                 if (!modelSums[normalized]) modelSums[normalized] = { total: 0, count: 0 };
@@ -178,7 +218,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         }
 
         return newAverages;
-    }, [historyEntries, batchResult]);
+    }, [filteredHistoryEntries, batchResult]);
 
     const modelTabs = useMemo(() => {
         const discovered = new Set<string>(Object.keys(modelAverages).map(normalizeModelName));
@@ -201,9 +241,9 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             { subject: 'Authority', A: 88, B: 70, C: 60, fullMark: 100 },
         ];
 
-        if (!historyEntries || historyEntries.length === 0) return fallback;
+        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) return fallback;
 
-        const latestEntry = historyEntries[0];
+        const latestEntry = filteredHistoryEntries[0];
         if (latestEntry && latestEntry.results) {
             const gpt = latestEntry.results.find((r: { model: string }) => r.model.includes("GPT"));
             const claude = latestEntry.results.find((r: { model: string }) => r.model.includes("Claude"));
@@ -219,7 +259,24 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         }
 
         return fallback;
-    }, [historyEntries]);
+    }, [filteredHistoryEntries]);
+
+    const visibleModelAverages = useMemo(() => {
+        const preferredOrder = models.length > 0 ? models.map(model => normalizeModelName(model.displayName)) : FALLBACK_MODEL_ORDER;
+        return preferredOrder.reduce<Record<string, number>>((acc, modelName) => {
+            if (typeof modelAverages[modelName] === "number") {
+                acc[modelName] = modelAverages[modelName];
+            }
+            return acc;
+        }, {});
+    }, [modelAverages, models]);
+
+    const normalizeAuditUrl = (value: string) => {
+        const trimmed = value.trim();
+        if (!trimmed) return "";
+        if (/^https?:\/\//i.test(trimmed)) return trimmed;
+        return `https://${trimmed}`;
+    };
 
 
 
@@ -251,7 +308,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         `Who are ${organization.name}'s competitors?`,
                         `Is ${organization.name} suitable for enterprise?`
                     ],
-                    manifestVersion: "latest"
+                    manifestVersion: activeManifestVersion
                 })
             });
             const data = await response.json();
@@ -310,6 +367,8 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                 if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
                 else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
             }
+            const normalizedUrl = normalizeAuditUrl(seoUrl);
+            setSeoUrl(normalizedUrl);
 
             const endpoint = organization.id === "demo_org_id" ? '/api/seo/audit/mock' : '/api/seo/audit';
 
@@ -319,7 +378,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${effectiveToken}`
                 },
-                body: JSON.stringify({ url: seoUrl, orgId: organization.id })
+                body: JSON.stringify({ url: normalizedUrl, orgId: organization.id, manifestVersion: activeManifestVersion })
             });
             const data = await response.json();
 
@@ -371,14 +430,14 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     };
 
     useEffect(() => {
-        if (!historyEntries || historyEntries.length === 0) {
+        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) {
             // No real data yet — show empty state, not fake numbers
             setHistoricalData([]);
             return;
         }
 
         const dayMap: Record<string, { score: number, count: number }> = {};
-        historyEntries.forEach((entry: ScoringHistoryEntry) => {
+        filteredHistoryEntries.forEach((entry: ScoringHistoryEntry) => {
             const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
             const label = ts.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
@@ -400,17 +459,17 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         if (realData.length > 0) {
             setHistoricalData(realData.reverse()); // Set to oldest first
         }
-    }, [historyEntries]);
+    }, [filteredHistoryEntries]);
 
     const chartData = useMemo(() => {
         if (loading) return [];
-        if (!historyEntries && !_error) return [];
-        if (historyEntries && historyEntries.length === 0) return [];
+        if (!filteredHistoryEntries && !_error) return [];
+        if (filteredHistoryEntries && filteredHistoryEntries.length === 0) return [];
 
         const targetModel = activeTab;
         const dataPoints: { name: string; score: number }[] = [];
 
-        for (const entry of (historyEntries || [])) {
+        for (const entry of (filteredHistoryEntries || [])) {
             const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
             const label = ts.toLocaleDateString("en-US", { weekday: "short" });
             const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => normalizeModelName(r.model) === targetModel);
@@ -420,13 +479,13 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         }
 
         return dataPoints;
-    }, [historyEntries, activeTab, loading, _error]);
+    }, [filteredHistoryEntries, activeTab, loading, _error]);
 
     const fidelityRisks = useMemo(() => {
-        if (!historyEntries) return [];
+        if (!filteredHistoryEntries) return [];
         const risks: { id: number; model: string; text: string; severity: string }[] = [];
         let riskId = 1;
-        for (const entry of historyEntries) {
+        for (const entry of filteredHistoryEntries) {
             for (const result of (entry.results || []) as { model: string; accuracy: number; hasHallucination: boolean }[]) {
                 // Hardened: Only surface risks with high confidence of drift
                 if (result.hasHallucination || result.accuracy < 60) {
@@ -440,7 +499,15 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             }
         }
         return risks.slice(0, 5);
-    }, [historyEntries]);
+    }, [filteredHistoryEntries]);
+
+    const radarExplainer = [
+        { label: "Consistency", detail: "How stable the narrative stays across prompts." },
+        { label: "Factuality", detail: "How closely answers stay anchored to verified claims." },
+        { label: "Sentiment", detail: "Whether tone about the brand remains context-appropriate." },
+        { label: "Safety", detail: "How reliably the model avoids harmful or fabricated assertions." },
+        { label: "Authority", detail: "How strongly the model preserves your real market positioning." },
+    ];
 
     // Compute display values
     const avgScore = chartData.length > 0
@@ -588,7 +655,18 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
-                        <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions.</p>
+                        <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/80 dark:bg-slate-950/40 p-4">
+                            <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-3">How to read the ASoV Radar</p>
+                            <p className="text-xs text-slate-500 mb-3">Farther out is better. Each spoke shows how strongly a model preserves one dimension of your verified brand context.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {radarExplainer.map((item) => (
+                                    <div key={item.label} className="text-xs text-slate-500">
+                                        <span className="font-medium text-slate-700 dark:text-slate-300">{item.label}:</span> {item.detail}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions for {activeContextName || organization?.name || "the selected context"}.</p>
                     </div>
 
                     {/* NEW: Historical Narrative Fidelity Trend Chart */}
@@ -678,7 +756,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                     {seoResult.checks.map((check, i) => (
                                         <div key={i} className="flex items-center justify-between text-sm bg-slate-50 dark:bg-slate-900 rounded-lg px-4 py-2 border border-slate-200 dark:border-white/5">
                                             <span className="text-slate-700 dark:text-slate-300">{check.check}</span>
-                                            <span className={`text-xs px-2 py-0.5 rounded ${check.status === "pass" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : check.status === "warning" ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" : "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded ${check.status === "pass" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : ["warning", "warn"].includes(check.status) ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" : "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
                                                 {check.status}
                                             </span>
                                         </div>
@@ -727,7 +805,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-6 shadow-xl dark:shadow-none">
                         <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-6">Model Accuracy Comparison</h3>
                         <div className="space-y-6">
-                            {Object.entries(modelAverages).map(([modelName, score], i) => {
+                            {Object.entries(visibleModelAverages).map(([modelName, score], i) => {
                                 return (
                                     <div key={modelName}>
                                         <div className="flex justify-between text-sm mb-2">
@@ -758,7 +836,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 fidelityRisks.map((risk: { id: number, model: string, text: string }) => (
                                     <div key={risk.id} className="p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 hover:border-rose-500/30 transition-colors">
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">{risk.model}</span>
+                                            <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">{normalizeModelName(risk.model)}</span>
                                             <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
                                         </div>
                                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug">{risk.text}</p>
@@ -793,8 +871,11 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         asovScore={avgScore}
                         driftRate={batchResult?.driftRate || 0}
                         onClose={() => setIsCertificateOpen(false)}
-                        modelResults={historyEntries && historyEntries.length > 0 ? [...historyEntries].reverse()[0]?.results : undefined}
-                        lastPrompt={historyEntries && historyEntries.length > 0 ? [...historyEntries].reverse()[0]?.prompt : undefined}
+                        modelResults={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.results : undefined}
+                        lastPrompt={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.prompt : undefined}
+                        seoResult={seoResult || undefined}
+                        competitors={competitors}
+                        activeContextName={activeContextName || organization?.name || "Current Context"}
                     />
                 )}
             </AnimatePresence>

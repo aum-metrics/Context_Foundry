@@ -28,6 +28,16 @@ router = APIRouter()
 class SEOAuditRequest(BaseModel):
     url: str
     orgId: str
+    manifestVersion: Optional[str] = "latest"
+
+
+def _normalize_audit_url(url: str) -> str:
+    trimmed = (url or "").strip()
+    if not trimmed:
+        return trimmed
+    if re.match(r"^https?://", trimmed, re.IGNORECASE):
+        return trimmed
+    return f"https://{trimmed}"
 
 from utils.task_queue import FirestoreTaskQueue
 
@@ -159,7 +169,7 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
                     openai_key = org_data.get("apiKeys", {}).get("openai", os.getenv("OPENAI_API_KEY", ""))
                     if openai_key == "internal_platform_managed":
                         openai_key = os.getenv("OPENAI_API_KEY", "")
-                    manifest_doc = db.collection("organizations").document(request.orgId).collection("manifests").document("latest").get()
+                    manifest_doc = db.collection("organizations").document(request.orgId).collection("manifests").document(request.manifestVersion or "latest").get()
                     manifest_content = ""
                     if manifest_doc.exists:
                         manifest_content = (manifest_doc.to_dict() or {}).get("content", "")[:2000]
@@ -214,6 +224,8 @@ async def run_seo_audit(
     uid = current_user.get("uid")
     if not verify_user_org_access(uid, request.orgId):
         raise HTTPException(status_code=403, detail="Unauthorized")
+
+    request.url = _normalize_audit_url(request.url)
 
     # Entitlement Check: SEO Audits require Growth or Scale
     if db:

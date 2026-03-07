@@ -36,6 +36,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
+    const version = searchParams.get('version') || 'latest';
 
     const defaultManifesto = `# AUM Context Foundry: The Verified Identity Router
 
@@ -66,7 +67,7 @@ AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate
         try {
             // Proxy the request to the hardened AUM backend to bypass client Firestore rules
             const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-            const response = await fetch(`${backendUrl}/api/workspaces/${orgId}/manifest`, {
+            const response = await fetch(`${backendUrl}/api/workspaces/${orgId}/manifest?version=${encodeURIComponent(version)}`, {
                 method: "GET",
                 cache: "no-store", // Ensure we always get the latest manifest
             });

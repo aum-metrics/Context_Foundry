@@ -579,6 +579,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     # ----- 0. SHA-256 HASH CACHE CHECK (Zero-Burn Optimization) -----
     cache_input = f"{request.orgId}_{request.prompt}_{request.manifestVersion}".encode('utf-8')
     cache_key = hashlib.sha256(cache_input).hexdigest()
+    resolved_manifest_version = request.manifestVersion
     
     if db:
         try:
@@ -604,7 +605,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                         logger.info(f"Cache HIT for simulation {cache_key}. Serving redundant request for $0.00.")
                         return {
                             "results": cached_results,
-                            "version": request.manifestVersion,
+                            "version": cached_data.get("manifestVersion", request.manifestVersion),
                             "prompt": request.prompt,
                             "cached": True
                         }
@@ -714,6 +715,15 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         if not gemini_key:
             logger.info("🧪 Dev-mode: Gemini key missing, enabling mock scoring")
 
+    # Use the fully resolved provider keys for claim extraction, claim verification,
+    # and semantic scoring. The org record may contain placeholders like
+    # `internal_platform_managed`, which are valid for routing but invalid for direct API use.
+    effective_api_keys = {
+        "openai": openai_key,
+        "gemini": gemini_key,
+        "anthropic": claude_key,
+    }
+
     # --- PHASE 7: DEEP CONTEXT RETRIEVAL ---
     if openai_key and db:
         try:
@@ -725,6 +735,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 latest_doc = db.collection("organizations").document(request.orgId).collection("manifests").document("latest").get()
                 if latest_doc.exists:
                     manifest_version = latest_doc.to_dict().get("version", "latest")
+            resolved_manifest_version = manifest_version
 
             # --- PHASE 8: NATIVE VECTOR SEARCH (O(log N)) ---
             # REQUIRES: Firestore Vector Index on 'embedding' field
@@ -770,6 +781,14 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
             if top_chunks:
                 manifest_content = "\n\n---\n\n".join(top_chunks)
+                if openai_key:
+                    try:
+                        manifest_embedding = client.embeddings.create(
+                            input=[manifest_content[:8000]],
+                            model="text-embedding-3-small"
+                        ).data[0].embedding
+                    except Exception as embed_err:
+                        logger.warning(f"Simulation context re-embedding failed: {embed_err}")
             elif not is_dev and not manifest_content:
                 # If no chunks found and no fallback content, it's a manifest issue
                 raise HTTPException(status_code=500, detail="Context retrieval failed. Please re-ingest your manifest.")
@@ -798,13 +817,13 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     eps_div = 0.45
     claims = []
     # Hardened Claim Extraction with multi-provider fallback
-    claims = extract_claims(manifest_content, api_keys)
+    claims = extract_claims(manifest_content, effective_api_keys)
 
     # --- PARALLEL INFERENCE & SCORING ---
     async def _run_and_score(model_name: str, runner_fn, key: str):
         return await asyncio.to_thread(
             _score_model,
-            model_name, runner_fn, key, api_keys,
+            model_name, runner_fn, key, effective_api_keys,
             system_prompt, request.prompt, manifest_embedding, claims, eps_div
         )
 
@@ -866,7 +885,7 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
 
     # ----- 5. ATOMIC BILLING & CACHE UPDATE (Background) -----
     if db:
-        background_tasks.add_task(_store_simulation_results, request.orgId, request.prompt, request.manifestVersion, results, cache_key)
+        background_tasks.add_task(_store_simulation_results, request.orgId, request.prompt, resolved_manifest_version, results, cache_key)
         import random
         if random.random() < 0.1:
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
@@ -883,7 +902,7 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
         "results": results,
         "adjudication": adjudication_note,
         "lockedModels": locked_models,
-        "version": request.manifestVersion,
+        "version": resolved_manifest_version,
         "prompt": request.prompt,
         "claimsExtracted": len(claims),
         "cached": False,

@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
+    const version = searchParams.get('version') || 'latest';
 
     if (!orgId) {
         return new NextResponse("Tenant manifest requires an orgId.", {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
 
     try {
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-        const response = await fetch(`${backendUrl}/api/workspaces/${orgId}/manifest-full`, {
+        const response = await fetch(`${backendUrl}/api/workspaces/${orgId}/manifest-full?version=${encodeURIComponent(version)}`, {
             method: "GET",
             cache: "no-store",
         });

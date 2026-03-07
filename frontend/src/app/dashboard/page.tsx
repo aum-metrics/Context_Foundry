@@ -21,7 +21,7 @@ interface AdminOrgOption {
 export default function AUMContextFoundry() {
   const [activeView, setActiveView] = useState("som");
   const { theme, toggleTheme } = useTheme();
-  const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId } = useOrganization();
+  const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId, analysisContexts, activeManifestVersion, activeContextName, setActiveManifestVersion } = useOrganization();
   const [adminOrgs, setAdminOrgs] = useState<AdminOrgOption[]>([]);
 
   useEffect(() => {
@@ -77,6 +77,26 @@ export default function AUMContextFoundry() {
                 </p>
               </div>
             )}
+            <div className="mb-6">
+              <label className="block text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500 mb-2">
+                Analysis Context
+              </label>
+              <select
+                value={activeManifestVersion}
+                onChange={(e) => setActiveManifestVersion(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-200 outline-none focus:border-indigo-500"
+              >
+                <option value="latest">Latest Context ({organization?.name || "Current"})</option>
+                {analysisContexts.map((context) => (
+                  <option key={context.version} value={context.version}>
+                    {context.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+                You are analyzing {activeContextName || organization?.name || "the selected context"}.
+              </p>
+            </div>
           </div>
 
           <nav className="flex flex-col space-y-1.5 px-3">

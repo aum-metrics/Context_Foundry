@@ -61,7 +61,7 @@ const VectorCloud = () => {
 };
 
 export default function SemanticIngestion() {
-    const { organization } = useOrganization();
+    const { organization, refreshKey, activeManifestVersion, setActiveManifestVersion } = useOrganization();
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
     const [isDragging, setIsDragging] = useState(false);
     const [schemaData, setSchemaData] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export default function SemanticIngestion() {
             try {
                 const token = await auth.currentUser?.getIdToken();
                 if (!token) return;
-                const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data`, {
+                const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (!manifestResp.ok) return;
@@ -95,7 +95,7 @@ export default function SemanticIngestion() {
             }
         };
         loadExistingManifest();
-    }, [organization]);
+    }, [organization, refreshKey, activeManifestVersion]);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -177,6 +177,10 @@ export default function SemanticIngestion() {
             setSchemaData(JSON.stringify(result.schemaData, null, 2));
             setRawText(null); // Zero-retention
             setStep("editor");
+            if (typeof window !== "undefined") {
+                if (result.version) setActiveManifestVersion(result.version);
+                window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
+            }
         } catch (error) {
             console.error("URL Ingestion Error:", error);
             setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : "Unknown ingestion failure"}`]);
@@ -229,6 +233,10 @@ export default function SemanticIngestion() {
         setSchemaData(JSON.stringify(result.schemaData || result, null, 2));
         setRawText(result.rawText || "No text extracted.");
         setLogs(prev => [...prev, "SUCCESS: Structured JSON-LD generated."]);
+        if (organization?.id && typeof window !== "undefined") {
+            if (result.version) setActiveManifestVersion(result.version);
+            window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
+        }
 
         // Move to editor view
         setTimeout(() => setStep("editor"), 1500);

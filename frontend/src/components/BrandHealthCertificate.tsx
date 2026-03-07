@@ -32,6 +32,44 @@ interface BrandHealthCertificateProps {
     // Optional: passed directly from in-session simulation results
     modelResults?: ModelResult[];
     lastPrompt?: string;
+    seoResult?: {
+        seoScore: number;
+        geoScore: number;
+        overallScore: number;
+        recommendation: string;
+    };
+    competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[] }[];
+    activeContextName?: string;
+}
+
+const CANONICAL_MODEL_ORDER = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
+
+function normalizeModelName(model: string): string {
+    const raw = (model || "").trim();
+    const lowered = raw.toLowerCase();
+    const aliases: Record<string, string> = {
+        "gpt-4o": "GPT-4o",
+        "gpt-4o-mini": "GPT-4o",
+        "gpt-4o mini": "GPT-4o",
+        "gemini 1.5 flash": "Gemini 3 Flash",
+        "gemini 2.0 flash": "Gemini 3 Flash",
+        "gemini 2.5 flash": "Gemini 3 Flash",
+        "gemini 3 flash": "Gemini 3 Flash",
+        "gemini-1.5-flash": "Gemini 3 Flash",
+        "gemini-2.0-flash": "Gemini 3 Flash",
+        "gemini-2.5-flash": "Gemini 3 Flash",
+        "gemini-3-flash": "Gemini 3 Flash",
+        "claude 3.5 haiku": "Claude 4.5 Sonnet",
+        "claude 3.5 sonnet": "Claude 4.5 Sonnet",
+        "claude 4.5": "Claude 4.5 Sonnet",
+        "claude 4.5 sonnet": "Claude 4.5 Sonnet",
+        "claude-3-5-haiku": "Claude 4.5 Sonnet",
+        "claude-3-5-sonnet": "Claude 4.5 Sonnet",
+        "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet",
+        "claude-sonnet-4-20250514": "Claude 4.5 Sonnet",
+        "claude-sonnet-4-5": "Claude 4.5 Sonnet",
+    };
+    return aliases[lowered] || raw;
 }
 
 export default function BrandHealthCertificate({
@@ -41,9 +79,12 @@ export default function BrandHealthCertificate({
     onClose,
     modelResults: propModelResults,
     lastPrompt: propPrompt,
+    seoResult,
+    competitors = [],
+    activeContextName,
 }: BrandHealthCertificateProps) {
     const organizationName = propOrgName;
-    const { organization } = useOrganization();
+    const { organization, refreshKey, activeManifestVersion } = useOrganization();
     const { models } = useModelCatalog();
     const certificateRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");
@@ -75,7 +116,11 @@ export default function BrandHealthCertificate({
                 });
                 if (!response.ok) return;
                 const data = await response.json();
-                const record = (data.history || [])[0];
+                const matchingHistory = (data.history || []).filter((entry: { version?: string }) => {
+                    if (!activeManifestVersion || activeManifestVersion === "latest") return true;
+                    return entry.version === activeManifestVersion;
+                });
+                const record = matchingHistory[0];
                 if (record) {
                     setLatestRecord({ prompt: record.prompt || "", results: record.results || [], timestamp: record.timestamp || null });
                 }
@@ -86,9 +131,11 @@ export default function BrandHealthCertificate({
             }
         };
         fetchHistory();
-    }, [organization, propModelResults, propPrompt]);
+    }, [organization, propModelResults, propPrompt, refreshKey, activeManifestVersion]);
 
-    const results = latestRecord?.results || [];
+    const results = (latestRecord?.results || [])
+        .map((result) => ({ ...result, model: normalizeModelName(result.model) }))
+        .sort((a, b) => CANONICAL_MODEL_ORDER.indexOf(a.model) - CANONICAL_MODEL_ORDER.indexOf(b.model));
     const avgLcrs = results.length > 0 ? Math.round(results.reduce((s: number, r: ModelResult) => s + r.accuracy, 0) / results.length) : asovScore;
     const hallucinationCount = results.filter((r: ModelResult) => r.hasHallucination).length;
     const fidelityPct = results.length > 0 ? Math.round((results.filter((r: ModelResult) => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
@@ -196,6 +243,9 @@ export default function BrandHealthCertificate({
                                     <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Organization</p>
                                     <p className="text-2xl font-semibold text-slate-900 dark:text-white">{organizationName}</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">AI Contextual Representation Audit</p>
+                                    {activeContextName && (
+                                        <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">Context: {activeContextName}</p>
+                                    )}
                                 </div>
                                 <div className="text-center">
                                     <div className="relative w-28 h-28">
@@ -285,6 +335,59 @@ export default function BrandHealthCertificate({
                                 </p>
                             </div>
 
+                            <div className="mb-8 p-5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10">
+                                <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">How to read this report</p>
+                                <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">AI Visibility:</span> how strongly your brand shows up with the right narrative in model outputs.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Fidelity Rate:</span> the share of models that stayed grounded instead of drifting.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Hallucinations:</span> how many models invented, contradicted, or omitted material facts.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">LCRS:</span> a blended score using semantic alignment plus claim recall against your verified context.</p>
+                                </div>
+                            </div>
+
+                            {(seoResult || competitors.length > 0) && (
+                                <div className="mb-8 grid grid-cols-1 gap-4">
+                                    {seoResult && (
+                                        <div className="p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">Search Readiness Snapshot</p>
+                                            <div className="grid grid-cols-3 gap-3 mb-3">
+                                                <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 text-center">
+                                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">SEO</p>
+                                                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{seoResult.seoScore}%</p>
+                                                </div>
+                                                <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 text-center">
+                                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">GEO</p>
+                                                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{seoResult.geoScore}%</p>
+                                                </div>
+                                                <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 text-center">
+                                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Overall</p>
+                                                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{seoResult.overallScore}%</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">{seoResult.recommendation}</p>
+                                        </div>
+                                    )}
+                                    {competitors.length > 0 && (
+                                        <div className="p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">Competitor Displacement Summary</p>
+                                            <div className="space-y-3">
+                                                {competitors.slice(0, 3).map((competitor) => (
+                                                    <div key={competitor.name} className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-sm font-medium text-slate-900 dark:text-white">{competitor.name}</span>
+                                                            <span className="text-sm font-semibold text-rose-500">{competitor.displacementRate}%</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500">
+                                                            Strengths: {competitor.strengths.join(", ") || "N/A"} · Weaknesses: {competitor.weaknesses.join(", ") || "N/A"}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* 3-TILE SUMMARY */}
                             <div className="grid grid-cols-3 gap-4 mb-8">
                                 <div className="p-4 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8 text-center shadow-sm dark:shadow-none">
@@ -332,7 +435,7 @@ export default function BrandHealthCertificate({
                                     <div>
                                         <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">Inference Audit</p>
                                         {models.map((model) => (
-                                            <p key={model.provider}>{model.provider}: {model.displayName}</p>
+                                            <p key={model.provider}>{model.provider}: {normalizeModelName(model.displayName)}</p>
                                         ))}
                                         <p className="mt-1">Embed: text-embedding-3-small</p>
                                     </div>
