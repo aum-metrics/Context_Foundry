@@ -178,23 +178,51 @@ export default function BrandHealthCertificate({
     const handleDownload = async () => {
         if (!certificateRef.current) return;
         setIsDownloading(true);
+
         try {
-            const canvas = await html2canvas(certificateRef.current, {
+            // 1. Wait for animations to settle (framer-motion transitions)
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const element = certificateRef.current;
+            const rect = element.getBoundingClientRect();
+
+            // 2. Capture canvas with explicit scale and offset handling
+            const canvas = await html2canvas(element, {
                 backgroundColor: "#0f172a",
                 scale: 2,
                 useCORS: true,
                 logging: false,
+                width: rect.width,
+                height: rect.height,
+                scrollX: 0,
+                scrollY: -window.scrollY, // Correct for page scroll
+                onclone: (clonedDoc) => {
+                    // Ensure the cloned element is visible and stable
+                    const clonedElement = clonedDoc.getElementById(element.id) || clonedDoc.querySelector('[ref="certificateRef"]');
+                    if (clonedElement) {
+                        (clonedElement as HTMLElement).style.transform = 'none';
+                        (clonedElement as HTMLElement).style.boxShadow = 'none';
+                    }
+                }
             });
+
+            // 3. Generate PDF
             const imgData = canvas.toDataURL("image/png");
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [canvas.width / 2, canvas.height / 2]
+                format: [rect.width, rect.height]
             });
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
-            pdf.save(`AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`);
+
+            pdf.addImage(imgData, 'PNG', 0, 0, rect.width, rect.height);
+
+            const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
+            pdf.save(fileName);
+
+            console.log("PDF generated successfully:", fileName);
         } catch (err) {
-            console.error("Failed to generate certificate PDF", err);
+            console.error("Failed to generate certificate PDF:", err);
+            window.alert("Failed to generate PDF. Please try again or take a screenshot.");
         } finally {
             setIsDownloading(false);
         }
