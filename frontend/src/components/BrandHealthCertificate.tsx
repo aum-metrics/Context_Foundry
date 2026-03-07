@@ -326,7 +326,7 @@ export default function BrandHealthCertificate({
                                     <div>
                                         <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">Inference Audit</p>
                                         <p>GPT: gpt-4o-mini (T=0.2)</p>
-                                        <p>Gemini: gemini-2.0-flash (T=0.2)</p>
+                                        <p>Gemini: gemini-1.5-flash (T=0.2)</p>
                                         <p>Claude: claude-3-5-haiku (T=0.2)</p>
                                         <p className="mt-1">Embed: text-embedding-3-small</p>
                                     </div>

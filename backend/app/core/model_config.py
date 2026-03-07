@@ -12,8 +12,8 @@ OPENAI_MANIFEST_MODEL = "gpt-4o-mini"            # For llms.txt generation
 OPENAI_CLAIM_MODEL = "gpt-4o-mini"               # For claim extraction/verify
 OPENAI_ADJUDICATION_MODEL = "gpt-4o-mini"        # For multi-model adjudication
 
-GEMINI_SIMULATION_MODEL = "gemini-2.0-flash"     # For Gemini inference
-CLAUDE_SIMULATION_MODEL = "claude-3-5-haiku-20241022"  # For Claude inference
+GEMINI_SIMULATION_MODEL = "gemini-1.5-flash"     # For Gemini inference
+CLAUDE_SIMULATION_MODEL = "claude-3-5-haiku-latest"  # For Claude inference
 
 # ── Embedding Models ──────────────────────────────────────────────────────────
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small" # For vector embeddings

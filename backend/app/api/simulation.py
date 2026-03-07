@@ -25,6 +25,13 @@ from core.firebase_config import db
 from fastapi.responses import StreamingResponse
 import io
 import csv
+from core.model_config import (
+    OPENAI_CLAIM_MODEL,
+    OPENAI_SIMULATION_MODEL,
+    GEMINI_SIMULATION_MODEL,
+    CLAUDE_SIMULATION_MODEL,
+    MODEL_DISPLAY_NAMES
+)
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +82,7 @@ def extract_claims(manifest_content: str, api_keys: dict) -> list:
             client = OpenAI(api_key=openai_key)
             resp = client.chat.completions.create(
                 messages=[{"role": "system", "content": prompt}, {"role": "user", "content": manifest_content[:5000]}],
-                model="gpt-4o-mini",
+                model=OPENAI_CLAIM_MODEL,
                 response_format={"type": "json_object"},
                 temperature=0,
             )
@@ -83,7 +90,7 @@ def extract_claims(manifest_content: str, api_keys: dict) -> list:
         elif gemini_key and GEMINI_AVAILABLE:
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model=GEMINI_SIMULATION_MODEL,
                 contents=[f"{prompt}\n\nDocument:\n{manifest_content[:5000]}"],
                 config={'response_mime_type': 'application/json'}
             )
@@ -120,7 +127,7 @@ Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|no
             resp = client.chat.completions.create(
                 messages=[{"role": "system", "content": sys_prompt}, 
                           {"role": "user", "content": f"CLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"}],
-                model="gpt-4o-mini",
+                model=OPENAI_CLAIM_MODEL,
                 response_format={"type": "json_object"},
                 temperature=0,
             )
@@ -128,7 +135,7 @@ Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|no
         elif gemini_key and GEMINI_AVAILABLE:
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model=GEMINI_SIMULATION_MODEL,
                 contents=[f"{sys_prompt}\n\nCLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"],
                 config={'response_mime_type': 'application/json'}
             )
@@ -171,7 +178,7 @@ def run_openai(api_key: str, system_prompt: str, user_prompt: str) -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        model="gpt-4o-mini",
+        model=OPENAI_SIMULATION_MODEL,
         temperature=0.2,
     )
     return completion.choices[0].message.content or ""
@@ -182,7 +189,7 @@ def run_gemini(api_key: str, system_prompt: str, user_prompt: str) -> str:
         raise Exception("google-genai not installed")
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
-        model='gemini-2.0-flash',
+        model=GEMINI_SIMULATION_MODEL,
         contents=[f"{system_prompt}\n\nQuestion: {user_prompt}"]
     )
     return response.text or ""
@@ -193,7 +200,7 @@ def run_claude(api_key: str, system_prompt: str, user_prompt: str) -> str:
         raise Exception("anthropic not installed")
     client = anthropic.Anthropic(api_key=api_key)
     response = client.messages.create(
-        model="claude-3-5-haiku-20241022",
+        model=CLAUDE_SIMULATION_MODEL,
         max_tokens=1000,
         temperature=0.2,
         system=system_prompt,
@@ -293,16 +300,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                  claims: list, eps_div: float) -> dict:
     """Score a single model's response against the manifest."""
     
-    # Standardize Model Names for Database Consistency
-    _model_mapping = {
-        "gpt-4o-mini": "GPT-4o Mini",
-        "gemini-2.0-flash": "Gemini 2.0 Flash",
-        "claude-3-5-haiku": "Claude 3.5 Haiku",
-        "searchgpt": "SearchGPT Pro (Sim)",
-        "perplexity": "Perplexity Pro (Sim)"
-    }
-    
-    normalized_name = _model_mapping.get(model_name.lower().strip(), model_name.strip())
+    normalized_name = MODEL_DISPLAY_NAMES.get(model_name.lower().strip(), model_name.strip())
 
     try:
         from core.config import settings
