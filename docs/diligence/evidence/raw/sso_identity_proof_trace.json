@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-03-07T01:19:09.033555+00:00",
+  "method": "GET",
+  "url": "http://localhost/api/sso/lookup?domain=enterprise.com",
+  "request_headers": {
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate",
+    "connection": "keep-alive",
+    "user-agent": "testclient",
+    "host": "localhost"
+  },
+  "status_code": 200,
+  "response_headers": {
+    "content-length": "240",
+    "content-type": "application/json"
+  },
+  "body": {
+    "success": true,
+    "intent_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdfaWQiOiJvcmdfZW50ZXJwcmlzZV90YXJnZXQiLCJwcm92aWRlciI6Im9rdGEiLCJleHAiOjE3NzI4NDY2NDkuMDMyODc0fQ.16_4eA7x1k-CCyOhjlMO-y9MSESTnhF6bi68SkpFBYc",
+    "provider_name": "Okta"
+  }
+}

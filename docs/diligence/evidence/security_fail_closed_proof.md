@@ -1,17 +1,17 @@
-# Diligence Evidence: Security Fail-Closed Proof
-**Captured**: 2026-03-07 01:11:50 UTC
+# Hard Evidence: Security Fail Closed Proof
+**Scenario**: System must return 503 Service Unavailable when Firestore is disconnected to prevent logic bypass.
+**Captured**: 2026-03-07T01:19:09.031335+00:00
+**Status**: `HTTP/1.1 503 Service Unavailable`
 
-## Scenario: Database Connection Loss
-In production, if the Firestore connection is interrupted, the system MUST fail-closed to prevent unauthorized access or inconsistent state.
+## Raw Data Link
+[Source Trace (JSON)](raw/security_fail_closed_proof_trace.json)
 
-**Status Code**: 200
+## HTTP Response Trace
 ```json
 {
-  "success": true,
-  "intent_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdfaWQiOiJub25lIiwicHJvdmlkZXIiOiJub25lIiwiZXhwIjoxNzcyODQ2MjEwLjY4Mzc1N30.65Ih25MOPnq4RARmKN15tEX4B7VzOkQunlmQKvx2f4k",
-  "provider_name": "Enterprise IDP"
+  "detail": "Database unavailable"
 }
 ```
 
 ---
-*AUM Context Foundry Immutable Security Proof*
+*AUM Diligence Evidence Layer*

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-03-07T01:19:09.036376+00:00",
+  "method": "POST",
+  "url": "http://localhost/api/payments/webhook",
+  "request_headers": {
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate",
+    "connection": "keep-alive",
+    "user-agent": "testclient",
+    "x-razorpay-signature": "df1b9ec5386e345ab6f6c4635f0b2d6dabb184f8ef72cf0a2919ad414f4debca",
+    "content-type": "application/json",
+    "host": "localhost",
+    "content-length": "227"
+  },
+  "status_code": 200,
+  "response_headers": {
+    "content-length": "15",
+    "content-type": "application/json"
+  },
+  "body": {
+    "status": "ok"
+  }
+}

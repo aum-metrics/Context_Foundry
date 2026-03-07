@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-03-07T01:19:09.031335+00:00",
+  "method": "GET",
+  "url": "http://localhost/api/sso/lookup?domain=security-test.com",
+  "request_headers": {
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate",
+    "connection": "keep-alive",
+    "user-agent": "testclient",
+    "host": "localhost"
+  },
+  "status_code": 503,
+  "response_headers": {
+    "content-length": "33",
+    "content-type": "application/json"
+  },
+  "body": {
+    "detail": "Database unavailable"
+  }
+}

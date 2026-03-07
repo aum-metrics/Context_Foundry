@@ -1,13 +1,22 @@
-# AUM Context Foundry: Technical Diligence Master
+# AUM Context Foundry: Diligence Draft Pack
 
 > **Authoritative Specification for Acquisition Review**  
-> **Version**: 5.2.0-Diligence  
+> **Status**: [DRAFT] Transitioning to Hard Acquisition-Grade Proofs  
+> **Version**: 5.2.1-Diligence-HardEvidence  
 > **Confidentiality**: High (Technical Data Room)
 
 ---
 
 ## 1. Executive Summary
 AUM Context Foundry is a production-grade B2B SaaS platform for LLM Brand Accuracy & Safety. It provides a specialized LCRS (Library-Claim-Recall-Score) engine that mathematically proves how accurately frontier models (GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet) represent a corporate "Source of Truth."
+
+### Verification Maturity & Proof Pack
+This document serves as a **Diligence Draft Pack**. We have transitioned from narrative-only claims to **Hard Artifact Verification**. 
+- **Level 1 (Narrative)**: Documentation of system behavior.
+- **Level 2 (Trace)**: Raw JSON request/response captures including HTTP status lines and headers.
+- **Level 3 (State)**: Verified database mutations and quota decrements (In Progress).
+
+Current evidence artifacts are stored in the `evidence/raw/` directory with full cryptographic traces.
 
 ### Key Technical Pillars
 - **Frontier-First Engine**: Native integration with the latest LLM benchmarks.
