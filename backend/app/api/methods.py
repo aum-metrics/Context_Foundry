@@ -8,8 +8,45 @@ Description: Public Transparency API - Methodology and Math for LCRS Scoring.
 
 from fastapi import APIRouter
 from typing import Dict, Any
+from core.firebase_config import db
+from core.model_config import (
+    OPENAI_SIMULATION_MODEL,
+    GEMINI_SIMULATION_MODEL,
+    CLAUDE_SIMULATION_MODEL,
+    MODEL_DISPLAY_NAMES,
+    API_MODEL_MAPPING,
+)
 
 router = APIRouter()
+
+
+def _default_model_catalog():
+    return [
+        {
+            "provider": "openai",
+            "displayName": MODEL_DISPLAY_NAMES.get(OPENAI_SIMULATION_MODEL, "GPT-4o"),
+            "productLabel": OPENAI_SIMULATION_MODEL,
+            "apiModelId": API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL),
+            "enabled": True,
+            "order": 1,
+        },
+        {
+            "provider": "gemini",
+            "displayName": MODEL_DISPLAY_NAMES.get(GEMINI_SIMULATION_MODEL, "Gemini 3 Flash"),
+            "productLabel": GEMINI_SIMULATION_MODEL,
+            "apiModelId": API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL),
+            "enabled": True,
+            "order": 2,
+        },
+        {
+            "provider": "anthropic",
+            "displayName": MODEL_DISPLAY_NAMES.get(CLAUDE_SIMULATION_MODEL, "Claude 4.5 Sonnet"),
+            "productLabel": CLAUDE_SIMULATION_MODEL,
+            "apiModelId": API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL),
+            "enabled": True,
+            "order": 3,
+        },
+    ]
 
 @router.get("/")
 async def get_methodology():
@@ -46,3 +83,26 @@ async def get_methodology():
             "Zero-Retention Privacy Compliance"
         ]
     }
+
+
+@router.get("/model-catalog")
+async def get_model_catalog():
+    payload = {
+        "models": _default_model_catalog(),
+        "source": "code_default",
+    }
+    if not db:
+        return payload
+
+    try:
+        doc = db.collection("platform_config").document("model_catalog").get()
+        if doc.exists:
+            data = doc.to_dict() or {}
+            models = data.get("models")
+            if isinstance(models, list) and models:
+                payload["models"] = sorted(models, key=lambda item: item.get("order", 999))
+                payload["source"] = "firestore"
+    except Exception:
+        pass
+
+    return payload

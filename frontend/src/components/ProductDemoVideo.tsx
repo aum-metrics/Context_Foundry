@@ -49,7 +49,7 @@ export default function ProductFlowShowcase() {
         {
             id: 1,
             title: "Narrative Simulation",
-            subtitle: "Stress-test ChatGPT, Claude, and Gemini for Context Drift.",
+            subtitle: "Stress-test OpenAI, Anthropic Claude, and Google Gemini for Context Drift.",
             icon: Search,
             tag: "The Process",
             outputLabel: "Drift Analysis Log",
@@ -63,9 +63,9 @@ export default function ProductFlowShowcase() {
                     </div>
                     <div className="space-y-2">
                         {[
-                            { name: 'GPT-4o', score: 92, status: 'Fidelity' },
-                            { name: 'Claude 4.5 Sonnet', score: 45, status: 'Drift' },
-                            { name: 'Gemini 3 Flash', score: 88, status: 'Fidelity' }
+                            { name: 'OpenAI', score: 92, status: 'Fidelity' },
+                            { name: 'Anthropic Claude', score: 45, status: 'Drift' },
+                            { name: 'Google Gemini', score: 88, status: 'Fidelity' }
                         ].map((m) => (
                             <div key={m.name} className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/5">
                                 <div className="text-[9px] w-16">{m.name}</div>

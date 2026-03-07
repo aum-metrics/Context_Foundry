@@ -11,6 +11,7 @@ import { useOrganization } from "./OrganizationContext";
 import { UpgradeModal } from "./UpgradeModal";
 import { Hexagon, Award } from "lucide-react";
 import BrandHealthCertificate from "./BrandHealthCertificate";
+import { useModelCatalog } from "@/hooks/useModelCatalog";
 
 interface BatchResult {
     domainStability: number;
@@ -33,7 +34,7 @@ interface SEOResult {
     recommendation: string;
 }
 
-const CANONICAL_MODEL_ORDER: string[] = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
+const FALLBACK_MODEL_ORDER: string[] = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
 
 function normalizeModelName(model: string): string {
     const raw = (model || "").trim();
@@ -62,6 +63,7 @@ function normalizeModelName(model: string): string {
 
 export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (view: string) => void }) {
     const { organization } = useOrganization();
+    const { models } = useModelCatalog();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o");
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
@@ -180,8 +182,9 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
     const modelTabs = useMemo(() => {
         const discovered = new Set<string>(Object.keys(modelAverages).map(normalizeModelName));
-        return CANONICAL_MODEL_ORDER.filter((model) => discovered.has(model));
-    }, [modelAverages]);
+        const preferredOrder = models.length > 0 ? models.map(model => normalizeModelName(model.displayName)) : FALLBACK_MODEL_ORDER;
+        return preferredOrder.filter((model) => discovered.has(model));
+    }, [modelAverages, models]);
 
     useEffect(() => {
         if (modelTabs.length > 0 && !modelTabs.includes(activeTab)) {

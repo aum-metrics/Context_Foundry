@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, TrendingUp, X, FileText } from "lucide-react";
 import { Logo } from "./Logo";
 import { useOrganization } from "./OrganizationContext";
+import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { db } from "@/lib/firestorePaths";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 
@@ -44,6 +45,7 @@ export default function BrandHealthCertificate({
 }: BrandHealthCertificateProps) {
     const organizationName = propOrgName;
     const { organization } = useOrganization();
+    const { models } = useModelCatalog();
     const certificateRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");
     const [isoTimestamp, setIsoTimestamp] = useState("");
@@ -326,9 +328,9 @@ export default function BrandHealthCertificate({
                                     </div>
                                     <div>
                                         <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">Inference Audit</p>
-                                        <p>GPT: GPT-4o</p>
-                                        <p>Gemini: Gemini 3 Flash</p>
-                                        <p>Claude: Claude 4.5 Sonnet</p>
+                                        {models.map((model) => (
+                                            <p key={model.provider}>{model.provider}: {model.displayName}</p>
+                                        ))}
                                         <p className="mt-1">Embed: text-embedding-3-small</p>
                                     </div>
                                 </div>

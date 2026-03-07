@@ -4,6 +4,7 @@ import { useRazorpay } from "@/hooks/useRazorpay";
 import { X, CheckCircle, ShieldCheck, Cpu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
+import { useModelCatalog } from "@/hooks/useModelCatalog";
 
 interface UpgradeModalProps {
     isOpen: boolean;
@@ -15,7 +16,9 @@ interface UpgradeModalProps {
 export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Features", limitReason }: UpgradeModalProps) {
     const { organization, orgUser } = useOrganization();
     const { checkout, isScriptLoading } = useRazorpay();
+    const { models } = useModelCatalog();
     const [isProcessing, setIsProcessing] = useState(false);
+    const modelLabel = models.map(model => model.displayName).join(", ");
 
     if (!isOpen) return null;
 
@@ -99,7 +102,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                     <Cpu className="w-5 h-5 text-indigo-500 mr-3 mt-0.5" />
                                     <div>
                                         <p className="font-medium text-slate-900 dark:text-white">Full Multi-Model Access</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Unlock GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash for full frontier-model synthesis.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Unlock {modelLabel || "OpenAI, Anthropic Claude, and Google Gemini"} for full frontier-model synthesis.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">

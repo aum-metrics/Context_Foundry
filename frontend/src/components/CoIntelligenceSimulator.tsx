@@ -50,7 +50,6 @@ export default function CoIntelligenceSimulator() {
     const [lockedModels, setLockedModels] = useState<string[]>([]);
     const [lastPrompt, setLastPrompt] = useState("");
     const [byokError, setByokError] = useState(false);
-
     useEffect(() => {
         if (!organization) return;
 
@@ -454,7 +453,7 @@ export default function CoIntelligenceSimulator() {
                                     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-x-4 gap-y-2">
                                         <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-widest font-semibold">
                                             <Shield className="w-3 h-3 mr-1.5 text-indigo-400" />
-                                            {result.model.toLowerCase().includes('gpt') ? 'GPT-4o' : result.model.toLowerCase().includes('claude') ? 'Claude 4.5 Sonnet' : 'Gemini 3 Flash'}
+                                            {result.model}
                                         </div>
                                         <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-widest font-semibold">
                                             <Zap className="w-3 h-3 mr-1.5 text-amber-400" />

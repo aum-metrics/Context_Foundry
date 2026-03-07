@@ -15,10 +15,45 @@ interface OrgData {
     plan: string;
     status: string;
     members: number;
+    seatLimit?: number;
+    pendingInvites?: number;
     simulations: number;
     apiKeys: { openai: string; gemini: string; anthropic: string };
     email: string;
     lastPayment: string;
+}
+
+interface OrgDetail {
+    id: string;
+    name: string;
+    subscription: {
+        planId: string;
+        status: string;
+        billingPeriod?: string;
+        maxSimulations: number;
+        simsThisCycle: number;
+        currentPeriodEnd?: string | null;
+        trialEndsAt?: string | null;
+    };
+    seats: {
+        active: number;
+        limit: number;
+        pendingInvites: number;
+    };
+    users: { uid: string; email: string; role: string; status: string; joinedAt?: string | null }[];
+    pendingInvites: { id: string; email: string; role: string; status: string; invitedAt?: string | null }[];
+    payments: { id: string; status: string; planId: string; amount: number; customerEmail: string; createdAt?: string | null; shortUrl?: string }[];
+    simulations: number;
+}
+
+interface AdminModelConfig {
+    provider: string;
+    slot: string;
+    displayName: string;
+    productLabel: string;
+    apiModelId: string;
+    enabled: boolean;
+    order: number;
 }
 
 // Fallback data for when Firestore is unavailable
@@ -26,7 +61,17 @@ const FALLBACK_ORGS: OrgData[] = [
     { id: "demo-org", name: "Demo Organization", plan: "Growth", status: "active", members: 2, simulations: 0, apiKeys: { openai: "", gemini: "", anthropic: "" }, lastPayment: "N/A", email: "admin@demo.com" },
 ];
 
-type TabType = "organizations" | "api-keys" | "users" | "payments" | "health";
+type TabType = "organizations" | "api-keys" | "users" | "payments" | "health" | "platform";
+
+const PLAN_OPTIONS = ["explorer", "growth", "scale", "enterprise"];
+const SUBSCRIPTION_STATUS_OPTIONS = ["active", "trialing", "past_due", "cancelled"];
+
+function formatDateTimeLabel(value?: string | null) {
+    if (!value) return "Not set";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString();
+}
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -43,6 +88,11 @@ export default function AdminDashboard() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [healthStatus, setHealthStatus] = useState<{ name: string; endpoint: string; status: string }[]>([]);
     const [checkingHealth, setCheckingHealth] = useState(false);
+    const [orgDetail, setOrgDetail] = useState<OrgDetail | null>(null);
+    const [loadingOrgDetail, setLoadingOrgDetail] = useState(false);
+    const [subscriptionDraft, setSubscriptionDraft] = useState<Record<string, string | number | boolean>>({});
+    const [modelConfig, setModelConfig] = useState<AdminModelConfig[]>([]);
+    const [loadingModelConfig, setLoadingModelConfig] = useState(false);
 
     useEffect(() => {
         fetch("/api/admin/verify")
@@ -80,6 +130,8 @@ export default function AdminDashboard() {
                 plan: o.plan,
                 status: o.status,
                 members: o.members,
+                seatLimit: o.seatLimit,
+                pendingInvites: o.pendingInvites,
                 simulations: o.simulations,
                 apiKeys: o.apiKeys,
                 email: o.email,
@@ -103,6 +155,45 @@ export default function AdminDashboard() {
     }, [nextCursor]);
 
     useEffect(() => { fetchOrgs(false); }, [fetchOrgs]);
+
+    const fetchOrgDetail = useCallback(async (orgId: string) => {
+        setLoadingOrgDetail(true);
+        try {
+            const resp = await fetch(`/api/admin/orgs/${orgId}/details`, { credentials: "include" });
+            if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+            const data = await resp.json();
+            setOrgDetail(data);
+            setSubscriptionDraft({
+                planId: data.subscription.planId,
+                status: data.subscription.status,
+                maxSimulations: data.subscription.maxSimulations,
+                activeSeats: data.seats.active,
+                trialEndsAt: data.subscription.trialEndsAt || "",
+                resetUsage: false,
+            });
+        } catch (err) {
+            console.error("Failed to fetch org detail:", err);
+            setOrgDetail(null);
+        }
+        setLoadingOrgDetail(false);
+    }, []);
+
+    useEffect(() => {
+        if (selectedOrg?.id) fetchOrgDetail(selectedOrg.id);
+    }, [selectedOrg?.id, fetchOrgDetail]);
+
+    const fetchModelConfig = useCallback(async () => {
+        setLoadingModelConfig(true);
+        try {
+            const resp = await fetch("/api/admin/model-config", { credentials: "include" });
+            if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+            const data = await resp.json();
+            setModelConfig(data.models || []);
+        } catch (err) {
+            console.error("Failed to fetch model config:", err);
+        }
+        setLoadingModelConfig(false);
+    }, []);
 
     const handleLogout = async () => {
         await fetch("/api/admin/logout", { method: "POST" });
@@ -131,7 +222,8 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (activeTab === "health") fetchHealth();
-    }, [activeTab]);
+        if (activeTab === "platform") fetchModelConfig();
+    }, [activeTab, fetchModelConfig]);
 
     const resetUserPassword = async (email: string) => {
         const actionId = `reset-${email}`;
@@ -197,6 +289,49 @@ export default function AdminDashboard() {
         setTimeout(() => setActionSuccess(null), 2000);
     };
 
+    const saveSubscription = async () => {
+        if (!selectedOrg) return;
+        const actionId = `subscription-${selectedOrg.id}`;
+        setActionLoading(actionId);
+        try {
+            const resp = await fetch(`/api/admin/orgs/${selectedOrg.id}/subscription`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(subscriptionDraft),
+            });
+            if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+            setActionSuccess(actionId);
+            await fetchOrgs(false);
+            await fetchOrgDetail(selectedOrg.id);
+        } catch (err) {
+            console.error("Failed to update subscription:", err);
+        }
+        setActionLoading(null);
+        setTimeout(() => setActionSuccess(null), 2000);
+    };
+
+    const saveModelConfig = async () => {
+        const actionId = "save-model-config";
+        setActionLoading(actionId);
+        try {
+            const resp = await fetch("/api/admin/model-config", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ models: modelConfig }),
+            });
+            if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+            const data = await resp.json();
+            setModelConfig(data.models || []);
+            setActionSuccess(actionId);
+        } catch (err) {
+            console.error("Failed to update model config:", err);
+        }
+        setActionLoading(null);
+        setTimeout(() => setActionSuccess(null), 2000);
+    };
+
     const filteredOrgs = orgs.filter(org =>
         org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         org.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -208,6 +343,7 @@ export default function AdminDashboard() {
         { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
         { id: "payments", label: "Payments", icon: <CreditCard className="w-4 h-4" /> },
         { id: "health", label: "System Health", icon: <Activity className="w-4 h-4" /> },
+        { id: "platform", label: "Model Control", icon: <RotateCcw className="w-4 h-4" /> },
     ];
 
     return (
@@ -260,16 +396,17 @@ export default function AdminDashboard() {
                                             <th className="text-left px-6 py-4">Organization</th>
                                             <th className="text-left px-6 py-4">Plan</th>
                                             <th className="text-left px-6 py-4">Status</th>
+                                            <th className="text-right px-6 py-4">Seats</th>
                                             <th className="text-right px-6 py-4">Simulations</th>
                                             <th className="text-right px-6 py-4">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {loadingOrgs ? (
-                                            <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Loading from Firestore...</td></tr>
+                                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">Loading from Firestore...</td></tr>
                                         ) : filteredOrgs.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-20 text-center">
+                                                <td colSpan={6} className="px-6 py-20 text-center">
                                                     <div className="flex flex-col items-center justify-center">
                                                         <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
                                                             <Building2 className="w-8 h-8 text-slate-600" />
@@ -289,9 +426,10 @@ export default function AdminDashboard() {
                                                     {org.status === "active" ? <span className="flex items-center text-xs text-emerald-400"><CheckCircle className="w-3 h-3 mr-1" /> Active</span>
                                                         : <span className="flex items-center text-xs text-rose-400"><AlertTriangle className="w-3 h-3 mr-1" /> {org.status}</span>}
                                                 </td>
+                                                <td className="px-6 py-4 text-right text-sm text-slate-400">{org.members}/{org.seatLimit || 1}</td>
                                                 <td className="px-6 py-4 text-right text-sm text-slate-400">{org.simulations}</td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <button onClick={() => { setSelectedOrg(org); setActiveTab("api-keys"); }} className="text-xs text-amber-400 hover:text-amber-300">Manage →</button>
+                                                    <button onClick={() => { setSelectedOrg(org); setActiveTab("payments"); }} className="text-xs text-amber-400 hover:text-amber-300">Manage →</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -370,33 +508,65 @@ export default function AdminDashboard() {
                     {/* USERS */}
                     {activeTab === "users" && (
                         <div>
-                            <h2 className="text-xl font-light mb-6">User Management</h2>
-                            <div className="space-y-4">
-                                {orgs.map((org) => (
-                                    <div key={org.id} className="bg-slate-900 border border-white/5 rounded-2xl p-5 flex items-center justify-between">
-                                        <div><p className="text-sm text-white">{org.email}</p><p className="text-xs text-slate-500">{org.name} · admin</p></div>
-                                        <div className="flex space-x-3">
-                                            <button onClick={() => resetUserPassword(org.email)}
-                                                className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl text-xs transition-all flex items-center space-x-2">
-                                                {actionLoading === `reset-${org.email}` ? <RefreshCw className="w-3 h-3 animate-spin" /> : actionSuccess === `reset-${org.email}` ? <Check className="w-3 h-3 text-emerald-400" /> : <RotateCcw className="w-3 h-3" />}
-                                                <span>Reset Password</span>
-                                            </button>
-                                            <button onClick={() => sendPaymentReminder(org.id, org.email)}
-                                                className="bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 px-4 py-2 rounded-xl text-xs transition-all flex items-center space-x-2">
-                                                {actionLoading === `payment-link-${org.id}` ? <RefreshCw className="w-3 h-3 animate-spin" /> : actionSuccess === `payment-link-${org.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Send className="w-3 h-3" />}
-                                                <span>Payment Reminder</span>
-                                            </button>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-light">User Management</h2>
+                                <select value={selectedOrg?.id || ""} onChange={(e) => setSelectedOrg(orgs.find(o => o.id === e.target.value) || null)}
+                                    className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500">
+                                    <option value="">Select Organization</option>
+                                    {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                </select>
+                            </div>
+                            {!selectedOrg ? (
+                                <div className="bg-slate-900 border border-white/5 rounded-2xl p-12 text-center text-slate-500">Select an organization to inspect users and invites.</div>
+                            ) : loadingOrgDetail ? (
+                                <div className="bg-slate-900 border border-white/5 rounded-2xl p-12 text-center text-slate-500">Loading tenant users...</div>
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-6">
+                                        <h3 className="text-sm font-medium text-white mb-4">Active Users</h3>
+                                        <div className="space-y-3">
+                                            {(orgDetail?.users || []).map((user) => (
+                                                <div key={user.uid} className="flex items-center justify-between border border-white/5 rounded-xl p-4">
+                                                    <div>
+                                                        <p className="text-sm text-white">{user.email}</p>
+                                                        <p className="text-xs text-slate-500">{user.role} · {user.status}</p>
+                                                    </div>
+                                                    <button onClick={() => resetUserPassword(user.email)}
+                                                        className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl text-xs transition-all flex items-center space-x-2">
+                                                        {actionLoading === `reset-${user.email}` ? <RefreshCw className="w-3 h-3 animate-spin" /> : actionSuccess === `reset-${user.email}` ? <Check className="w-3 h-3 text-emerald-400" /> : <RotateCcw className="w-3 h-3" />}
+                                                        <span>Reset</span>
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-6">
+                                        <h3 className="text-sm font-medium text-white mb-4">Pending Invites</h3>
+                                        <div className="space-y-3">
+                                            {(orgDetail?.pendingInvites || []).length > 0 ? (orgDetail?.pendingInvites || []).map((invite) => (
+                                                <div key={invite.id} className="border border-white/5 rounded-xl p-4">
+                                                    <p className="text-sm text-white">{invite.email}</p>
+                                                    <p className="text-xs text-slate-500">{invite.role} · invited {invite.invitedAt?.slice(0, 10) || "recently"}</p>
+                                                </div>
+                                            )) : <p className="text-sm text-slate-500">No pending invites.</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* PAYMENTS */}
                     {activeTab === "payments" && (
                         <div>
-                            <h2 className="text-xl font-light mb-6">Payments & Subscriptions</h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-light">Payments & Subscriptions</h2>
+                                <select value={selectedOrg?.id || ""} onChange={(e) => setSelectedOrg(orgs.find(o => o.id === e.target.value) || null)}
+                                    className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500">
+                                    <option value="">Select Organization</option>
+                                    {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                </select>
+                            </div>
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
                                 <div className="bg-slate-900 border border-white/5 rounded-2xl p-6">
                                     <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Orgs</p>
@@ -433,6 +603,108 @@ export default function AdminDashboard() {
                                     </tbody>
                                 </table>
                             </div>
+                            {selectedOrg && (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-6 space-y-4">
+                                        <h3 className="text-sm font-medium text-white">Subscription Controls</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <label className="text-xs text-slate-400">Plan
+                                                <select value={String(subscriptionDraft.planId || "")} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, planId: e.target.value }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none">
+                                                    {PLAN_OPTIONS.map(plan => <option key={plan} value={plan}>{plan}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="text-xs text-slate-400">Status
+                                                <select value={String(subscriptionDraft.status || "")} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, status: e.target.value }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none">
+                                                    {SUBSCRIPTION_STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="text-xs text-slate-400">Billing Period
+                                                <select value={String(subscriptionDraft.billingPeriod || orgDetail?.subscription.billingPeriod || "monthly")} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, billingPeriod: e.target.value }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none">
+                                                    {["monthly", "quarterly", "annual"].map(period => <option key={period} value={period}>{period}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="text-xs text-slate-400">Max Simulations
+                                                <input type="number" value={Number(subscriptionDraft.maxSimulations || 0)} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, maxSimulations: Number(e.target.value) }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                            </label>
+                                            <label className="text-xs text-slate-400">Active Seats
+                                                <input type="number" value={Number(subscriptionDraft.activeSeats || 0)} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, activeSeats: Number(e.target.value) }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                            </label>
+                                            <label className="text-xs text-slate-400 col-span-2">Trial Ends At
+                                                <input type="datetime-local" value={String(subscriptionDraft.trialEndsAt || "")} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, trialEndsAt: e.target.value }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                            </label>
+                                            <label className="text-xs text-slate-400 col-span-2">Current Period End
+                                                <input type="datetime-local" value={String(subscriptionDraft.currentPeriodEnd || orgDetail?.subscription.currentPeriodEnd || "")} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, currentPeriodEnd: e.target.value }))}
+                                                    className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                            </label>
+                                        </div>
+                                        <label className="flex items-center gap-2 text-sm text-slate-300">
+                                            <input type="checkbox" checked={Boolean(subscriptionDraft.resetUsage)} onChange={(e) => setSubscriptionDraft(prev => ({ ...prev, resetUsage: e.target.checked }))} />
+                                            Reset current simulation usage
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-4 text-xs text-slate-400 border border-white/5 rounded-xl p-4 bg-slate-950">
+                                            <div>
+                                                <p className="uppercase tracking-wider text-slate-500 mb-1">Seats Used</p>
+                                                <p className="text-base text-white">{orgDetail?.seats.active || 0} / {orgDetail?.seats.limit || 0}</p>
+                                            </div>
+                                            <div>
+                                                <p className="uppercase tracking-wider text-slate-500 mb-1">Pending Invites</p>
+                                                <p className="text-base text-white">{orgDetail?.seats.pendingInvites || 0}</p>
+                                            </div>
+                                            <div>
+                                                <p className="uppercase tracking-wider text-slate-500 mb-1">Usage This Cycle</p>
+                                                <p className="text-base text-white">{orgDetail?.subscription.simsThisCycle || 0} / {orgDetail?.subscription.maxSimulations || 0}</p>
+                                            </div>
+                                            <div>
+                                                <p className="uppercase tracking-wider text-slate-500 mb-1">Trial Ends</p>
+                                                <p className="text-base text-white">{formatDateTimeLabel(orgDetail?.subscription.trialEndsAt)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button onClick={saveSubscription}
+                                                className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 px-4 py-2.5 rounded-xl text-xs font-medium transition-all">
+                                                {actionLoading === `subscription-${selectedOrg.id}` ? "Saving..." : actionSuccess === `subscription-${selectedOrg.id}` ? "Saved" : "Save Subscription"}
+                                            </button>
+                                            <button onClick={() => sendPaymentReminder(selectedOrg.id, selectedOrg.email)}
+                                                className="bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 px-4 py-2.5 rounded-xl text-xs font-medium transition-all">
+                                                Send Payment Link
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-6">
+                                        <h3 className="text-sm font-medium text-white mb-4">Recent Payments</h3>
+                                        <div className="space-y-3">
+                                            {(orgDetail?.payments || []).length > 0 ? (orgDetail?.payments || []).map(payment => (
+                                                <div key={payment.id} className="border border-white/5 rounded-xl p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-sm text-white">{payment.planId || "payment"}</p>
+                                                        <p className="text-xs text-slate-400">{payment.status}</p>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-1">{payment.customerEmail} · {payment.createdAt?.slice(0, 10) || "recent"}</p>
+                                                    {payment.shortUrl ? <a href={payment.shortUrl} target="_blank" className="text-xs text-indigo-400 mt-2 inline-block">Open Link</a> : null}
+                                                </div>
+                                            )) : <p className="text-sm text-slate-500">No recent payment records.</p>}
+                                        </div>
+                                        {orgDetail ? (
+                                            <div className="mt-6 border-t border-white/5 pt-4 text-xs text-slate-400 space-y-2">
+                                                <div className="flex justify-between gap-4">
+                                                    <span>Current Period End</span>
+                                                    <span className="text-white">{formatDateTimeLabel(orgDetail.subscription.currentPeriodEnd)}</span>
+                                                </div>
+                                                <div className="flex justify-between gap-4">
+                                                    <span>Billing Period</span>
+                                                    <span className="text-white">{orgDetail.subscription.billingPeriod || "Not set"}</span>
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -453,6 +725,54 @@ export default function AdminDashboard() {
                                         <p className="text-slate-500">Checking system health...</p>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "platform" && (
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-light">Platform Model Control</h2>
+                                <button onClick={saveModelConfig}
+                                    className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 px-4 py-2.5 rounded-xl text-xs font-medium transition-all">
+                                    {actionLoading === "save-model-config" ? "Saving..." : actionSuccess === "save-model-config" ? "Saved" : "Publish Model Config"}
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {loadingModelConfig ? (
+                                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-12 text-center text-slate-500">Loading model control plane...</div>
+                                ) : modelConfig.map((model, index) => (
+                                    <div key={`${model.provider}-${index}`} className="bg-slate-900 border border-white/5 rounded-2xl p-6 grid grid-cols-1 lg:grid-cols-6 gap-4 items-end">
+                                        <label className="text-xs text-slate-400">Provider
+                                            <input value={model.provider} disabled className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-400 outline-none" />
+                                        </label>
+                                        <label className="text-xs text-slate-400">Display Name
+                                            <input value={model.displayName} onChange={(e) => setModelConfig(prev => prev.map((item, i) => i === index ? { ...item, displayName: e.target.value } : item))}
+                                                className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                        </label>
+                                        <label className="text-xs text-slate-400">Product Label
+                                            <input value={model.productLabel} onChange={(e) => setModelConfig(prev => prev.map((item, i) => i === index ? { ...item, productLabel: e.target.value } : item))}
+                                                className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                        </label>
+                                        <label className="text-xs text-slate-400 lg:col-span-2">Provider API Model ID
+                                            <input value={model.apiModelId} onChange={(e) => setModelConfig(prev => prev.map((item, i) => i === index ? { ...item, apiModelId: e.target.value } : item))}
+                                                className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none font-mono" />
+                                        </label>
+                                        <label className="text-xs text-slate-400">Display Order
+                                            <input type="number" value={model.order} onChange={(e) => setModelConfig(prev => prev.map((item, i) => i === index ? { ...item, order: Number(e.target.value) } : item))}
+                                                className="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm text-slate-300">
+                                            <input type="checkbox" checked={model.enabled} onChange={(e) => setModelConfig(prev => prev.map((item, i) => i === index ? { ...item, enabled: e.target.checked } : item))} />
+                                            Enabled
+                                        </label>
+                                    </div>
+                                ))}
+                                {!loadingModelConfig && modelConfig.length > 0 ? (
+                                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-6 text-xs text-slate-400">
+                                        Runtime surfaces will pick up these changes from Firestore-backed config. Static marketing/docs copy is still code-backed and must be reviewed separately when model naming changes.
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     )}

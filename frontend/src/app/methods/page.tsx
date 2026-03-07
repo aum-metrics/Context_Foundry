@@ -100,7 +100,7 @@ export default function MethodsPage() {
                                 Multi-Model Adjudication
                             </h3>
                             <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                                We don't just "guess." LCRS uses a consensus model where GPT-4o acts as the primary auditor for claim verification, while your AUM manifest serves as the immutable Ground Truth.
+                                We don't just "guess." LCRS uses the currently configured OpenAI frontier model as the primary auditor for claim verification, while your AUM manifest serves as the immutable Ground Truth.
                             </p>
                         </motion.div>
 
@@ -164,7 +164,7 @@ export default function MethodsPage() {
                                     "AUM is a marketing tool that <strong className="text-rose-500 dark:text-rose-400 line-through">stores</strong> brand files and helps with SEO monitoring."
                                 </div>
                                 <div className="flex items-center space-x-3 text-[10px] font-mono text-slate-400 uppercase tracking-widest">
-                                    <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/5">Engine: Claude-3.5-Sonnet</span>
+                                    <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/5">Engine: Anthropic Claude (configured frontier model)</span>
                                     <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/5">Temp: 0.0</span>
                                 </div>
                             </div>

@@ -1,20 +1,102 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
-from typing import Optional, Any
+from pydantic import BaseModel, Field
+from typing import Optional, Any, Dict, List
 from core.firebase_config import db, app as firebase_app
 from firebase_admin import auth as firebase_auth
+from fastapi.security import HTTPBearer
 from core.security import security, HTTPAuthorizationCredentials
 from api.audit import log_audit_event
 import datetime
 import logging
 import os
+from core.model_config import (
+    OPENAI_SIMULATION_MODEL,
+    GEMINI_SIMULATION_MODEL,
+    CLAUDE_SIMULATION_MODEL,
+    MODEL_DISPLAY_NAMES,
+    API_MODEL_MAPPING,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+admin_security = HTTPBearer(auto_error=False)
+
+PLAN_LIMITS = {
+    "explorer": {"maxSimulations": 1, "seatLimit": 1},
+    "growth": {"maxSimulations": 100, "seatLimit": 5},
+    "scale": {"maxSimulations": 500, "seatLimit": 25},
+    "enterprise": {"maxSimulations": 2000, "seatLimit": 100},
+}
+
+
+def _serialize_datetime(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _default_model_catalog() -> List[Dict[str, Any]]:
+    return [
+        {
+            "provider": "openai",
+            "slot": "simulation",
+            "displayName": MODEL_DISPLAY_NAMES.get(OPENAI_SIMULATION_MODEL, "GPT-4o"),
+            "productLabel": OPENAI_SIMULATION_MODEL,
+            "apiModelId": API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL),
+            "enabled": True,
+            "order": 1,
+        },
+        {
+            "provider": "gemini",
+            "slot": "simulation",
+            "displayName": MODEL_DISPLAY_NAMES.get(GEMINI_SIMULATION_MODEL, "Gemini 3 Flash"),
+            "productLabel": GEMINI_SIMULATION_MODEL,
+            "apiModelId": API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL),
+            "enabled": True,
+            "order": 2,
+        },
+        {
+            "provider": "anthropic",
+            "slot": "simulation",
+            "displayName": MODEL_DISPLAY_NAMES.get(CLAUDE_SIMULATION_MODEL, "Claude 4.5 Sonnet"),
+            "productLabel": CLAUDE_SIMULATION_MODEL,
+            "apiModelId": API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL),
+            "enabled": True,
+            "order": 3,
+        },
+    ]
+
+
+def _get_runtime_model_catalog() -> Dict[str, Any]:
+    payload = {
+        "models": _default_model_catalog(),
+        "source": "code_default",
+        "updatedAt": None,
+        "updatedBy": None,
+    }
+    if not db:
+        return payload
+
+    try:
+        doc = db.collection("platform_config").document("model_catalog").get()
+        if doc.exists:
+            data = doc.to_dict() or {}
+            models = data.get("models")
+            if isinstance(models, list) and models:
+                payload["models"] = sorted(models, key=lambda item: item.get("order", 999))
+                payload["source"] = "firestore"
+                payload["updatedAt"] = _serialize_datetime(data.get("updatedAt"))
+                payload["updatedBy"] = data.get("updatedBy")
+    except Exception as e:
+        logger.warning(f"Failed to load Firestore model catalog, falling back to code defaults: {e}")
+
+    return payload
 
 async def verify_admin(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(admin_security)
 ):
     """
     Verify the request comes from an authenticated Firebase user with 'admin' claim.
@@ -97,6 +179,11 @@ async def verify_admin_session_route(admin_user: dict = Depends(verify_admin)):
     Explicitly check if the current Admin Session Cookie is valid, unrevoked, and has the admin claim.
     """
     return {"success": True, "verified": True, "uid": admin_user.get("uid")}
+
+
+@router.get("/model-config")
+async def get_model_config(admin_user: dict = Depends(verify_admin)):
+    return _get_runtime_model_catalog()
 
 @router.get("/orgs")
 async def list_organizations(
@@ -186,6 +273,13 @@ async def list_organizations(
                 "plan": data.get("subscription", {}).get("planId", "explorer"),
                 "status": data.get("subscription", {}).get("status", "active"),
                 "members": member_count,
+                "seatLimit": PLAN_LIMITS.get(data.get("subscription", {}).get("planId", "explorer"), PLAN_LIMITS["explorer"]).get("seatLimit", 1),
+                "pendingInvites": len(list(
+                    db.collection("organizations").document(org_id).collection("pendingInvites")
+                    .where(filter=FieldFilter("status", "==", "pending"))
+                    .limit(100)
+                    .stream()
+                )),
                 "simulations": sim_count,
                 "apiKeys": {
                     "openai": "configured" if (data.get("apiKeys") or {}).get("openai") else "",
@@ -212,6 +306,32 @@ async def list_organizations(
 class UpdateApiKeyRequest(BaseModel):
     provider: str  # "openai" | "gemini" | "anthropic"
     value: str
+
+
+class AdminModelConfigItem(BaseModel):
+    provider: str
+    slot: str = "simulation"
+    displayName: str
+    productLabel: str
+    apiModelId: str
+    enabled: bool = True
+    order: int = 0
+
+
+class UpdateModelConfigRequest(BaseModel):
+    models: List[AdminModelConfigItem]
+
+
+class UpdateSubscriptionRequest(BaseModel):
+    planId: Optional[str] = None
+    status: Optional[str] = None
+    maxSimulations: Optional[int] = Field(default=None, ge=0)
+    billingPeriod: Optional[str] = None
+    activeSeats: Optional[int] = Field(default=None, ge=0)
+    currentPeriodEnd: Optional[str] = None
+    trialEndsAt: Optional[str] = None
+    resetUsage: bool = False
+    notes: Optional[str] = None
 
 
 @router.put("/orgs/{org_id}/keys")
@@ -244,6 +364,200 @@ async def update_org_api_key(
         return {"success": True, "message": f"{request_body.provider} key updated for {org_id}"}
     except Exception as e:
         logger.error(f"Admin key update failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/model-config")
+async def update_model_config(
+    request_body: UpdateModelConfigRequest,
+    admin_user: dict = Depends(verify_admin)
+):
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    if len(request_body.models) == 0:
+        raise HTTPException(status_code=400, detail="At least one model config entry is required")
+
+    allowed_providers = {"openai", "gemini", "anthropic"}
+    normalized_models = []
+    for item in request_body.models:
+        if item.provider not in allowed_providers:
+            raise HTTPException(status_code=400, detail=f"Unsupported provider: {item.provider}")
+        normalized_models.append(item.model_dump())
+
+    payload = {
+        "models": normalized_models,
+        "updatedAt": datetime.datetime.now(datetime.timezone.utc),
+        "updatedBy": admin_user.get("email", "unknown_admin"),
+    }
+
+    try:
+        db.collection("platform_config").document("model_catalog").set(payload)
+        log_audit_event(
+            org_id="system_admin",
+            actor_id=admin_user.get("email", "admin"),
+            event_type="admin_model_config_updated",
+            resource_id="model_catalog",
+            metadata={"modelCount": len(normalized_models)}
+        )
+        return {"success": True, **_get_runtime_model_catalog()}
+    except Exception as e:
+        logger.error(f"Admin model config update failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/orgs/{org_id}/details")
+async def get_org_details(org_id: str, admin_user: dict = Depends(verify_admin)):
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    try:
+        org_doc = db.collection("organizations").document(org_id).get()
+        if not org_doc.exists:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        data = org_doc.to_dict() or {}
+        subscription = data.get("subscription", {})
+        plan_id = subscription.get("planId", "explorer")
+        limits = PLAN_LIMITS.get(plan_id, PLAN_LIMITS["explorer"])
+
+        users_docs = list(db.collection("users").where("orgId", "==", org_id).stream())
+        users = []
+        for user_doc in users_docs:
+            user_data = user_doc.to_dict() or {}
+            users.append({
+                "uid": user_doc.id,
+                "email": user_data.get("email", ""),
+                "role": user_data.get("role", "member"),
+                "joinedAt": _serialize_datetime(user_data.get("joinedAt")),
+                "status": user_data.get("status", "active"),
+            })
+
+        invites_docs = list(
+            db.collection("organizations").document(org_id).collection("pendingInvites")
+            .where("status", "==", "pending").stream()
+        )
+        invites = []
+        for invite_doc in invites_docs:
+            invite_data = invite_doc.to_dict() or {}
+            invites.append({
+                "id": invite_doc.id,
+                "email": invite_data.get("email", ""),
+                "role": invite_data.get("role", "member"),
+                "status": invite_data.get("status", "pending"),
+                "invitedAt": _serialize_datetime(invite_data.get("invitedAt")),
+            })
+
+        payment_docs = list(
+            db.collection("organizations").document(org_id).collection("payments")
+            .order_by("createdAt", direction="DESCENDING").limit(10).stream()
+        )
+        payments = []
+        for payment_doc in payment_docs:
+            payment_data = payment_doc.to_dict() or {}
+            payments.append({
+                "id": payment_doc.id,
+                "status": payment_data.get("status", ""),
+                "planId": payment_data.get("planId", ""),
+                "amount": payment_data.get("amount", 0),
+                "customerEmail": payment_data.get("customerEmail", ""),
+                "createdAt": _serialize_datetime(payment_data.get("createdAt")),
+                "shortUrl": payment_data.get("shortUrl"),
+            })
+
+        sim_count = len(
+            list(db.collection("organizations").document(org_id).collection("scoringHistory").select([]).limit(1000).stream())
+        )
+
+        active_seats = data.get("activeSeats", len(users))
+        seat_limit = limits.get("seatLimit", max(active_seats, 1))
+
+        return {
+            "id": org_id,
+            "name": data.get("name", org_id),
+            "subscription": {
+                "planId": plan_id,
+                "status": subscription.get("status", "active"),
+                "billingPeriod": subscription.get("billingPeriod", "monthly"),
+                "maxSimulations": subscription.get("maxSimulations", limits.get("maxSimulations", 1)),
+                "simsThisCycle": subscription.get("simsThisCycle", 0),
+                "currentPeriodStart": _serialize_datetime(subscription.get("currentPeriodStart")),
+                "currentPeriodEnd": _serialize_datetime(subscription.get("currentPeriodEnd")),
+                "activatedAt": _serialize_datetime(subscription.get("activatedAt")),
+                "trialEndsAt": _serialize_datetime(subscription.get("trialEndsAt")),
+            },
+            "seats": {
+                "active": active_seats,
+                "limit": seat_limit,
+                "pendingInvites": len(invites),
+            },
+            "users": users,
+            "pendingInvites": invites,
+            "payments": payments,
+            "simulations": sim_count,
+            "createdAt": _serialize_datetime(data.get("createdAt")),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin org detail fetch failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/orgs/{org_id}/subscription")
+async def update_org_subscription(
+    org_id: str,
+    request_body: UpdateSubscriptionRequest,
+    admin_user: dict = Depends(verify_admin)
+):
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    try:
+        org_ref = db.collection("organizations").document(org_id)
+        org_doc = org_ref.get()
+        if not org_doc.exists:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        current = org_doc.to_dict() or {}
+        current_sub = current.get("subscription", {})
+        next_plan = request_body.planId or current_sub.get("planId", "explorer")
+        plan_limits = PLAN_LIMITS.get(next_plan, PLAN_LIMITS["explorer"])
+
+        updates: Dict[str, Any] = {}
+        if request_body.planId:
+            updates["subscription.planId"] = request_body.planId
+        if request_body.status:
+            updates["subscription.status"] = request_body.status
+        if request_body.billingPeriod:
+            updates["subscription.billingPeriod"] = request_body.billingPeriod
+        updates["subscription.maxSimulations"] = request_body.maxSimulations if request_body.maxSimulations is not None else current_sub.get("maxSimulations", plan_limits["maxSimulations"])
+        if request_body.activeSeats is not None:
+            updates["activeSeats"] = request_body.activeSeats
+        if request_body.resetUsage:
+            updates["subscription.simsThisCycle"] = 0
+        if request_body.currentPeriodEnd:
+            updates["subscription.currentPeriodEnd"] = request_body.currentPeriodEnd
+        if request_body.trialEndsAt is not None:
+            updates["subscription.trialEndsAt"] = request_body.trialEndsAt
+        if request_body.planId and "subscription.currentPeriodStart" not in updates:
+            updates["subscription.currentPeriodStart"] = datetime.datetime.now(datetime.timezone.utc)
+        if request_body.notes:
+            updates["adminNotes.subscription"] = request_body.notes
+
+        org_ref.update(updates)
+        log_audit_event(
+            org_id=org_id,
+            actor_id=admin_user.get("email", "admin"),
+            event_type="admin_subscription_updated",
+            resource_id=org_id,
+            metadata=request_body.model_dump()
+        )
+        return {"success": True, "message": "Subscription updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin subscription update failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

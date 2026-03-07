@@ -47,7 +47,7 @@ export default function AboutPage() {
                             Today, your customers aren&apos;t clicking links—they are asking an AI. If your brand context isn&apos;t perfectly structured, hallucination-resistant, and injected directly into the LLM&apos;s context window, <strong className="text-slate-900 dark:text-white">your competition will become the synthetic ground truth.</strong>
                         </p>
                         <p>
-                            We built AUM Context Foundry to give enterprise marketing, PR, and engineering teams a unified &quot;Smoke Detector&quot; for narrative drift. We run parallel queries across GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash, mathematically scoring your Agentic Share of Voice (ASoV).
+                            We built AUM Context Foundry to give enterprise marketing, PR, and engineering teams a unified &quot;Smoke Detector&quot; for narrative drift. We run parallel queries across OpenAI, Anthropic Claude, and Google Gemini, mathematically scoring your Agentic Share of Voice (ASoV).
                         </p>
                     </div>
                 </div>
@@ -64,7 +64,7 @@ export default function AboutPage() {
                             </div>
                             <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Precision Measurement</h4>
                             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                                We run deterministic, parallel queries across GPT-4o, Claude, and Gemini to objectively measure how accurately each model represents your brand.
+                                We run deterministic, parallel queries across OpenAI, Anthropic Claude, and Google Gemini to objectively measure how accurately each model represents your brand.
                             </p>
                         </div>
 
