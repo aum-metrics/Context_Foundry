@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, Beaker, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2, Download } from "lucide-react";
+import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, Beaker, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2, Download, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
@@ -473,8 +473,8 @@ export default function CoIntelligenceSimulator() {
                                                 }}
                                                 className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"
                                             >
-                                                <Code2 className="w-3 h-3 mr-1.5" />
-                                                Export MD
+                                                <Copy className="w-3 h-3 mr-1.5" />
+                                                COPY
                                             </button>
                                         )}
                                     </div>

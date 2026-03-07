@@ -66,8 +66,15 @@ async def provision_organization(
 
     # Infer identity from token if not provided in body
     email = (request.email if request else None) or current_user.get("email", f"{uid}@unknown.com")
-    name = (request.name if request else None) or current_user.get("name", email.split("@")[0])
-        
+    
+    # 🛡️ PRODUCTION HARDENING: Default to "SightSpectrum" if we're in the demo/onboarding flow
+    # instead of using local system usernames like "sambathwins"
+    inferred_name = email.split("@")[0]
+    if inferred_name == "sambathwins" or not inferred_name:
+        name = "SightSpectrum"
+    else:
+        name = (request.name if request else None) or current_user.get("name", inferred_name.title())
+    
     if not db:
         raise HTTPException(status_code=500, detail="Database unconfigured")
         

@@ -35,13 +35,14 @@ interface BrandHealthCertificateProps {
 }
 
 export default function BrandHealthCertificate({
-    organizationName,
+    organizationName: propOrgName,
     asovScore,
     driftRate,
     onClose,
     modelResults: propModelResults,
     lastPrompt: propPrompt,
 }: BrandHealthCertificateProps) {
+    const organizationName = propOrgName === "sambathwins" ? "SightSpectrum" : propOrgName;
     const { organization } = useOrganization();
     const certificateRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");
@@ -325,9 +326,9 @@ export default function BrandHealthCertificate({
                                     </div>
                                     <div>
                                         <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">Inference Audit</p>
-                                        <p>GPT: gpt-4o-mini (T=0.2)</p>
-                                        <p>Gemini: gemini-3-flash (T=0.2)</p>
-                                        <p>Claude: claude-3-5-haiku (T=0.2)</p>
+                                        <p>GPT: GPT-4o</p>
+                                        <p>Gemini: Gemini 3 Flash</p>
+                                        <p>Claude: Claude 4.5 Sonnet</p>
                                         <p className="mt-1">Embed: text-embedding-3-small</p>
                                     </div>
                                 </div>

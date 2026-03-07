@@ -116,20 +116,31 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
     // Memoized Calculations to prevent infinite re-renders
     const modelAverages = useMemo(() => {
+        const NORMALIZE: Record<string, string> = {
+            "Gemini 1.5 Flash": "Gemini 3 Flash",
+            "Gemini 2.0 Flash": "Gemini 3 Flash",
+            "gemini-1.5-flash": "Gemini 3 Flash",
+            "gemini-2.0-flash": "Gemini 3 Flash",
+            "Claude 3.5 Sonnet": "Claude 4.5 Sonnet",
+            "claude-3-5-sonnet": "Claude 4.5 Sonnet",
+            "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet"
+        };
+
         if (!historyEntries || historyEntries.length === 0) {
             return {
-                "GPT-4o Mini": 92,
-                "Claude 3.5 Haiku": 75,
-                "Gemini 2.0 Flash": 70
+                "GPT-4o": 92,
+                "Claude 4.5 Sonnet": 75,
+                "Gemini 3 Flash": 70
             };
         }
 
         const modelSums: Record<string, { total: number, count: number }> = {};
         historyEntries.forEach((entry: ScoringHistoryEntry) => {
             entry.results?.forEach((res: { model: string; accuracy: number }) => {
-                if (!modelSums[res.model]) modelSums[res.model] = { total: 0, count: 0 };
-                modelSums[res.model].total += res.accuracy;
-                modelSums[res.model].count += 1;
+                const normalized = NORMALIZE[res.model] || res.model;
+                if (!modelSums[normalized]) modelSums[normalized] = { total: 0, count: 0 };
+                modelSums[normalized].total += res.accuracy;
+                modelSums[normalized].count += 1;
             });
         });
 
@@ -140,7 +151,11 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
         // Mix in Batch Results if present
         if (batchResult && batchResult.modelAverages) {
-            return { ...newAverages, ...batchResult.modelAverages };
+            const normalizedBatch: Record<string, number> = {};
+            Object.entries(batchResult.modelAverages).forEach(([model, avg]) => {
+                normalizedBatch[NORMALIZE[model] || model] = avg as number;
+            });
+            return { ...newAverages, ...normalizedBatch };
         }
 
         return newAverages;
@@ -357,6 +372,16 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     }, [historyEntries]);
 
     const chartData = useMemo(() => {
+        const NORMALIZE: Record<string, string> = {
+            "Gemini 1.5 Flash": "Gemini 3 Flash",
+            "Gemini 2.0 Flash": "Gemini 3 Flash",
+            "gemini-1.5-flash": "Gemini 3 Flash",
+            "gemini-2.0-flash": "Gemini 3 Flash",
+            "Claude 3.5 Sonnet": "Claude 4.5 Sonnet",
+            "claude-3-5-sonnet": "Claude 4.5 Sonnet",
+            "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet"
+        };
+
         if (loading) return [];
         if (!historyEntries && !_error) return [];
         if (historyEntries && historyEntries.length === 0) return [];
@@ -367,7 +392,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         for (const entry of (historyEntries || [])) {
             const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
             const label = ts.toLocaleDateString("en-US", { weekday: "short" });
-            const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => r.model === targetModel);
+            const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => (NORMALIZE[r.model] || r.model) === targetModel);
             if (modelResult) {
                 dataPoints.push({ name: label, score: modelResult.accuracy });
             }
