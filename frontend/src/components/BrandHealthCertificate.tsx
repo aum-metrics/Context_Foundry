@@ -563,76 +563,122 @@ export default function BrandHealthCertificate({
             <div className="fixed top-0 left-[-9999px] z-[-1] pointer-events-none opacity-0">
                 <div
                     ref={captureRef}
-                    className="w-[800px] bg-slate-900 p-12 text-white flex flex-col gap-8"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
+                    className="w-[800px] flex flex-col gap-8"
+                    style={{
+                        fontFamily: "'Inter', sans-serif",
+                        backgroundColor: "#0f172a",
+                        padding: "48px",
+                        color: "#ffffff"
+                    }}
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Logo size={48} theme="dark" />
                             <div>
-                                <p className="text-[12px] text-indigo-400 uppercase tracking-[0.3em] font-bold">AUM Context Foundry</p>
-                                <p className="text-white font-semibold text-xl">Brand Health Certificate</p>
+                                <p style={{ fontSize: "12px", color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.3em", fontWeight: "bold" }}>AUM Context Foundry</p>
+                                <p style={{ color: "#ffffff", fontWeight: "600", fontSize: "20px", margin: 0 }}>Brand Health Certificate</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[12px] text-slate-500 uppercase tracking-widest">Issued</p>
-                            <p className="text-slate-300 text-sm font-medium">{issuedDate}</p>
+                            <p style={{ fontSize: "12px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Issued</p>
+                            <p style={{ color: "#cbd5e1", fontSize: "14px", fontWeight: "500", margin: 0 }}>{issuedDate}</p>
                         </div>
                     </div>
 
                     {/* Org Info */}
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-between">
-                        <div>
-                            <p className="text-[12px] text-slate-500 uppercase tracking-widest mb-1">Organization</p>
-                            <p className="text-3xl font-bold text-white">{organizationName}</p>
-                            {activeContextName && <p className="text-sm text-indigo-400 mt-2">Context: {activeContextName}</p>}
+                    <div style={{
+                        padding: "32px",
+                        borderRadius: "24px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "between"
+                    }}>
+                        <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: "12px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Organization</p>
+                            <p style={{ fontSize: "30px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{organizationName}</p>
+                            {activeContextName && <p style={{ fontSize: "14px", color: "#818cf8", marginTop: "8px" }}>Context: {activeContextName}</p>}
                         </div>
-                        <div className="text-center p-6 bg-white/5 rounded-full border border-white/10">
-                            <p className="text-4xl font-bold text-white">{avgLcrs}%</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Avg LCRS</p>
+                        <div style={{
+                            textAlign: "center",
+                            padding: "24px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            borderRadius: "9999px",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            minWidth: "120px"
+                        }}>
+                            <p style={{ fontSize: "36px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{avgLcrs}%</p>
+                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Avg LCRS</p>
                         </div>
                     </div>
 
                     {/* Scores */}
-                    <div className="space-y-4">
-                        <p className="text-sm font-bold uppercase tracking-widest text-indigo-400">Multi-Model LCRS Breakdown</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <p style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.1em", color: "#818cf8", margin: 0 }}>Multi-Model LCRS Breakdown</p>
                         {results.map((r, i) => (
-                            <div key={i} className="flex items-center gap-6 p-5 rounded-2xl bg-white/5 border border-white/10">
-                                <div className="w-40 shrink-0 font-bold text-sm">{r.model}</div>
-                                <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full rounded-full" style={{ width: `${r.accuracy}%`, backgroundColor: scoreColor(r.accuracy) }} />
+                            <div key={i} style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "24px",
+                                padding: "20px",
+                                borderRadius: "16px",
+                                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)"
+                            }}>
+                                <div style={{ width: "160px", flexShrink: 0, fontWeight: "bold", fontSize: "14px", color: "#ffffff" }}>{r.model}</div>
+                                <div style={{ flex: 1, height: "12px", backgroundColor: "rgba(255, 255, 255, 0.1)", borderRadius: "9999px", overflow: "hidden" }}>
+                                    <div style={{ height: "100%", borderRadius: "9999px", width: `${r.accuracy}%`, backgroundColor: scoreColor(r.accuracy) }} />
                                 </div>
-                                <div className="w-16 text-right font-bold" style={{ color: scoreColor(r.accuracy) }}>{r.accuracy}%</div>
+                                <div style={{ width: "64px", textAlign: "right", fontWeight: "bold", color: scoreColor(r.accuracy) }}>{r.accuracy}%</div>
                             </div>
                         ))}
                     </div>
 
                     {/* Summary */}
-                    <div className="p-6 rounded-2xl bg-slate-800/50 border border-white/5">
-                        <p className="text-sm font-bold uppercase tracking-widest mb-3">Executive Summary</p>
-                        <p className="text-base text-slate-300 leading-relaxed">{getExecutiveSummary(avgLcrs, organizationName)}</p>
+                    <div style={{
+                        padding: "24px",
+                        borderRadius: "16px",
+                        backgroundColor: "rgba(30, 41, 59, 0.5)",
+                        border: "1px solid rgba(255, 255, 255, 0.05)"
+                    }}>
+                        <p style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "12px" }}>Executive Summary</p>
+                        <p style={{ fontSize: "16px", color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>{getExecutiveSummary(avgLcrs, organizationName)}</p>
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-6">
-                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">AI Visibility</p>
-                            <p className="text-2xl font-bold text-white">{asovScore}%</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px" }}>
+                        <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>AI Visibility</p>
+                            <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{asovScore}%</p>
                         </div>
-                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Fidelity Rate</p>
-                            <p className="text-2xl font-bold text-white">{fidelityPct}%</p>
+                        <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Fidelity Rate</p>
+                            <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{fidelityPct}%</p>
                         </div>
-                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Hallucinations</p>
-                            <p className="text-2xl font-bold text-white">{hallucinationCount}/{results.length || "—"}</p>
+                        <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Hallucinations</p>
+                            <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{hallucinationCount}/{results.length || "—"}</p>
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 rounded-2xl bg-slate-800 border border-white/5 flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-[0.2em] font-mono">
-                        <span>AUM Context Foundry • Precision Monitoring v1.2.9</span>
+                    <div style={{
+                        padding: "24px",
+                        borderRadius: "16px",
+                        backgroundColor: "#1e293b",
+                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: "10px",
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.2em",
+                        fontFamily: "monospace"
+                    }}>
+                        <span>AUM Context Foundry • Precision Monitoring v1.2.12</span>
                         <span>{isoTimestamp}</span>
                     </div>
                 </div>
