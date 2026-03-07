@@ -233,6 +233,8 @@ async def run_seo_audit(
 @router.post("/audit/mock")
 async def run_mock_seo_audit(request: SEOAuditRequest, auth: dict = Depends(get_current_user)):
     """Immediate mock response for demo@demo.com"""
+    if settings.ENV != "development" or not getattr(settings, "ALLOW_MOCK_AUTH", False):
+        raise HTTPException(status_code=404, detail="Mock SEO endpoint disabled")
     if request.orgId != "demo_org_id":
         raise HTTPException(status_code=403, detail="Mock endpoint only for demo org")
     
@@ -252,7 +254,7 @@ async def get_seo_status(
     uid = current_user.get("uid")
 
     # 🛡️ DEMO MOCKING (P0): Deterministic SEO metrics for Sight Spectrum
-    if org_id == "demo_org_id":
+    if org_id == "demo_org_id" and settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False):
         return {
             "status": "completed",
             "jobId": job_id,

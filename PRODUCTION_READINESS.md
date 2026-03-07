@@ -11,7 +11,7 @@ The application has a **single source of truth** for environment mode: `settings
 
 | Mode | Default? | Behavior |
 |------|----------|----------|
-| `production` | ✅ Yes | Strict: missing secrets → `sys.exit(1)` at startup. Swagger/Redoc disabled. Mock auth blocked (even if `ALLOW_MOCK_AUTH=True`). Internal error details hidden from responses. Dev defaults for `JWT_SECRET` / `SSO_ENCRYPTION_KEY` → ValueError crash. |
+| `production` | ✅ Yes | Strict: missing secrets → `sys.exit(1)` at startup. Swagger/Redoc disabled. Mock auth blocked. Internal error details hidden from responses. Dev defaults for `JWT_SECRET` / `SSO_ENCRYPTION_KEY` → ValueError crash. |
 | `development` | No | Degraded: missing secrets logged as warnings. Mock auth allowed (requires `ALLOW_MOCK_AUTH=True`). Full error details exposed. Swagger at `/api/docs`. Quota enforcement relaxed for local testing. |
 
 ### How Mode Is Determined
@@ -64,7 +64,7 @@ if self.ENV == "production":
 | `ENV` | Yes | Yes | `"production"` | Environment mode. Controls all security gates. |
 | `JWT_SECRET` | Yes (unique) | No | Dev default | 64-char cryptographic string. Dev default crashes in prod. |
 | `SSO_ENCRYPTION_KEY` | Yes (unique) | No | Dev default | Fernet key for SSO client secret encryption. Dev default crashes in prod. |
-| `ALLOW_MOCK_AUTH` | No | Optional | `False` | Enables `mock-dev-token` bypass. **Blocked in prod regardless.** |
+| `ALLOW_MOCK_AUTH` | No | Optional | `False` | Enables mock auth bypass in local development only. Ignored in production. |
 | `OPENAI_API_KEY` | Yes | No | None | OpenAI platform key for LCRS simulation + claim extraction. |
 | `GEMINI_API_KEY` | Yes | No | None | Google Gemini key for multi-model LCRS. |
 | `ANTHROPIC_API_KEY` | Yes | No | None | Anthropic Claude key for multi-model LCRS. |
@@ -190,7 +190,7 @@ curl https://api.yourdomain.com/api/docs
 | Risk | Severity | Mitigation | Status |
 |------|----------|------------|--------|
 | Missing production secrets | Critical | Startup gate (`sys.exit(1)`) | ✅ Enforced |
-| Mock auth in production | Critical | Double-gated: `ENV + ALLOW_MOCK_AUTH` | ✅ Hardened |
+| Mock auth in production | Critical | Development-only gate: `ENV=development && ALLOW_MOCK_AUTH=True` | ✅ Hardened |
 | Dev defaults in production | Critical | Pydantic validator crashes on dev defaults | ✅ Enforced |
 | Rate limiter failure | Medium | Fail-closed (503) at backend + frontend edge | ✅ End-to-end |
 | Webhook forgery | Medium | `hmac.compare_digest` + idempotency | ✅ Implemented |

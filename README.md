@@ -155,7 +155,7 @@ To avoid environmental drift or placeholder confusion during staging/production 
 | Frontend Styling | Vanilla CSS + Framer Motion | Custom design system with micro-animations |
 | Backend API | FastAPI (Python 3.12) | Native AI SDK support (OpenAI, Gemini, Anthropic), async, auto-docs |
 | Database | Firebase Firestore (NoSQL) | Real-time sync, built-in Auth, zero SQL migrations |
-| Identity & Auth | Firebase Auth + Custom JWT | Email/password, Google OAuth, SSO, mock-dev bypass |
+| Identity & Auth | Firebase Auth + Custom JWT | Email/password, Google OAuth, SSO, explicit local mock mode only |
 | Payments | Razorpay | Order creation, signature verification, server-to-server webhooks |
 | Rate Limiting | SlowAPI + Firestore-backed per-IP | Global request throttle + cross-region crawler protection |
 | CI/CD | GitHub Actions | Frontend lint + backend syntax + pytest on every push |
@@ -866,7 +866,7 @@ AUM Context Foundry is designed for enterprise-grade deployment. Extensive docum
 
 ### ⚠️ Known Limitations & Residual Risks (Transparency Disclosure)
 For technical diligence and auditing purposes, please note the following residual behaviors:
-1. **Dependency-Driven Degraded Features**: The system relies on optional dependencies (`playwright` for SEO, `anthropic` for Claude 3.5). While the `development` environment will gracefully degrade and provide mock data if these are uninstalled, the `production` gate now strictly requires them. However, a malformed production container deployment lacking `requirements.txt` execution could result in degraded behavior (e.g., fallback logic or silent feature skips). This is a deployment diligence tracking item.
+1. **Dependency-Driven Degraded Features**: The system relies on optional dependencies (`playwright` for SEO, `anthropic` for Claude 4.5 Sonnet). While the `development` environment will gracefully degrade and provide mock data if these are uninstalled, the `production` gate now strictly requires them. However, a malformed production container deployment lacking `requirements.txt` execution could result in degraded behavior (e.g., fallback logic or silent feature skips). This is a deployment diligence tracking item.
 2. **Minor Test Hygiene Warnings**: The backend pytest suite passes 100% of its assertions natively. However, depending on the local python environment (`pytest` vs `pytest-asyncio` plugin versions), minor third-party collection warnings (e.g. `DeprecationWarning`) might appear in test stdout. These do not affect pass/fail status but may be noted during extreme diligence reviews.
 3. **Rate Limiting Edge Behavior**: The `llms.txt` edge route rate limiting currently only blocks `429` responses from the backend, allowing other error codes to pass through the edge cache. 
 

@@ -51,7 +51,7 @@
 
 **Who**: Admin or Member.
 **Prerequisites**: At least one document ingested (CIM built).
-**Result**: LCRS scores for GPT-4o, Claude 3.5, Gemini 2.0 on your question.
+**Result**: LCRS scores for GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash on your question.
 
 ```
 1. Navigate to "Co-Intelligence Simulator"

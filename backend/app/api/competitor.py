@@ -14,6 +14,7 @@ from openai import OpenAI
 import os
 import json
 import logging
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ async def get_competitor_displacement(org_id: str, auth: dict = Depends(get_auth
             raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
     # 🛡️ DEMO MOCKING (P0): Deterministic competitor metrics for Sight Spectrum
-    if org_id == "demo_org_id":
+    if org_id == "demo_org_id" and settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False):
         return {
             "competitors": [
                 {

@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { OrganizationProvider } from "./OrganizationContext";
 
-const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login"];
+const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/llms-full.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login"];
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -19,8 +19,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     useEffect(() => {
         const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
         const isDemoUser = savedMockUser === "demo@demo.com";
-        const isMockMode = (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-            process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash");
+        const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
 
         if (isDemoUser || isMockMode) {
             console.warn(isDemoUser ? "👤 DEMO ACCOUNT ACTIVE" : "🔓 MOCK AUTH MODE ACTIVE");

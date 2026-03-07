@@ -54,6 +54,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 router = APIRouter()
 
+
+def _demo_mode_enabled() -> bool:
+    from core.config import settings
+    return settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False)
+
 # ============================================================================
 # MATH ENGINE
 # ============================================================================
@@ -532,7 +537,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         logger.info(f"🧪 Dev-mode: Access granted to {request.orgId} for {auth['uid']}")
 
     # 🛡️ DEMO MOCKING (P0): Deterministic results for Sight Spectrum
-    if request.orgId == "demo_org_id":
+    if request.orgId == "demo_org_id" and _demo_mode_enabled():
         logger.info(f"👤 Serving Mock Simulation for Demo Account: {request.prompt}")
         
         # Predefined "Sight Spectrum" responses to showcase brand drift
@@ -683,9 +688,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     # --- ENTERPRISE AUTO-PROVISIONING & SIGHTSPECTRUM OVERRIDE ---
     # 🛡️ DEMO HARDENING (P0): If this is SightSpectrum or demo, auto-promote to platform-managed keys
     # to ensure zero-friction testing during the actual platform audit.
-    _is_sightspectrum = "sightspectrum" in (org_data.get("name", "").lower() or "")
-    
-    if _is_sightspectrum or request.orgId == "demo_org_id":
+    if request.orgId == "demo_org_id" and _demo_mode_enabled():
         if not openai_key: openai_key = "internal_platform_managed"
         if not gemini_key: gemini_key = "internal_platform_managed"
         if not claude_key: claude_key = "internal_platform_managed"
@@ -789,7 +792,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
     # 🛡️ GROUNDING HARDENING (P0): If SightSpectrum, inject the explicit "500 employees" ground truth
     # to prevent legacy hallucinations (e.g. "15 people") from penalizing accuracy in simulations.
-    if "sightspectrum" in manifest_content.lower():
+    if request.orgId == "demo_org_id" and _demo_mode_enabled() and "sightspectrum" in manifest_content.lower():
         system_prompt += "\n\nCRITICAL GROUND TRUTH: SightSpectrum has 500+ professionals. Any answer stating a smaller number is factually incorrect."
 
     eps_div = 0.45
@@ -1009,7 +1012,7 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     # 🛡️ DEMO MOCKING (P0): Fixed historical data for Sight Spectrum
-    if org_id == "demo_org_id":
+    if org_id == "demo_org_id" and _demo_mode_enabled():
         history = [
             {
                 "prompt": "How much does HC Insight cost per month?",

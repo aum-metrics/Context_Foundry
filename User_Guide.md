@@ -66,7 +66,7 @@ You'll be taken straight to the Dashboard.
 
 ### 3.2 Reading Your Results
 
-AUM runs your question through **GPT-4o, Claude 3.5, and Gemini 2.0** simultaneously and scores each response:
+AUM runs your question through **GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash** simultaneously and scores each response:
 
 ```
 LCRS Score = (60% × Claim Accuracy) + (40% × Semantic Alignment)
@@ -205,7 +205,7 @@ See `FAQ.md` for a full list. Quick answers:
 A: No. Raw documents are processed in memory and immediately purged. Mathematical embeddings (the CIM) are stored for 24 hours and then automatically deleted via platform-wide TTL.
 
 **Q: Which AI models are tested?**
-A: GPT-4o (OpenAI), Claude 3.5 Sonnet (Anthropic), Gemini 2.0 Flash (Google).
+A: GPT-4o (OpenAI), Claude 4.5 Sonnet (Anthropic), Gemini 3 Flash (Google).
 
 **Q: Do I need to provide my own API keys?**
 A: No. AUM provides platform-managed inference keys for all plans.

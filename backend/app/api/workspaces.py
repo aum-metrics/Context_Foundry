@@ -26,6 +26,10 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _demo_mode_enabled() -> bool:
+    return settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False)
+
+
 def _humanize_org_name(raw_name: str) -> str:
     cleaned = (raw_name or "").strip().replace(".", " ").replace("_", " ").replace("-", " ")
     return " ".join(part.capitalize() for part in cleaned.split() if part)
@@ -991,7 +995,7 @@ async def get_org_profile(
         raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
 
     # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum for demo account
-    if org_id == "demo_org_id":
+    if org_id == "demo_org_id" and _demo_mode_enabled():
         return {
             "id": "demo_org_id",
             "name": "Sight Spectrum",
@@ -1040,7 +1044,7 @@ async def get_public_manifest(org_id: str):
         raise HTTPException(status_code=503, detail="Database unconfigured")
         
     # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum manifest for demo account
-    if org_id == "demo_org_id":
+    if org_id == "demo_org_id" and _demo_mode_enabled():
         content = """# Sight Spectrum - AI Protocol Manifest
 
 ## Core Identity

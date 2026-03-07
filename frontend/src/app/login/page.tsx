@@ -27,8 +27,8 @@ export default function LoginPage() {
             const redirectParams = searchParams.get("redirect");
             const targetUrl = redirectParams || "/dashboard";
 
-            const isDemoLogin = email === "demo@demo.com" && password === "testdemo";
-            const isMockMode = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash";
+            const isDemoLogin = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true" && email === "demo@demo.com" && password === "testdemo";
+            const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
 
             if (isDemoLogin || isMockMode) {
                 // Local mock bypass when user hasn't setup Firebase OR is using demo account
@@ -39,6 +39,10 @@ export default function LoginPage() {
                     router.push(targetUrl);
                 }, 1000);
                 return;
+            }
+
+            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
+                throw new Error("Firebase client configuration missing. Set NEXT_PUBLIC_FIREBASE_* or explicitly enable NEXT_PUBLIC_ALLOW_MOCK_AUTH for local development.");
             }
 
             if (isSignUp) {

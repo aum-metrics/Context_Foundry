@@ -99,7 +99,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                     <Cpu className="w-5 h-5 text-indigo-500 mr-3 mt-0.5" />
                                     <div>
                                         <p className="font-medium text-slate-900 dark:text-white">Full Multi-Model Access</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Unlock GPT-4o Mini and Claude 3.5 Haiku alongside Gemini for holistic synthesis.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Unlock GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash for full frontier-model synthesis.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">

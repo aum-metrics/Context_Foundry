@@ -177,7 +177,7 @@ If jobs (e.g., scraping competitor sites) fail, they enter the DLQ (Dead Letter 
 * **Fix:** Ensure the API server has sufficient RAM to run the embeddings model. Ask the user to re-upload the Context Document to trigger a fresh `/api/ingestion/parse` transaction. 
 
 ### Issue 5: SearchGPT or Perplexity Missing from Matrix
-* **Cause:** The Explorer Plan artificially bounds the response engine to GPT-4o Mini to preserve API budget. The UI natively locks premium frontier models.
+* **Cause:** The Explorer Plan intentionally limits simulation access to GPT-4o to preserve API budget. The UI locks Gemini 3 Flash and Claude 4.5 Sonnet behind paid tiers.
 * **Fix:** Advise user to upgrade to Growth or Scale plan.
 
 ---

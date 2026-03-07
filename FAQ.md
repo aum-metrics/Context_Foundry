@@ -13,7 +13,7 @@ LCRS (Low-Latency Claim-based Reliability Scoring) is AUM's proprietary scoring 
 - **40% Semantic Fidelity**: Cosine similarity between AI response embedding and your brand's verified knowledge base.
 
 **Q: Which AI models does AUM test?**
-GPT-4o (OpenAI), Claude 3.5 (Anthropic), and Gemini 2.0 (Google). All three are evaluated simultaneously for each simulation.
+GPT-4o (OpenAI), Claude 4.5 Sonnet (Anthropic), and Gemini 3 Flash (Google). All three are evaluated simultaneously for each simulation.
 
 **Q: What is a "Context Information Model" (CIM)?**
 The CIM is the mathematical representation of your brand's verified knowledge base. It's built from documents you upload — PDFs, product specs, FAQs, etc. — and stored as vector embeddings. All simulations test AI responses against this model.

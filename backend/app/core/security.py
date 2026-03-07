@@ -36,10 +36,9 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     
     if token in ["mock-dev-token", "mock-demo-token"]:
         is_demo = token == "mock-demo-token"
-        
-        # 🛡️ SECURITY HARDENING: ONLY allow mock-demo-token in production. 
-        # mock-dev-token remains restricted to development + explicitly allowed.
-        if is_demo or (settings.ENV == "development" and allow_mock):
+
+        # Mock/demo auth is development-only. Production must use real identity providers.
+        if settings.ENV == "development" and allow_mock:
             token_type = "DEMO" if is_demo else "DEV"
             logger.info(f"🔓 {token_type} mode: accepting {token}")
             return {
@@ -90,7 +89,8 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
     # 🛡️ DEMO MOCKING: Allow demo user access to demo org
-    if uid == "demo_uid" and target_org_id == "demo_org_id":
+    from core.config import settings
+    if settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False) and uid == "demo_uid" and target_org_id == "demo_org_id":
         return True
         
     if not db:
