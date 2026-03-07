@@ -181,9 +181,9 @@ export default function BrandHealthCertificate({
         setIsDownloading(true);
 
         try {
-            // No delay needed for static off-screen element
+            // 1. Small delay even for static container to ensure SVG font/rendering readiness
+            await new Promise(r => setTimeout(r, 100));
             const element = captureRef.current;
-            const rect = element.getBoundingClientRect();
 
             const canvas = await html2canvas(element, {
                 backgroundColor: "#0f172a",
@@ -197,7 +197,7 @@ export default function BrandHealthCertificate({
                 y: 0,
             });
 
-            const imgData = canvas.toDataURL("image/png");
+            const imgData = canvas.toDataURL("image/png", 1.0);
 
             // PDF formatting (A4-ish proportions)
             const pdfWidth = 800;
@@ -206,7 +206,8 @@ export default function BrandHealthCertificate({
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [pdfWidth, pdfHeight]
+                format: [pdfWidth, pdfHeight],
+                hotfixes: ["px_scaling"]
             });
 
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);

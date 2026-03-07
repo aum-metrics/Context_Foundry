@@ -270,7 +270,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
             setActiveManifestVersionState(nextVersion);
             localStorage.setItem(manifestStorageKey, nextVersion);
         }
-    }, [analysisContexts, activeOrgId]);
+    }, [analysisContexts, activeOrgId, activeManifestVersion]);
 
     const isPlatformAdmin = orgUser?.role === "admin" && orgUser?.orgId === "system_admin_org";
     const activeContextName = analysisContexts.find((ctx) => ctx.version === activeManifestVersion)?.name
