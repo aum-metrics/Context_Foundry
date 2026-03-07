@@ -42,7 +42,7 @@ export default function BrandHealthCertificate({
     modelResults: propModelResults,
     lastPrompt: propPrompt,
 }: BrandHealthCertificateProps) {
-    const organizationName = propOrgName === "sambathwins" ? "SightSpectrum" : propOrgName;
+    const organizationName = propOrgName;
     const { organization } = useOrganization();
     const certificateRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");

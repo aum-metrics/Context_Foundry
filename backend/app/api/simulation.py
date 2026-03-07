@@ -174,6 +174,7 @@ def compute_divergence(api_key: str, manifest_embedding: list, answer: str) -> f
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
 def run_openai(api_key: str, system_prompt: str, user_prompt: str) -> str:
     api_model = API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL)
+    client = OpenAI(api_key=api_key)
     completion = client.chat.completions.create(
         messages=[
             {"role": "system", "content": system_prompt},
@@ -189,6 +190,7 @@ def run_gemini(api_key: str, system_prompt: str, user_prompt: str) -> str:
     if not GEMINI_AVAILABLE:
         raise Exception("google-genai not installed")
     api_model = API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
+    client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model=api_model,
         contents=[f"{system_prompt}\n\nQuestion: {user_prompt}"]
@@ -200,6 +202,7 @@ def run_claude(api_key: str, system_prompt: str, user_prompt: str) -> str:
     if not CLAUDE_AVAILABLE:
         raise Exception("anthropic not installed")
     api_model = API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL)
+    client = anthropic.Anthropic(api_key=api_key)
     response = client.messages.create(
         model=api_model,
         max_tokens=1000,

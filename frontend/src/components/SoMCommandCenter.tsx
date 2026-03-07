@@ -137,7 +137,9 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         const modelSums: Record<string, { total: number, count: number }> = {};
         historyEntries.forEach((entry: ScoringHistoryEntry) => {
             entry.results?.forEach((res: { model: string; accuracy: number }) => {
-                const normalized = NORMALIZE[res.model] || res.model;
+                // Normalize keys to Title Case for the chart
+                const rawName = res.model || "Unknown";
+                const normalized = NORMALIZE[rawName] || (rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase());
                 if (!modelSums[normalized]) modelSums[normalized] = { total: 0, count: 0 };
                 modelSums[normalized].total += res.accuracy;
                 modelSums[normalized].count += 1;
