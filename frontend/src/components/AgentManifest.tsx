@@ -8,34 +8,41 @@ export default function AgentManifest() {
     const { organization } = useOrganization();
     const [activeTab, setActiveTab] = useState<"llms.txt" | "llms-full.txt">("llms.txt");
     const [copied, setCopied] = useState(false);
-
-    // Dynamic content generation
-    const [manifestContent, setManifestContent] = useState<string>("Connecting to Ground Truth Directory...\nVerifying semantic index availability...");
+    const [manifestContent, setManifestContent] = useState<Record<"llms.txt" | "llms-full.txt", string>>({
+        "llms.txt": "Connecting to Ground Truth Directory...\nVerifying semantic index availability...",
+        "llms-full.txt": "Connecting to Ground Truth Directory...\nVerifying semantic index availability...",
+    });
 
     useEffect(() => {
-        if (!organization?.id) return;
+        const orgId = organization?.id;
+        if (!orgId) return;
 
-        async function fetchManifest() {
+        async function fetchManifest(kind: "llms.txt" | "llms-full.txt") {
             try {
-                const res = await fetch(`/llms.txt?orgId=${organization?.id || ''}`);
+                const path = kind === "llms-full.txt" ? "/llms-full.txt" : "/llms.txt";
+                const res = await fetch(`${path}?orgId=${orgId}`);
                 if (res.ok) {
                     const text = await res.text();
-                    if (text.includes("<!DOCTYPE html>")) {
-                        setManifestContent("Error loading manifest. Missing document ingestion.");
-                    } else {
-                        setManifestContent(text);
-                    }
+                    const nextValue = text.includes("<!DOCTYPE html>")
+                        ? "Error loading manifest. Missing document ingestion."
+                        : text;
+                    setManifestContent(prev => ({ ...prev, [kind]: nextValue }));
                 } else {
-                    setManifestContent("No Agent Manifest found. Please ingest a source document first in the Semantic Ingestion Engine.");
+                    setManifestContent(prev => ({
+                        ...prev,
+                        [kind]: "No Agent Manifest found. Please ingest a source document first in the Semantic Ingestion Engine."
+                    }));
                 }
             } catch {
-                setManifestContent("Error fetching Edge manifest.");
+                setManifestContent(prev => ({ ...prev, [kind]: "Error fetching Edge manifest." }));
             }
         }
-        setTimeout(fetchManifest, 1000); // UI visual feedback buffer
+
+        fetchManifest("llms.txt");
+        fetchManifest("llms-full.txt");
     }, [organization?.id]);
 
-    const content = manifestContent;
+    const content = manifestContent[activeTab];
 
 
 
@@ -50,7 +57,7 @@ export default function AgentManifest() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'llms.txt';
+        a.download = activeTab;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -70,7 +77,7 @@ export default function AgentManifest() {
                     onClick={handleDownloadTxt}
                     className="mt-4 md:mt-0 px-6 py-2.5 rounded-lg flex items-center font-medium transition-all bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_20px_rgba(192,38,211,0.3)] hover:scale-105"
                 >
-                    <FileDown className="w-4 h-4 mr-2" /> Download llms.txt
+                    <FileDown className="w-4 h-4 mr-2" /> Download {activeTab}
                 </button>
             </header>
 

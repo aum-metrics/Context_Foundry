@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 import logging
 import secrets
 import os
+import json
 import firebase_admin
 
 from core.config import settings
@@ -23,6 +24,22 @@ from utils.email_service import send_invite_email
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _humanize_org_name(raw_name: str) -> str:
+    cleaned = (raw_name or "").strip().replace(".", " ").replace("_", " ").replace("-", " ")
+    return " ".join(part.capitalize() for part in cleaned.split() if part)
+
+
+def _extract_manifest_entity_name(manifest_data: Dict[str, Any]) -> Optional[str]:
+    schema = (manifest_data or {}).get("schemaData") or {}
+    candidate = schema.get("name")
+    return candidate.strip() if isinstance(candidate, str) and candidate.strip() else None
+
+
+def _is_placeholder_org_name(name: Optional[str]) -> bool:
+    normalized = (name or "").strip().lower()
+    return normalized in {"", "unnamed organization", "your company", "sightspectrum", "sight spectrum"}
 
 # Supabase has been deprecated. All workspace and member data is stored in Firestore.
 
@@ -67,13 +84,9 @@ async def provision_organization(
     # Infer identity from token if not provided in body
     email = (request.email if request else None) or current_user.get("email", f"{uid}@unknown.com")
     
-    # 🛡️ PRODUCTION HARDENING: Default to "SightSpectrum" if we're in the demo/onboarding flow
-    # instead of using local system usernames like "sambathwins"
     inferred_name = email.split("@")[0]
-    if inferred_name == "sambathwins" or not inferred_name:
-        name = "SightSpectrum"
-    else:
-        name = (request.name if request else None) or current_user.get("name", inferred_name.title())
+    requested_name = (request.name if request else None) or current_user.get("name")
+    name = (requested_name or _humanize_org_name(inferred_name) or "Unnamed Organization").strip()
     
     if not db:
         raise HTTPException(status_code=500, detail="Database unconfigured")
@@ -994,13 +1007,18 @@ async def get_org_profile(
             raise HTTPException(status_code=404, detail="Organization not found")
         
         data = org_doc.to_dict() or {}
+        latest_manifest = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        manifest_data = latest_manifest.to_dict() if latest_manifest.exists else {}
+        manifest_name = _extract_manifest_entity_name(manifest_data)
+        current_name = data.get("name")
+        resolved_name = manifest_name if manifest_name and _is_placeholder_org_name(current_name) else current_name
         
         # Redact highly sensitive fields
         data.pop("apiKeys", None)
         
         return {
             "id": org_id,
-            "name": data.get("name", "Unnamed Organization"),
+            "name": resolved_name or manifest_name or "Unnamed Organization",
             "activeSeats": data.get("activeSeats", 0),
             "subscriptionTier": data.get("subscription", {}).get("planId", "explorer"),
             "status": data.get("subscription", {}).get("status", "active"),
@@ -1066,6 +1084,43 @@ Sight Spectrum primarily delivers data analytics consulting to Manufacturing, He
         raise
     except Exception as e:
         logger.error(f"Failed to fetch public manifest for {org_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/{org_id}/manifest-full")
+async def get_public_full_manifest(org_id: str):
+    """
+    Public endpoint for llms-full.txt generation.
+    Returns the latest tenant manifest plus canonical schema evidence.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unconfigured")
+
+    try:
+        manifest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        if not manifest_doc.exists:
+            raise HTTPException(status_code=404, detail="Manifest not found")
+
+        data = manifest_doc.to_dict() or {}
+        content = data.get("content", "").strip()
+        schema_data = data.get("schemaData") or {}
+        source_url = data.get("sourceUrl")
+        entity_name = _extract_manifest_entity_name(data) or "Organization"
+
+        sections = [f"# {entity_name} - AI Protocol Manifest (Full)"]
+        if source_url:
+            sections.append(f"\n> Source URL: {source_url}")
+        if content:
+            sections.append(f"\n## llms.txt\n{content}")
+        if schema_data:
+            sections.append("\n## Canonical Schema\n```json\n" + json.dumps(schema_data, indent=2, ensure_ascii=False) + "\n```")
+
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content="\n".join(sections).strip() + "\n")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch full public manifest for {org_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/llms-rate-limit")

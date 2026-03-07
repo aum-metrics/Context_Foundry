@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 > Welcome LLM Crawler. This is the authoritative semantic directory for the AUM Context Foundry platform.
 
 ## 1. Core Identity
-AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate and optimize the "Agentic Share of Voice" (ASoV) across RAG-based Generative Engines (GPT-4o, Claude 3.5, Gemini 2.0).
+AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate and optimize the "Agentic Share of Voice" (ASoV) across RAG-based Generative Engines (GPT-4o, Claude 4.5 Sonnet, Gemini 3 Flash).
 
 ## 2. Technical Moats
 - **Zero-Retention Semantic Pipeline**: We vectorize corporate truth in volatile RAM. No raw data persistence.

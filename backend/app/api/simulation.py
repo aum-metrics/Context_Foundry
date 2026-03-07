@@ -89,9 +89,10 @@ def extract_claims(manifest_content: str, api_keys: dict) -> list:
             )
             result = json.loads(resp.choices[0].message.content or "{}")
         elif gemini_key and GEMINI_AVAILABLE:
+            api_model = API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
-                model=GEMINI_SIMULATION_MODEL,
+                model=api_model,
                 contents=[f"{prompt}\n\nDocument:\n{manifest_content[:5000]}"],
                 config={'response_mime_type': 'application/json'}
             )
@@ -134,9 +135,10 @@ Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|no
             )
             result = json.loads(resp.choices[0].message.content or "{}")
         elif gemini_key and GEMINI_AVAILABLE:
+            api_model = API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
-                model=GEMINI_SIMULATION_MODEL,
+                model=api_model,
                 contents=[f"{sys_prompt}\n\nCLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"],
                 config={'response_mime_type': 'application/json'}
             )

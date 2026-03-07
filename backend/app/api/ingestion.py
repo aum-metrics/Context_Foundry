@@ -250,6 +250,13 @@ async def parse_document(
                         batch = db.batch()
                 batch.commit()
 
+            extracted_name = schema_data.get("name")
+            if isinstance(extracted_name, str) and extracted_name.strip():
+                db.collection("organizations").document(orgId).set(
+                    {"name": extracted_name.strip()},
+                    merge=True
+                )
+
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="document_ingestion", resource_id=manifest_id, metadata={"chunks": len(chunks)})
             
         return {
@@ -434,6 +441,13 @@ async def parse_url(
                         batch_w.commit()
                         batch_w = db.batch()
                 batch_w.commit()
+
+            extracted_name = schema_data.get("name")
+            if isinstance(extracted_name, str) and extracted_name.strip():
+                db.collection("organizations").document(orgId).set(
+                    {"name": extracted_name.strip()},
+                    merge=True
+                )
 
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="url_ingestion",
                             resource_id=manifest_id, metadata={"url": request.url, "chunks": len(chunks)})

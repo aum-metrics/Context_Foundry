@@ -33,9 +33,36 @@ interface SEOResult {
     recommendation: string;
 }
 
+const CANONICAL_MODEL_ORDER: string[] = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
+
+function normalizeModelName(model: string): string {
+    const raw = (model || "").trim();
+    const lowered = raw.toLowerCase();
+    const aliases: Record<string, string> = {
+        "gpt-4o": "GPT-4o",
+        "gpt-4o-mini": "GPT-4o",
+        "gemini 1.5 flash": "Gemini 3 Flash",
+        "gemini 2.0 flash": "Gemini 3 Flash",
+        "gemini 2.5 flash": "Gemini 3 Flash",
+        "gemini-1.5-flash": "Gemini 3 Flash",
+        "gemini-2.0-flash": "Gemini 3 Flash",
+        "gemini-2.5-flash": "Gemini 3 Flash",
+        "gemini-3-flash": "Gemini 3 Flash",
+        "claude 3.5 sonnet": "Claude 4.5 Sonnet",
+        "claude 4 sonnet": "Claude 4.5 Sonnet",
+        "claude 4.5 sonnet": "Claude 4.5 Sonnet",
+        "claude-3-5-sonnet": "Claude 4.5 Sonnet",
+        "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet",
+        "claude-sonnet-4-20250514": "Claude 4.5 Sonnet",
+        "claude-sonnet-4-5": "Claude 4.5 Sonnet",
+    };
+
+    return aliases[lowered] || raw;
+}
+
 export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (view: string) => void }) {
     const { organization } = useOrganization();
-    const [activeTab, setActiveTab] = useState<string>("GPT-4o Mini");
+    const [activeTab, setActiveTab] = useState<string>("GPT-4o");
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -116,30 +143,18 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
     // Memoized Calculations to prevent infinite re-renders
     const modelAverages = useMemo(() => {
-        const NORMALIZE: Record<string, string> = {
-            "Gemini 1.5 Flash": "Gemini 3 Flash",
-            "Gemini 2.0 Flash": "Gemini 3 Flash",
-            "gemini-1.5-flash": "Gemini 3 Flash",
-            "gemini-2.0-flash": "Gemini 3 Flash",
-            "Claude 3.5 Sonnet": "Claude 4.5 Sonnet",
-            "claude-3-5-sonnet": "Claude 4.5 Sonnet",
-            "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet"
-        };
-
         if (!historyEntries || historyEntries.length === 0) {
             return {
                 "GPT-4o": 92,
+                "Gemini 3 Flash": 70,
                 "Claude 4.5 Sonnet": 75,
-                "Gemini 3 Flash": 70
             };
         }
 
         const modelSums: Record<string, { total: number, count: number }> = {};
         historyEntries.forEach((entry: ScoringHistoryEntry) => {
             entry.results?.forEach((res: { model: string; accuracy: number }) => {
-                // Normalize keys to Title Case for the chart
-                const rawName = res.model || "Unknown";
-                const normalized = NORMALIZE[rawName] || (rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase());
+                const normalized = normalizeModelName(res.model || "Unknown");
                 if (!modelSums[normalized]) modelSums[normalized] = { total: 0, count: 0 };
                 modelSums[normalized].total += res.accuracy;
                 modelSums[normalized].count += 1;
@@ -155,13 +170,24 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         if (batchResult && batchResult.modelAverages) {
             const normalizedBatch: Record<string, number> = {};
             Object.entries(batchResult.modelAverages).forEach(([model, avg]) => {
-                normalizedBatch[NORMALIZE[model] || model] = avg as number;
+                normalizedBatch[normalizeModelName(model)] = avg as number;
             });
             return { ...newAverages, ...normalizedBatch };
         }
 
         return newAverages;
     }, [historyEntries, batchResult]);
+
+    const modelTabs = useMemo(() => {
+        const discovered = new Set<string>(Object.keys(modelAverages).map(normalizeModelName));
+        return CANONICAL_MODEL_ORDER.filter((model) => discovered.has(model));
+    }, [modelAverages]);
+
+    useEffect(() => {
+        if (modelTabs.length > 0 && !modelTabs.includes(activeTab)) {
+            setActiveTab(modelTabs[0]);
+        }
+    }, [activeTab, modelTabs]);
 
     const radarData = useMemo(() => {
         const fallback = [
@@ -374,16 +400,6 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     }, [historyEntries]);
 
     const chartData = useMemo(() => {
-        const NORMALIZE: Record<string, string> = {
-            "Gemini 1.5 Flash": "Gemini 3 Flash",
-            "Gemini 2.0 Flash": "Gemini 3 Flash",
-            "gemini-1.5-flash": "Gemini 3 Flash",
-            "gemini-2.0-flash": "Gemini 3 Flash",
-            "Claude 3.5 Sonnet": "Claude 4.5 Sonnet",
-            "claude-3-5-sonnet": "Claude 4.5 Sonnet",
-            "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet"
-        };
-
         if (loading) return [];
         if (!historyEntries && !_error) return [];
         if (historyEntries && historyEntries.length === 0) return [];
@@ -394,7 +410,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         for (const entry of (historyEntries || [])) {
             const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
             const label = ts.toLocaleDateString("en-US", { weekday: "short" });
-            const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => (NORMALIZE[r.model] || r.model) === targetModel);
+            const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => normalizeModelName(r.model) === targetModel);
             if (modelResult) {
                 dataPoints.push({ name: label, score: modelResult.accuracy });
             }
@@ -494,7 +510,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 Accuracy Over Time (from Simulations)
                             </h2>
                             <div className="flex p-1 bg-slate-100 dark:bg-slate-950/50 rounded-lg border border-slate-200 dark:border-white/5">
-                                {Object.keys(modelAverages).map((model) => (
+                                {modelTabs.map((model) => (
                                     <button
                                         key={model}
                                         onClick={() => setActiveTab(model)}
@@ -503,7 +519,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                             : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
                                             }`}
                                     >
-                                        {model.split(' ')[0]}
+                                        {model}
                                     </button>
                                 ))}
                             </div>

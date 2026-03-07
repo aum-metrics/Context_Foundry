@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, Beaker, Send, MessageSquare, Cpu, CheckCircle, Lock, Code2, Download, Copy } from "lucide-react";
+import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, Beaker, Send, MessageSquare, Cpu, CheckCircle, Lock, Download, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";

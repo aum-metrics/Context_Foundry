@@ -12,8 +12,8 @@ OPENAI_MANIFEST_MODEL = "gpt-4o"            # For llms.txt generation
 OPENAI_CLAIM_MODEL = "gpt-4o"               # For claim extraction/verify
 OPENAI_ADJUDICATION_MODEL = "gpt-4o"        # For multi-model adjudication
 
-GEMINI_SIMULATION_MODEL = "gemini-3-flash"       # For Gemini inference
-CLAUDE_SIMULATION_MODEL = "claude-sonnet-4-5"    # For Claude inference
+GEMINI_SIMULATION_MODEL = "gemini-3-flash"       # Product label for Gemini inference
+CLAUDE_SIMULATION_MODEL = "claude-sonnet-4-5"    # Product label for Claude inference
 
 # ── Embedding Models ──────────────────────────────────────────────────────────
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small" # For vector embeddings
@@ -26,10 +26,9 @@ MODEL_DISPLAY_NAMES = {
 }
 
 # ── API Model Mapping (Prevents 404s for Frontier Names) ───────────────────
-# These futuristic names are used for display/demo, but mapped to stable IDs
-# for the actual API calls until the frontier models are officially released.
+# Product labels stay stable in the UI, while provider calls use supported API IDs.
 API_MODEL_MAPPING = {
-    "gemini-3-flash": "gemini-1.5-flash",
-    "claude-sonnet-4-5": "claude-3-5-sonnet-20241022",
+    "gemini-3-flash": "gemini-2.5-flash",
+    "claude-sonnet-4-5": "claude-sonnet-4-20250514",
     "gpt-4o": "gpt-4o",
 }
