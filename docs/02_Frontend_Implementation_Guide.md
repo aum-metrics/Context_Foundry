@@ -2,7 +2,7 @@
 
 **Target Audience:** Frontend Engineers, Interns
 **Prerequisites:** React, Next.js (App Router), CSS, Framer Motion.
-**Last Updated:** March 2026 | Reflects hardening passes 1-5.
+**Last Updated:** March 2026 | Reflects v1.2.6 hardened build.
 
 ---
 
@@ -46,10 +46,10 @@ It provides a globally accessible hook:
 import { useOrganization } from "@/components/OrganizationContext";
 
 // Inside any component:
-const { organization, orgUser, loading } = useOrganization();
+const { organization, activeManifestVersion, analysisContexts } = useOrganization();
 
 console.log(organization.name); // "Acme Corp"
-console.log(organization.subscriptionTier) // "growth"
+console.log(activeManifestVersion); // "latest" or specific UUID
 ```
 
 **Common Bug Fix:** "The dashboard is blank but I'm logged in."
@@ -143,6 +143,9 @@ const handleSaveData = async (payload) => {
     }
 }
 ```
+
+### 6.1 The "Decoupling" Mandate
+As of v1.2.6, **direct Firestore SDK calls are forbidden** in presentation components. All data (Manifests, History, SEO) must be fetched via the FastAPI gateway to ensure token verification, caching, and multi-tenancy rules are consistently applied.
 
 ---
 

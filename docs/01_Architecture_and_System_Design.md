@@ -2,7 +2,7 @@
 
 **Target Audience:** New Developers, Interns, and Solutions Architects
 **Prerequisites:** Basic knowledge of React, APIs, and Cloud Databases.
-**Last Updated:** March 2026 | Reflects hardening passes 1-5.
+**Last Updated:** March 2026 | Reflects v1.2.6 hardened build.
 
 ---
 
@@ -42,7 +42,7 @@ If you are an intern trying to fix a bug or add a feature, you must understand t
 ### Step 1: Client Request (Frontend)
 A user clicks a button in the UI (e.g., "Run Simulation"). 
 *   **Where to find it:** `frontend/src/components/CoIntelligenceSimulator.tsx`.
-*   **What happens:** The frontend uses the `fetch()` API. It grabs the user's Firebase token (`await auth.currentUser.getIdToken()`) and sends a `POST` request to the backend.
+*   **What happens:** The frontend uses the `fetch()` API. It grabs the user's Firebase token (`await auth.currentUser.getIdToken()`) and sends a `POST` request to the backend. **Critical:** Local components are now strictly decoupled from the Firestore SDK; all data flow is gated through FastAPI.
 
 ### Step 2: The API Gateway (Backend)
 The request hits our FastAPI server router.
@@ -137,9 +137,9 @@ Here is the exact framework you take:
 
 If you hear senior engineers throw around these terms, here is what they mean:
 
-*   **LCRS (Logical Contextual Representation Score):** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. Reproducible but not academically validated. Found in `backend/app/api/simulation.py`.
+*   **LCRS (Logical Contextual Representation Score):** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. v1.2.6 introduces Zero-Burn caching to serve redundant evaluations instantly.
 *   **DLQ (Dead Letter Queue):** The graveyard for background tasks that crashed. Jobs that fail 3 times are marked `failed_permanent`. Found in `backend/app/utils/task_queue_recovery.py`.
-*   **CIM (Context Information Model):** The mathematical and semantic representation of an organization's verified ground truth — JSON-LD schema + 1536-dimensional embeddings. Found in `backend/app/api/ingestion.py`.
+*   **CIM (Context Information Model):** The mathematical and semantic representation of an organization's verified ground truth — JSON-LD schema + 1536-dimensional embeddings. Now supports **Versioned Context Switching**.
 *   **Manifest (`llms.txt`):** The CIM synthesized into AI-crawler-friendly plain text. Served at `/llms.txt?orgId=...`. Hardened: org-specific failures return 503 (no silent fallback).
 *   **ASoV (Agentic Share of Voice):** The competitive metric AUM tracks — what percentage of AI-generated answers represent your brand vs. competitors.
 

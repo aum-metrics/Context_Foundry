@@ -59,7 +59,8 @@ You'll be taken straight to the Dashboard.
 ### 3.1 The Co-Intelligence Simulator
 
 1. Navigate to **Co-Intelligence Simulator** in the sidebar.
-2. Enter a question a customer might ask an AI about your brand:
+2. **Context Switching (v1.2.6)**: Select the manifest version you wish to test against. By default, "Latest" is selected.
+3. Enter a question a customer might ask an AI about your brand:
    - Example: *"What is Acme Corp's data retention policy?"*
    - Example: *"Does TechBrand support integration with Salesforce?"*
 3. Click **Run Simulation**.
@@ -101,9 +102,8 @@ Analyzes your website for:
 
 > This is an async process — results appear within 30–60 seconds.
 
-### 4.3 Competitor Displacement Analysis
-Answers: *"Is AI recommending my competitors instead of me?"*
-Shows displacement rate and competitive positioning across AI models.
+### 4.3 Brand Health Certificate (v1.2.6)
+Generate a comprehensive PDF-ready report containing Google SEO scores, GEO competitor displacement analysis, and LCRS stability metrics. 
 
 ---
 

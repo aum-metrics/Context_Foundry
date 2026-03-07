@@ -35,7 +35,9 @@ This is the exact structure of our production database.
     *   `name` (string)
     *   `subscription` (object) - *Contains `planId`, `simsThisCycle`, `status`.*
 *   **Subcollection: `/manifests/{manifestId}`**
-    *   Contains the vector embeddings and raw text of the uploaded Context Documents.
+    *   Contains the vector embeddings and raw text of the uploaded Context Documents. Now supports versioned context switching (v1.2.6).
+*   **Subcollection: `/simulationCache/{hash}`**
+    *   SHA-256 keyed cache of simulation results. Implements "Zero-Burn" suppression of redundant compute.
 *   **Subcollection: `/scoringHistory/{simulationId}`**
     *   The atomic ledger. Every time LCRS runs, it drops a JSON log here containing timestamps, formulas, and prompt traces. *Do not delete these; clients use them for auditing.*
 *   **Subcollection: `/auditLogs/{logId}`**

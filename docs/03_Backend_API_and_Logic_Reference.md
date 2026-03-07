@@ -2,7 +2,7 @@
 
 **Target Audience:** Backend Engineers, System Operators, Interns
 **Prerequisites:** Python 3.12, FastAPI, basic understanding of concurrent programming (`asyncio`).
-**Last Updated:** March 2026 | Reflects hardening passes 1-5.
+**Last Updated:** March 2026 | Reflects v1.2.6 hardened build.
 
 ---
 
@@ -19,7 +19,7 @@ Everything starts at `backend/app/main.py`. This file does four critical things:
 
 ### Directory Structure
 *   `app/api/`: Contains all the route handlers (15 modules):
-    *   `simulation.py` (810 lines) — LCRS engine + B2B API gateway
+    *   `simulation.py` (810 lines) — LCRS engine + B2B API gateway (v1.2.6 includes Zero-Burn caching)
     *   `ingestion.py` — Zero-retention PDF → CIM pipeline
     *   `workspaces.py` — Org provisioning, members, invites, manifest, rate limiter
     *   `payments.py` — Razorpay orders, verify, webhooks, payment links
@@ -84,6 +84,7 @@ This is the crown jewel of the platform. If you touch this file, test it locally
 The LCRS (Logical Contextual Representation Score) grades AI model accuracy using two blended metrics:
 *   **60% Weight - Claim Accuracy (Reproducible):** Did the AI output include all the strictly required facts from the source Context Document? We use an `LLM-as-a-judge` sub-routine to evaluate this at `temperature=0` for consistent results. Note: "reproducible" means same inputs yield same outputs, not "academically validated."
 *   **40% Weight - Semantic Alignment (Vector Math):** We convert the AI's answer into a vector embedding and compare its cosine distance to the original Context Document's embedding. This catches "vibe" drift or subtle hallucinations.
+*   **Zero-Burn Optimization (v1.2.6):** A SHA-256 hash of `org_id + prompt + manifest_version` is used to suppress redundant compute. Matching requests return cached results in <50ms.
 
 ### The Async Parallel Gather
 Usually, calling GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet takes 7 seconds. 
@@ -92,9 +93,9 @@ If we ran them sequentially, a simulation would take `10 + 8 + 7 = 25 seconds`.
 Instead, we use Python's `asyncio.gather()`:
 ```python
 results = await asyncio.gather(
-    _score_model("GPT-4o", ...),
-    _score_model("Claude 4.5 Sonnet", ...),
-    _score_model("Gemini 3 Flash", ...)
+    _run_and_score("GPT-4o", ...),
+    _run_and_score("Claude 4.5 Sonnet", ...),
+    _run_and_score("Gemini 2.5 Flash", ...)
 )
 ```
 This runs all three requests in parallel across different threads. The total time is simply the time of the slowest model (10 seconds). **Massive performance win.**

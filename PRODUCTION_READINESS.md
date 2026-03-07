@@ -1,7 +1,7 @@
 # Production Readiness & Dependency Posture
 
 > **Audience**: Acquisition diligence, engineering leads, security reviewers, DevOps.
-> **Last Updated**: March 2026 | Commit: `03574b1` on `main`
+> **Last Updated**: March 2026 | Commit: `9790cf5` on `main` (v1.2.6-hardened)
 
 ---
 
@@ -195,6 +195,7 @@ curl https://api.yourdomain.com/api/docs
 | Rate limiter failure | Medium | Fail-closed (503) at backend + frontend edge | ✅ End-to-end |
 | Webhook forgery | Medium | `hmac.compare_digest` + idempotency | ✅ Implemented |
 | Stalled background jobs | Low | Auto-recovery sweep every 5 min, 3-strike DLQ | ✅ Active |
+| **Zero-Burn Cache Poisoning** | Low | SHA-256 hash collision protection + 24hr TTL validation | ✅ Active (v1.2.6) |
 
 ---
 

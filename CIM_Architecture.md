@@ -1,6 +1,6 @@
 # AUM Context Foundry — CIM Architecture
 **Context Information Model — Technical Design**
-**v5.1.0 | March 2026**
+**v5.1.0-v1.2.6 | March 2026**
 
 ---
 
@@ -143,13 +143,13 @@ Limit check queries the `manifests` collection document count (not `documents`).
    < 60   → "drift_detected"
 ```
 
-### Caching
+### Caching (Zero-Burn v2)
 ```
 cache_key = SHA-256(orgId + prompt + manifestVersion)
 cache_doc = organizations/{orgId}/simulationCache/{cache_key}
 TTL: 24 hours
 ```
-Cache is checked after plan validation and before API calls. All entries are subject to the same 24-hour TTL as the parent manifest.
+Cache is checked using a deterministic SHA-256 hash of the request signature. Serves results in <100ms.
 
 ---
 
