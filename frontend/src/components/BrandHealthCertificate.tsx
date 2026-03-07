@@ -87,6 +87,7 @@ export default function BrandHealthCertificate({
     const { organization, refreshKey, activeManifestVersion } = useOrganization();
     const { models } = useModelCatalog();
     const certificateRef = useRef<HTMLDivElement>(null);
+    const captureRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");
     const [isoTimestamp, setIsoTimestamp] = useState("");
     const [isDownloading, setIsDownloading] = useState(false);
@@ -176,50 +177,44 @@ export default function BrandHealthCertificate({
     };
 
     const handleDownload = async () => {
-        if (!certificateRef.current) return;
+        if (!captureRef.current) return;
         setIsDownloading(true);
 
         try {
-            // 1. Wait for animations to settle (framer-motion transitions)
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const element = certificateRef.current;
+            // No delay needed for static off-screen element
+            const element = captureRef.current;
             const rect = element.getBoundingClientRect();
 
-            // 2. Capture canvas with explicit scale and offset handling
             const canvas = await html2canvas(element, {
                 backgroundColor: "#0f172a",
                 scale: 2,
                 useCORS: true,
                 logging: false,
-                width: rect.width,
-                height: rect.height,
-                scrollX: 0,
-                scrollY: -window.scrollY, // Correct for page scroll
-                onclone: (clonedDoc) => {
-                    // Ensure the cloned element is visible and stable
-                    const clonedElement = clonedDoc.getElementById(element.id) || clonedDoc.querySelector('[ref="certificateRef"]');
-                    if (clonedElement) {
-                        (clonedElement as HTMLElement).style.transform = 'none';
-                        (clonedElement as HTMLElement).style.boxShadow = 'none';
-                    }
-                }
+                width: 800, // Fixed width for consistent PDF layout
+                height: element.scrollHeight,
+                windowWidth: 800,
+                x: 0,
+                y: 0,
             });
 
-            // 3. Generate PDF
             const imgData = canvas.toDataURL("image/png");
+
+            // PDF formatting (A4-ish proportions)
+            const pdfWidth = 800;
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [rect.width, rect.height]
+                format: [pdfWidth, pdfHeight]
             });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, rect.width, rect.height);
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log("PDF generated successfully:", fileName);
+            console.log("PDF generated successfully using Clean Capture");
         } catch (err) {
             console.error("Failed to generate certificate PDF:", err);
             window.alert("Failed to generate PDF. Please try again or take a screenshot.");
@@ -562,6 +557,85 @@ export default function BrandHealthCertificate({
                     </AnimatePresence>
                 </div>
             </motion.div>
+
+            {/* 📸 OFF-SCREEN CAPTURE CONTAINER (High Reliability PDF Generation) */}
+            <div className="fixed top-0 left-[-9999px] z-[-1] pointer-events-none opacity-0">
+                <div
+                    ref={captureRef}
+                    className="w-[800px] bg-slate-900 p-12 text-white flex flex-col gap-8"
+                    style={{ fontFamily: "'Inter', sans-serif" }}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <Logo size={48} theme="dark" />
+                            <div>
+                                <p className="text-[12px] text-indigo-400 uppercase tracking-[0.3em] font-bold">AUM Context Foundry</p>
+                                <p className="text-white font-semibold text-xl">Brand Health Certificate</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[12px] text-slate-500 uppercase tracking-widest">Issued</p>
+                            <p className="text-slate-300 text-sm font-medium">{issuedDate}</p>
+                        </div>
+                    </div>
+
+                    {/* Org Info */}
+                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-between">
+                        <div>
+                            <p className="text-[12px] text-slate-500 uppercase tracking-widest mb-1">Organization</p>
+                            <p className="text-3xl font-bold text-white">{organizationName}</p>
+                            {activeContextName && <p className="text-sm text-indigo-400 mt-2">Context: {activeContextName}</p>}
+                        </div>
+                        <div className="text-center p-6 bg-white/5 rounded-full border border-white/10">
+                            <p className="text-4xl font-bold text-white">{avgLcrs}%</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Avg LCRS</p>
+                        </div>
+                    </div>
+
+                    {/* Scores */}
+                    <div className="space-y-4">
+                        <p className="text-sm font-bold uppercase tracking-widest text-indigo-400">Multi-Model LCRS Breakdown</p>
+                        {results.map((r, i) => (
+                            <div key={i} className="flex items-center gap-6 p-5 rounded-2xl bg-white/5 border border-white/10">
+                                <div className="w-40 shrink-0 font-bold text-sm">{r.model}</div>
+                                <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${r.accuracy}%`, backgroundColor: scoreColor(r.accuracy) }} />
+                                </div>
+                                <div className="w-16 text-right font-bold" style={{ color: scoreColor(r.accuracy) }}>{r.accuracy}%</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="p-6 rounded-2xl bg-slate-800/50 border border-white/5">
+                        <p className="text-sm font-bold uppercase tracking-widest mb-3">Executive Summary</p>
+                        <p className="text-base text-slate-300 leading-relaxed">{getExecutiveSummary(avgLcrs, organizationName)}</p>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">AI Visibility</p>
+                            <p className="text-2xl font-bold text-white">{asovScore}%</p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Fidelity Rate</p>
+                            <p className="text-2xl font-bold text-white">{fidelityPct}%</p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Hallucinations</p>
+                            <p className="text-2xl font-bold text-white">{hallucinationCount}/{results.length || "—"}</p>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-6 rounded-2xl bg-slate-800 border border-white/5 flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-[0.2em] font-mono">
+                        <span>AUM Context Foundry • Precision Monitoring v1.2.9</span>
+                        <span>{isoTimestamp}</span>
+                    </div>
+                </div>
+            </div>
         </motion.div>
     );
 }
