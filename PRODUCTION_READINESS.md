@@ -110,7 +110,7 @@ Defined in `.github/workflows/ci.yml`. Runs on every push to `main` and all PRs.
 | Job | Steps | Failure Impact |
 |-----|-------|----------------|
 | **Frontend Lint** | `npm ci` → `npx next lint` | Blocks merge: ESLint errors in TypeScript/React |
-| **Backend Tests** | `pip install -r requirements.txt` → `py_compile` → `python test_main.py` → `pytest` (10 tests) | Blocks merge: Python syntax errors, import failures, logic regressions |
+| **Backend Tests** | `pip install -r requirements.txt` → `py_compile` → `python test_main.py` → `pytest` (62 tests) | Blocks merge: Python syntax errors, import failures, logic regressions |
 
 Additional gate: `next.config.ts` sets `ignoreDuringBuilds: false` — lint errors also fail Vercel production builds.
 
@@ -118,7 +118,7 @@ Additional gate: `next.config.ts` sets `ignoreDuringBuilds: false` — lint erro
 
 | Test File | Tests | What It Covers |
 |-----------|-------|---------------|
-| `test_simulation.py` | 2 | LCRS endpoint (happy + unhappy path), 60/40 math |
+| `test_simulation.py` | 3 | LCRS endpoint (happy + unhappy path), 60/40 math, Frontier Label contract verification |
 | `test_ingestion.py` | 2 | Recursive split algorithm + parse endpoint |
 | `test_competitor.py` | 2 | Displacement endpoint + auth rejection |
 | `test_audit.py` | 2 | Audit log write + retrieval |

@@ -86,15 +86,15 @@ The LCRS (Logical Contextual Representation Score) grades AI model accuracy usin
 *   **40% Weight - Semantic Alignment (Vector Math):** We convert the AI's answer into a vector embedding and compare its cosine distance to the original Context Document's embedding. This catches "vibe" drift or subtle hallucinations.
 
 ### The Async Parallel Gather
-Usually, calling OpenAI takes 10 seconds. Calling Claude takes 8 seconds. Calling Gemini takes 7 seconds. 
+Usually, calling GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet takes 7 seconds. 
 If we ran them sequentially, a simulation would take `10 + 8 + 7 = 25 seconds`.
 
 Instead, we use Python's `asyncio.gather()`:
 ```python
 results = await asyncio.gather(
     _score_model("GPT-4o", ...),
-    _score_model("Claude", ...),
-    _score_model("Gemini", ...)
+    _score_model("Claude 4.5 Sonnet", ...),
+    _score_model("Gemini 3 Flash", ...)
 )
 ```
 This runs all three requests in parallel across different threads. The total time is simply the time of the slowest model (10 seconds). **Massive performance win.**

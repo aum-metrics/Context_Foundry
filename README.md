@@ -65,7 +65,7 @@ Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts
 
 | Dimension | Scope & Evidence Level |
 |-----------|------------------------|
-| Unit & Integration (Backend) | 61 tests validating LCRS math, DB transactions, and module routing. Verified continuously via GitHub Actions. |
+| Unit & Integration (Backend) | 62 tests validating LCRS math, DB transactions, and module routing. Verified continuously via GitHub Actions. |
 | UI Smoke Tests (Frontend) | Playwright Next.js build verification, testing DOM mounts and UI routing via auth-bypass. Verified via GitHub Actions. |
 | External E2E (Webhooks/SSO) | Manually gated prior to release (see `PRODUCTION_READINESS.md`). CI explicitly avoids third-party sandbox integration (Razorpay/IdP) to prevent artifact drift. |
 

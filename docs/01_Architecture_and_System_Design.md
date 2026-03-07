@@ -10,7 +10,7 @@
 
 Welcome to **AUM Context Foundry**. Before you look at a single line of code, you must understand *why* this product exists. 
 
-Current Large Language Models (LLMs) like ChatGPT, Gemini, and Claude often "hallucinate"—meaning they confidently invent facts. For a business, if an AI chatbot lies about a refund policy or a feature, it creates massive legal liability and destroys brand trust. 
+Current Large Language Models (LLMs) like GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet often "hallucinate"—meaning they confidently invent facts. For a business, if an AI chatbot lies about a refund policy or a feature, it creates massive legal liability and destroys brand trust. 
 
 **AUM Context Foundry solves this.** We provide an enterprise-grade platform that ingest a company's source of truth (a pricing PDF, a feature list, a security document) and acts as an **Independent Auditor** for AI models. We test different AI engines against this "Context Document" to score them on how faithfully they represent that company, preventing context drift and hallucinations.
 

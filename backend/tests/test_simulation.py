@@ -132,3 +132,52 @@ def test_lcrs_scoring_math():
     semantic_sim = 0.8
     drift = 100.0 - ((claim_match * 0.6 + semantic_sim * 0.4) * 100.0)
     assert round(drift, 1) == 38.0
+@patch("api.simulation.verify_user_org_access")
+@patch("api.simulation.OpenAI")
+@patch("api.simulation.db")
+def test_frontier_model_labels(mock_sim_db, mock_openai, mock_verify):
+    """
+    Strictly verify that the frontier model labels (GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet)
+    as defined in core.model_config are correctly returned by the mission-critical simulation endpoint.
+    """
+    from core.model_config import MODEL_DISPLAY_NAMES
+    
+    # 1. Setup Security & DB Mocks
+    mock_verify.return_value = True
+    mock_org_doc = MagicMock()
+    mock_org_doc.exists = True
+    mock_org_doc.to_dict.return_value = {
+        "apiKeys": {"openai": "sk-mock"},
+        "subscription": {"maxSimulations": 50, "planId": "growth"}
+    }
+    mock_org_doc.collection.return_value.document.return_value.get.return_value = MagicMock(exists=True, to_dict=lambda: {"content": "mock", "embedding": [0.1]*1536})
+    mock_sim_db.collection.return_value.document.return_value.get.return_value = mock_org_doc
+
+    # 2. Mock OpenAI client
+    mock_client = MagicMock()
+    mock_openai.return_value = mock_client
+    mock_embed = MagicMock(embedding=[0.1]*1536)
+    mock_client.embeddings.create.return_value = MagicMock(data=[mock_embed])
+    
+    # Mock response
+    mock_choice = MagicMock()
+    mock_choice.message.content = '{"results": [], "claims": ["claim1"], "answer": "mock answer"}'
+    mock_client.chat.completions.create.return_value = MagicMock(choices=[mock_choice])
+
+    # 3. Request
+    response = client.post(
+        "/api/simulation/run",
+        headers={"Authorization": "Bearer mock-dev-token"},
+        json={"orgId": "test_org", "manifestVersion": "latest", "prompt": "Verify Labels"}
+    )
+    
+    assert response.status_code == 200
+    results = response.json().get("results", [])
+    
+    # Check if all frontier labels from model_config are present in the response
+    # In ENV="testing", the API may append " Mock" to labels
+    returned_labels = [r["model"].replace(" Mock", "") for r in results]
+    expected_labels = list(MODEL_DISPLAY_NAMES.values())
+    
+    for expected in expected_labels:
+        assert expected in returned_labels, f"Expected frontier label '{expected}' missing from API response. Got: {returned_labels}"

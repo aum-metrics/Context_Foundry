@@ -64,8 +64,8 @@ export default function ProductFlowShowcase() {
                     <div className="space-y-2">
                         {[
                             { name: 'GPT-4o', score: 92, status: 'Fidelity' },
-                            { name: 'Claude 3.5', score: 45, status: 'Drift' },
-                            { name: 'Gemini 2', score: 88, status: 'Fidelity' }
+                            { name: 'Claude 4.5 Sonnet', score: 45, status: 'Drift' },
+                            { name: 'Gemini 3 Flash', score: 88, status: 'Fidelity' }
                         ].map((m) => (
                             <div key={m.name} className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/5">
                                 <div className="text-[9px] w-16">{m.name}</div>

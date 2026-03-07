@@ -30,7 +30,8 @@ from core.model_config import (
     OPENAI_SIMULATION_MODEL,
     GEMINI_SIMULATION_MODEL,
     CLAUDE_SIMULATION_MODEL,
-    MODEL_DISPLAY_NAMES
+    GEMINI_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL,
+    MODEL_DISPLAY_NAMES, OPENAI_SCHEMA_MODEL
 )
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ try:
     CLAUDE_AVAILABLE = True
 except ImportError:
     CLAUDE_AVAILABLE = False
-    logger.warning("anthropic not installed, Claude 3.5 Haiku will be skipped")
+    logger.warning("anthropic not installed, Claude 4.5 Sonnet will be skipped")
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -246,7 +247,7 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
     api_keys: Dict[str, str] = {}
 
     from core.config import settings
-    is_dev = settings.ENV == "development"
+    is_dev = settings.ENV in ["development", "testing"]
 
     if db:
         try:
@@ -304,7 +305,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
 
     try:
         from core.config import settings
-        if settings.ENV == "development" and not runner_key:
+        if settings.ENV in ["development", "testing"] and not runner_key:
             logger.info(f"🧪 Dev-mode: Simulated response for {model_name}")
             import random
             accuracy = round(random.uniform(75, 98), 1)
@@ -519,27 +520,27 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         # Predefined "Sight Spectrum" responses to showcase brand drift
         mock_responses = {
             "How much does HC Insight cost per month?": [
-                {"model": "GPT-4o Mini", "accuracy": 12.4, "hasHallucination": True, "claimScore": "1/5 claims supported", "answer": "HC Insight is generally free for individual users, with a pro tier starting at $49/month for small teams."},
-                {"model": "Claude 3.5 Haiku", "accuracy": 98.2, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "HC Insight costs $499/month for the Growth plan. There is no free tier; only a 14-day trial for new users."},
-                {"model": "Gemini 2.0 Flash", "accuracy": 8.1, "hasHallucination": True, "claimScore": "0/5 claims supported", "answer": "HC Insight pricing is not public; you must contact their sales team for a custom quote starting around $2,000/mo."}
+                {"model": "GPT-4o", "accuracy": 12.4, "hasHallucination": True, "claimScore": "1/5 claims supported", "answer": "HC Insight is generally free for individual users, with a pro tier starting at $49/month for small teams."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 98.2, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "HC Insight costs $499/month for the Growth plan. There is no free tier; only a 14-day trial for new users."},
+                {"model": "Gemini 3 Flash", "accuracy": 8.1, "hasHallucination": True, "claimScore": "0/5 claims supported", "answer": "HC Insight pricing is not public; you must contact their sales team for a custom quote starting around $2,000/mo."}
             ],
             "Does DataBlitz support Salesforce integration?": [
-                {"model": "GPT-4o Mini", "accuracy": 85.0, "hasHallucination": False, "claimScore": "4/5 claims supported", "answer": "Yes, DataBlitz supports Salesforce integration to pull manufacturing pipeline data."},
-                {"model": "Claude 3.5 Haiku", "accuracy": 92.0, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "Yes, DataBlitz provides a read-only Salesforce API integration specifically for fetching manufacturing data."},
-                {"model": "Gemini 2.0 Flash", "accuracy": 35.0, "hasHallucination": True, "claimScore": "2/5 claims supported", "answer": "DataBlitz has deep bidirectional Salesforce integration, allowing you to update manufacturing records directly from their dashboard."}
+                {"model": "GPT-4o", "accuracy": 85.0, "hasHallucination": False, "claimScore": "4/5 claims supported", "answer": "Yes, DataBlitz supports Salesforce integration to pull manufacturing pipeline data."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 92.0, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "Yes, DataBlitz provides a read-only Salesforce API integration specifically for fetching manufacturing data."},
+                {"model": "Gemini 3 Flash", "accuracy": 35.0, "hasHallucination": True, "claimScore": "2/5 claims supported", "answer": "DataBlitz has deep bidirectional Salesforce integration, allowing you to update manufacturing records directly from their dashboard."}
             ],
             "In which sectors does SightSpectrum primarily deliver its data analytics consulting services?": [
-                {"model": "GPT-4o Mini", "accuracy": 91.5, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, and Professional Services sectors."},
-                {"model": "Claude 3.5 Haiku", "accuracy": 97.8, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum focuses on Manufacturing (via DataBlitz), Healthcare (via HC Insight), and specialized IT services for mid-market enterprises."},
-                {"model": "Gemini 2.0 Flash", "accuracy": 42.0, "hasHallucination": True, "claimScore": "2/5", "answer": "SightSpectrum is a global leader in Retail and E-commerce fashion analytics, focusing on B2C logistics."}
+                {"model": "GPT-4o", "accuracy": 91.5, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, and Professional Services sectors."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 97.8, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum focuses on Manufacturing (via DataBlitz), Healthcare (via HC Insight), and specialized IT services for mid-market enterprises."},
+                {"model": "Gemini 3 Flash", "accuracy": 42.0, "hasHallucination": True, "claimScore": "2/5", "answer": "SightSpectrum is a global leader in Retail and E-commerce fashion analytics, focusing on B2C logistics."}
             ]
         }
         
         # Default fallback for custom demo prompts
         default_results = [
-            {"model": "GPT-4o Mini", "accuracy": 45.0, "hasHallucination": True, "claimScore": "2/5", "answer": "This is a high-quality hallucinated response to demonstrate AI Brand Drift for Sight Spectrum."},
-            {"model": "Claude 3.5 Haiku", "accuracy": 95.0, "hasHallucination": False, "claimScore": "5/5", "answer": "This model is correctly following the Sight Spectrum / HC Insight manifest."},
-            {"model": "Gemini 2.0 Flash", "accuracy": 40.0, "hasHallucination": True, "claimScore": "1/5", "answer": "Another example of context drift in Agentic Search affecting Sight Spectrum's brand perception."}
+            {"model": "GPT-4o", "accuracy": 45.0, "hasHallucination": True, "claimScore": "2/5", "answer": "This is a high-quality hallucinated response to demonstrate AI Brand Drift for Sight Spectrum."},
+            {"model": "Claude 4.5 Sonnet", "accuracy": 95.0, "hasHallucination": False, "claimScore": "5/5", "answer": "This model is correctly following the Sight Spectrum / HC Insight manifest."},
+            {"model": "Gemini 3 Flash", "accuracy": 40.0, "hasHallucination": True, "claimScore": "1/5", "answer": "Another example of context drift in Agentic Search affecting Sight Spectrum's brand perception."}
         ]
         
         results = mock_responses.get(request.prompt, default_results)
@@ -758,7 +759,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
     # Enforce Model Gating
     if org_plan == "explorer":
-        # Explorer users only get one model (GPT-4o Mini)
+        # Explorer users only get one model (GPT-4o)
         gemini_key = None
         claude_key = None
 
@@ -791,11 +792,11 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
             )
 
     if openai_key or is_dev:
-        tasks.append(_run_and_score("GPT-4o Mini", run_openai, openai_key))
-    if (gemini_key and GEMINI_AVAILABLE) or (is_dev and GEMINI_AVAILABLE):
-        tasks.append(_run_and_score("Gemini 2.0 Flash", run_gemini, gemini_key))
-    if (claude_key and CLAUDE_AVAILABLE) or (is_dev and CLAUDE_AVAILABLE):
-        tasks.append(_run_and_score("Claude 3.5 Haiku", run_claude, claude_key))
+        tasks.append(_run_and_score(OPENAI_SIMULATION_MODEL, run_openai, openai_key))
+    if gemini_key or is_dev:
+        tasks.append(_run_and_score(GEMINI_SIMULATION_MODEL, run_gemini, gemini_key))
+    if claude_key or is_dev:
+        tasks.append(_run_and_score(CLAUDE_SIMULATION_MODEL, run_claude, claude_key))
 
     if not tasks:
         raise HTTPException(status_code=503, detail="No AI providers configured.")
@@ -828,7 +829,7 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
                 
                 client = OpenAI(api_key=openai_key)
                 adj_resp = client.chat.completions.create(
-                    model="gpt-4o",
+                    model=OPENAI_SCHEMA_MODEL,
                     messages=[{"role": "system", "content": adjudication_prompt}],
                     response_format={"type": "json_object"},
                     temperature=0
@@ -845,8 +846,12 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
 
     locked_models = []
+    locked_models = []
     if org_plan == "explorer":
-        locked_models = ["Claude 3.5 Haiku", "Gemini 2.0 Flash"]
+        locked_models = [
+            MODEL_DISPLAY_NAMES.get(CLAUDE_SIMULATION_MODEL, "Claude"),
+            MODEL_DISPLAY_NAMES.get(GEMINI_SIMULATION_MODEL, "Gemini")
+        ]
 
     return {
         "results": results,
@@ -986,9 +991,9 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
             {
                 "prompt": "How much does HC Insight cost per month?",
                 "results": [
-                    {"model": "GPT-4o Mini", "accuracy": 12.4, "hasHallucination": True},
-                    {"model": "Claude 3.5 Haiku", "accuracy": 98.2, "hasHallucination": False},
-                    {"model": "Gemini 2.0 Flash", "accuracy": 8.1, "hasHallucination": True}
+                    {"model": "GPT-4o", "accuracy": 12.4, "hasHallucination": True},
+                    {"model": "Claude 4.5 Sonnet", "accuracy": 98.2, "hasHallucination": False},
+                    {"model": "Gemini 3 Flash", "accuracy": 8.1, "hasHallucination": True}
                 ],
                 "timestamp": datetime.now(timezone.utc) - timedelta(days=2),
                 "version": "v1_baseline"
@@ -996,9 +1001,9 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
             {
                 "prompt": "Does DataBlitz support Salesforce integration?",
                 "results": [
-                    {"model": "GPT-4o Mini", "accuracy": 85.0, "hasHallucination": False},
-                    {"model": "Claude 3.5 Haiku", "accuracy": 92.0, "hasHallucination": False},
-                    {"model": "Gemini 2.0 Flash", "accuracy": 35.0, "hasHallucination": True}
+                    {"model": "GPT-4o", "accuracy": 85.0, "hasHallucination": False},
+                    {"model": "Claude 4.5 Sonnet", "accuracy": 92.0, "hasHallucination": False},
+                    {"model": "Gemini 3 Flash", "accuracy": 35.0, "hasHallucination": True}
                 ],
                 "timestamp": datetime.now(timezone.utc) - timedelta(days=1),
                 "version": "latest-demo"
@@ -1006,9 +1011,9 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
             {
                 "prompt": "Is Sight Spectrum HIPAA compliant?",
                 "results": [
-                    {"model": "GPT-4o Mini", "accuracy": 95.0, "hasHallucination": False},
-                    {"model": "Claude 3.5 Haiku", "accuracy": 96.0, "hasHallucination": False},
-                    {"model": "Gemini 2.0 Flash", "accuracy": 88.0, "hasHallucination": False}
+                    {"model": "GPT-4o", "accuracy": 95.0, "hasHallucination": False},
+                    {"model": "Claude 4.5 Sonnet", "accuracy": 96.0, "hasHallucination": False},
+                    {"model": "Gemini 3 Flash", "accuracy": 88.0, "hasHallucination": False}
                 ],
                 "timestamp": datetime.now(timezone.utc) - timedelta(hours=4),
                 "version": "latest-demo"

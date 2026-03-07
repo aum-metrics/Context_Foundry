@@ -22,7 +22,7 @@ export default function LandingPage() {
 
             {/* Premium Background Gradients */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 dark:bg-indigo-600/10 blur-[140px] rounded-full"></div>
+                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 dark:bg-indigo-600/10 blur-[130px] rounded-full"></div>
                 <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-500/10 dark:bg-fuchsia-600/10 blur-[130px] rounded-full"></div>
                 <div className="absolute top-[30%] left-[30%] w-[40%] h-[40%] bg-cyan-500/10 dark:bg-cyan-900/10 blur-[150px] rounded-full"></div>
             </div>
@@ -67,7 +67,7 @@ export default function LandingPage() {
                                 Industry forecasts indicate that by 2028, over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B sales work</strong> will be driven by generative AI interfaces.
                             </span>
                             <span className="block mt-2">
-                                AUM ensures ChatGPT, Claude, and Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
+                                AUM ensures GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
                             </span>
                             <p className="text-xs text-slate-500 dark:text-slate-500 italic mt-4">
                                 [1] Gartner. "Future of Sales" (2024 Prediction).
@@ -111,7 +111,7 @@ export default function LandingPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-medium text-slate-900 dark:text-white">Competitor Benchmarking</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly when and why Claude or Perplexity recommend your competitors instead of you.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly when and why Claude 4.5 Sonnet or Perplexity recommend your competitors instead of you.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">
@@ -146,7 +146,7 @@ export default function LandingPage() {
                                     <span className="text-2xl font-light text-cyan-600 dark:text-cyan-400">84.2%</span>
                                 </div>
                                 <div className="space-y-4">
-                                    {['ChatGPT', 'Claude 3.5', 'Gemini 2.0 Flash'].map((model, i) => (
+                                    {['GPT-4o', 'Claude 4.5 Sonnet', 'Gemini 3 Flash'].map((model, i) => (
                                         <div key={model} className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-slate-600 dark:text-slate-400">{model}</span>
@@ -273,7 +273,7 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {[
-                            { metric: '3', label: 'LLM Providers', sub: 'ChatGPT · Claude · Gemini', cls: 'text-indigo-600 dark:text-indigo-400' },
+                            { metric: '3', label: 'LLM Providers', sub: 'GPT-4o · Claude 4.5 · Gemini 3', cls: 'text-indigo-600 dark:text-indigo-400' },
                             { metric: '☁️', label: 'Cloud-Native', sub: 'Google Cloud Run (Asia)', cls: 'text-emerald-600 dark:text-emerald-400' },
                             { metric: '3x', label: 'Multi-Model', sub: 'Parallel LLM queries', cls: 'text-cyan-600 dark:text-cyan-400' },
                             { metric: '🔒', label: 'Zero-Retention', sub: 'No raw data stored', cls: 'text-fuchsia-600 dark:text-fuchsia-400' },
@@ -325,8 +325,7 @@ export default function LandingPage() {
                                 <div className="flex gap-6 group">
                                     <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">02</div>
                                     <div>
-                                        <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">ASoV & Context Drift Endpoints</h3>
-                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time mathematical scores (60/40 blend) for brand fidelity across GPT-4o, Claude 3.5, and Gemini 2.0 to power your own analytics.</p>
+                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time mathematical scores (60/40 blend) for brand fidelity across GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash to power your own analytics.</p>
                                     </div>
                                 </div>
                             </div>
@@ -492,13 +491,13 @@ export default function LandingPage() {
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Brand Probe&quot;?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against ChatGPT, Claude, and Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
+                                A Brand Probe is a single diagnostic query tested across all three major models simultaneously. One probe against GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Why does the free tier include all 3 models?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                Because a single-model score isn&apos;t the insight. The insight is when ChatGPT rates your brand at 91% accuracy and Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
+                                Because a single-model score isn&apos;t the insight. The insight is when GPT-4o rates your brand at 91% accuracy and Claude 4.5 Sonnet rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
