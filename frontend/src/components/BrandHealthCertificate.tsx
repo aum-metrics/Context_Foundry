@@ -177,13 +177,33 @@ export default function BrandHealthCertificate({
     };
 
     const handleDownload = async () => {
-        if (!captureRef.current) return;
+        if (!captureRef.current) {
+            console.error("PDF Error: captureRef.current is null or undefined");
+            window.alert("Failed to generate PDF. Please try again or take a screenshot.");
+            return;
+        }
         setIsDownloading(true);
 
         try {
-            // 1. Small delay even for static container to ensure SVG font/rendering readiness
-            await new Promise(r => setTimeout(r, 100));
+            // 1. Longer delay to ensure all content is rendered
+            await new Promise(r => setTimeout(r, 300));
             const element = captureRef.current;
+
+            // Calculate proper dimensions - use getBoundingClientRect as fallback
+            let elementHeight = element.scrollHeight;
+            if (!elementHeight || elementHeight === 0) {
+                const rect = element.getBoundingClientRect();
+                elementHeight = rect.height;
+                console.warn("ScrollHeight was 0, using getBoundingClientRect:", elementHeight);
+            }
+            
+            // Ensure we have a valid height, fallback to 2000px if all else fails
+            if (!elementHeight || elementHeight === 0) {
+                elementHeight = 2000;
+                console.warn("Could not calculate element height, using fallback: 2000px");
+            }
+
+            console.log(`PDF generation started. Element dimensions: width=800, height=${elementHeight}`);
 
             const canvas = await html2canvas(element, {
                 backgroundColor: "#0f172a",
@@ -191,15 +211,18 @@ export default function BrandHealthCertificate({
                 useCORS: true,
                 logging: false,
                 width: 800,
-                height: element.scrollHeight,
+                height: elementHeight,
                 windowWidth: 800,
+                windowHeight: elementHeight,
                 x: 0,
                 y: 0,
+                allowTaint: true,
+                foreignObjectRendering: true,
                 onclone: (clonedDoc) => {
-                    // NUCLEAR FIX v2: Scrub ANY mention of oklch/oklab from the clone's CSS
+                    // NUCLEAR FIX v3: Scrub ANY mention of oklch/oklab from the clone's CSS
                     const scrub = (str: string) => {
                         if (!str) return str;
-                        // Replace oklch/oklab with a safe fallack (Indigo-400ish RGB: 129, 140, 248)
+                        // Replace oklch/oklab with a safe fallback (Indigo-400ish RGB: 129, 140, 248)
                         return str.replace(/okl(ch|ab)\([^)]+\)/g, 'rgb(129, 140, 248)');
                     };
 
@@ -229,15 +252,28 @@ export default function BrandHealthCertificate({
                                 }
                             });
                         }
+
+                        // Ensure images and SVGs have proper data-CORS attributes
+                        if (el.tagName === 'img' || el.tagName === 'image') {
+                            el.setAttribute('crossOrigin', 'anonymous');
+                        }
                     }
                 }
             });
+
+            if (!canvas) {
+                throw new Error("html2canvas returned null or undefined canvas");
+            }
+
+            console.log(`Canvas created successfully. Size: ${canvas.width}x${canvas.height}`);
 
             const imgData = canvas.toDataURL("image/png", 1.0);
 
             // PDF formatting (A4-ish proportions)
             const pdfWidth = 800;
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const pdfHeight = Math.max((canvas.height * pdfWidth) / canvas.width, 1000);
+
+            console.log(`PDF dimensions: ${pdfWidth}x${pdfHeight}`);
 
             const pdf = new jsPDF({
                 orientation: 'portrait',
@@ -251,9 +287,12 @@ export default function BrandHealthCertificate({
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log("PDF generated successfully using Clean Capture (v1.2.13)");
+            console.log("PDF generated successfully using Clean Capture (v1.2.14)");
         } catch (err) {
             console.error("Failed to generate certificate PDF:", err);
+            if (err instanceof Error) {
+                console.error("Error details:", err.message, err.stack);
+            }
             window.alert("Failed to generate PDF. Please try again or take a screenshot.");
         } finally {
             setIsDownloading(false);
@@ -596,7 +635,10 @@ export default function BrandHealthCertificate({
             </motion.div>
 
             {/* 📸 OFF-SCREEN CAPTURE CONTAINER (High Reliability PDF Generation) */}
-            <div className="fixed top-0 left-[-9999px] z-[-1] pointer-events-none opacity-0">
+            <div 
+                className="fixed top-0 left-[-9999px] z-[-1] pointer-events-none"
+                style={{ visibility: "hidden", height: "auto", width: "1px", overflow: "visible" }}
+            >
                 <div
                     ref={captureRef}
                     className="w-[800px] flex flex-col gap-8"
@@ -604,7 +646,10 @@ export default function BrandHealthCertificate({
                         fontFamily: "'Inter', sans-serif",
                         backgroundColor: "#0f172a",
                         padding: "48px",
-                        color: "#ffffff"
+                        color: "#ffffff",
+                        minHeight: "auto",
+                        visibility: "visible",
+                        opacity: 1
                     }}
                 >
                     {/* Header */}
