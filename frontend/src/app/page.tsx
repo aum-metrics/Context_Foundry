@@ -14,9 +14,15 @@ import React from "react";
 import ProductFlowShowcase from "@/components/ProductDemoVideo";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { useRazorpay } from "@/hooks/useRazorpay";
+import { auth } from "@/lib/firebase";
+import { db } from "@/lib/firestorePaths";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function LandingPage() {
     const [currency, setCurrency] = React.useState<'usd' | 'inr'>('usd');
+    const [isUpgrading, setIsUpgrading] = React.useState<string | null>(null);
+    const { checkout, isScriptLoading } = useRazorpay();
 
     React.useEffect(() => {
         const saved = localStorage.getItem('pricing-currency');
@@ -29,6 +35,39 @@ export default function LandingPage() {
         const next = currency === 'usd' ? 'inr' : 'usd';
         setCurrency(next);
         localStorage.setItem('pricing-currency', next);
+    };
+
+    const handleUpgradeFromLanding = async (planId: "growth" | "scale") => {
+        try {
+            setIsUpgrading(planId);
+            const user = auth.currentUser;
+            const selectedCurrency = currency === "inr" ? "INR" : "USD";
+            if (!user || !user.email) {
+                const redirect = encodeURIComponent(`/dashboard?upgrade=${planId}&currency=${selectedCurrency}`);
+                window.location.href = `/login?redirect=${redirect}`;
+                return;
+            }
+
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const orgId = userDoc.exists() ? userDoc.data()?.orgId : null;
+            if (!orgId) {
+                const redirect = encodeURIComponent(`/dashboard?upgrade=${planId}&currency=${selectedCurrency}`);
+                window.location.href = `/login?redirect=${redirect}`;
+                return;
+            }
+
+            await checkout(
+                planId,
+                orgId,
+                user.email,
+                selectedCurrency,
+                () => window.location.assign("/dashboard"),
+                () => setIsUpgrading(null)
+            );
+        } catch {
+            setIsUpgrading(null);
+            window.alert("Unable to start checkout from landing page. Please sign in and try again.");
+        }
     };
 
     return (
@@ -432,10 +471,10 @@ export default function LandingPage() {
                                 <span className="text-4xl font-light tracking-tighter text-slate-900 dark:text-white">One Free Report</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">1</strong> simulation run (all 3 models, so they see real value)</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">1</strong>{" "}simulation run (all 3 models, so users see real value)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic LCRS score</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code> preview</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code>{" "}preview</li>
                                 <li className="flex items-start text-slate-400 dark:text-slate-500"><CheckCircle2 className="w-4 h-4 mr-2.5 mt-0.5 shrink-0" /> No scoring history</li>
                                 <li className="flex items-start text-slate-400 dark:text-slate-500"><CheckCircle2 className="w-4 h-4 mr-2.5 mt-0.5 shrink-0" /> No team seats</li>
                             </ul>
@@ -464,15 +503,20 @@ export default function LandingPage() {
                                 <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">100</strong> simulations/month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">100</strong>{" "}simulations/month</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Download <code>/llms.txt</code> manifest</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Download <code>/llms.txt</code>{" "}manifest</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
-                            <Link href="/login" className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm">
-                                Upgrade to Growth
-                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => handleUpgradeFromLanding("growth")}
+                                disabled={isScriptLoading || isUpgrading === "growth"}
+                                className="block w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-center transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isUpgrading === "growth" ? "Starting Checkout..." : "Upgrade to Growth"}
+                            </button>
                             <p className="text-center text-xs text-slate-400 mt-4">Cancel anytime.</p>
                         </motion.div>
 
@@ -493,16 +537,21 @@ export default function LandingPage() {
                                 <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">500</strong> simulations/month</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">500</strong>{" "}simulations/month</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Everything in Growth</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Competitor tracking</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> White-labeled exports</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">Unlimited</strong> team seats</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">Unlimited</strong>{" "}team seats</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Agency SLA</li>
                             </ul>
-                            <Link href="/contact" className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm">
-                                Contact Us
-                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => handleUpgradeFromLanding("scale")}
+                                disabled={isScriptLoading || isUpgrading === "scale"}
+                                className="block w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isUpgrading === "scale" ? "Starting Checkout..." : "Upgrade to Scale"}
+                            </button>
                             <p className="text-center text-xs text-slate-400 mt-4">Custom Agency SLA available.</p>
                         </motion.div>
                     </div>
@@ -523,13 +572,13 @@ export default function LandingPage() {
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Why does the free tier include all 3 models?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                Because a single-model score isn&apos;t the insight. The insight is when OpenAI rates your brand at 91% accuracy and Anthropic Claude rates it at 47%. That gap is what you&apos;re paying to understand and fix. Showing you only one model would be dishonest about the product&apos;s value.
+                                Because a single-model score misses the key signal. The real insight is model variance. If OpenAI rates your brand at 91% and Anthropic Claude rates it at 47%, that gap identifies retrieval and grounding risk you need to fix.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What happens when I hit my simulation limit?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                Simulations pause — no surprise overage charges. You&apos;ll get a dashboard warning at 80% usage. The counter resets on your billing date.
+                                Simulations pause with no overage billing. You&apos;ll get a dashboard warning at 80% usage, and your quota resets on your billing date.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
@@ -552,4 +601,3 @@ export default function LandingPage() {
         </div >
     );
 }
-

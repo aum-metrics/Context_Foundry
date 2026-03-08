@@ -29,6 +29,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
             "growth",
             organization.id,
             orgUser.email,
+            "INR",
             () => window.location.reload(), // Success callback
             () => setIsProcessing(false)    // Failure callback
         );

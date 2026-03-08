@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, TrendingUp, X, FileText } from "lucide-react";
 import { Logo } from "./Logo";
@@ -176,187 +175,125 @@ export default function BrandHealthCertificate({
     };
 
     const handleDownload = async () => {
-        if (!certificateRef.current) {
-            console.error("❌ PDF Error: certificateRef.current is null");
-            window.alert("Certificate element not found. Please refresh and try again.");
-            return;
-        }
-
-        const element = certificateRef.current;
-
-        // DEBUG: Check if element has actual content
-        const textContent = element.innerText || element.textContent || "";
-        if (!textContent || textContent.trim().length === 0) {
-            console.error("❌ PDF Error: Element has no text content");
-            window.alert("Certificate is empty. Please run a simulation first.");
-            return;
-        }
-
-        console.log("📋 Certificate content detected. Starting PDF generation...");
-        console.log("Text preview:", textContent.substring(0, 100));
-
         setIsDownloading(true);
-
         try {
-            // Ensure content is fully rendered and animations have settled
-            await new Promise(r => setTimeout(r, 1200));
-
-            // Get actual element dimensions
-            const rect = element.getBoundingClientRect();
-            let width = Math.max(rect.width, 800);
-            let height = Math.max(rect.height, 600);
-
-            // Enforce reasonable limits to prevent huge files
-            width = Math.min(width, 1200);
-            height = Math.min(height, 2500);
-
-            console.log(`🎯 Capture dimensions: ${width.toFixed(0)}x${height.toFixed(0)}px`);
-
-            // Simple html2canvas call with theme-aware clone scrubbing
-            const canvas = await html2canvas(element, {
-                backgroundColor: "#ffffff",
-                scale: 2, // Higher scale for better quality
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                windowWidth: width,
-                windowHeight: height,
-                width: width,
-                height: height,
-                onclone: (clonedDoc) => {
-                    // 🌓 FORCE LIGHT MODE
-                    clonedDoc.documentElement.classList.remove('dark');
-                    clonedDoc.documentElement.style.colorScheme = 'light';
-                    clonedDoc.body.classList.remove('dark');
-                    clonedDoc.body.style.backgroundColor = '#ffffff';
-
-                    // 🛠️ NUCLEAR SCRUBBING (v1.2.21)
-                    // html2canvas fails on oklch() / oklab(). We must replace these globally.
-                    const oklchRegex = /oklch\([^)]+\)/g;
-                    const oklabRegex = /oklab\([^)]+\)/g;
-
-                    const allElements = clonedDoc.getElementsByTagName('*');
-                    for (let i = 0; i < allElements.length; i++) {
-                        const el = allElements[i] as HTMLElement;
-
-                        // 1. Force Visibility
-                        el.style.opacity = '1';
-                        el.style.visibility = 'visible';
-                        if (el.style.display === 'none' && !el.classList.contains('hidden-on-pdf')) {
-                            el.style.display = 'block';
-                        }
-
-                        el.style.animation = 'none';
-                        el.style.transition = 'none';
-                        el.style.fontFamily = "'Inter', -apple-system, sans-serif";
-
-                        // 2. Scrub oklch/oklab from style attributes (inline styles)
-                        const styleAttr = el.getAttribute('style');
-                        if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
-                            const scrubbed = styleAttr
-                                .replace(oklchRegex, 'rgb(79, 70, 229)') // Fallback to indigo-600
-                                .replace(oklabRegex, 'rgb(79, 70, 229)');
-                            el.setAttribute('style', scrubbed);
-                        }
-
-                        // 3. Force dark text for readability on white bg if it was white
-                        const style = clonedDoc.defaultView?.getComputedStyle(el);
-                        if (style?.color === 'rgb(255, 255, 255)' || style?.color === 'white' || style?.color === '#ffffff') {
-                            el.style.color = '#0f172a';
-                        }
-
-                        // 4. Background color scrub
-                        if (style?.backgroundColor && (style.backgroundColor.includes('oklch') || style.backgroundColor.includes('oklab'))) {
-                            el.style.backgroundColor = '#ffffff';
-                        }
-
-                        // 5. Border color scrub
-                        if (style?.borderColor && (style.borderColor.includes('oklch') || style.borderColor.includes('oklab'))) {
-                            el.style.borderColor = '#e2e8f0';
-                        }
-                    }
-
-                    // 🎯 FIX SVGs (Especially motion.circle)
-                    const svgCircles = clonedDoc.querySelectorAll('circle');
-                    svgCircles.forEach(circle => {
-                        const dashArray = circle.getAttribute('stroke-dasharray');
-                        if (dashArray) {
-                            circle.setAttribute('stroke-dashoffset', '0');
-                        }
-                        // Scrub SVG stroke/fill
-                        const stroke = circle.getAttribute('stroke');
-                        if (stroke && (stroke.includes('oklch') || stroke.includes('oklab'))) {
-                            circle.setAttribute('stroke', '#6366f1');
-                        }
-                    });
-                }
-            });
-
-            if (!canvas) {
-                throw new Error("html2canvas returned null");
-            }
-
-            const canvasPixels = canvas.width * canvas.height;
-            console.log(`✅ Canvas created: ${canvas.width}x${canvas.height}px (${(canvasPixels / 1000000).toFixed(2)}MP)`);
-
-            // 🔍 BLANK PAGE DETECTION (Nuclear Verification)
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                const sampleSize = 20;
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-                let isBlank = true;
-
-                // Sample pixels across the canvas
-                for (let i = 0; i < data.length; i += 4 * sampleSize) {
-                    // If any pixel is not pure white (#ffffff) or near-white, it's not blank
-                    if (data[i] < 250 || data[i + 1] < 250 || data[i + 2] < 250) {
-                        isBlank = false;
-                        break;
-                    }
-                }
-
-                if (isBlank) {
-                    console.error("❌ PDF Error: Canvas appears to be blank (pure white)");
-                    window.alert("Detected a blank capture. This usually happens if the theme (Dark Mode) conflicts with PDF generation. Please ensure you are running v1.2.20+ and try again.");
-                    setIsDownloading(false);
-                    return;
-                }
-            }
-
-            // Convert to JPEG instead of PNG for smaller file size
-            const imgData = canvas.toDataURL("image/jpeg", 0.9);
-            console.log(`📦 Image data size: ${(imgData.length / 1024).toFixed(2)}KB`);
-
-            if (!imgData || imgData.length < 5000) {
-                throw new Error("Canvas produced suspiciously small image data (likely blank)");
-            }
-
-            // Create PDF with proper sizing
-            const pdfWidth = 210; // A4 mm
-            const pdfHeight = (height / width) * pdfWidth;
-
             const pdf = new jsPDF({
-                orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+                compress: true,
             });
 
-            // Add image filling the page
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 14;
+            const contentWidth = pageWidth - (margin * 2);
+            let y = margin;
+
+            const ensureSpace = (needed = 8) => {
+                if (y + needed > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+            };
+
+            const writeHeading = (text: string) => {
+                ensureSpace(10);
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(13);
+                pdf.setTextColor(31, 41, 55);
+                pdf.text(text, margin, y);
+                y += 6.5;
+            };
+
+            const writeBody = (text: string, size = 10, color: [number, number, number] = [55, 65, 81]) => {
+                const lines = pdf.splitTextToSize(text, contentWidth);
+                ensureSpace((lines.length * 5) + 2);
+                pdf.setFont("helvetica", "normal");
+                pdf.setFontSize(size);
+                pdf.setTextColor(color[0], color[1], color[2]);
+                pdf.text(lines, margin, y);
+                y += (lines.length * 5) + 1.5;
+            };
+
+            const writeDivider = () => {
+                ensureSpace(4);
+                pdf.setDrawColor(226, 232, 240);
+                pdf.line(margin, y, pageWidth - margin, y);
+                y += 4;
+            };
+
+            const executiveSummary = getExecutiveSummary(avgLcrs, organizationName);
+            const currentPrompt = latestRecord?.prompt || propPrompt || "Not available";
+            const inferenceAudit = models
+                .map((m) => `${m.provider}: ${m.displayName}`)
+                .join(" | ");
+            const competitorSummary = competitors.length > 0
+                ? competitors
+                    .slice(0, 3)
+                    .map((c) => `${c.name} (${c.displacementRate}%)`)
+                    .join(", ")
+                : "No displacement detected in current context.";
+
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(16);
+            pdf.setTextColor(79, 70, 229);
+            pdf.text("AUM Context Foundry - Brand Health Report", margin, y);
+            y += 7;
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(10);
+            pdf.setTextColor(71, 85, 105);
+            pdf.text(`Issued: ${issuedDate}`, margin, y);
+            y += 5;
+            pdf.text(`Organization: ${organizationName}`, margin, y);
+            y += 5;
+            pdf.text(`Analysis Context: ${activeContextName || activeManifestVersion || "latest"}`, margin, y);
+            y += 6;
+            writeDivider();
+
+            writeHeading("Executive Summary");
+            writeBody(executiveSummary);
+
+            writeHeading("Core Metrics");
+            writeBody(`LCRS Average: ${avgLcrs}% (${gradeLabel(avgLcrs)})`);
+            writeBody(`AI Visibility (ASoV): ${asovScore}%`);
+            writeBody(`Fidelity Rate: ${fidelityPct}%`);
+            writeBody(`Hallucinations: ${hallucinationCount}/${results.length}`);
+
+            writeHeading("Model Accuracy Comparison");
+            if (results.length === 0) {
+                writeBody("No model outputs found for this context/version.");
+            } else {
+                results.forEach((result) => {
+                    writeBody(`${result.model}: ${result.accuracy}% | ${result.hasHallucination ? "Hallucination Detected" : "Grounded"}${result.claimScore ? ` | ${result.claimScore}` : ""}`);
+                });
+            }
+
+            writeHeading("Query Tested");
+            writeBody(currentPrompt);
+
+            writeHeading("Search Readiness Snapshot");
+            writeBody(`SEO Score: ${seoResult?.seoScore ?? 0}% | GEO Score: ${seoResult?.geoScore ?? 0}% | Overall: ${seoResult?.overallScore ?? 0}%`);
+            writeBody(seoResult?.recommendation || "No SEO/GEO recommendation available for this run.");
+
+            writeHeading("Competitor Displacement");
+            writeBody(competitorSummary);
+
+            writeHeading("How To Read This Report");
+            writeBody("LCRS blends semantic grounding and claim recall. A higher value indicates the response stayed close to the verified manifest context.");
+            writeBody("AI Visibility measures how strongly your brand appears across retrieval answers.");
+            writeBody("Fidelity Rate shows the share of model outputs that remained grounded.");
+            writeBody("Hallucinations count outputs with contradictions or unsupported claims.");
+
+            writeHeading("Inference Audit");
+            writeBody(inferenceAudit || "No runtime model catalog available.");
+            writeBody(`Generated At (UTC): ${isoTimestamp}`);
 
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
-
-            console.log(`✅ PDF saved successfully: ${fileName} (v1.2.20)`);
             setIsDownloading(false);
         } catch (err) {
-            console.error("❌ PDF generation failed:", err);
-            if (err instanceof Error) {
-                console.error("Details:", err.message);
-                console.error("Stack:", err.stack);
-            }
             window.alert(`PDF generation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
             setIsDownloading(false);
         }

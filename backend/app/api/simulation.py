@@ -73,7 +73,7 @@ def cosine_sim(v1, v2):
     return float(dot_product / (norm_v1 * norm_v2))
 
 
-def extract_claims(manifest_content: str, api_keys: dict) -> list:
+def extract_claims(manifest_content: str, question: str, api_keys: dict) -> list:
     """
     Extract verifiable factual claims from the Context Document.
     Uses OpenAI by default, falls back to Gemini if available.
@@ -81,13 +81,18 @@ def extract_claims(manifest_content: str, api_keys: dict) -> list:
     openai_key = api_keys.get("openai")
     gemini_key = api_keys.get("gemini")
     
-    prompt = "Extract specific verifiable claims from this document. Return JSON array of strings under the key 'claims'. Each claim should be a single factual statement (e.g., pricing, features, capabilities). Max 10 claims."
+    prompt = (
+        "Extract only the claims from this document that are relevant to the user question. "
+        "Return JSON array of strings under key 'claims'. Keep each claim atomic and verifiable. "
+        "Include at most 6 claims, prioritized by relevance.\n\n"
+        f"USER QUESTION: {question}"
+    )
     
     try:
         if openai_key:
             client = OpenAI(api_key=openai_key)
             resp = client.chat.completions.create(
-                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": manifest_content[:5000]}],
+                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": manifest_content[:6000]}],
                 model=OPENAI_CLAIM_MODEL,
                 response_format={"type": "json_object"},
                 temperature=0,
@@ -98,7 +103,7 @@ def extract_claims(manifest_content: str, api_keys: dict) -> list:
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
                 model=api_model,
-                contents=[f"{prompt}\n\nDocument:\n{manifest_content[:5000]}"],
+                contents=[f"{prompt}\n\nDocument:\n{manifest_content[:6000]}"],
                 config={'response_mime_type': 'application/json'}
             )
             result = json.loads(resp.text)
@@ -106,7 +111,7 @@ def extract_claims(manifest_content: str, api_keys: dict) -> list:
             return []
             
         claims = result.get("claims", result.get("facts", []))
-        return claims[:10] if isinstance(claims, list) else []
+        return claims[:6] if isinstance(claims, list) else []
     except Exception as e:
         logger.error(f"Claim extraction failed: {e}")
         return []
@@ -823,7 +828,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     eps_div = 0.45
     claims = []
     # Hardened Claim Extraction with multi-provider fallback
-    claims = extract_claims(manifest_content, effective_api_keys)
+    claims = extract_claims(manifest_content, request.prompt, effective_api_keys)
 
     # --- PARALLEL INFERENCE & SCORING ---
     async def _run_and_score(model_name: str, runner_fn, key: str):

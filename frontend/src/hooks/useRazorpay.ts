@@ -79,6 +79,7 @@ export function useRazorpay() {
             planId: string,
             orgId: string,
             email: string,
+            currency: "INR" | "USD" = "INR",
             onSuccess?: () => void,
             onFailure?: (error: unknown) => void
         ) => {
@@ -102,6 +103,7 @@ export function useRazorpay() {
                     body: JSON.stringify({
                         orgId,
                         planId,
+                        currency,
                         customerEmail: email,
                     }),
                 });

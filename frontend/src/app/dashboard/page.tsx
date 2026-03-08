@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
@@ -12,6 +12,8 @@ import { useOrganization } from "@/components/OrganizationContext";
 import TeamSettings from "@/components/TeamSettings";
 import SSOSettings from "@/components/SSOSettings";
 import { auth } from "@/lib/firebase";
+import { useSearchParams } from "next/navigation";
+import { useRazorpay } from "@/hooks/useRazorpay";
 
 interface AdminOrgOption {
   id: string;
@@ -23,6 +25,9 @@ export default function AUMContextFoundry() {
   const { theme, toggleTheme } = useTheme();
   const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId, analysisContexts, activeManifestVersion, activeContextName, setActiveManifestVersion } = useOrganization();
   const [adminOrgs, setAdminOrgs] = useState<AdminOrgOption[]>([]);
+  const searchParams = useSearchParams();
+  const { checkout } = useRazorpay();
+  const autoCheckoutTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (!isPlatformAdmin) {
@@ -46,6 +51,38 @@ export default function AUMContextFoundry() {
 
     loadAdminOrgs();
   }, [isPlatformAdmin]);
+
+  useEffect(() => {
+    if (autoCheckoutTriggeredRef.current) return;
+    if (!organization?.id || !orgUser?.email) return;
+
+    const requestedPlan = searchParams.get("upgrade");
+    const requestedCurrency = (searchParams.get("currency") || "INR").toUpperCase();
+    const normalizedPlan = requestedPlan === "growth" || requestedPlan === "scale" ? requestedPlan : null;
+    const normalizedCurrency = requestedCurrency === "USD" ? "USD" : "INR";
+
+    if (!normalizedPlan) return;
+    autoCheckoutTriggeredRef.current = true;
+
+    checkout(
+      normalizedPlan,
+      organization.id,
+      orgUser.email,
+      normalizedCurrency,
+      () => window.location.reload(),
+      (error) => {
+        console.error("Auto checkout from upgrade intent failed", error);
+      }
+    );
+
+    // Remove transient intent params so refresh/back doesn't relaunch checkout.
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("upgrade");
+      url.searchParams.delete("currency");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams, organization?.id, orgUser?.email, checkout]);
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 overflow-hidden font-sans transition-colors duration-300">
