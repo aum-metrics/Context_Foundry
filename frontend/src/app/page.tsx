@@ -16,6 +16,20 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export default function LandingPage() {
+    const [currency, setCurrency] = React.useState<'usd' | 'inr'>('usd');
+
+    React.useEffect(() => {
+        const saved = localStorage.getItem('pricing-currency');
+        if (saved === 'inr' || saved === 'usd') {
+            setCurrency(saved as 'usd' | 'inr');
+        }
+    }, []);
+
+    const toggleCurrency = () => {
+        const next = currency === 'usd' ? 'inr' : 'usd';
+        setCurrency(next);
+        localStorage.setItem('pricing-currency', next);
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans overflow-x-hidden selection:bg-indigo-500/30 transition-colors duration-300">
@@ -387,6 +401,18 @@ export default function LandingPage() {
                         <h2 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mb-4">Transparent Pricing</h2>
                         <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white">Choose Your GEO Strategy</h3>
                         <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mt-4 font-light">All plans include zero-retention data processing and multi-tenant isolation.</p>
+
+                        {/* Currency Toggle */}
+                        <div className="flex items-center justify-center gap-4 mt-8">
+                            <span className={`text-sm font-medium ${currency === 'inr' ? 'text-slate-500' : 'text-slate-900 dark:text-white'}`}>USD</span>
+                            <button
+                                onClick={toggleCurrency}
+                                className="px-4 py-2 rounded-full border border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 font-medium text-sm transition-all hover:scale-105 active:scale-95"
+                            >
+                                {currency === 'inr' ? '🇮🇳 INR' : '🇺🇸 USD'} ({currency === 'inr' ? '₹' : '$'})
+                            </button>
+                            <span className={`text-sm font-medium ${currency === 'inr' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>INR</span>
+                        </div>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -434,7 +460,7 @@ export default function LandingPage() {
                                 <p className="text-sm text-slate-500">For teams serious about AI visibility.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
-                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">$79</span>
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">{currency === 'inr' ? '₹6,499' : '$79'}</span>
                                 <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
@@ -463,7 +489,7 @@ export default function LandingPage() {
                                 <p className="text-sm text-slate-500">For agencies managing high-volume brands.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
-                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">$249</span>
+                                <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">{currency === 'inr' ? '₹20,999' : '$249'}</span>
                                 <span className="text-slate-500 font-medium ml-2">/mo</span>
                             </div>
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">

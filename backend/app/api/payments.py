@@ -49,22 +49,28 @@ def get_razorpay_client():
 PLANS = {
     "explorer": {
         "name": "Explorer",
-        "amount": 0,
-        "currency": "INR",
+        "amounts": {"USD": 0, "INR": 0},
+        "currency_display": "USD/INR",
         "period": "once",
         "description": "1 simulation run, 1 document ingestion, basic ASoV score",
     },
     "growth": {
         "name": "Growth",
-        "amount": 660000,  # ~$79/mo
-        "currency": "INR",
+        "amounts": {
+            "USD": 7900,      # $79.00 in cents
+            "INR": 649900     # ₹6,499 in paise
+        },
+        "currency_display": "$79/₹6,499",
         "period": "monthly",
         "description": "All 3 models, 100 simulations/month, /llms.txt deploy",
     },
     "scale": {
         "name": "Scale",
-        "amount": 2080000,  # ~$249/mo
-        "currency": "INR",
+        "amounts": {
+            "USD": 24900,     # $249.00 in cents
+            "INR": 2099900    # ₹20,999 in paise
+        },
+        "currency_display": "$249/₹20,999",
         "period": "monthly",
         "description": "500 simulations/month, priority queue, batch domain analysis",
     },
@@ -78,6 +84,7 @@ PLANS = {
 class CreateSubscriptionRequest(BaseModel):
     orgId: str
     planId: str  # explorer, growth, scale
+    currency: str = "INR"  # Default to INR, can be USD or INR
     customerEmail: str
     customerName: Optional[str] = None
 
@@ -120,14 +127,22 @@ async def create_subscription_order(request: CreateSubscriptionRequest, auth: di
     if not plan:
         raise HTTPException(status_code=400, detail=f"Invalid plan: {request.planId}. Choose from: {list(PLANS.keys())}")
 
+    # Validate currency
+    currency = request.currency.upper()
+    if currency not in plan.get("amounts", {}):
+        currency = "INR"  # Default fallback
+    
+    amount = plan["amounts"].get(currency, 0)
+
     try:
         order = client.order.create({
-            "amount": plan["amount"],
-            "currency": plan["currency"],
-            "receipt": f"aum_{request.orgId}_{request.planId}",
+            "amount": amount,
+            "currency": currency,
+            "receipt": f"aum_{request.orgId}_{request.planId}_{currency}",
             "notes": {
                 "orgId": request.orgId,
                 "planId": request.planId,
+                "currency": currency,
                 "customerEmail": request.customerEmail,
             }
         })
@@ -137,8 +152,8 @@ async def create_subscription_order(request: CreateSubscriptionRequest, auth: di
             db.collection("organizations").document(request.orgId).collection("payments").add({
                 "orderId": order["id"],
                 "planId": request.planId,
-                "amount": plan["amount"],
-                "currency": plan["currency"],
+                "amount": amount,
+                "currency": currency,
                 "status": "created",
                 "customerEmail": request.customerEmail,
                 "createdAt": datetime.now(timezone.utc),
@@ -146,11 +161,12 @@ async def create_subscription_order(request: CreateSubscriptionRequest, auth: di
 
         return {
             "orderId": order["id"],
-            "amount": plan["amount"],
-            "currency": plan["currency"],
+            "amount": amount,
+            "currency": currency,
             "keyId": os.getenv("RAZORPAY_KEY_ID"),
             "planName": plan["name"],
             "description": plan["description"],
+            "displayPrice": plan.get("currency_display", f"{amount}{currency}"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Razorpay order creation failed: {e}")

@@ -122,9 +122,9 @@ def verify_claims(claims: list, ai_response: str, api_keys: dict) -> list:
     gemini_key = api_keys.get("gemini")
     
     sys_prompt = """Compare each claim against the AI response. For each claim, determine:
-- "supported": The AI response correctly states this fact
-- "contradicted": The AI response states something different
-- "not_mentioned": The AI response doesn't address this fact
+- "supported": The AI response correctly states this fact OR provides a semantically consistent value (e.g., "500+" supports "500").
+- "contradicted": The AI response directly denies this fact or gives an incompatible value.
+- "not_mentioned": The AI response doesn't address this fact.
 
 Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|not_mentioned", "detail": "brief explanation"}]}"""
 
@@ -372,14 +372,20 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             
             # Fidelity Status Mapping
             if accuracy > 85: status = "high_fidelity"
-            elif accuracy > 60: status = "minor_drift"
+            elif accuracy > 65: status = "minor_drift"
             else: status = "critical_drift"
             
-            has_drift = accuracy < 60 or any(c.get("verdict") == "contradicted" for c in claim_results)
+            # HALLUCINATION DETECTION FIX v1.2.18:
+            # Only mark as hallucination if:
+            # 1. There are actual contradictions in verified claims, OR
+            # 2. Claims are mostly unsupported (< 40% supported) AND semantic divergence is high
+            contradictions = sum(1 for c in claim_results if c.get("verdict") == "contradicted")
+            has_drift = (contradictions > 0) or (claim_accuracy < 0.4 and semantic_accuracy < 0.5)
         else:
             accuracy = round(max(0.0, 1.0 - divergence) * 100, 1)
             status = "high_fidelity" if accuracy > 75 else "critical_drift"
-            has_drift = accuracy < 55
+            # Without extracted claims, only mark hallucination if accuracy is critically low
+            has_drift = accuracy < 30
 
         return {
             "model": normalized_name,

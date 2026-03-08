@@ -177,129 +177,101 @@ export default function BrandHealthCertificate({
 
     const handleDownload = async () => {
         if (!certificateRef.current) {
-            console.error("PDF Error: certificateRef.current is null or undefined");
-            window.alert("Failed to generate PDF. Please try again or take a screenshot.");
+            console.error("❌ PDF Error: certificateRef.current is null");
+            window.alert("Certificate element not found. Please refresh and try again.");
             return;
         }
+
+        const element = certificateRef.current;
+        
+        // DEBUG: Check if element has actual content
+        const textContent = element.innerText || element.textContent || "";
+        if (!textContent || textContent.trim().length === 0) {
+            console.error("❌ PDF Error: Element has no text content");
+            window.alert("Certificate is empty. Please run a simulation first.");
+            return;
+        }
+        
+        console.log("📋 Certificate content detected. Starting PDF generation...");
+        console.log("Text preview:", textContent.substring(0, 100));
+
         setIsDownloading(true);
 
         try {
-            // Longer delay to ensure all content is rendered
-            await new Promise(r => setTimeout(r, 500));
-            const element = certificateRef.current;
+            // Ensure content is fully rendered
+            await new Promise(r => setTimeout(r, 800));
 
-            // Use fixed, reasonable dimensions to avoid massive files
-            const FIXED_WIDTH = 800;
-            const FIXED_MAX_HEIGHT = 3000; // Reasonable max height to prevent huge PDFs
+            // Get actual element dimensions
+            const rect = element.getBoundingClientRect();
+            let width = Math.max(rect.width, 800);
+            let height = Math.max(rect.height, 600);
 
-            // Get actual content height
-            let elementHeight = element.scrollHeight;
-            
-            // Clamp to reasonable bounds
-            if (!elementHeight || elementHeight === 0 || elementHeight > FIXED_MAX_HEIGHT) {
-                elementHeight = FIXED_MAX_HEIGHT;
-            }
+            // Enforce reasonable limits to prevent huge files
+            width = Math.min(width, 1200);
+            height = Math.min(height, 2500);
 
-            console.log(`PDF capture: width=${FIXED_WIDTH}px, height=${elementHeight}px (before scale)`);
+            console.log(`🎯 Capture dimensions: ${width.toFixed(0)}x${height.toFixed(0)}px`);
 
+            // Simple html2canvas call without complex style scrubbing
             const canvas = await html2canvas(element, {
                 backgroundColor: "#ffffff",
-                scale: 1, // Reduced from 2 to keep file size reasonable
+                scale: 1,
                 useCORS: true,
                 allowTaint: true,
-                foreignObjectRendering: true,
                 logging: false,
-                width: FIXED_WIDTH,
-                height: elementHeight,
-                windowWidth: FIXED_WIDTH,
-                windowHeight: elementHeight,
-                x: 0,
-                y: 0,
-                onclone: (clonedDoc) => {
-                    // NUCLEAR FIX v4: Scrub ANY mention of oklch/oklab from the clone's CSS
-                    const scrub = (str: string) => {
-                        if (!str) return str;
-                        return str.replace(/okl(ch|ab)\([^)]+\)/g, 'rgb(129, 140, 248)');
-                    };
-
-                    // 1. Scrub all <style> blocks
-                    const styleTags = clonedDoc.getElementsByTagName('style');
-                    for (let i = 0; i < styleTags.length; i++) {
-                        try {
-                            styleTags[i].innerHTML = scrub(styleTags[i].innerHTML);
-                        } catch (e) { /* ignore read-only styles */ }
-                    }
-
-                    // 2. Scrub all inline style attributes
-                    const allElements = clonedDoc.getElementsByTagName('*');
-                    for (let i = 0; i < allElements.length; i++) {
-                        const el = allElements[i] as HTMLElement;
-                        const styleAttr = el.getAttribute('style');
-                        if (styleAttr) {
-                            el.setAttribute('style', scrub(styleAttr));
-                        }
-
-                        // Handle icons/SVGs that might have oklch in fill/stroke attributes
-                        if (el.tagName === 'svg' || el.tagName === 'path' || el.tagName === 'circle') {
-                            ['fill', 'stroke'].forEach(attr => {
-                                const val = el.getAttribute(attr);
-                                if (val && (val.includes('oklch') || val.includes('oklab'))) {
-                                    el.setAttribute(attr, '#818cf8');
-                                }
-                            });
-                        }
-
-                        // Ensure images and SVGs have proper CORS attributes
-                        if (el.tagName === 'img' || el.tagName === 'image') {
-                            el.setAttribute('crossOrigin', 'anonymous');
-                        }
-                    }
-                }
+                windowWidth: width,
+                windowHeight: height,
+                width: width,
+                height: height
             });
 
-            if (!canvas || canvas.width === 0 || canvas.height === 0) {
-                throw new Error(`html2canvas returned invalid canvas: ${canvas?.width || 0}x${canvas?.height || 0}`);
+            if (!canvas) {
+                throw new Error("html2canvas returned null");
             }
 
-            console.log(`Canvas created: ${canvas.width}x${canvas.height}px (${(canvas.width * canvas.height / 1000000).toFixed(2)}MP)`);
+            const canvasPixels = canvas.width * canvas.height;
+            console.log(`✅ Canvas created: ${canvas.width}x${canvas.height}px (${(canvasPixels / 1000000).toFixed(2)}MP)`);
 
-            // Convert to image with lower quality to reduce file size
-            const imgData = canvas.toDataURL("image/png", 0.85);
+            // Try to detect if canvas is blank (all white/empty)
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx?.getImageData(0, 0, 1, 1);
+            const pixel = imageData?.data;
+            console.log(`Canvas sample pixel RGB: [${pixel?.[0]}, ${pixel?.[1]}, ${pixel?.[2]}]`);
 
-            if (!imgData || imgData === "data:image/png;base64,") {
-                throw new Error("Canvas produced empty image data");
+            // Convert to JPEG instead of PNG for smaller file size
+            const imgData = canvas.toDataURL("image/jpeg", 0.8);
+            console.log(`📦 Image data size: ${(imgData.length / 1024).toFixed(2)}KB`);
+
+            if (!imgData || imgData.length < 1000) {
+                throw new Error("Canvas produced suspiciously small image data");
             }
 
-            console.log(`Image data size: ${(imgData.length / 1024 / 1024).toFixed(2)}MB`);
-
-            // A4 dimensions in mm: 210 x 297
-            const pdfWidth = 210;
-            const pdfHeight = (elementHeight / FIXED_WIDTH) * pdfWidth;
-
-            console.log(`PDF final size: ${pdfWidth}mm x ${pdfHeight.toFixed(2)}mm`);
+            // Create PDF with proper sizing
+            const pdfWidth = 210; // A4 mm
+            const pdfHeight = (height / width) * pdfWidth;
 
             const pdf = new jsPDF({
                 orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
                 unit: 'mm',
                 format: 'a4',
-                hotfixes: ["px_scaling"],
-                compress: true // Enable PDF compression
+                compress: true
             });
 
-            // Add image to PDF - scale to fit page width
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            // Add image filling the page
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log("✅ PDF generated successfully (v1.2.16 - Optimized Size)");
+            console.log(`✅ PDF saved successfully: ${fileName} (v1.2.17)`);
+            setIsDownloading(false);
         } catch (err) {
-            console.error("❌ Failed to generate certificate PDF:", err);
+            console.error("❌ PDF generation failed:", err);
             if (err instanceof Error) {
-                console.error("Error details:", err.message, err.stack);
+                console.error("Details:", err.message);
+                console.error("Stack:", err.stack);
             }
-            window.alert("Failed to generate PDF. Please try again or take a screenshot.");
-        } finally {
+            window.alert(`PDF generation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
             setIsDownloading(false);
         }
     };
