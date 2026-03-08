@@ -183,7 +183,7 @@ export default function BrandHealthCertificate({
         }
 
         const element = certificateRef.current;
-        
+
         // DEBUG: Check if element has actual content
         const textContent = element.innerText || element.textContent || "";
         if (!textContent || textContent.trim().length === 0) {
@@ -191,15 +191,15 @@ export default function BrandHealthCertificate({
             window.alert("Certificate is empty. Please run a simulation first.");
             return;
         }
-        
+
         console.log("📋 Certificate content detected. Starting PDF generation...");
         console.log("Text preview:", textContent.substring(0, 100));
 
         setIsDownloading(true);
 
         try {
-            // Ensure content is fully rendered
-            await new Promise(r => setTimeout(r, 800));
+            // Ensure content is fully rendered and animations have settled
+            await new Promise(r => setTimeout(r, 1200));
 
             // Get actual element dimensions
             const rect = element.getBoundingClientRect();
@@ -212,17 +212,68 @@ export default function BrandHealthCertificate({
 
             console.log(`🎯 Capture dimensions: ${width.toFixed(0)}x${height.toFixed(0)}px`);
 
-            // Simple html2canvas call without complex style scrubbing
+            // Simple html2canvas call with theme-aware clone scrubbing
             const canvas = await html2canvas(element, {
                 backgroundColor: "#ffffff",
-                scale: 1,
+                scale: 2, // Higher scale for better quality
                 useCORS: true,
                 allowTaint: true,
                 logging: false,
                 windowWidth: width,
                 windowHeight: height,
                 width: width,
-                height: height
+                height: height,
+                onclone: (clonedDoc) => {
+                    const clonedEl = clonedDoc.querySelector(`[ref="certificateRef"]`) || clonedDoc.body;
+
+                    // 🌓 FORCE LIGHT MODE in the clone
+                    clonedDoc.documentElement.classList.remove('dark');
+                    clonedDoc.documentElement.style.colorScheme = 'light';
+                    clonedDoc.body.classList.remove('dark');
+                    clonedDoc.body.style.backgroundColor = '#ffffff';
+
+                    // 🛠️ SCRUB VISIBILITY, OPACITY & MOTION
+                    const allElements = clonedDoc.getElementsByTagName('*');
+                    for (let i = 0; i < allElements.length; i++) {
+                        const el = allElements[i] as HTMLElement;
+
+                        // Force opacity and visibility regardless of computed styles
+                        el.style.opacity = '1';
+                        el.style.visibility = 'visible';
+
+                        if (el.style.display === 'none' && !el.classList.contains('hidden-on-pdf')) {
+                            el.style.display = 'block';
+                        }
+
+                        // Stop any running animations
+                        el.style.animation = 'none';
+                        el.style.transition = 'none';
+
+                        // Force font-family for consistency
+                        el.style.fontFamily = "'Inter', -apple-system, sans-serif";
+                    }
+
+                    // 🎯 FIX SVGs (Especially motion.circle)
+                    const svgCircles = clonedDoc.querySelectorAll('circle');
+                    svgCircles.forEach(circle => {
+                        // If it's a motion circle with dasharray/offset, force the final value
+                        const dashArray = circle.getAttribute('stroke-dasharray');
+                        if (dashArray) {
+                            circle.setAttribute('stroke-dashoffset', '0');
+                        }
+                    });
+
+                    // 🎯 TARGET SPECIFIC TEXT (Ensure no white-on-white)
+                    const textElements = clonedDoc.querySelectorAll('p, span, h1, h2, h3, h4, div');
+                    textElements.forEach(el => {
+                        const node = el as HTMLElement;
+                        const style = clonedDoc.defaultView?.getComputedStyle(node);
+                        const color = style?.color;
+                        if (color === 'rgb(255, 255, 255)' || color === 'white' || color === '#ffffff') {
+                            node.style.color = '#0f172a'; // Force dark slate for white text
+                        }
+                    });
+                }
             });
 
             if (!canvas) {
@@ -294,7 +345,7 @@ export default function BrandHealthCertificate({
                 {/* Close button inside the drawer header */}
                 <div className="sticky top-0 z-[110] flex justify-between items-center px-8 py-4 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-white/5">
                     <div className="flex items-center gap-3">
-                        <Logo size={28} />
+                        <Logo size={28} isCapture={isDownloading} />
                         <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Brand Health Report</h2>
                     </div>
                     <button onClick={onClose} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors bg-slate-100 dark:bg-slate-800/80 p-2 rounded-full">
@@ -317,7 +368,7 @@ export default function BrandHealthCertificate({
                             {/* HEADER ROW */}
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-3">
-                                    <Logo size={36} />
+                                    <Logo size={36} isCapture={isDownloading} />
                                     <div>
                                         <p className="text-[9px] text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] font-bold">AUM Context Foundry</p>
                                         <p className="text-slate-900 dark:text-white font-semibold text-sm">Brand Health Certificate</p>
