@@ -1,9 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { jsPDF } from "jspdf";
-import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, TrendingUp, X, FileText } from "lucide-react";
+import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, X, FileText } from "lucide-react";
 import { Logo } from "./Logo";
 import { useOrganization } from "./OrganizationContext";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
@@ -69,6 +69,20 @@ function normalizeModelName(model: string): string {
         "claude-sonnet-4-5": "Claude 4.5 Sonnet",
     };
     return aliases[lowered] || raw;
+}
+
+function parseClaimRecallPercent(claimScore?: string): number | null {
+    if (!claimScore) return null;
+    const ratioMatch = claimScore.match(/(\d+)\s*\/\s*(\d+)/);
+    if (!ratioMatch) return null;
+    const supported = Number(ratioMatch[1]);
+    const total = Number(ratioMatch[2]);
+    if (!Number.isFinite(supported) || !Number.isFinite(total) || total <= 0) return null;
+    return Math.max(0, Math.min(100, Math.round((supported / total) * 100)));
+}
+
+function clampPct(value: number): number {
+    return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 export default function BrandHealthCertificate({
@@ -157,6 +171,33 @@ export default function BrandHealthCertificate({
 
     const scoreColor = (s: number) => s >= 85 ? "#10b981" : s >= 65 ? "#f59e0b" : s >= 40 ? "#fb923c" : "#ef4444";
     const gradeLabel = (s: number) => s >= 85 ? "HIGH FIDELITY" : s >= 65 ? "MINOR DRIFT" : s >= 40 ? "SEVERE DRIFT" : "CRITICAL DRIFT";
+    const hasLowRecallCriticalDrift = avgLcrs < 55 && hallucinationCount === 0;
+
+    const radarMetrics = useMemo(() => {
+        const byModel: Record<string, { consistency: number; factuality: number; sentiment: number; safety: number; authority: number }> = {
+            "GPT-4o": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
+            "Gemini 3 Flash": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
+            "Claude 4.5 Sonnet": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
+        };
+
+        results.forEach((result) => {
+            if (!byModel[result.model]) return;
+            const accuracy = clampPct(result.accuracy || 0);
+            const claimRecall = parseClaimRecallPercent(result.claimScore) ?? accuracy;
+            const safety = result.hasHallucination ? clampPct(claimRecall - 25) : clampPct(claimRecall + 10);
+            const authority = clampPct((accuracy * 0.6) + (claimRecall * 0.4));
+            const sentiment = clampPct((accuracy * 0.5) + (safety * 0.5));
+            byModel[result.model] = {
+                consistency: accuracy,
+                factuality: claimRecall,
+                sentiment,
+                safety,
+                authority,
+            };
+        });
+
+        return byModel;
+    }, [results]);
 
     const getExecutiveSummary = (score: number, orgName: string) => {
         const hCount = results.filter((r: ModelResult) => r.hasHallucination).length;
@@ -171,8 +212,12 @@ export default function BrandHealthCertificate({
         if (score >= 40) {
             return `ALERT: ${orgName} is experiencing Severe Data Drift. ${hCount > 0 ? `Hallucinations detected in ${hCount}/${totalMod} tested models.` : "Material facts are being omitted or misattributed."} Generative engines are failing to recall specific product differentiators. Immediate semantic alignment is recommended.`;
         }
-        return `WARNING: ${orgName} suffers from Critical Data Drift. Generative AI engines are currently hallucinating material facts${hCount > 0 ? ` across ${hCount}/${totalMod} models` : ""}, fabricating competitor displacements, or failing to retrieve your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
+        if (hCount > 0) {
+            return `WARNING: ${orgName} suffers from Critical Data Drift. Generative AI engines are hallucinating material facts across ${hCount}/${totalMod} models and misrepresenting your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
+        }
+        return `WARNING: ${orgName} suffers from Critical Data Drift. Even without explicit hallucinations, models are failing to recall enough verified claims from your context, causing under-representation of your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
     };
+    const GradeBadgeIcon = avgLcrs >= 85 ? CheckCircle2 : avgLcrs >= 55 ? Shield : AlertTriangle;
 
     const handleDownload = async () => {
         setIsDownloading(true);
@@ -285,6 +330,15 @@ export default function BrandHealthCertificate({
             writeBody("AI Visibility measures how strongly your brand appears across retrieval answers.");
             writeBody("Fidelity Rate shows the share of model outputs that remained grounded.");
             writeBody("Hallucinations count outputs with contradictions or unsupported claims.");
+            writeBody("Critical Drift can appear even when Hallucinations are 0/3: this means responses were mostly non-fabricated but still missed too many required claims, reducing claim recall and therefore LCRS.");
+
+            writeHeading("ASoV Radar Context (5-D)");
+            writeBody("The ASoV Radar is a contextual decomposition of the same run. It maps each model into Consistency, Factuality, Sentiment, Safety, and Authority using observed accuracy, claim recall, and hallucination flags.");
+            CANONICAL_MODEL_ORDER.forEach((model) => {
+                const metrics = radarMetrics[model];
+                writeBody(`${model}: Consistency ${metrics.consistency} | Factuality ${metrics.factuality} | Sentiment ${metrics.sentiment} | Safety ${metrics.safety} | Authority ${metrics.authority}`);
+            });
+            writeBody("Interpretation rule: farther-out dimensions indicate stronger narrative preservation. A narrow or inward radar footprint indicates retrieval weakness in that contextual dimension.");
 
             writeHeading("Inference Audit");
             writeBody(inferenceAudit || "No runtime model catalog available.");
@@ -462,8 +516,27 @@ export default function BrandHealthCertificate({
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">Fidelity Rate:</span> the share of models that stayed grounded instead of drifting.</p>
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">Hallucinations:</span> how many models invented, contradicted, or omitted material facts.</p>
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">LCRS:</span> a blended score using semantic alignment plus claim recall against your verified context.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Why Critical Drift can still happen at 0/3 hallucinations:</span> this usually means models stayed non-fabricated but missed too many required claims, so claim recall stayed low and LCRS remained in drift territory.</p>
                                 </div>
                             </div>
+
+                            {results.length > 0 && (
+                                <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">ASoV Radar Context (5-D)</p>
+                                    <p className="text-xs text-slate-500 mb-4">
+                                        These contextual dimensions are derived from this exact run&apos;s observed accuracy, claim recall, and hallucination flags.
+                                        They explain where narrative preservation is strong vs weak across model families.
+                                    </p>
+                                    <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                                        {CANONICAL_MODEL_ORDER.map((model) => (
+                                            <p key={model}>
+                                                <span className="font-semibold text-slate-800 dark:text-slate-200">{model}:</span>{" "}
+                                                Consistency {radarMetrics[model].consistency} · Factuality {radarMetrics[model].factuality} · Sentiment {radarMetrics[model].sentiment} · Safety {radarMetrics[model].safety} · Authority {radarMetrics[model].authority}
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {(seoResult || competitors.length > 0) && (
                                 <div className="mb-8 grid grid-cols-1 gap-4">
@@ -536,12 +609,17 @@ export default function BrandHealthCertificate({
                             {/* GRADE BADGE */}
                             <div className="flex items-center justify-center mb-8">
                                 <div className="flex items-center gap-3 px-6 py-3 rounded-full border bg-white dark:bg-transparent" style={{ borderColor: scoreColor(avgLcrs) + "40", backgroundColor: scoreColor(avgLcrs) + "0f" }}>
-                                    <TrendingUp className="w-4 h-4" style={{ color: scoreColor(avgLcrs) }} />
+                                    <GradeBadgeIcon className="w-4 h-4" style={{ color: scoreColor(avgLcrs) }} />
                                     <span className="text-sm font-bold uppercase tracking-widest" style={{ color: scoreColor(avgLcrs) }}>
                                         {gradeLabel(avgLcrs)}
                                     </span>
                                 </div>
                             </div>
+                            {hasLowRecallCriticalDrift && (
+                                <p className="text-center text-xs text-slate-500 dark:text-slate-400 -mt-5 mb-7">
+                                    Drift is driven by low claim recall, not fabricated facts. Improve retrieval specificity in your manifest/context.
+                                </p>
+                            )}
 
                             {/* METHODOLOGY FOOTER */}
                             <div className="p-5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 font-mono text-[9px] text-slate-500 dark:text-slate-400 leading-relaxed shadow-inner">
@@ -618,14 +696,21 @@ export default function BrandHealthCertificate({
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Score Bands</p>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Score Bands (LCRS)</p>
                                         <div className="space-y-2 text-xs">
-                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-emerald-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">&gt;80%</span><span className="text-slate-500">High Fidelity</span></div>
-                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-amber-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">55–80%</span><span className="text-slate-500">Minor Drift</span></div>
-                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-red-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">&lt;55%</span><span className="text-slate-500">Critical Drift</span></div>
+                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-emerald-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">&gt;85%</span><span className="text-slate-500">High Fidelity</span></div>
+                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-amber-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">66–85%</span><span className="text-slate-500">Minor Drift</span></div>
+                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-orange-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">40–65%</span><span className="text-slate-500">Severe Drift</span></div>
+                                            <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-red-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">&lt;40%</span><span className="text-slate-500">Critical Drift</span></div>
                                         </div>
-                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">Hallucinations</p>
-                                        <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">Flagged if LCRS &lt;60% <em>or</em> any claim is &quot;contradicted&quot;.</p>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">Hallucination Flag Rule</p>
+                                        <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                                            A model is flagged when verified contradictions are detected, or when claim recall is very low together with high semantic divergence. Low LCRS alone does not automatically mean hallucination.
+                                        </p>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">ASoV Radar (Contextual)</p>
+                                        <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                                            The radar expands/collapses based on this run&apos;s observed consistency, factual recall, safety, sentiment alignment, and authority retention across GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet.
+                                        </p>
                                     </div>
                                 </div>
                             </motion.div>

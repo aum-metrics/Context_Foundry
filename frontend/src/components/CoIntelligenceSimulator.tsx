@@ -227,7 +227,7 @@ export default function CoIntelligenceSimulator() {
                     <Beaker className="w-6 h-6 mr-3 text-amber-500" />
                     RAG Fidelity Monitoring
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">Monitor how accurately AI engines (SearchGPT, Perplexity, Gemini) represent your business. We provide mathematical rigor for your brand's AI retrieval step, scoring each response against your verified Ground Truth.</p>
+                <p className="text-sm text-slate-500 mt-1">Monitor how accurately AI engines (GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet) represent your business. We score each response against your verified Ground Truth with deterministic LCRS methodology.</p>
             </header>
 
             <div className="flex-1 w-full flex flex-col lg:flex-row gap-6">

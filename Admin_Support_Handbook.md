@@ -181,7 +181,7 @@ If a payment succeeded but the plan wasn't updated (e.g., webhook failure):
 1. Customer configures their IdP (Okta/Azure/Google) with redirect URI: `https://api.aumcontextfoundry.com/api/sso/callback`.
 2. Customer provides: Client ID, Client Secret, domain.
 3. Admin calls `POST /api/sso/configure` with org membership to store config (client secret is Fernet-encrypted in Firestore).
-4. Customer signs in via `GET /api/sso/initiate?org_id={orgId}`.
+4. Customer signs in via `GET /api/sso/login?intent={signed_intent_token}`.
 
 ### 5.3 Troubleshooting SSO
 - **"Invalid SSO provider"**: Check `provider` field is one of `okta`, `azure`, `google`.

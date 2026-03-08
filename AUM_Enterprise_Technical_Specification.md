@@ -237,7 +237,7 @@ sso_configs/
 ## 8. SEO Audit Pipeline
 
 Async job pattern:
-1. `GET /api/seo/audit?orgId=...` → returns `{ jobId }` immediately (Playwright runs in background).
+1. `POST /api/seo/audit` with JSON body (`{ orgId, url }`) → returns `{ jobId }` immediately (Playwright runs in background).
 2. Frontend polls `GET /api/seo/audit/status/{orgId}/{jobId}` until `status: "complete"`.
 3. Results include Core Web Vitals, meta tags, JSON-LD validation, LLM-readability score.
 
@@ -256,7 +256,7 @@ Supported providers: Okta, Azure AD, Google Workspace.
 
 - `POST /api/sso/configure` — org membership required, client secret encrypted with Fernet (32-byte key from `SSO_ENCRYPTION_KEY` env). Managed via `SSOSettings.tsx` UI.
 - `GET /api/sso/status/{orgId}` — org membership required.
-- `POST /api/sso/initiate` — auth required.
+- `GET /api/sso/login?intent=...` — public redirect endpoint, invoked with a signed short-lived SSO intent token.
 
 ---
 

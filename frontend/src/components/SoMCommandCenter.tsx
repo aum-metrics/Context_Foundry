@@ -66,6 +66,20 @@ function normalizeModelName(model: string): string {
     return aliases[lowered] || raw;
 }
 
+function parseClaimRecallPercent(claimScore?: string): number | null {
+    if (!claimScore) return null;
+    const ratioMatch = claimScore.match(/(\d+)\s*\/\s*(\d+)/);
+    if (!ratioMatch) return null;
+    const supported = Number(ratioMatch[1]);
+    const total = Number(ratioMatch[2]);
+    if (!Number.isFinite(supported) || !Number.isFinite(total) || total <= 0) return null;
+    return Math.max(0, Math.min(100, Math.round((supported / total) * 100)));
+}
+
+function clampPct(value: number): number {
+    return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (view: string) => void }) {
     const { organization, refreshKey, activeManifestVersion, activeContextName } = useOrganization();
     const { models } = useModelCatalog();
@@ -241,32 +255,49 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     }, [activeTab, modelTabs]);
 
     const radarData = useMemo(() => {
-        const fallback = [
-            { subject: 'Consistency', A: 90, B: 70, C: 65, fullMark: 100 },
-            { subject: 'Factuality', A: 95, B: 80, C: 75, fullMark: 100 },
-            { subject: 'Sentiment', A: 85, B: 75, C: 80, fullMark: 100 },
-            { subject: 'Safety', A: 98, B: 90, C: 85, fullMark: 100 },
-            { subject: 'Authority', A: 88, B: 70, C: 60, fullMark: 100 },
+        const empty = [
+            { subject: "Consistency", A: 0, B: 0, C: 0, fullMark: 100 },
+            { subject: "Factuality", A: 0, B: 0, C: 0, fullMark: 100 },
+            { subject: "Sentiment", A: 0, B: 0, C: 0, fullMark: 100 },
+            { subject: "Safety", A: 0, B: 0, C: 0, fullMark: 100 },
+            { subject: "Authority", A: 0, B: 0, C: 0, fullMark: 100 },
         ];
 
-        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) return fallback;
+        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) return empty;
 
         const latestEntry = filteredHistoryEntries[0];
-        if (latestEntry && latestEntry.results) {
-            const gpt = latestEntry.results.find((r: { model: string }) => r.model.includes("GPT"));
-            const claude = latestEntry.results.find((r: { model: string }) => r.model.includes("Claude"));
-            const gemini = latestEntry.results.find((r: { model: string }) => r.model.includes("Gemini"));
+        if (!latestEntry?.results?.length) return empty;
 
-            return [
-                { subject: 'Consistency', A: gpt?.accuracy || 80, B: claude?.accuracy || 70, C: gemini?.accuracy || 60, fullMark: 100 },
-                { subject: 'Factuality', A: (gpt?.accuracy || 0) + 2, B: (claude?.accuracy || 0) - 5, C: gemini?.accuracy || 0, fullMark: 100 },
-                { subject: 'Sentiment', A: 85, B: 88, C: 82, fullMark: 100 },
-                { subject: 'Safety', A: 98, B: 95, C: 90, fullMark: 100 },
-                { subject: 'Authority', A: gpt?.accuracy || 85, B: (claude?.accuracy || 85) - 10, C: (gemini?.accuracy || 85) - 15, fullMark: 100 },
-            ];
-        }
+        const byModel: Record<string, { consistency: number; factuality: number; sentiment: number; safety: number; authority: number }> = {
+            "GPT-4o": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
+            "Claude 4.5 Sonnet": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
+            "Gemini 3 Flash": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
+        };
 
-        return fallback;
+        latestEntry.results.forEach((result: { model: string; accuracy: number; hasHallucination: boolean; claimScore?: string }) => {
+            const model = normalizeModelName(result.model);
+            if (!byModel[model]) return;
+            const accuracy = clampPct(result.accuracy || 0);
+            const claimRecall = parseClaimRecallPercent(result.claimScore) ?? accuracy;
+            const safety = result.hasHallucination ? clampPct(claimRecall - 25) : clampPct(claimRecall + 10);
+            const authority = clampPct((accuracy * 0.6) + (claimRecall * 0.4));
+            const sentiment = clampPct((accuracy * 0.5) + (safety * 0.5));
+            byModel[model] = {
+                consistency: accuracy,
+                factuality: claimRecall,
+                sentiment,
+                safety,
+                authority,
+            };
+        });
+
+        return [
+            { subject: "Consistency", A: byModel["GPT-4o"].consistency, B: byModel["Claude 4.5 Sonnet"].consistency, C: byModel["Gemini 3 Flash"].consistency, fullMark: 100 },
+            { subject: "Factuality", A: byModel["GPT-4o"].factuality, B: byModel["Claude 4.5 Sonnet"].factuality, C: byModel["Gemini 3 Flash"].factuality, fullMark: 100 },
+            { subject: "Sentiment", A: byModel["GPT-4o"].sentiment, B: byModel["Claude 4.5 Sonnet"].sentiment, C: byModel["Gemini 3 Flash"].sentiment, fullMark: 100 },
+            { subject: "Safety", A: byModel["GPT-4o"].safety, B: byModel["Claude 4.5 Sonnet"].safety, C: byModel["Gemini 3 Flash"].safety, fullMark: 100 },
+            { subject: "Authority", A: byModel["GPT-4o"].authority, B: byModel["Claude 4.5 Sonnet"].authority, C: byModel["Gemini 3 Flash"].authority, fullMark: 100 },
+        ];
     }, [filteredHistoryEntries]);
 
     const visibleModelAverages = useMemo(() => {
@@ -534,7 +565,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     <Logo size={48} showText={false} />
                     <div>
                         <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">Platform Health Status</h1>
-                        <p className="text-slate-500 text-sm mt-1">Verified RAG Fidelity Across SearchGPT, Perplexity, and Gemini</p>
+                        <p className="text-slate-500 text-sm mt-1">Verified RAG Fidelity Across GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet</p>
                     </div>
                 </div>
                 <div className="mt-4 md:mt-0 flex items-center space-x-6">
@@ -665,7 +696,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         </div>
                         <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/80 dark:bg-slate-950/40 p-4">
                             <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-3">How to read the ASoV Radar</p>
-                            <p className="text-xs text-slate-500 mb-3">Farther out is better. Each spoke shows how strongly a model preserves one dimension of your verified brand context.</p>
+                            <p className="text-xs text-slate-500 mb-3">Farther out is better. Each spoke is derived from observed simulation accuracy, claim recall, and hallucination flags for your active context version.</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {radarExplainer.map((item) => (
                                     <div key={item.label} className="text-xs text-slate-500">

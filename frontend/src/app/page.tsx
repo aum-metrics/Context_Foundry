@@ -164,7 +164,7 @@ export default function LandingPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-medium text-slate-900 dark:text-white">Competitor Benchmarking</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly when and why Anthropic Claude or Perplexity recommend your competitors instead of you.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">See exactly when and why GPT-4o, Gemini 3 Flash, or Claude 4.5 Sonnet recommend your competitors instead of you.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">

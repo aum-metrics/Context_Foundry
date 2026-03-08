@@ -95,7 +95,7 @@ Instead, we use Python's `asyncio.gather()`:
 results = await asyncio.gather(
     _run_and_score("GPT-4o", ...),
     _run_and_score("Claude 4.5 Sonnet", ...),
-    _run_and_score("Gemini 2.5 Flash", ...)
+    _run_and_score("Gemini 3 Flash", ...)
 )
 ```
 This runs all three requests in parallel across different threads. The total time is simply the time of the slowest model (10 seconds). **Massive performance win.**

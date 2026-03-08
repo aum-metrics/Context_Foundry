@@ -84,7 +84,7 @@ All major credit/debit cards, UPI, and Net Banking via Razorpay.
 You'll see a "Limit Reached" message in the simulator. You can upgrade immediately to continue. Your data is never deleted.
 
 **Q: Can I get a refund?**
-Yes, within 7 days of purchase. Contact [your-support-email].
+Yes, within 7 days of purchase. Contact hello@aumcontextfoundry.com.
 
 ---
 
@@ -113,10 +113,10 @@ Yes. The public B2B API is at `/api/simulation/v1/run`. Internal dashboard APIs 
 Yes. Enterprise plans support Okta, Azure Active Directory, and Google Workspace SSO.
 
 **Q: Can we deploy AUM on-premise?**
-Yes, for enterprise agreements. The backend is fully containerized (Docker). Contact [your-enterprise-email].
+Yes, for enterprise agreements. The backend is fully containerized (Docker). Contact hello@aumcontextfoundry.com.
 
 **Q: Is there a white-label option?**
-Contact [your-enterprise-email] for OEM and white-label licensing.
+Contact hello@aumcontextfoundry.com for OEM and white-label licensing.
 
 ---
 

@@ -508,7 +508,7 @@ CI runs automatically on every push to `main` and on pull requests via `.github/
 | **Frontend Lint** | `npm ci` → `npx next lint` | ESLint errors in TypeScript/React code |
 | **Backend Syntax** | `py_compile` on every `.py` file | Python syntax error (missing import, bad indentation) |
 | **Backend Smoke** | `python test_main.py` | FastAPI app fails to import/initialize routers |
-| **Backend Tests** | `pip install -r requirements.txt` → `pytest` (10 tests) | Logic regression in simulation, ingestion, audit, competitor, or RAG |
+| **Backend Tests** | `pip install -r requirements.txt` → `pytest` (current suite: 62 tests) | Logic regression in simulation, ingestion, audit, competitor, or RAG |
 
 Build policy: `ignoreDuringBuilds: false` in `next.config.ts` means **lint errors also fail production builds** on Vercel.
 
@@ -529,7 +529,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 ### Centralized Model Versioning (`model_config.py`)
 - Single source of truth for all LLM/Embedding model endpoints.
 - Prevents version drift across LCRS engines, claim extractors, semantic chunking, and GEO scoring pipelines.
-- Supports **Claude 4.5 Sonnet**, **Gemini 2.5 Flash**, and **GPT-4o** arrays.
+- Supports **Claude 4.5 Sonnet**, **Gemini 3 Flash**, and **GPT-4o**.
 
 ### Zero-Burn Caching & Context Re-Embedding
 - **SHA-256 Cache Check**: Redundant simulation requests are suppressed at the database level, serving results in <100ms at $0.00 compute cost.
@@ -577,14 +577,14 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/workspaces/provision` | Firebase JWT | Auto-provision org + API key |
-| GET | `/api/workspaces/my-workspaces` | Firebase JWT | List user's workspaces |
+| GET | `/api/workspaces/list` | Firebase JWT | List user's workspaces |
 | GET | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | List members + pending invites |
 | POST | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | Create pending invitation |
 | POST | `/api/workspaces/{orgId}/accept-invite` | Firebase JWT | Accept invitation + join org |
 | POST | `/api/workspaces/{orgId}/invites/{id}/resend` | Firebase JWT + org-verify | Resend invitation email |
 | DELETE | `/api/workspaces/{orgId}/invites/{id}` | Firebase JWT + org-verify | Revoke invitation |
 | GET | `/api/workspaces/{orgId}/profile` | Firebase JWT + org-verify | Get org profile (redacted) |
-| GET | `/api/workspaces/{orgId}/manifest` | Public | Fetch tenant /llms.txt manifest |
+| GET | `/api/workspaces/{orgId}/manifest` | Public | Fetch tenant /llms.txt manifest (supports `?version=`) |
 | POST | `/api/workspaces/llms-rate-limit` | Internal | Global rate limiter (fail-closed) |
 
 ### Payments (Razorpay)
@@ -603,7 +603,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/sso/configure` | Firebase JWT + org-verify | Configure OAuth2 SSO |
-| GET | `/api/sso/initiate` | Public | Start SSO login redirect |
+| GET | `/api/sso/login` | Public | Start SSO login redirect using signed `intent` token |
 | GET | `/api/sso/callback` | Public | SSO OAuth2 callback handler |
 
 ### API Keys, Analytics & Support
@@ -611,12 +611,12 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/keys/generate` | Firebase JWT + org-verify | Generate B2B API key |
-| GET | `/api/keys/list/{orgId}` | Firebase JWT + org-verify | List API keys for the current user's organization |
-| POST | `/api/keys/revoke` | Firebase JWT + org-verify | Revoke API key |
-| POST | `/api/chatbot/query` | Firebase JWT | Ask RAG support chatbot |
+| GET | `/api/keys/list` | Firebase JWT | List API keys for the current user |
+| DELETE | `/api/keys/{key_id}` | Firebase JWT | Revoke API key |
+| POST | `/api/chatbot/ask` | Firebase JWT | Ask RAG support chatbot |
 | POST | `/api/seo/audit` | Firebase JWT | Start async SEO audit |
 | GET | `/api/competitor/displacement/{orgId}` | Firebase JWT + org-verify | Competitive analysis |
-| POST | `/api/batch/submit` | Firebase JWT + org-verify | Submit batch analysis job |
+| POST | `/api/batch/batch` | Firebase JWT + org-verify | Submit batch analysis job |
 | GET | `/api/batch/batch/status/{orgId}/{jobId}` | Firebase JWT + org-verify | Check batch job status |
 | GET | `/api/audit/logs/{orgId}` | Firebase JWT + org-verify | Fetch SOC2 audit logs |
 
@@ -628,7 +628,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | GET | `/api/health` | Public | Health check with Firestore connectivity |
 | GET | `/api/methods/` | Public | Transparent algorithmic breakdown of LCRS heuristics |
 | GET | `/llms.txt` | Public | Default marketing manifesto |
-| GET | `/llms.txt?orgId=xxx` | Public | Tenant-specific manifesto (503 on failure) |
+| GET | `/llms.txt?orgId=xxx&version=latest` | Public | Tenant-specific manifesto (503 on failure) |
 
 ---
 
@@ -664,7 +664,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 | `AgentManifest` | llms.txt manifest — editor/viewer for tenant manifest content |
 | `AuthWrapper` | Auth state provider — Firebase listener, mock auth in dev |
 | `OrganizationContext` | React Context — org state, subscription, workspace info |
-| `BrandHealthCertificate` | AI Brand Intelligence Report — Firestore persisted stats, LCRS methodology, PNG export |
+| `BrandHealthCertificate` | AI Brand Intelligence Report — Firestore persisted stats, LCRS methodology, PDF export |
 
 ---
 
@@ -798,7 +798,7 @@ Every security gate defaults to **deny**:
 ### Configuration Flow
 1. Admin configures SSO via `SSOSettings` component → `POST /api/sso/configure`.
 2. Backend stores OAuth2 config (client ID, Fernet-encrypted client secret, provider URL) in Firestore `sso_configs/{orgId}`.
-3. Login page detects email domain → redirects to `GET /api/sso/initiate?domain=company.com`.
+3. Login page resolves tenant/provider and redirects to `GET /api/sso/login?intent=<signed_token>`.
 4. Backend builds OAuth2 authorization URL → redirects user to identity provider.
 5. IdP authenticates → redirects to `GET /api/sso/callback` with authorization code.
 6. Backend exchanges code for tokens → creates/updates Firebase user → returns JWT.
@@ -873,7 +873,7 @@ AUM Context Foundry is designed for enterprise-grade deployment. Extensive docum
 For technical diligence and auditing purposes, please note the following residual behaviors:
 1. **Dependency-Driven Degraded Features**: The system relies on optional dependencies (`playwright` for SEO, `anthropic` for Claude 4.5 Sonnet). While the `development` environment will gracefully degrade and provide mock data if these are uninstalled, the `production` gate now strictly requires them. However, a malformed production container deployment lacking `requirements.txt` execution could result in degraded behavior (e.g., fallback logic or silent feature skips). This is a deployment diligence tracking item.
 2. **Minor Test Hygiene Warnings**: The backend pytest suite passes 100% of its assertions natively. However, depending on the local python environment (`pytest` vs `pytest-asyncio` plugin versions), minor third-party collection warnings (e.g. `DeprecationWarning`) might appear in test stdout. These do not affect pass/fail status but may be noted during extreme diligence reviews.
-3. **Rate Limiting Edge Behavior**: The `llms.txt` edge route rate limiting currently only blocks `429` responses from the backend, allowing other error codes to pass through the edge cache. 
+3. **Rate Limiting Availability Tradeoff**: The `llms.txt` edge route is configured fail-closed; any backend limiter/network error returns `503` to prevent bypass and abusive traffic.
 
 ---
 

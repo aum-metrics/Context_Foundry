@@ -166,7 +166,7 @@ Your manifesto updates automatically whenever you upload a new document.
    {
      "results": [
        { "model": "gpt-4o", "lcrsScore": 92.1, "grade": "high_fidelity" },
-       { "model": "claude-3-5-sonnet", "lcrsScore": 78.3, "grade": "minor_drift" },
+       { "model": "Claude 4.5 Sonnet", "lcrsScore": 78.3, "grade": "minor_drift" },
        { "model": "gemini-2-0-flash", "lcrsScore": 65.7, "grade": "minor_drift" }
      ]
    }

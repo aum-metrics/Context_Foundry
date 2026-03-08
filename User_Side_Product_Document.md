@@ -119,8 +119,8 @@ Your LCRS score will tell you exactly how the AI ecosystem sees your brand right
 ## Support
 
 - **Help Center**: In progress — check back soon.
-- **Email**: [your-support-email]
-- **Enterprise**: [your-enterprise-email]
+- **Email**: hello@aumcontextfoundry.com
+- **Enterprise**: hello@aumcontextfoundry.com
 
 ---
 
