@@ -283,18 +283,37 @@ export default function BrandHealthCertificate({
             const canvasPixels = canvas.width * canvas.height;
             console.log(`✅ Canvas created: ${canvas.width}x${canvas.height}px (${(canvasPixels / 1000000).toFixed(2)}MP)`);
 
-            // Try to detect if canvas is blank (all white/empty)
+            // 🔍 BLANK PAGE DETECTION (Nuclear Verification)
             const ctx = canvas.getContext('2d');
-            const imageData = ctx?.getImageData(0, 0, 1, 1);
-            const pixel = imageData?.data;
-            console.log(`Canvas sample pixel RGB: [${pixel?.[0]}, ${pixel?.[1]}, ${pixel?.[2]}]`);
+            if (ctx) {
+                const sampleSize = 20;
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                let isBlank = true;
+
+                // Sample pixels across the canvas
+                for (let i = 0; i < data.length; i += 4 * sampleSize) {
+                    // If any pixel is not pure white (#ffffff) or near-white, it's not blank
+                    if (data[i] < 250 || data[i + 1] < 250 || data[i + 2] < 250) {
+                        isBlank = false;
+                        break;
+                    }
+                }
+
+                if (isBlank) {
+                    console.error("❌ PDF Error: Canvas appears to be blank (pure white)");
+                    window.alert("Detected a blank capture. This usually happens if the theme (Dark Mode) conflicts with PDF generation. Please ensure you are running v1.2.20+ and try again.");
+                    setIsDownloading(false);
+                    return;
+                }
+            }
 
             // Convert to JPEG instead of PNG for smaller file size
-            const imgData = canvas.toDataURL("image/jpeg", 0.8);
+            const imgData = canvas.toDataURL("image/jpeg", 0.9);
             console.log(`📦 Image data size: ${(imgData.length / 1024).toFixed(2)}KB`);
 
-            if (!imgData || imgData.length < 1000) {
-                throw new Error("Canvas produced suspiciously small image data");
+            if (!imgData || imgData.length < 5000) {
+                throw new Error("Canvas produced suspiciously small image data (likely blank)");
             }
 
             // Create PDF with proper sizing
@@ -314,7 +333,7 @@ export default function BrandHealthCertificate({
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log(`✅ PDF saved successfully: ${fileName} (v1.2.17)`);
+            console.log(`✅ PDF saved successfully: ${fileName} (v1.2.20)`);
             setIsDownloading(false);
         } catch (err) {
             console.error("❌ PDF generation failed:", err);
