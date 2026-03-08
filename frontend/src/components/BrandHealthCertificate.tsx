@@ -188,23 +188,30 @@ export default function BrandHealthCertificate({
             await new Promise(r => setTimeout(r, 500));
             const element = certificateRef.current;
 
-            // Get element dimensions using getBoundingClientRect
-            const rect = element.getBoundingClientRect();
-            const elementHeight = Math.max(rect.height, element.scrollHeight, 1200);
-            const elementWidth = Math.max(rect.width, element.offsetWidth, 800);
+            // Use fixed, reasonable dimensions to avoid massive files
+            const FIXED_WIDTH = 800;
+            const FIXED_MAX_HEIGHT = 3000; // Reasonable max height to prevent huge PDFs
 
-            console.log(`PDF generation started. Capturing visible certificate. Dimensions: ${elementWidth}x${elementHeight}`);
+            // Get actual content height
+            let elementHeight = element.scrollHeight;
+            
+            // Clamp to reasonable bounds
+            if (!elementHeight || elementHeight === 0 || elementHeight > FIXED_MAX_HEIGHT) {
+                elementHeight = FIXED_MAX_HEIGHT;
+            }
+
+            console.log(`PDF capture: width=${FIXED_WIDTH}px, height=${elementHeight}px (before scale)`);
 
             const canvas = await html2canvas(element, {
                 backgroundColor: "#ffffff",
-                scale: 2,
+                scale: 1, // Reduced from 2 to keep file size reasonable
                 useCORS: true,
                 allowTaint: true,
                 foreignObjectRendering: true,
-                logging: true,
-                width: elementWidth,
+                logging: false,
+                width: FIXED_WIDTH,
                 height: elementHeight,
-                windowWidth: elementWidth,
+                windowWidth: FIXED_WIDTH,
                 windowHeight: elementHeight,
                 x: 0,
                 y: 0,
@@ -212,7 +219,6 @@ export default function BrandHealthCertificate({
                     // NUCLEAR FIX v4: Scrub ANY mention of oklch/oklab from the clone's CSS
                     const scrub = (str: string) => {
                         if (!str) return str;
-                        // Replace oklch/oklab with a safe fallback (Indigo-400ish RGB: 129, 140, 248)
                         return str.replace(/okl(ch|ab)\([^)]+\)/g, 'rgb(129, 140, 248)');
                     };
 
@@ -255,36 +261,40 @@ export default function BrandHealthCertificate({
                 throw new Error(`html2canvas returned invalid canvas: ${canvas?.width || 0}x${canvas?.height || 0}`);
             }
 
-            console.log(`Canvas created successfully. Size: ${canvas.width}x${canvas.height}`);
+            console.log(`Canvas created: ${canvas.width}x${canvas.height}px (${(canvas.width * canvas.height / 1000000).toFixed(2)}MP)`);
 
-            const imgData = canvas.toDataURL("image/png", 1.0);
+            // Convert to image with lower quality to reduce file size
+            const imgData = canvas.toDataURL("image/png", 0.85);
 
             if (!imgData || imgData === "data:image/png;base64,") {
                 throw new Error("Canvas produced empty image data");
             }
 
-            // PDF formatting - use canvas dimensions as base
-            const pdfWidth = 210; // A4 width in mm
-            const pdfHeight = (canvas.height / canvas.width) * pdfWidth;
+            console.log(`Image data size: ${(imgData.length / 1024 / 1024).toFixed(2)}MB`);
 
-            console.log(`PDF dimensions: ${pdfWidth}mm x ${pdfHeight}mm`);
+            // A4 dimensions in mm: 210 x 297
+            const pdfWidth = 210;
+            const pdfHeight = (elementHeight / FIXED_WIDTH) * pdfWidth;
+
+            console.log(`PDF final size: ${pdfWidth}mm x ${pdfHeight.toFixed(2)}mm`);
 
             const pdf = new jsPDF({
                 orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
                 unit: 'mm',
-                format: [pdfWidth, pdfHeight],
-                hotfixes: ["px_scaling"]
+                format: 'a4',
+                hotfixes: ["px_scaling"],
+                compress: true // Enable PDF compression
             });
 
-            // Add image to cover full page
+            // Add image to PDF - scale to fit page width
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log("PDF generated successfully using Live Certificate Capture (v1.2.15)");
+            console.log("✅ PDF generated successfully (v1.2.16 - Optimized Size)");
         } catch (err) {
-            console.error("Failed to generate certificate PDF:", err);
+            console.error("❌ Failed to generate certificate PDF:", err);
             if (err instanceof Error) {
                 console.error("Error details:", err.message, err.stack);
             }
