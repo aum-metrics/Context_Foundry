@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { jsPDF } from "jspdf";
-import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, X, FileText } from "lucide-react";
+import { Shield, Download, Globe, Cpu, CheckCircle2, XCircle, AlertTriangle, BookOpen, X, FileText, Lock } from "lucide-react";
 import { Logo } from "./Logo";
 import { useOrganization } from "./OrganizationContext";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
@@ -39,6 +39,8 @@ interface BrandHealthCertificateProps {
     };
     competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[] }[];
     activeContextName?: string;
+    allowPdfDownload?: boolean;
+    onUpgradeRequired?: () => void;
 }
 
 const CANONICAL_MODEL_ORDER = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
@@ -95,6 +97,8 @@ export default function BrandHealthCertificate({
     seoResult,
     competitors = [],
     activeContextName,
+    allowPdfDownload = true,
+    onUpgradeRequired,
 }: BrandHealthCertificateProps) {
     const organizationName = propOrgName;
     const { organization, refreshKey, activeManifestVersion } = useOrganization();
@@ -653,14 +657,24 @@ export default function BrandHealthCertificate({
 
                     {/* ACTION BUTTONS */}
                     <div className="flex gap-4 w-full">
-                        <button
-                            onClick={handleDownload}
-                            disabled={isDownloading}
-                            className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-indigo-500/25"
-                        >
-                            <Download className="w-4 h-4" />
-                            {isDownloading ? "Generating..." : "Download Report (PDF)"}
-                        </button>
+                        {allowPdfDownload ? (
+                            <button
+                                onClick={handleDownload}
+                                disabled={isDownloading}
+                                className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-indigo-500/25"
+                            >
+                                <Download className="w-4 h-4" />
+                                {isDownloading ? "Generating..." : "Download Report (PDF)"}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={onUpgradeRequired}
+                                className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-indigo-500/25"
+                            >
+                                <Lock className="w-4 h-4" />
+                                Unlock PDF Reports
+                            </button>
+                        )}
                         <button
                             onClick={() => setShowMethodology(!showMethodology)}
                             className="flex items-center justify-center flex-1 gap-2 py-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-2xl font-semibold border-slate-200 border dark:border-white/10 transition-all shadow-sm dark:shadow-none"

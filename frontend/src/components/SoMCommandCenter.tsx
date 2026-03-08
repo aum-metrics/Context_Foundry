@@ -599,11 +599,18 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                             {avgScore > 0 && <span className="text-lg text-slate-500">%</span>}
                         </div>
                         <button
-                            onClick={() => setIsCertificateOpen(true)}
+                            onClick={() => {
+                                if (organization?.subscriptionTier === "explorer") {
+                                    setUpgradeFeatureName("Brand Health PDF Report");
+                                    setIsUpgradeModalOpen(true);
+                                    return;
+                                }
+                                setIsCertificateOpen(true);
+                            }}
                             className="mt-2 text-[10px] uppercase tracking-[0.2em] font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center group"
                         >
-                            <Award className="w-3 h-3 mr-1.5 group-hover:scale-125 transition-transform" />
-                            View Health Certificate
+                            {organization?.subscriptionTier === "explorer" ? <Lock className="w-3 h-3 mr-1.5 group-hover:scale-125 transition-transform" /> : <Award className="w-3 h-3 mr-1.5 group-hover:scale-125 transition-transform" />}
+                            {organization?.subscriptionTier === "explorer" ? "Unlock Health Certificate" : "View Health Certificate"}
                         </button>
                     </div>
                 </div>
@@ -915,6 +922,11 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         seoResult={seoResult || undefined}
                         competitors={competitors}
                         activeContextName={activeContextName || organization?.name || "Current Context"}
+                        allowPdfDownload={organization?.subscriptionTier !== "explorer"}
+                        onUpgradeRequired={() => {
+                            setUpgradeFeatureName("Brand Health PDF Report");
+                            setIsUpgradeModalOpen(true);
+                        }}
                     />
                 )}
             </AnimatePresence>

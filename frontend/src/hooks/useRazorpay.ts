@@ -37,6 +37,9 @@ export interface RazorpayOptions {
     theme?: {
         color?: string;
     };
+    modal?: {
+        ondismiss?: () => void;
+    };
 }
 
 // Extend window interface
@@ -155,6 +158,13 @@ export function useRazorpay() {
                     },
                     theme: {
                         color: "#4f46e5", // Indigo 600
+                    },
+                    modal: {
+                        ondismiss: () => {
+                            if (onFailure) {
+                                onFailure(new Error("Payment cancelled by user."));
+                            }
+                        },
                     },
                 };
 

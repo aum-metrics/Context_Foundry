@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield } from "lucide-react";
+import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield, Lock } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
 import SemanticIngestion from "@/components/SemanticIngestion";
 import AgentManifest from "@/components/AgentManifest";
@@ -11,6 +11,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useOrganization } from "@/components/OrganizationContext";
 import TeamSettings from "@/components/TeamSettings";
 import SSOSettings from "@/components/SSOSettings";
+import { UpgradeModal } from "@/components/UpgradeModal";
 import { auth } from "@/lib/firebase";
 import { useSearchParams } from "next/navigation";
 import { useRazorpay } from "@/hooks/useRazorpay";
@@ -22,6 +23,8 @@ interface AdminOrgOption {
 
 export default function AUMContextFoundry() {
   const [activeView, setActiveView] = useState("som");
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState("Premium Features");
   const { theme, toggleTheme } = useTheme();
   const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId, analysisContexts, activeManifestVersion, activeContextName, setActiveManifestVersion } = useOrganization();
   const [adminOrgs, setAdminOrgs] = useState<AdminOrgOption[]>([]);
@@ -51,6 +54,12 @@ export default function AUMContextFoundry() {
 
     loadAdminOrgs();
   }, [isPlatformAdmin]);
+
+  useEffect(() => {
+    if (organization?.subscriptionTier === "explorer" && activeView === "som") {
+      setActiveView("simulator");
+    }
+  }, [organization?.subscriptionTier, activeView]);
 
   useEffect(() => {
     if (autoCheckoutTriggeredRef.current) return;
@@ -138,13 +147,20 @@ export default function AUMContextFoundry() {
 
           <nav className="flex flex-col space-y-1.5 px-3">
             <button
-              onClick={() => setActiveView("som")}
+              onClick={() => {
+                if (organization?.subscriptionTier === "explorer") {
+                  setUpgradeFeatureName("SoM Dashboard + Historical Trends");
+                  setIsUpgradeModalOpen(true);
+                  return;
+                }
+                setActiveView("som");
+              }}
               className={`flex items-center text-sm px-3 py-2.5 rounded-xl transition-all ${activeView === "som"
                 ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium border border-indigo-500/20"
                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
                 }`}
             >
-              <LayoutDashboard className="w-4 h-4 mr-3" /> Dashboard (SoM)
+              {organization?.subscriptionTier === "explorer" ? <Lock className="w-4 h-4 mr-3" /> : <LayoutDashboard className="w-4 h-4 mr-3" />} Dashboard (SoM)
             </button>
             <button
               onClick={() => setActiveView("ingestion")}
@@ -223,12 +239,17 @@ export default function AUMContextFoundry() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none -translate-y-20"></div>
-        {activeView === "som" && <SoMCommandCenter setActiveView={setActiveView} />}
+        {activeView === "som" && organization?.subscriptionTier !== "explorer" && <SoMCommandCenter setActiveView={setActiveView} />}
         {activeView === "ingestion" && <SemanticIngestion />}
         {activeView === "manifest" && <AgentManifest />}
         {activeView === "simulator" && <CoIntelligenceSimulator />}
         {activeView === "team" && <TeamSettings />}
         {activeView === "sso" && <SSOSettings />}
+        <UpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          featureHighlight={upgradeFeatureName}
+        />
       </main>
 
     </div>

@@ -117,7 +117,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                     <CheckCircle className="w-5 h-5 text-purple-500 mr-3 mt-0.5" />
                                     <div>
                                         <p className="font-medium text-slate-900 dark:text-white">10x Simulation Capacity</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Bump your usage limit from 50 to 500 simulations every billing cycle.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Bump your usage limit from 1 free simulation to 100 simulations every billing cycle.</p>
                                     </div>
                                 </div>
                             </div>
@@ -127,7 +127,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                 <div>
                                     <p className="text-sm text-slate-500 font-medium mb-1">Growth Plan</p>
                                     <div className="flex items-baseline space-x-1">
-                                        <span className="text-2xl font-bold text-slate-900 dark:text-white">₹6,600</span>
+                                        <span className="text-2xl font-bold text-slate-900 dark:text-white">₹6,499</span>
                                         <span className="text-slate-500 text-sm">/mo</span>
                                     </div>
                                 </div>

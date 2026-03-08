@@ -199,6 +199,12 @@ export default function CoIntelligenceSimulator() {
 
     const handleExportCSV = async () => {
         if (!organization) return;
+        if (organization.subscriptionTier === "explorer") {
+            setUpgradeFeatureName("Audit CSV Export");
+            setUpgradeLimitReason("EXPLORER_LIMIT_REACHED");
+            setIsUpgradeModalOpen(true);
+            return;
+        }
         try {
             const token = await auth.currentUser?.getIdToken();
             const response = await fetch(`/api/simulation/export/${organization.id}`, {
@@ -303,10 +309,14 @@ export default function CoIntelligenceSimulator() {
                         </div>
                         <button
                             onClick={handleExportCSV}
-                            className="flex items-center space-x-2 text-xs font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                            className={`flex items-center space-x-2 text-xs font-medium border px-3 py-1.5 rounded-lg transition-colors ${
+                                organization?.subscriptionTier === "explorer"
+                                    ? "text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                                    : "text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            }`}
                         >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Export Audit CSV</span>
+                            {organization?.subscriptionTier === "explorer" ? <Lock className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+                            <span>{organization?.subscriptionTier === "explorer" ? "Unlock CSV Export" : "Export Audit CSV"}</span>
                         </button>
                     </div>
 

@@ -59,6 +59,19 @@ def _demo_mode_enabled() -> bool:
     from core.config import settings
     return settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False)
 
+
+def _get_org_plan(org_id: str) -> str:
+    if not db:
+        return "explorer"
+    try:
+        org_doc = db.collection("organizations").document(org_id).get()
+        if not org_doc.exists:
+            return "explorer"
+        data = org_doc.to_dict() or {}
+        return str(data.get("subscription", {}).get("planId", "explorer")).lower()
+    except Exception:
+        return "explorer"
+
 # ============================================================================
 # MATH ENGINE
 # ============================================================================
@@ -983,6 +996,16 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
     """
     if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], orgId):
         raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+
+    org_plan = _get_org_plan(orgId)
+    if org_plan not in ["growth", "scale", "enterprise"]:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "FEATURE_REQUIRES_GROWTH",
+                "message": "CSV audit export is available on Growth, Scale, and Enterprise plans."
+            }
+        )
         
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -1041,6 +1064,8 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
     if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], org_id):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
+    org_plan = _get_org_plan(org_id)
+
     # 🛡️ DEMO MOCKING (P0): Fixed historical data for Sight Spectrum
     if org_id == "demo_org_id" and _demo_mode_enabled():
         history = [
@@ -1078,6 +1103,8 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
         # Convert timestamps to ISO format for JSON serialization
         for entry in history:
             entry["timestamp"] = entry["timestamp"].isoformat()
+        if org_plan == "explorer":
+            return {"history": history[:1]}
         return {"history": history}
 
     # Standard Firestore retrieval
@@ -1085,10 +1112,11 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
         return {"history": []}
 
     try:
+        history_limit = 1 if org_plan == "explorer" else 50
         history_stream = db.collection("organizations").document(org_id) \
                            .collection("scoringHistory") \
                            .order_by("timestamp", direction="DESCENDING") \
-                           .limit(50) \
+                           .limit(history_limit) \
                            .stream()
         
         history = []
