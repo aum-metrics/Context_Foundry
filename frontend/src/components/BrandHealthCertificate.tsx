@@ -87,7 +87,6 @@ export default function BrandHealthCertificate({
     const { organization, refreshKey, activeManifestVersion } = useOrganization();
     const { models } = useModelCatalog();
     const certificateRef = useRef<HTMLDivElement>(null);
-    const captureRef = useRef<HTMLDivElement>(null);
     const [issuedDate, setIssuedDate] = useState("");
     const [isoTimestamp, setIsoTimestamp] = useState("");
     const [isDownloading, setIsDownloading] = useState(false);
@@ -177,49 +176,40 @@ export default function BrandHealthCertificate({
     };
 
     const handleDownload = async () => {
-        if (!captureRef.current) {
-            console.error("PDF Error: captureRef.current is null or undefined");
+        if (!certificateRef.current) {
+            console.error("PDF Error: certificateRef.current is null or undefined");
             window.alert("Failed to generate PDF. Please try again or take a screenshot.");
             return;
         }
         setIsDownloading(true);
 
         try {
-            // 1. Longer delay to ensure all content is rendered
-            await new Promise(r => setTimeout(r, 300));
-            const element = captureRef.current;
+            // Longer delay to ensure all content is rendered
+            await new Promise(r => setTimeout(r, 500));
+            const element = certificateRef.current;
 
-            // Calculate proper dimensions - use getBoundingClientRect as fallback
-            let elementHeight = element.scrollHeight;
-            if (!elementHeight || elementHeight === 0) {
-                const rect = element.getBoundingClientRect();
-                elementHeight = rect.height;
-                console.warn("ScrollHeight was 0, using getBoundingClientRect:", elementHeight);
-            }
-            
-            // Ensure we have a valid height, fallback to 2000px if all else fails
-            if (!elementHeight || elementHeight === 0) {
-                elementHeight = 2000;
-                console.warn("Could not calculate element height, using fallback: 2000px");
-            }
+            // Get element dimensions using getBoundingClientRect
+            const rect = element.getBoundingClientRect();
+            const elementHeight = Math.max(rect.height, element.scrollHeight, 1200);
+            const elementWidth = Math.max(rect.width, element.offsetWidth, 800);
 
-            console.log(`PDF generation started. Element dimensions: width=800, height=${elementHeight}`);
+            console.log(`PDF generation started. Capturing visible certificate. Dimensions: ${elementWidth}x${elementHeight}`);
 
             const canvas = await html2canvas(element, {
-                backgroundColor: "#0f172a",
+                backgroundColor: "#ffffff",
                 scale: 2,
                 useCORS: true,
-                logging: false,
-                width: 800,
+                allowTaint: true,
+                foreignObjectRendering: true,
+                logging: true,
+                width: elementWidth,
                 height: elementHeight,
-                windowWidth: 800,
+                windowWidth: elementWidth,
                 windowHeight: elementHeight,
                 x: 0,
                 y: 0,
-                allowTaint: true,
-                foreignObjectRendering: true,
                 onclone: (clonedDoc) => {
-                    // NUCLEAR FIX v3: Scrub ANY mention of oklch/oklab from the clone's CSS
+                    // NUCLEAR FIX v4: Scrub ANY mention of oklch/oklab from the clone's CSS
                     const scrub = (str: string) => {
                         if (!str) return str;
                         // Replace oklch/oklab with a safe fallback (Indigo-400ish RGB: 129, 140, 248)
@@ -253,7 +243,7 @@ export default function BrandHealthCertificate({
                             });
                         }
 
-                        // Ensure images and SVGs have proper data-CORS attributes
+                        // Ensure images and SVGs have proper CORS attributes
                         if (el.tagName === 'img' || el.tagName === 'image') {
                             el.setAttribute('crossOrigin', 'anonymous');
                         }
@@ -261,33 +251,38 @@ export default function BrandHealthCertificate({
                 }
             });
 
-            if (!canvas) {
-                throw new Error("html2canvas returned null or undefined canvas");
+            if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                throw new Error(`html2canvas returned invalid canvas: ${canvas?.width || 0}x${canvas?.height || 0}`);
             }
 
             console.log(`Canvas created successfully. Size: ${canvas.width}x${canvas.height}`);
 
             const imgData = canvas.toDataURL("image/png", 1.0);
 
-            // PDF formatting (A4-ish proportions)
-            const pdfWidth = 800;
-            const pdfHeight = Math.max((canvas.height * pdfWidth) / canvas.width, 1000);
+            if (!imgData || imgData === "data:image/png;base64,") {
+                throw new Error("Canvas produced empty image data");
+            }
 
-            console.log(`PDF dimensions: ${pdfWidth}x${pdfHeight}`);
+            // PDF formatting - use canvas dimensions as base
+            const pdfWidth = 210; // A4 width in mm
+            const pdfHeight = (canvas.height / canvas.width) * pdfWidth;
+
+            console.log(`PDF dimensions: ${pdfWidth}mm x ${pdfHeight}mm`);
 
             const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'px',
+                orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
+                unit: 'mm',
                 format: [pdfWidth, pdfHeight],
                 hotfixes: ["px_scaling"]
             });
 
+            // Add image to cover full page
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
             pdf.save(fileName);
 
-            console.log("PDF generated successfully using Clean Capture (v1.2.14)");
+            console.log("PDF generated successfully using Live Certificate Capture (v1.2.15)");
         } catch (err) {
             console.error("Failed to generate certificate PDF:", err);
             if (err instanceof Error) {
@@ -634,136 +629,8 @@ export default function BrandHealthCertificate({
                 </div>
             </motion.div>
 
-            {/* 📸 OFF-SCREEN CAPTURE CONTAINER (High Reliability PDF Generation) */}
-            <div 
-                className="fixed top-0 left-[-9999px] z-[-1] pointer-events-none"
-                style={{ visibility: "hidden", height: "auto", width: "1px", overflow: "visible" }}
-            >
-                <div
-                    ref={captureRef}
-                    className="w-[800px] flex flex-col gap-8"
-                    style={{
-                        fontFamily: "'Inter', sans-serif",
-                        backgroundColor: "#0f172a",
-                        padding: "48px",
-                        color: "#ffffff",
-                        minHeight: "auto",
-                        visibility: "visible",
-                        opacity: 1
-                    }}
-                >
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Logo size={48} theme="dark" />
-                            <div>
-                                <p style={{ fontSize: "12px", color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.3em", fontWeight: "bold" }}>AUM Context Foundry</p>
-                                <p style={{ color: "#ffffff", fontWeight: "600", fontSize: "20px", margin: 0 }}>Brand Health Certificate</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p style={{ fontSize: "12px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Issued</p>
-                            <p style={{ color: "#cbd5e1", fontSize: "14px", fontWeight: "500", margin: 0 }}>{issuedDate}</p>
-                        </div>
-                    </div>
 
-                    {/* Org Info */}
-                    <div style={{
-                        padding: "32px",
-                        borderRadius: "24px",
-                        backgroundColor: "rgba(255, 255, 255, 0.05)",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "between"
-                    }}>
-                        <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: "12px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Organization</p>
-                            <p style={{ fontSize: "30px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{organizationName}</p>
-                            {activeContextName && <p style={{ fontSize: "14px", color: "#818cf8", marginTop: "8px" }}>Context: {activeContextName}</p>}
-                        </div>
-                        <div style={{
-                            textAlign: "center",
-                            padding: "24px",
-                            backgroundColor: "rgba(255, 255, 255, 0.05)",
-                            borderRadius: "9999px",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                            minWidth: "120px"
-                        }}>
-                            <p style={{ fontSize: "36px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{avgLcrs}%</p>
-                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Avg LCRS</p>
-                        </div>
-                    </div>
-
-                    {/* Scores */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <p style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.1em", color: "#818cf8", margin: 0 }}>Multi-Model LCRS Breakdown</p>
-                        {results.map((r, i) => (
-                            <div key={i} style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "24px",
-                                padding: "20px",
-                                borderRadius: "16px",
-                                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)"
-                            }}>
-                                <div style={{ width: "160px", flexShrink: 0, fontWeight: "bold", fontSize: "14px", color: "#ffffff" }}>{r.model}</div>
-                                <div style={{ flex: 1, height: "12px", backgroundColor: "rgba(255, 255, 255, 0.1)", borderRadius: "9999px", overflow: "hidden" }}>
-                                    <div style={{ height: "100%", borderRadius: "9999px", width: `${r.accuracy}%`, backgroundColor: scoreColor(r.accuracy) }} />
-                                </div>
-                                <div style={{ width: "64px", textAlign: "right", fontWeight: "bold", color: scoreColor(r.accuracy) }}>{r.accuracy}%</div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Summary */}
-                    <div style={{
-                        padding: "24px",
-                        borderRadius: "16px",
-                        backgroundColor: "rgba(30, 41, 59, 0.5)",
-                        border: "1px solid rgba(255, 255, 255, 0.05)"
-                    }}>
-                        <p style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "12px" }}>Executive Summary</p>
-                        <p style={{ fontSize: "16px", color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>{getExecutiveSummary(avgLcrs, organizationName)}</p>
-                    </div>
-
-                    {/* Stats */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px" }}>
-                        <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", textAlign: "center" }}>
-                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>AI Visibility</p>
-                            <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{asovScore}%</p>
-                        </div>
-                        <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", textAlign: "center" }}>
-                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Fidelity Rate</p>
-                            <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{fidelityPct}%</p>
-                        </div>
-                        <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", textAlign: "center" }}>
-                            <p style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Hallucinations</p>
-                            <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>{hallucinationCount}/{results.length || "—"}</p>
-                        </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{
-                        padding: "24px",
-                        borderRadius: "16px",
-                        backgroundColor: "#1e293b",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        fontSize: "10px",
-                        color: "#64748b",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.2em",
-                        fontFamily: "monospace"
-                    }}>
-                        <span>AUM Context Foundry • Precision Monitoring v1.2.12</span>
-                        <span>{isoTimestamp}</span>
-                    </div>
-                </div>
-            </div>
+            {/* OFF-SCREEN CAPTURE CONTAINER - NO LONGER USED (Switched to direct certificate capture v1.2.15) */}
         </motion.div>
     );
 }
