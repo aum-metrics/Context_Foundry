@@ -224,53 +224,69 @@ export default function BrandHealthCertificate({
                 width: width,
                 height: height,
                 onclone: (clonedDoc) => {
-                    const clonedEl = clonedDoc.querySelector(`[ref="certificateRef"]`) || clonedDoc.body;
-
-                    // 🌓 FORCE LIGHT MODE in the clone
+                    // 🌓 FORCE LIGHT MODE
                     clonedDoc.documentElement.classList.remove('dark');
                     clonedDoc.documentElement.style.colorScheme = 'light';
                     clonedDoc.body.classList.remove('dark');
                     clonedDoc.body.style.backgroundColor = '#ffffff';
 
-                    // 🛠️ SCRUB VISIBILITY, OPACITY & MOTION
+                    // 🛠️ NUCLEAR SCRUBBING (v1.2.21)
+                    // html2canvas fails on oklch() / oklab(). We must replace these globally.
+                    const oklchRegex = /oklch\([^)]+\)/g;
+                    const oklabRegex = /oklab\([^)]+\)/g;
+
                     const allElements = clonedDoc.getElementsByTagName('*');
                     for (let i = 0; i < allElements.length; i++) {
                         const el = allElements[i] as HTMLElement;
 
-                        // Force opacity and visibility regardless of computed styles
+                        // 1. Force Visibility
                         el.style.opacity = '1';
                         el.style.visibility = 'visible';
-
                         if (el.style.display === 'none' && !el.classList.contains('hidden-on-pdf')) {
                             el.style.display = 'block';
                         }
 
-                        // Stop any running animations
                         el.style.animation = 'none';
                         el.style.transition = 'none';
-
-                        // Force font-family for consistency
                         el.style.fontFamily = "'Inter', -apple-system, sans-serif";
+
+                        // 2. Scrub oklch/oklab from style attributes (inline styles)
+                        const styleAttr = el.getAttribute('style');
+                        if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
+                            const scrubbed = styleAttr
+                                .replace(oklchRegex, 'rgb(79, 70, 229)') // Fallback to indigo-600
+                                .replace(oklabRegex, 'rgb(79, 70, 229)');
+                            el.setAttribute('style', scrubbed);
+                        }
+
+                        // 3. Force dark text for readability on white bg if it was white
+                        const style = clonedDoc.defaultView?.getComputedStyle(el);
+                        if (style?.color === 'rgb(255, 255, 255)' || style?.color === 'white' || style?.color === '#ffffff') {
+                            el.style.color = '#0f172a';
+                        }
+
+                        // 4. Background color scrub
+                        if (style?.backgroundColor && (style.backgroundColor.includes('oklch') || style.backgroundColor.includes('oklab'))) {
+                            el.style.backgroundColor = '#ffffff';
+                        }
+
+                        // 5. Border color scrub
+                        if (style?.borderColor && (style.borderColor.includes('oklch') || style.borderColor.includes('oklab'))) {
+                            el.style.borderColor = '#e2e8f0';
+                        }
                     }
 
                     // 🎯 FIX SVGs (Especially motion.circle)
                     const svgCircles = clonedDoc.querySelectorAll('circle');
                     svgCircles.forEach(circle => {
-                        // If it's a motion circle with dasharray/offset, force the final value
                         const dashArray = circle.getAttribute('stroke-dasharray');
                         if (dashArray) {
                             circle.setAttribute('stroke-dashoffset', '0');
                         }
-                    });
-
-                    // 🎯 TARGET SPECIFIC TEXT (Ensure no white-on-white)
-                    const textElements = clonedDoc.querySelectorAll('p, span, h1, h2, h3, h4, div');
-                    textElements.forEach(el => {
-                        const node = el as HTMLElement;
-                        const style = clonedDoc.defaultView?.getComputedStyle(node);
-                        const color = style?.color;
-                        if (color === 'rgb(255, 255, 255)' || color === 'white' || color === '#ffffff') {
-                            node.style.color = '#0f172a'; // Force dark slate for white text
+                        // Scrub SVG stroke/fill
+                        const stroke = circle.getAttribute('stroke');
+                        if (stroke && (stroke.includes('oklch') || stroke.includes('oklab'))) {
+                            circle.setAttribute('stroke', '#6366f1');
                         }
                     });
                 }
