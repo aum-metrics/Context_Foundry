@@ -150,14 +150,21 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
         checks.append({
             "check": "AI Crawler Readiness",
             "status": "pass" if jsonld_count > 0 and "noindex" not in robots_content.lower() else "fail",
-            "detail": "Structured data present and indexable" if jsonld_count > 0 else "Missing JSON-LD — ChatGPT, Perplexity, Gemini cannot extract verified facts"
+            "detail": "Structured data present and indexable" if jsonld_count > 0 else "Missing JSON-LD — GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet will have weaker verified facts"
         })
 
         # --- SEO SCORE (simple weighted) ---
         pass_count = sum(1 for c in checks if c["status"] == "pass")
-        fail_count = sum(1 for c in checks if c["status"] == "fail")
         seo_score = round((pass_count / len(checks)) * 100)
-        geo_score = 90 if jsonld_count > 0 else 20
+        structural_geo_checks = [
+            c for c in checks
+            if c["check"] in {"Schema.org JSON-LD", "AI Crawler Readiness", "Canonical URL", "Meta Description", "H1 Heading"}
+        ]
+        structural_geo_score = round(
+            (sum(1 for c in structural_geo_checks if c["status"] == "pass") / len(structural_geo_checks)) * 100
+        ) if structural_geo_checks else 0
+        geo_score = structural_geo_score
+        geo_method = "structural-readiness"
 
         # --- LLM-BASED GEO COMPARISON (if org has OpenAI key) ---
         geo_recommendation = ""
@@ -185,7 +192,7 @@ Existing JSON-LD blocks: {jsonld_count}
 Org Manifest:
 {manifest_content}
 
-Rate GEO (Generative Engine Optimization) fidelity 0-100: how well would AI engines like ChatGPT, Perplexity, Gemini represent this company based only on this page?
+Rate GEO (Generative Engine Optimization) fidelity 0-100: how well would AI engines like GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet represent this company based only on this page?
 Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement tip"}}"""
                         resp = client.chat.completions.create(
                             messages=[{"role": "user", "content": geo_prompt}],
@@ -194,7 +201,9 @@ Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement t
                             temperature=0
                         )
                         llm_result = json.loads(resp.choices[0].message.content)
-                        geo_score = llm_result.get("geo_score", geo_score)
+                        llm_geo_score = max(0, min(100, int(llm_result.get("geo_score", geo_score))))
+                        geo_score = round((structural_geo_score * 0.4) + (llm_geo_score * 0.6))
+                        geo_method = "blended-structural-and-manifest-alignment"
                         geo_recommendation = llm_result.get("recommendation", "")
             except Exception as e:
                 logger.warning(f"LLM GEO scoring failed: {e}")
@@ -206,9 +215,10 @@ Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement t
             "geoScore": geo_score,
             "overallScore": overall,
             "checks": checks,
+            "geoMethod": geo_method,
             "recommendation": geo_recommendation or (
                 "Add JSON-LD structured data to dramatically improve AI engine visibility." if jsonld_count == 0
-                else "Good foundation. Ensure your AUM manifest is deployed to /llms.txt for AI crawlers."
+                else "Good structural foundation. Tighten page copy so it mirrors your verified manifest claims more explicitly."
             ),
         }
 

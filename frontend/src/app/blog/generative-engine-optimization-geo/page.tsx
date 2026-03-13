@@ -46,7 +46,7 @@ export default function GeoArticlePage() {
             readTime="9 min read"
             schema={schema}
             relatedLinks={[
-                { href: "/dashboard", label: "Run SEO + GEO Audit" },
+                { href: "/#demo", label: "Watch Product Demo" },
                 { href: "/about", label: "Understand the Product" },
                 { href: "/contact", label: "Request a Demo" },
             ]}

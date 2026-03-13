@@ -650,11 +650,12 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
     # Enforce Dynamic Limits with Firestore Transaction (Race Condition Fix)
     limits = {
-        "explorer": 3,
+        "explorer": 1,
         "growth": 100,
-        "scale": 500
+        "scale": 500,
+        "enterprise": 500,
     }
-    plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 3))
+    plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 1))
 
     if db and not is_dev:
         from google.cloud import firestore

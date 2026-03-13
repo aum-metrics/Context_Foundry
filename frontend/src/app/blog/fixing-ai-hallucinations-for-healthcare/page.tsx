@@ -46,7 +46,7 @@ export default function HealthcareHallucinationsPage() {
             readTime="8 min read"
             schema={schema}
             relatedLinks={[
-                { href: "/dashboard", label: "Test Healthcare Prompts" },
+                { href: "/#demo", label: "Watch Product Demo" },
                 { href: "/security", label: "Read Zero-Retention Controls" },
                 { href: "/contact", label: "Talk to Sales" },
             ]}

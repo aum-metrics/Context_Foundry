@@ -593,8 +593,8 @@ async def admin_create_payment_link(
         amount = body.amount
         if not amount:
             PLANS = {
-                "growth": 660000,   # ~$79/mo — matches payments.py
-                "scale": 2080000,   # ~$249/mo — matches payments.py
+                "growth": 649900,   # ₹6,499/mo — matches payments.py
+                "scale": 2099900,   # ₹20,999/mo — matches payments.py
             }
             try:
                 org_doc = db.collection("organizations").document(body.orgId).get()

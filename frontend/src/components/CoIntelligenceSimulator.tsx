@@ -48,6 +48,7 @@ export default function CoIntelligenceSimulator() {
     const [lockedModels, setLockedModels] = useState<string[]>([]);
     const [lastPrompt, setLastPrompt] = useState("");
     const [byokError, setByokError] = useState(false);
+    const isExplorer = organization?.subscriptionTier === "explorer";
     useEffect(() => {
         if (!organization) return;
 
@@ -195,6 +196,11 @@ export default function CoIntelligenceSimulator() {
         if (accuracy >= 70) return "bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20";
         if (accuracy >= 50) return "bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20";
         return "bg-rose-50 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20";
+    };
+
+    const getExplorerPreview = (answer: string) => {
+        if (answer.length <= 220) return answer;
+        return `${answer.slice(0, 220).trim()}...`;
     };
 
     const handleExportCSV = async () => {
@@ -467,8 +473,18 @@ export default function CoIntelligenceSimulator() {
                                         </div>
                                     </div>
                                     <p className={`leading-relaxed text-sm mb-4 ${result.error ? "text-rose-600 dark:text-rose-400 font-medium italic" : "text-slate-700 dark:text-slate-300"}`}>
-                                        {result.error ? `Error: ${result.error}` : result.answer}
+                                        {result.error
+                                            ? `Error: ${result.error}`
+                                            : isExplorer
+                                                ? getExplorerPreview(result.answer)
+                                                : result.answer}
                                     </p>
+
+                                    {isExplorer && !result.error && (
+                                        <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-xs text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+                                            Explorer shows one scored answer preview only. Upgrade to unlock full response transcripts, claim verification detail, comparative audit history, and export artifacts.
+                                        </div>
+                                    )}
 
                                     {/* Transparency Footprint (Hardened Audit Check) */}
                                     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-x-4 gap-y-2">
@@ -480,12 +496,12 @@ export default function CoIntelligenceSimulator() {
                                             <Zap className="w-3 h-3 mr-1.5 text-amber-400" />
                                             temp=0.0
                                         </div>
-                                        {result.metrics && (
+                                        {!isExplorer && result.metrics && (
                                             <div className="text-[10px] text-slate-400 font-mono">
                                                 div: {result.metrics.semantic_divergence} / rec: {result.metrics.claim_recall}
                                             </div>
                                         )}
-                                        {!result.error && (
+                                        {!isExplorer && !result.error && (
                                             <button
                                                 onClick={() => {
                                                     const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | LCRS v1.2.0*`;
@@ -495,6 +511,19 @@ export default function CoIntelligenceSimulator() {
                                             >
                                                 <Copy className="w-3 h-3 mr-1.5" />
                                                 COPY
+                                            </button>
+                                        )}
+                                        {isExplorer && !result.error && (
+                                            <button
+                                                onClick={() => {
+                                                    setUpgradeFeatureName("Full Answer Transcript");
+                                                    setUpgradeLimitReason("EXPLORER_LIMIT_REACHED");
+                                                    setIsUpgradeModalOpen(true);
+                                                }}
+                                                className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"
+                                            >
+                                                <Lock className="w-3 h-3 mr-1.5" />
+                                                Unlock Full Evidence
                                             </button>
                                         )}
                                     </div>

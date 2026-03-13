@@ -46,9 +46,9 @@ export default function BrandSafetyInLlmsPage() {
             readTime="7 min read"
             schema={schema}
             relatedLinks={[
-                { href: "/dashboard", label: "Run Co-Intelligence Audit" },
+                { href: "/#demo", label: "Watch Product Demo" },
                 { href: "/methods", label: "Review Scoring Methods" },
-                { href: "/security", label: "Inspect Security Architecture" },
+                { href: "/contact", label: "Talk to Sales" },
             ]}
         >
             <p>

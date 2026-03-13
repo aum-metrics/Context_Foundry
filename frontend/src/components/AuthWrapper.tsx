@@ -6,7 +6,8 @@ import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { OrganizationProvider } from "./OrganizationContext";
 
-const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/llms-full.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login"];
+const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/llms-full.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login", "/blog"];
+const PUBLIC_PREFIXES = ["/blog/"];
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -14,10 +15,11 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const router = useRouter();
     const pathname = usePathname();
     const normalizedPathname = pathname.replace(/\/$/, "") || "/";
-    const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname);
+    const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname) || PUBLIC_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix));
 
     useEffect(() => {
         const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
+        const isLocalHost = typeof window !== 'undefined' && ["localhost", "127.0.0.1"].includes(window.location.hostname);
         /**
          * 🛡️ DEMO MODE AUTHENTICATION BYPASS (Intentional)
          * ------------------------------------------------
@@ -31,8 +33,8 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
          * Security Note: This should be disabled or strictly gated in final production 
          * releases unless a public-facing sandbox mode is explicitly required.
          */
-        const isDemoUser = savedMockUser === "demo@demo.com";
-        const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
+        const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true" && isLocalHost;
+        const isDemoUser = savedMockUser === "demo@demo.com" && isMockMode;
 
         if (isDemoUser || isMockMode) {
             console.warn(isDemoUser ? "👤 DEMO ACCOUNT ACTIVE" : "🔓 MOCK AUTH MODE ACTIVE");

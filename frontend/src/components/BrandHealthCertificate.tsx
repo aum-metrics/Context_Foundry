@@ -35,6 +35,7 @@ interface BrandHealthCertificateProps {
         seoScore: number;
         geoScore: number;
         overallScore: number;
+        geoMethod?: string;
         recommendation: string;
     };
     competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[] }[];
@@ -87,6 +88,16 @@ function clampPct(value: number): number {
     return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function averageAccuracy(results: ModelResult[]): number {
+    if (!results.length) return 0;
+    return Math.round(results.reduce((sum, result) => sum + (result.accuracy || 0), 0) / results.length);
+}
+
+function hallucinationRate(results: ModelResult[]): number {
+    if (!results.length) return 0;
+    return Math.round((results.filter((result) => result.hasHallucination).length / results.length) * 100);
+}
+
 export default function BrandHealthCertificate({
     organizationName: propOrgName,
     asovScore,
@@ -109,6 +120,7 @@ export default function BrandHealthCertificate({
     const [isDownloading, setIsDownloading] = useState(false);
     const [showMethodology, setShowMethodology] = useState(false);
     const [latestRecord, setLatestRecord] = useState<ScoringRecord | null>(null);
+    const [historyRecords, setHistoryRecords] = useState<ScoringRecord[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -121,8 +133,6 @@ export default function BrandHealthCertificate({
     useEffect(() => {
         if (propModelResults && propModelResults.length > 0) {
             setLatestRecord({ prompt: propPrompt || "", results: propModelResults, timestamp: null });
-            setLoadingHistory(false);
-            return;
         }
         if (!organization?.id) { setLoadingHistory(false); return; }
         const fetchHistory = async () => {
@@ -152,9 +162,18 @@ export default function BrandHealthCertificate({
                     if (!activeManifestVersion || activeManifestVersion === "latest") return true;
                     return entry.version === activeManifestVersion;
                 });
-                const record = matchingHistory[0];
+                const normalizedHistory = matchingHistory.map((entry: ScoringRecord) => ({
+                    prompt: entry.prompt || "",
+                    results: (entry.results || []).map((result: ModelResult) => ({
+                        ...result,
+                        model: normalizeModelName(result.model),
+                    })),
+                    timestamp: entry.timestamp || null,
+                }));
+                setHistoryRecords(normalizedHistory);
+                const record = normalizedHistory[0];
                 if (record) {
-                    setLatestRecord({ prompt: record.prompt || "", results: record.results || [], timestamp: record.timestamp || null });
+                    setLatestRecord(record);
                 }
             } catch (e) {
                 console.warn("Could not load scoring history:", e);
@@ -169,9 +188,29 @@ export default function BrandHealthCertificate({
     const results = (latestRecord?.results || [])
         .map((result) => ({ ...result, model: normalizeModelName(result.model) }))
         .sort((a, b) => CANONICAL_MODEL_ORDER.indexOf(a.model) - CANONICAL_MODEL_ORDER.indexOf(b.model));
-    const avgLcrs = results.length > 0 ? Math.round(results.reduce((s: number, r: ModelResult) => s + r.accuracy, 0) / results.length) : asovScore;
+    const avgLcrs = results.length > 0 ? averageAccuracy(results) : asovScore;
     const hallucinationCount = results.filter((r: ModelResult) => r.hasHallucination).length;
     const fidelityPct = results.length > 0 ? Math.round((results.filter((r: ModelResult) => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
+    const remediationSnapshot = useMemo(() => {
+        if (historyRecords.length < 2) return null;
+        const chronological = [...historyRecords].reverse();
+        const baseline = chronological[0];
+        const current = chronological[chronological.length - 1];
+        const baselineAvg = averageAccuracy(baseline.results || []);
+        const currentAvg = averageAccuracy(current.results || []);
+        const baselineHallucinationRate = hallucinationRate(baseline.results || []);
+        const currentHallucinationRate = hallucinationRate(current.results || []);
+        return {
+            baselinePrompt: baseline.prompt,
+            currentPrompt: current.prompt,
+            baselineAvg,
+            currentAvg,
+            deltaLcrs: currentAvg - baselineAvg,
+            baselineHallucinationRate,
+            currentHallucinationRate,
+            deltaHallucinationRate: currentHallucinationRate - baselineHallucinationRate,
+        };
+    }, [historyRecords]);
 
     const scoreColor = (s: number) => s >= 85 ? "#10b981" : s >= 65 ? "#f59e0b" : s >= 40 ? "#fb923c" : "#ef4444";
     const gradeLabel = (s: number) => s >= 85 ? "HIGH FIDELITY" : s >= 65 ? "MINOR DRIFT" : s >= 40 ? "SEVERE DRIFT" : "CRITICAL DRIFT";
@@ -324,7 +363,18 @@ export default function BrandHealthCertificate({
 
             writeHeading("Search Readiness Snapshot");
             writeBody(`SEO Score: ${seoResult?.seoScore ?? 0}% | GEO Score: ${seoResult?.geoScore ?? 0}% | Overall: ${seoResult?.overallScore ?? 0}%`);
+            writeBody(`GEO Method: ${seoResult?.geoMethod || "Not available"}`);
             writeBody(seoResult?.recommendation || "No SEO/GEO recommendation available for this run.");
+
+            writeHeading("Remediation Delta");
+            if (!remediationSnapshot) {
+                writeBody("Not enough historical runs yet to calculate baseline-vs-current remediation impact.");
+            } else {
+                writeBody(`LCRS movement: ${remediationSnapshot.baselineAvg}% -> ${remediationSnapshot.currentAvg}% (${remediationSnapshot.deltaLcrs >= 0 ? "+" : ""}${remediationSnapshot.deltaLcrs} points)`);
+                writeBody(`Hallucination rate movement: ${remediationSnapshot.baselineHallucinationRate}% -> ${remediationSnapshot.currentHallucinationRate}% (${remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}${remediationSnapshot.deltaHallucinationRate} points)`);
+                writeBody(`Baseline prompt: ${remediationSnapshot.baselinePrompt || "Not available"}`);
+                writeBody(`Current prompt: ${remediationSnapshot.currentPrompt || "Not available"}`);
+            }
 
             writeHeading("Competitor Displacement");
             writeBody(competitorSummary);
@@ -335,6 +385,7 @@ export default function BrandHealthCertificate({
             writeBody("Fidelity Rate shows the share of model outputs that remained grounded.");
             writeBody("Hallucinations count outputs with contradictions or unsupported claims.");
             writeBody("Critical Drift can appear even when Hallucinations are 0/3: this means responses were mostly non-fabricated but still missed too many required claims, reducing claim recall and therefore LCRS.");
+            writeBody("GEO is not the same metric as drift. GEO measures page-level generative readiness and manifest alignment, while LCRS measures how well a tested model answer stayed grounded on a specific prompt.");
 
             writeHeading("ASoV Radar Context (5-D)");
             writeBody("The ASoV Radar is a contextual decomposition of the same run. It maps each model into Consistency, Factuality, Sentiment, Safety, and Authority using observed accuracy, claim recall, and hallucination flags.");
@@ -547,7 +598,7 @@ export default function BrandHealthCertificate({
                                     {seoResult && (
                                         <div className="p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
                                             <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">Search Readiness Snapshot</p>
-                                            <div className="grid grid-cols-3 gap-3 mb-3">
+                                    <div className="grid grid-cols-3 gap-3 mb-3">
                                                 <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 text-center">
                                                     <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">SEO</p>
                                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{seoResult.seoScore}%</p>
@@ -562,6 +613,9 @@ export default function BrandHealthCertificate({
                                                 </div>
                                             </div>
                                             <p className="text-xs text-slate-600 dark:text-slate-400">{seoResult.recommendation}</p>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
+                                                GEO reflects page-level generative readiness and manifest alignment, not the same thing as simulation drift on an individual prompt.
+                                            </p>
                                         </div>
                                     )}
                                     {competitors.length > 0 && (
@@ -608,6 +662,32 @@ export default function BrandHealthCertificate({
                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{hallucinationCount}/{results.length || "—"}</p>
                                     <p className="text-[9px] text-slate-500">models affected</p>
                                 </div>
+                            </div>
+
+                            <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
+                                <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">Remediation Delta</p>
+                                {remediationSnapshot ? (
+                                    <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                                        <p>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200">LCRS movement:</span>{" "}
+                                            {remediationSnapshot.baselineAvg}% to {remediationSnapshot.currentAvg}% ({remediationSnapshot.deltaLcrs >= 0 ? "+" : ""}{remediationSnapshot.deltaLcrs} points)
+                                        </p>
+                                        <p>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200">Hallucination-rate movement:</span>{" "}
+                                            {remediationSnapshot.baselineHallucinationRate}% to {remediationSnapshot.currentHallucinationRate}% ({remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}{remediationSnapshot.deltaHallucinationRate} points)
+                                        </p>
+                                        <p>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200">Baseline prompt:</span> {remediationSnapshot.baselinePrompt || "Not available"}
+                                        </p>
+                                        <p>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200">Current prompt:</span> {remediationSnapshot.currentPrompt || "Not available"}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Baseline comparison will appear after at least two runs exist for this organization/context.
+                                    </p>
+                                )}
                             </div>
 
                             {/* GRADE BADGE */}

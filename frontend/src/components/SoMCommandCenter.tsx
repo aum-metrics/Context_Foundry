@@ -30,6 +30,7 @@ interface SEOResult {
     seoScore: number;
     geoScore: number;
     overallScore: number;
+    geoMethod?: string;
     checks: { check: string; status: string; detail: string }[];
     recommendation: string;
 }
