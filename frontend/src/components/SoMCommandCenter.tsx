@@ -99,6 +99,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     const [historicalData, setHistoricalData] = useState<{ date: string; score: number }[]>([]);
     const [competitors, setCompetitors] = useState<{ name: string, displacementRate: number, strengths: string[], weaknesses: string[] }[]>([]);
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const analysisSubject = activeContextName || organization?.name || "the selected context";
 
     useEffect(() => {
         return () => {
@@ -343,10 +344,10 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                 body: JSON.stringify({
                     orgId: organization.id,
                     prompts: [
-                        `What is the pricing for ${organization.name}?`,
-                        `What features does ${organization.name} offer?`,
-                        `Who are ${organization.name}'s competitors?`,
-                        `Is ${organization.name} suitable for enterprise?`
+                        `What is the pricing for ${analysisSubject}?`,
+                        `What features does ${analysisSubject} offer?`,
+                        `Who are ${analysisSubject}'s competitors?`,
+                        `Is ${analysisSubject} suitable for enterprise?`
                     ],
                     manifestVersion: activeManifestVersion
                 })
@@ -713,7 +714,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 ))}
                             </div>
                         </div>
-                        <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions for {activeContextName || organization?.name || "the selected context"}.</p>
+                        <p className="text-[10px] text-slate-500 text-center mt-4">Simultaneous benchmarking of model grounding across verified brand dimensions for {analysisSubject}.</p>
                     </div>
 
                     {/* NEW: Historical Narrative Fidelity Trend Chart */}
@@ -914,7 +915,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             <AnimatePresence>
                 {isCertificateOpen && (
                     <BrandHealthCertificate
-                        organizationName={organization?.name || "Your Company"}
+                        organizationName={analysisSubject}
                         asovScore={avgScore}
                         driftRate={batchResult?.driftRate || 0}
                         onClose={() => setIsCertificateOpen(false)}
@@ -922,7 +923,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         lastPrompt={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.prompt : undefined}
                         seoResult={seoResult || undefined}
                         competitors={competitors}
-                        activeContextName={activeContextName || organization?.name || "Current Context"}
+                        activeContextName={analysisSubject}
                         allowPdfDownload={organization?.subscriptionTier !== "explorer"}
                         onUpgradeRequired={() => {
                             setUpgradeFeatureName("Brand Health PDF Report");

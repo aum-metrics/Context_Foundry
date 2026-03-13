@@ -49,6 +49,7 @@ export default function CoIntelligenceSimulator() {
     const [lastPrompt, setLastPrompt] = useState("");
     const [byokError, setByokError] = useState(false);
     const isExplorer = organization?.subscriptionTier === "explorer";
+    const analysisSubject = organization ? (analysisContexts.find((context) => context.version === activeManifestVersion)?.name || organization.name) : "your company";
     useEffect(() => {
         if (!organization) return;
 
@@ -93,15 +94,15 @@ export default function CoIntelligenceSimulator() {
                     const lines = manifestContent.split("\n").filter((l: string) => l.trim().startsWith("##") || l.trim().startsWith("-")).slice(0, 8);
                     const topics = lines.map((l: string) => l.replace(/^#+\s*/, "").replace(/^-\s*/, "").trim()).filter((l: string) => l.length > 5).slice(0, 3);
                     const fallbackPrompts = topics.length >= 2 ? [
-                        `What is ${organization.name}'s core business and key offerings?`,
+                        `What is ${analysisSubject}'s core business and key offerings?`,
                         `What does the document say about ${topics[0]}?`,
-                        topics.length > 1 ? `How does ${organization.name} approach ${topics[1]}?` : `What are ${organization.name}'s main differentiators?`,
-                        `Compare ${organization.name} against its main competitors.`
+                        topics.length > 1 ? `How does ${analysisSubject} approach ${topics[1]}?` : `What are ${analysisSubject}'s main differentiators?`,
+                        `Compare ${analysisSubject} against its main competitors.`
                     ] : [
-                        `What is ${organization.name}'s core business and key offerings?`,
+                        `What is ${analysisSubject}'s core business and key offerings?`,
                         `What are the key facts and figures in this document?`,
-                        `What are ${organization.name}'s main strengths according to this document?`,
-                        `Compare ${organization.name} against its main competitors.`
+                        `What are ${analysisSubject}'s main strengths according to this document?`,
+                        `Compare ${analysisSubject} against its main competitors.`
                     ];
                     setDynamicPrompts(fallbackPrompts);
                     setActivePrompt(fallbackPrompts[0]);
@@ -109,12 +110,12 @@ export default function CoIntelligenceSimulator() {
                     setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
                     // No manifest yet — show generic but sensible prompts
                     setDynamicPrompts([
-                        `What is ${organization.name}'s core business?`,
-                        `What are ${organization.name}'s key products or services?`,
-                        `What are ${organization.name}'s main strengths?`,
-                        `Compare ${organization.name} against its main competitors.`
+                        `What is ${analysisSubject}'s core business?`,
+                        `What are ${analysisSubject}'s key products or services?`,
+                        `What are ${analysisSubject}'s main strengths?`,
+                        `Compare ${analysisSubject} against its main competitors.`
                     ]);
-                    setActivePrompt(`What is ${organization.name}'s core business?`);
+                    setActivePrompt(`What is ${analysisSubject}'s core business?`);
                 }
             } catch (e) {
                 console.error("Manifest fetch error:", e);
@@ -122,7 +123,7 @@ export default function CoIntelligenceSimulator() {
             }
         };
         fetchData();
-    }, [organization, refreshKey, activeManifestVersion, analysisContexts]);
+    }, [organization, refreshKey, activeManifestVersion, analysisContexts, analysisSubject]);
 
     useEffect(() => {
         setSelectedVersion(activeManifestVersion || "latest");
