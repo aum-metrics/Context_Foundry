@@ -33,6 +33,7 @@ export default function Navbar() {
 
                 <div className="hidden md:flex items-center space-x-8">
                     <Link href="/about" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors">About</Link>
+                    <Link href="/blog" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors">Insights</Link>
                     <Link href="/methods" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors">For Engineering</Link>
                     <Link href="/security" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors">Security Architecture</Link>
                     <Link href="/#moat" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors">Platform</Link>
