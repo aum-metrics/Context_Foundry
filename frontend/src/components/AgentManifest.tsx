@@ -148,14 +148,14 @@ export default function AgentManifest() {
                     </div>
                 </div>
 
-                <div className="flex-1 relative bg-transparent overflow-hidden">
-                    <pre className="p-6 overflow-auto text-sm font-mono text-slate-800 dark:text-slate-300 leading-relaxed max-h-[600px]">
+                <div className="flex-1 relative bg-transparent overflow-y-auto min-h-[500px] max-h-[700px] custom-scrollbar">
+                    <pre className="p-8 text-sm font-mono text-slate-800 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                         {content.split("\n").map((line, i) => {
-                            if (line.startsWith("#")) return <div key={i} className="text-fuchsia-600 dark:text-fuchsia-400 font-bold mt-4 mb-2">{line}</div>;
-                            if (line.startsWith(">")) return <div key={i} className="text-slate-500 dark:text-slate-500 italic border-l-2 border-slate-300 dark:border-slate-700 pl-3 my-1">{line}</div>;
-                            if (line.startsWith("-")) return <div key={i} className="text-cyan-700 dark:text-cyan-200 ml-4"><span className="text-fuchsia-500 mr-2">-</span>{line.substring(2)}</div>;
-                            if (line.includes("DO NOT")) return <div key={i} className="text-rose-600 dark:text-rose-400 ml-4 bg-rose-50 dark:bg-rose-500/10 px-2 rounded"><span className="text-fuchsia-500 mr-2">-</span>{line.substring(2)}</div>;
-                            return <div key={i} className="my-1 whitespace-pre">{line || ' '}</div>;
+                            if (line.startsWith("#")) return <div key={i} className="text-fuchsia-600 dark:text-fuchsia-400 font-bold mt-6 mb-3 text-lg">{line}</div>;
+                            if (line.startsWith(">")) return <div key={i} className="text-slate-500 dark:text-slate-500 italic border-l-4 border-slate-300 dark:border-slate-700 pl-4 my-3 bg-slate-50/50 dark:bg-white/5 py-1">{line}</div>;
+                            if (line.startsWith("-")) return <div key={i} className="text-cyan-700 dark:text-cyan-200 ml-4 py-0.5"><span className="text-fuchsia-500 mr-2">•</span>{line.substring(2)}</div>;
+                            if (line.includes("DO NOT")) return <div key={i} className="text-rose-600 dark:text-rose-400 ml-4 bg-rose-50 dark:bg-rose-500/10 px-3 py-1 rounded-md my-2 border border-rose-100 dark:border-rose-500/20">{line}</div>;
+                            return <div key={i} className="my-1">{line || '\u00A0'}</div>;
                         })}
                     </pre>
                 </div>
