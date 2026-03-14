@@ -158,9 +158,10 @@ Here is '{org_name}'s actual business context:
 {manifest_content[:4000]}
 </Context>
 
-Identify exactly 3 real-world competitors that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.
-If the context does not explicitly mention competitors, you MUST infer the top 3 established industry competitors based on the company's described services.
-Do NOT invent fake company names; use actual established companies in this specific market.
+Identify exactly 3 real-world competitor companies that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.
+CRITICAL PEER-MATCHING RULE: You must analyze the scale, geographic focus, and service niche of '{org_name}' from the context. Select competitors that are actual peer alternatives (similar revenue bucket, headcount, or target market size). DO NOT simply list Tier-1 industry giants (e.g., do not compare a $10M boutique to a $30B global systems integrator like Accenture unless the context explicitly proves they compete for the exact same enterprise accounts).
+If the context does not explicitly mention competitors, infer the top 3 established peer competitors in their specific market tier based on the described services.
+Do NOT invent fake company names; use actual companies in this specific market.
 
 For each competitor, return a JSON object with:
 - 'name': competitor company name
