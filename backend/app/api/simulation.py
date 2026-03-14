@@ -904,10 +904,8 @@ ANSWER GUIDELINES:
     if claude_key or is_dev:
         tasks.append(_run_and_score(CLAUDE_SIMULATION_MODEL, run_claude, claude_key))
 
-    if not tasks:
-        raise HTTPException(status_code=503, detail="No AI providers configured.")
-
     # --- PHASE 10: MULTI-MODEL ADJUDICATION ---
+    adjudication_note = None
     results = await asyncio.gather(*tasks)
     
     # === COMPETITIVE RANKING ADJUDICATION (B2B Enterprise Mode) ===
