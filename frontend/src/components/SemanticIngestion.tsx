@@ -67,6 +67,7 @@ export default function SemanticIngestion() {
     const [schemaData, setSchemaData] = useState<string | null>(null);
     const [rawText, setRawText] = useState<string | null>(null);
     const [urlInput, setUrlInput] = useState<string>("");
+    const [isIngesting, setIsIngesting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Processing simulation logs
@@ -110,90 +111,6 @@ export default function SemanticIngestion() {
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleFileUpload(e.target.files[0]);
-        }
-    };
-
-    /**
-     * Entry point for document processing.
-     * Hardened for Zero-Retention compliance by streaming directly to the 
-     * multipart/form-data payload without secondary disk caching.
-     */
-    const handleFileUpload = async (file: File) => {
-        if (!file) return;
-
-        setStep("processing");
-        setLogs([]);
-        setSchemaData(null);
-        setRawText(null);
-
-        setLogs(prev => [...prev, `Initiating secure ingestion for: ${file.name}`]);
-        setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
-
-        try {
-            await processWithPythonBackend(file);
-        } catch (error) {
-            console.error('Ingestion Error:', error);
-            setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : 'Unknown ingestion failure'}`]);
-        }
-    };
-
-    const handleUrlIngest = async (url: string) => {
-        if (!url || !organization?.id) return;
-
-        setStep("processing");
-        setLogs([]);
-        setSchemaData(null);
-        setRawText(null);
-
-        setLogs(prev => [...prev, `Initiating secure URL ingestion for: ${url}`]);
-        setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
-        setLogs(prev => [...prev, "Connecting to Semantic Ingestion Engine..."]);
-
-        try {
-            const token = await auth.currentUser?.getIdToken();
-            if (!token) throw new Error("Authentication required for secure ingestion.");
-
-            const response = await fetch("/api/ingestion/parse-url", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ url, orgId: organization.id }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || "URL processing failed");
-            }
-
-            setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
-            setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
-
-            const result = await response.json();
-            setLogs(prev => [...prev, "JSON-LD Schema verified."]);
-            setLogs(prev => [...prev, "Manifest generated."]);
-
-            setSchemaData(JSON.stringify(result.schemaData, null, 2));
-            setRawText(null); // Zero-retention
-            setStep("editor");
-            if (typeof window !== "undefined") {
-                if (result.version) setActiveManifestVersion(result.version);
-                window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
-            }
-        } catch (error) {
-            console.error("URL Ingestion Error:", error);
-            setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : "Unknown ingestion failure"}`]);
-        }
-    };
-
-
-    /**
-     * Orchestrates the communication with the Python FastAPI GEO Engine.
-     * 1. Packets the binary PDF and Auth Context.
-     * 2. Proxies through Next.js rewrite to local:8000.
-     * 3. Receives and renders the structured JSON-LD schema.
-     */
     const processWithPythonBackend = async (file: File) => {
         setLogs(prev => [...prev, "Connecting to Semantic Ingestion Engine..."]);
 
@@ -242,6 +159,86 @@ export default function SemanticIngestion() {
         setTimeout(() => setStep("editor"), 1500);
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+    };
+
+    const handleFileUpload = async (file: File) => {
+        if (!file || isIngesting) return;
+
+        setIsIngesting(true);
+        setStep("processing");
+        setLogs([]);
+        setSchemaData(null);
+        setRawText(null);
+
+        setLogs(prev => [...prev, `Initiating secure ingestion for: ${file.name}`]);
+        setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
+
+        try {
+            await processWithPythonBackend(file);
+        } catch (error) {
+            console.error('Ingestion Error:', error);
+            setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : 'Unknown ingestion failure'}`]);
+        } finally {
+            setIsIngesting(false);
+        }
+    };
+
+    const handleUrlIngest = async (url: string) => {
+        if (!url || !organization?.id || isIngesting) return;
+
+        setIsIngesting(true);
+        setStep("processing");
+        setLogs([]);
+        setSchemaData(null);
+        setRawText(null);
+
+        setLogs(prev => [...prev, `Initiating secure URL ingestion for: ${url}`]);
+        setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
+        setLogs(prev => [...prev, "Connecting to Semantic Ingestion Engine..."]);
+
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("Authentication required for secure ingestion.");
+
+            const response = await fetch("/api/ingestion/parse-url", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ url, orgId: organization.id }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "URL processing failed");
+            }
+
+            setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
+            setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
+
+            const result = await response.json();
+            setLogs(prev => [...prev, "JSON-LD Schema verified."]);
+            setLogs(prev => [...prev, "Manifest generated."]);
+
+            setSchemaData(JSON.stringify(result.schemaData, null, 2));
+            setRawText(null); // Zero-retention
+            setStep("editor");
+            if (typeof window !== "undefined") {
+                if (result.version) setActiveManifestVersion(result.version);
+                window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
+            }
+        } catch (error) {
+            console.error("URL Ingestion Error:", error);
+            setLogs(prev => [...prev, `CRITICAL ERROR: ${error instanceof Error ? error.message : "Unknown ingestion failure"}`]);
+        } finally {
+            setIsIngesting(false);
+        }
+    };
+
+
+
 
 
     return (
@@ -269,7 +266,7 @@ export default function SemanticIngestion() {
                                 className={`relative group rounded-3xl border-2 border-dashed transition-all duration-300 ${isDragging
                                     ? "border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-400/10"
                                     : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-500 dark:hover:bg-slate-800/50"
-                                    } backdrop-blur-xl p-16 flex flex-col items-center justify-center cursor-pointer shadow-sm dark:shadow-none`}
+                                    } ${isIngesting ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"} backdrop-blur-xl p-16 flex flex-col items-center justify-center shadow-sm dark:shadow-none`}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => {
@@ -279,7 +276,7 @@ export default function SemanticIngestion() {
                                         handleFileUpload(e.dataTransfer.files[0]);
                                     }
                                 }}
-                                onClick={triggerFileInput}
+                                onClick={() => !isIngesting && triggerFileInput()}
                             >
                                 <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-sm dark:shadow-none">
                                     <UploadCloud className={`w-10 h-10 ${isDragging ? "text-cyan-500 dark:text-cyan-400" : "text-slate-400 group-hover:text-cyan-500 dark:group-hover:text-cyan-400"}`} />
@@ -307,11 +304,11 @@ export default function SemanticIngestion() {
                                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg py-3 px-4 text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm dark:shadow-none placeholder-slate-400"
                                     />
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); if (urlInput) handleUrlIngest(urlInput); }}
-                                        disabled={!urlInput}
+                                        onClick={(e) => { e.stopPropagation(); if (urlInput && !isIngesting) handleUrlIngest(urlInput); }}
+                                        disabled={!urlInput || isIngesting}
                                         className="absolute right-2 top-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
                                     >
-                                        <ChevronRight className="w-4 h-4" />
+                                        {isIngesting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>

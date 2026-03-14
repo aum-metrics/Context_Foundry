@@ -36,12 +36,23 @@ export default function AUMContextFoundry() {
   const [activeStep, setActiveStep] = useState("ingest");
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const { theme, toggleTheme } = useTheme();
-  const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId, analysisContexts, activeManifestVersion, activeContextName, setActiveManifestVersion } = useOrganization();
+  const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId, analysisContexts, activeManifestVersion, activeContextName, setActiveManifestVersion, renameOrganization } = useOrganization();
   const [adminOrgs, setAdminOrgs] = useState<AdminOrgOption[]>([]);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
   const searchParams = useSearchParams();
   const { checkout } = useRazorpay();
   const autoCheckoutTriggeredRef = useRef(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const handleRename = async () => {
+    if (!renameValue.trim() || renameValue === (activeContextName || organization?.name)) {
+      setIsRenaming(false);
+      return;
+    }
+    const success = await renameOrganization(renameValue.trim());
+    if (success) setIsRenaming(false);
+  };
 
   useEffect(() => {
     if (!isPlatformAdmin) { setAdminOrgs([]); return; }
@@ -127,7 +138,35 @@ export default function AUMContextFoundry() {
                 <option value="latest">Latest — {organization?.name || "Current"}</option>
                 {analysisContexts.map((context) => (<option key={context.version} value={context.version}>{context.name}</option>))}
               </select>
-              <p className="mt-1.5 text-[10px] text-slate-500">Analyzing: {activeContextName || organization?.name || "—"}</p>
+              <div className="mt-1.5 flex items-center justify-between group">
+                {isRenaming ? (
+                  <div className="flex items-center gap-1 w-full">
+                    <input
+                      autoFocus
+                      className="bg-white dark:bg-slate-800 border border-indigo-500 rounded px-1.5 py-0.5 text-[10px] w-full outline-none"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={handleRename}
+                      onKeyDown={(e) => e.key === "Enter" && handleRename()}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-slate-500 truncate pr-4">
+                      Analyzing: {activeContextName || organization?.name || "—"}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setRenameValue(activeContextName || organization?.name || "");
+                        setIsRenaming(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded"
+                    >
+                      <Settings className="w-2.5 h-2.5 text-slate-400" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

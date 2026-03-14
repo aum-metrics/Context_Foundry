@@ -49,6 +49,7 @@ export interface OrganizationContextType {
     activeContextName: string | null;
     setActiveOrgId: (orgId: string | null) => void;
     setActiveManifestVersion: (version: string) => void;
+    renameOrganization: (newName: string) => Promise<boolean>;
 }
 
 const ACTIVE_ORG_OVERRIDE_KEY = "aum_active_org_override";
@@ -69,6 +70,7 @@ const OrganizationContext = createContext<OrganizationContextType>({
     activeContextName: null,
     setActiveOrgId: () => undefined,
     setActiveManifestVersion: () => undefined,
+    renameOrganization: async () => false,
 });
 
 export function OrganizationProvider({ children, user }: { children: React.ReactNode, user: User | null }) {
@@ -102,6 +104,32 @@ export function OrganizationProvider({ children, user }: { children: React.React
             localStorage.setItem(storageKey, version);
         }
         setActiveManifestVersionState(version);
+    };
+
+    const renameOrganization = async (newName: string): Promise<boolean> => {
+        if (!activeOrgId || !user) return false;
+        try {
+            const token = await user.getIdToken();
+            const response = await fetch(`/api/workspaces/${activeOrgId}/rename`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ name: newName })
+            });
+
+            if (response.ok) {
+                setOrganization(prev => prev ? { ...prev, name: newName } : null);
+                // Also trigger context refresh to update context names
+                setRefreshKey(prev => prev + 1);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error("Rename failed:", error);
+            return false;
+        }
     };
 
     useEffect(() => {
@@ -309,6 +337,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 activeContextName,
                 setActiveOrgId,
                 setActiveManifestVersion,
+                renameOrganization,
             }}
         >
             {children}
