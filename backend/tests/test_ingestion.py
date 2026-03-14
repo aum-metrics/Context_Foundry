@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from main import app
-from api.ingestion import recursive_split
+from app.main import app
+from app.api.ingestion import recursive_split
 
 client = TestClient(app, base_url="http://localhost")
 

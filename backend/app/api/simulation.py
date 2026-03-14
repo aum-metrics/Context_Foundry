@@ -568,8 +568,8 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     """
     from core.config import settings
     is_dev = settings.ENV == "development"
-
-    # 🛡️ SECURITY HARDENING (P0): Strict authorization check
+    adjudication_note = None
+    results = []
     if auth.get("type") == "session":
         if not verify_user_org_access(auth["uid"], request.orgId):
             raise HTTPException(status_code=403, detail="Unauthorized")

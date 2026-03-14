@@ -27,7 +27,7 @@ class CompetitorProfile(BaseModel):
     weaknesses: List[str]
     winningCategory: str = ""
     claimsOwned: List[str] = []
-    missingAssertions: List[str] = []
+    missingAssertions: List[dict | str] = []
 
 class CompetitorResponse(BaseModel):
     competitors: List[CompetitorProfile]
@@ -126,9 +126,17 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
     manifest_content = ""
     if db:
         try:
+            target_version = version
+            if version == "latest":
+                latest_ptr = db.collection("organizations").document(org_id) \
+                              .collection("manifests").document("latest").get()
+                if latest_ptr.exists:
+                    target_version = latest_ptr.to_dict().get("version", "latest")
+
             manifest_doc = db.collection("organizations").document(org_id) \
                           .collection("manifests") \
-                          .document(version).get()
+                          .document(target_version).get()
+            
             if manifest_doc.exists:
                 doc_data = manifest_doc.to_dict() or {}
                 # Use the llms.txt markdown content as the grounding context

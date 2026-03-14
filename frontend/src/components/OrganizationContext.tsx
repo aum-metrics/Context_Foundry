@@ -107,7 +107,11 @@ export function OrganizationProvider({ children, user }: { children: React.React
     };
 
     const renameOrganization = async (newName: string): Promise<boolean> => {
-        if (!activeOrgId || !user) return false;
+        const targetOrgId = activeOrgId || orgUser?.orgId;
+        if (!targetOrgId || !user) {
+            console.error("Rename failed: missing orgId or user", { targetOrgId, user: !!user });
+            return false;
+        }
         try {
             const token = await user.getIdToken();
             const response = await fetch(`/api/workspaces/${activeOrgId}/rename`, {
