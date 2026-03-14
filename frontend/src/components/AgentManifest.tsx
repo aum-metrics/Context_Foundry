@@ -21,8 +21,8 @@ export default function AgentManifest() {
 
         async function fetchManifest(kind: "llms.txt" | "llms-full.txt") {
             try {
-                const path = kind === "llms-full.txt" ? "/llms-full.txt" : "/llms.txt";
-                const res = await fetch(`${path}?orgId=${orgId}&version=${encodeURIComponent(activeManifestVersion)}`);
+                const endpoint = kind === "llms-full.txt" ? "manifest-full" : "manifest";
+                const res = await fetch(`/api/workspaces/${orgId}/${endpoint}?version=${encodeURIComponent(activeManifestVersion)}`);
                 if (res.ok) {
                     const text = await res.text();
                     const nextValue = text.includes("<!DOCTYPE html>")
@@ -70,7 +70,7 @@ export default function AgentManifest() {
     };
 
     return (
-        <div className="w-full h-full flex flex-col space-y-6 animate-fade-in font-sans">
+        <div className="w-full h-auto flex flex-col space-y-6 animate-fade-in font-sans">
             <header className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-light text-slate-900 dark:text-white flex items-center">
@@ -94,7 +94,7 @@ export default function AgentManifest() {
             </header>
 
             {/* Editor UI */}
-            <div className="flex-1 w-full h-[500px] flex flex-col rounded-2xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/40 backdrop-blur-xl overflow-hidden shadow-xl dark:shadow-2xl">
+            <div className="w-full min-h-[500px] flex flex-col rounded-2xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/40 backdrop-blur-xl overflow-hidden shadow-xl dark:shadow-2xl">
                 <div className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-white/5 px-4 py-3 flex justify-between items-center">
                     <div className="flex space-x-2 bg-slate-200/50 dark:bg-slate-900/80 p-1 rounded-lg border border-slate-300/50 dark:border-white/5">
                         {(["llms.txt", "llms-full.txt"] as const).map(tab => (
@@ -148,8 +148,8 @@ export default function AgentManifest() {
                     </div>
                 </div>
 
-                <div className="flex-1 relative bg-transparent">
-                    <pre className="absolute inset-0 p-6 overflow-auto text-sm font-mono text-slate-800 dark:text-slate-300 leading-relaxed">
+                <div className="flex-1 relative bg-transparent overflow-hidden">
+                    <pre className="p-6 overflow-auto text-sm font-mono text-slate-800 dark:text-slate-300 leading-relaxed max-h-[600px]">
                         {content.split("\n").map((line, i) => {
                             if (line.startsWith("#")) return <div key={i} className="text-fuchsia-600 dark:text-fuchsia-400 font-bold mt-4 mb-2">{line}</div>;
                             if (line.startsWith(">")) return <div key={i} className="text-slate-500 dark:text-slate-500 italic border-l-2 border-slate-300 dark:border-slate-700 pl-3 my-1">{line}</div>;
