@@ -158,9 +158,9 @@ Here is '{org_name}'s actual business context:
 {manifest_content[:4000]}
 </Context>
 
-Identify the top 3 real competitors that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.
-Only name companies that genuinely operate in the same space as shown by the context.
-Do NOT invent placeholders.
+Identify exactly 3 real-world competitors that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.
+If the context does not explicitly mention competitors, you MUST infer the top 3 established industry competitors based on the company's described services.
+Do NOT invent fake company names; use actual established companies in this specific market.
 
 For each competitor, return a JSON object with:
 - 'name': competitor company name
