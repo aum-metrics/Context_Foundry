@@ -425,8 +425,8 @@ export default function SemanticIngestion() {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="p-5 flex-1 overflow-y-auto font-mono text-xs md:text-sm bg-slate-950 text-slate-300">
-                                    <pre className="text-blue-300">
+                                <div className="p-0 flex-1 bg-slate-950 text-slate-300 relative">
+                                    <pre className="absolute inset-0 p-5 overflow-auto font-mono text-xs md:text-sm text-blue-300">
                                         {schemaData || "Loading..."}
                                     </pre>
                                 </div>
