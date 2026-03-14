@@ -287,8 +287,8 @@ test.describe("Authenticated enterprise workspace", () => {
     await page.goto("/dashboard");
     await page.waitForLoadState("domcontentloaded");
 
-    await expect(page.getByText("Enterprise Workspace")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Enterprise AI Visibility Command Center" })).toBeVisible();
+    await expect(page.getByText(/Workflow Pipeline/i)).toBeVisible();
+    await expect(page.getByText(/Competitor Ranking/i).first()).toBeVisible();
 
     await page.locator("select").first().selectOption("manifest-dataswitch");
     await expect(page.locator("select").first()).toHaveValue("manifest-dataswitch");
@@ -303,9 +303,9 @@ test.describe("Authenticated enterprise workspace", () => {
     await page.goto("/dashboard");
     await page.waitForLoadState("domcontentloaded");
 
-    await page.getByRole("button", { name: /Context Studio/i }).first().click();
-    await expect(page.getByRole("heading", { name: "Context Studio" })).toBeVisible();
-    await expect(page.getByText("1. Ingest source material")).toBeVisible();
+    await page.getByRole("button", { name: /Ingest/i }).first().click();
+    await expect(page.getByRole("heading", { name: "Ingest Source Material" })).toBeVisible();
+    await expect(page.getByText("Upload or link your company's verified content")).toBeVisible();
 
     await page.getByRole("button", { name: "Agent Manifest" }).click();
     await expect(page.getByText("SightSpectrum - AI Protocol Manifest")).toBeVisible();
@@ -315,8 +315,8 @@ test.describe("Authenticated enterprise workspace", () => {
     await page.goto("/dashboard");
     await page.waitForLoadState("domcontentloaded");
 
-    await page.getByRole("button", { name: "Co-Intelligence" }).first().click();
-    await expect(page.getByRole("heading", { name: "RAG Fidelity Monitoring" })).toBeVisible();
+    await page.getByRole("button", { name: "Simulate" }).first().click();
+    await expect(page.getByRole("heading", { name: "Enterprise Buyer Query Simulation" })).toBeVisible();
 
     await page.getByPlaceholder("Type a custom prompt...").fill("Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization?");
     await page.getByPlaceholder("Type a custom prompt...").press("Enter");

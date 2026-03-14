@@ -14,7 +14,7 @@ import logging
 from fastapi import Depends
 import asyncio
 from openai import OpenAI
-from core.firebase_config import db, firestore
+from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
 from core.config import settings
 from core.model_config import OPENAI_SCHEMA_MODEL, OPENAI_MANIFEST_MODEL, OPENAI_EMBEDDING_MODEL
