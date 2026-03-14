@@ -176,9 +176,11 @@ async def parse_document(
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
             
         prompt = (
-            "You are a semantic extraction engine. Extract a structured JSON-LD schema from the document below. "
+            "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema from the document below.\n"
+            "CRITICAL: identify the PRIMARY BRAND or ORGANIZATION name. Do NOT use navigation headers, service lists (e.g. 'Wi-Fi, Postpaid'), or slogans as the organization name.\n"
+            "If the document is for 'Airtel', the name should be 'Airtel', not a list of their products.\n"
             "Be strictly faithful to the document content — do NOT invent, hallucinate, or use placeholder data.\n"
-            "The schema type and fields must reflect the actual document: use 'ScholarlyArticle' or 'SoftwareApplication' for research/tech PDFs, not 'ProductCatalog'.\n"
+            "The schema type and fields must reflect the actual document: use 'ScholarlyArticle', 'Organization' or 'SoftwareApplication' for research/tech PDFs.\n"
             "Only include entities, claims, and attributes that are explicitly stated in the document.\n\n"
             f"<Doc>\n{doc_sample}\n</Doc>"
         )
@@ -381,7 +383,9 @@ async def parse_url(
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
 
         schema_prompt = (
-            f"You are a semantic extraction engine. Extract a structured JSON-LD schema from this web page.\n"
+            "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema from this web page.\n"
+            "CRITICAL: Identify the PRIMARY BRAND or ORGANIZATION name. Do NOT use descriptive headers, navigation menus (e.g. 'Wi-Fi, Postpaid, Prepaid'), or SEO taglines as the entity name.\n"
+            "Example: If the page is from airtel.in, the name is 'Airtel', not 'Wi-Fi, Postpaid, Prepaid'.\n"
             f"Source: {request.url}\n"
             "Be strictly faithful — do NOT invent or use placeholder data.\n\n"
             f"<Doc>\n{doc_sample}\n</Doc>"

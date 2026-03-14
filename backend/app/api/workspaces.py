@@ -83,6 +83,34 @@ class UpdateWorkspaceRequest(BaseModel):
     description: Optional[str] = None
     is_public: Optional[bool] = None
 
+class RenameWorkspaceRequest(BaseModel):
+    name: str
+
+@router.patch("/{org_id}/rename")
+async def rename_organization(
+    org_id: str,
+    request: RenameWorkspaceRequest,
+    auth: dict = Depends(get_auth_context)
+):
+    """
+    Manually overrides the organization's display name.
+    Useful when semantic extraction picks up a tagline or navigation menu erroneously.
+    """
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, org_id):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    try:
+        db.collection("organizations").document(org_id).update({
+            "name": request.name.strip(),
+            "updatedAt": datetime.now(timezone.utc)
+        })
+        log_audit_event(org_id=org_id, actor_id=uid, event_type="org_rename", metadata={"new_name": request.name})
+        return {"status": "success", "name": request.name}
+    except Exception as e:
+        logger.error(f"Rename failed for {org_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to rename organization")
+
 @router.post("/provision")
 async def provision_organization(
     current_user: dict = Depends(get_current_user),
