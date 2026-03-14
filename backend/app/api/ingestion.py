@@ -235,7 +235,11 @@ async def parse_document(
                     "createdAt": datetime.datetime.now(timezone.utc),
                     "expiresAt": expiry,
                     "version": id_val,
-                    "totalChunks": total_chunks
+                    "totalChunks": total_chunks,
+                    "metadata": {
+                        "source_url": source_url if 'source_url' in locals() else None,
+                        "inferred_name": data.get("name")
+                    }
                 }
                 txn.set(m_ref, doc_payload)
                 # 2. Write Latest with same TTL

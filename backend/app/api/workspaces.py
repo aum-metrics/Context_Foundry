@@ -36,9 +36,26 @@ def _humanize_org_name(raw_name: str) -> str:
 
 
 def _extract_manifest_entity_name(manifest_data: Dict[str, Any]) -> Optional[str]:
-    schema = (manifest_data or {}).get("schemaData") or {}
+    data = manifest_data or {}
+    schema = data.get("schemaData") or {}
+    metadata = data.get("metadata") or {}
+    
+    # Priority 1: Explicit schema name
     candidate = schema.get("name")
-    return candidate.strip() if isinstance(candidate, str) and candidate.strip() else None
+    if isinstance(candidate, str) and candidate.strip():
+        return candidate.strip()
+    
+    # Priority 2: Inferred name from LLM extraction
+    inferred = metadata.get("inferred_name")
+    if isinstance(inferred, str) and inferred.strip():
+        return inferred.strip()
+        
+    # Priority 3: Document Title
+    title = metadata.get("title")
+    if isinstance(title, str) and title.strip():
+        return title.strip()
+        
+    return None
 
 
 def _is_placeholder_org_name(name: Optional[str]) -> bool:
@@ -1131,15 +1148,21 @@ async def list_manifest_contexts(
                 continue
             data = manifest.to_dict() or {}
             
-            manifest_name = _extract_manifest_entity_name(data)
-            # Use manual name if candidate name is a placeholder
-            resolved_name = manifest_name if manifest_name and _is_placeholder_org_name(current_org_name) else (current_org_name or manifest_name or "Unnamed Context")
+            manifest_version_name = _extract_manifest_entity_name(data)
+            
+            # If we have a specific name for this manifest, use it.
+            # Only fall back to organization name if the manifest name is missing
+            # or if it's a generic placeholder.
+            if manifest_version_name and not _is_placeholder_org_name(manifest_version_name):
+                resolved_name = manifest_version_name
+            else:
+                resolved_name = current_org_name or manifest_version_name or "Unnamed Context"
 
             contexts.append({
                 "id": manifest.id,
                 "version": data.get("version", manifest.id),
                 "name": resolved_name,
-                "sourceUrl": data.get("sourceUrl"),
+                "sourceUrl": data.get("sourceUrl") or data.get("metadata", {}).get("source_url"),
                 "createdAt": _serialize_timestamp(data.get("createdAt")),
             })
 
