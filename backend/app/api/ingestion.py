@@ -14,8 +14,9 @@ import logging
 from fastapi import Depends
 import asyncio
 from openai import OpenAI
-from core.firebase_config import db
+from core.firebase_config import db, firestore
 from core.security import get_auth_context, verify_user_org_access
+from core.config import settings
 from core.model_config import OPENAI_SCHEMA_MODEL, OPENAI_MANIFEST_MODEL, OPENAI_EMBEDDING_MODEL
 from api.audit import log_audit_event
 import httpx
@@ -175,10 +176,20 @@ async def parse_document(
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
             
+        # Fetch current organization name for better semantic pinning
+        hint_org_name = ""
+        if db:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                hint_org_name = org_doc.to_dict().get("name", "")
+
+        org_hint_clause = f"The known organization name for this context is '{hint_org_name}'. " if hint_org_name else ""
+
         prompt = (
             "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema from the document below.\n"
+            f"{org_hint_clause}"
             "CRITICAL: identify the PRIMARY BRAND or ORGANIZATION name. Do NOT use navigation headers, service lists (e.g. 'Wi-Fi, Postpaid'), or slogans as the organization name.\n"
-            "If the document is for 'Airtel', the name should be 'Airtel', not a list of their products.\n"
+            "If the document is for a major brand (e.g. 'Airtel'), the name should be that brand name, not a list of their products.\n"
             "Be strictly faithful to the document content — do NOT invent, hallucinate, or use placeholder data.\n"
             "The schema type and fields must reflect the actual document: use 'ScholarlyArticle', 'Organization' or 'SoftwareApplication' for research/tech PDFs.\n"
             "Only include entities, claims, and attributes that are explicitly stated in the document.\n\n"

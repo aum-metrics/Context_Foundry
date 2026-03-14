@@ -169,10 +169,15 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 def load_router(module_path: str, prefix: str, tag: str) -> bool:
     """Safely load a router module"""
+    logger.info(f"⏳ Attempting to import {module_path}...")
+    import sys
+    sys.stdout.flush()
     try:
         # Import the module
         parts = module_path.split('.')
         module = __import__(module_path, fromlist=[parts[-1]])
+        logger.info(f"⚡ Imported {module_path} successfully. Checking for router...")
+        sys.stdout.flush()
         
         # Check for router
         if not hasattr(module, 'router'):

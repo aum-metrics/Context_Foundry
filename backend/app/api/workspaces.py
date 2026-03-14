@@ -1120,15 +1120,25 @@ async def list_manifest_contexts(
         manifests = db.collection("organizations").document(org_id).collection("manifests") \
             .order_by("createdAt", direction="DESCENDING").limit(25).stream()
 
+        # Fetch organization name for manual override logic
+        org_doc = db.collection("organizations").document(org_id).get()
+        org_data = org_doc.to_dict() if org_doc.exists else {}
+        current_org_name = org_data.get("name")
+
         contexts = []
         for manifest in manifests:
             if manifest.id == "latest":
                 continue
             data = manifest.to_dict() or {}
+            
+            manifest_name = _extract_manifest_entity_name(data)
+            # Use manual name if candidate name is a placeholder
+            resolved_name = manifest_name if manifest_name and _is_placeholder_org_name(current_org_name) else (current_org_name or manifest_name or "Unnamed Context")
+
             contexts.append({
                 "id": manifest.id,
                 "version": data.get("version", manifest.id),
-                "name": _extract_manifest_entity_name(data) or "Unnamed Context",
+                "name": resolved_name,
                 "sourceUrl": data.get("sourceUrl"),
                 "createdAt": _serialize_timestamp(data.get("createdAt")),
             })
