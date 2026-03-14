@@ -160,7 +160,15 @@ export function resolveRemediationTargets(params: {
   const claimKeywords = missingClaims.flatMap((claim) => tokenize(claim)).slice(0, 10);
   const weightedKeywords = Array.from(new Set([...categoryKeywords, ...claimKeywords]));
 
-  const homepageHost = sourceUrl ? new URL(sourceUrl).hostname.replace(/^www\./, "") : "";
+  let homepageHost = "";
+  if (sourceUrl) {
+    try {
+      const parseUrl = sourceUrl.includes("://") ? sourceUrl : `https://${sourceUrl}`;
+      homepageHost = new URL(parseUrl).hostname.replace(/^www\./, "");
+    } catch {
+      homepageHost = sourceUrl.replace(/^https?:\/\//i, "").replace(/^www\./, "").split('/')[0];
+    }
+  }
 
   const scored = candidates.map((candidate) => {
     const haystack = `${candidate.label} ${candidate.url} ${candidate.sourceType}`.toLowerCase();
