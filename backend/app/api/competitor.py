@@ -147,6 +147,14 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
     # If no manifest has been uploaded yet, return empty — don't hallucinate
     if not manifest_content:
         return {"competitors": []}
+
+    # Resolve platform-managed sentinel or missing key to environment key
+    if not api_key or api_key == "internal_platform_managed":
+        api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        logger.error(f"Competitor Engine Fail-Closed: No OpenAI key for org {org_id}")
+        return {"competitors": []}
         
     try:
         client = OpenAI(api_key=api_key)

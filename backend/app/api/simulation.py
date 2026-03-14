@@ -561,7 +561,7 @@ Rules:
 
 
 @router.post("/run")
-async def run_simulation(request: SimulationRequest, background_tasks: BackgroundTasks, auth: dict = Depends(get_auth_context)):
+async def run_simulation(request: SimulationRequest, background_tasks: BackgroundTasks, auth: dict = Depends(get_auth_context), skip_billing: bool = False):
     """
     Main LCRS Simulation Entry Point.
     Orchestrates Claim Extraction, Multi-Model Verification, and Divergence Scoring.
@@ -678,7 +678,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     }
     plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 1))
 
-    if db and not is_dev:
+    if db and not is_dev and not skip_billing:
         from google.cloud import firestore
         org_ref = db.collection("organizations").document(request.orgId)
         transaction = db.transaction()
@@ -748,7 +748,14 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         claude_key = os.getenv("ANTHROPIC_API_KEY")
 
     if not any([openai_key, gemini_key, claude_key]) and not is_dev:
+        # Final safety check: if all are None, try the root environment keys one last time
+        openai_key = openai_key or os.getenv("OPENAI_API_KEY")
+        gemini_key = gemini_key or os.getenv("GEMINI_API_KEY")
+        claude_key = claude_key or os.getenv("ANTHROPIC_API_KEY")
+
+    if not any([openai_key, gemini_key, claude_key]) and not is_dev:
         # If still no keys, it's a 503
+        logger.error(f"Simulation Engine Fail-Closed: No keys for org {request.orgId}")
         raise HTTPException(
             status_code=503, 
             detail="Simulation Engine Unavailable. Enterprise API keys not provisioned for this workspace."

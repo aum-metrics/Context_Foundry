@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 from api.simulation import run_simulation, SimulationRequest
 from fastapi import BackgroundTasks
 
-async def evaluate_simulation(req: SimulationRequest):
-    return await run_simulation(req, BackgroundTasks(), {"uid": "batch_worker", "orgId": req.orgId, "email": "batch@aumcontextfoundry.com"})
+async def evaluate_simulation(req: SimulationRequest, skip_billing: bool = False):
+    return await run_simulation(req, BackgroundTasks(), {"uid": "batch_worker", "orgId": req.orgId, "email": "batch@aumcontextfoundry.com"}, skip_billing=skip_billing)
 from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
 
@@ -40,7 +40,7 @@ async def _execute_batch_calculation(request: BatchSimulationRequest):
     """Core logic to run multiple simulations and calculate aggregate metrics."""
     tasks = [evaluate_simulation(SimulationRequest(
         prompt=p, orgId=request.orgId, manifestVersion=request.manifestVersion
-    )) for p in request.prompts]
+    ), skip_billing=True) for p in request.prompts]
     
     results = await asyncio.gather(*tasks, return_exceptions=True)
     
@@ -79,6 +79,27 @@ async def _execute_batch_calculation(request: BatchSimulationRequest):
 async def _process_batch_background(request: BatchSimulationRequest, job_id: str):
     """Background worker to process the batch and write results to Firestore."""
     async def worker():
+        # ATOMIC BILLING: Increment the entire batch total ONCE to prevent Firestore contention
+        if db:
+            try:
+                from google.cloud import firestore
+                org_ref = db.collection("organizations").document(request.orgId)
+                
+                @firestore.transactional
+                def atomic_batch_billing(txn, ref, count):
+                    snap = ref.get(transaction=txn)
+                    if not snap.exists: return
+                    data = snap.to_dict() or {}
+                    current = data.get("subscription", {}).get("simsThisCycle", 0)
+                    txn.update(ref, {"subscription.simsThisCycle": current + count})
+                
+                transaction = db.transaction()
+                atomic_batch_billing(transaction, org_ref, len(request.prompts))
+                logger.info(f"Atomic Billing: Incremented {len(request.prompts)} sims for {request.orgId}")
+            except Exception as e:
+                logger.error(f"Atomic Billing Failure: {e}")
+                # We proceed even if billing fails to prioritize UX, but log it.
+
         return await _execute_batch_calculation(request)
 
     await FirestoreTaskQueue.run_persistent_task(request.orgId, "batchJobs", job_id, worker)
