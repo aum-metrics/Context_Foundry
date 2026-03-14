@@ -16,7 +16,7 @@ export default function ProductFlowShowcase() {
             icon: Database,
             tag: "The Input",
             outputLabel: "Verified Manifest (JSON-LD)",
-            outputDetail: "Zero-retention distillation of product specs, pricing, and claims.",
+            outputDetail: "Zero-retention distillation of enterprise positioning, service proof, and buyer-facing claims.",
             accent: "emerald",
             preview: (
                 <div className="space-y-4">
@@ -32,15 +32,14 @@ export default function ProductFlowShowcase() {
                         {`{
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "SightSpectrum",
-  "description": "Enterprise Data Analytics & AI Services",
-  "employee": { "numberOfEmployees": 500 },
-  "product": [
-    { "name": "HC Insight", "url": "/hcinsights" },
-    { "name": "DataBlitz", "url": "/datablitz" },
-    { "name": "ConverSight AI", "url": "/conversightai" }
+  "name": "Northstar Analytics",
+  "description": "Enterprise AI, data, and cloud transformation partner",
+  "service": [
+    { "name": "Data modernization", "url": "/services/data-modernization" },
+    { "name": "AI transformation", "url": "/services/ai-transformation" },
+    { "name": "Industry analytics", "url": "/services/industry-analytics" }
   ],
-  "service": ["Cloud Data Services", "AI & Analytics Consulting"]
+  "sameAs": ["linkedin.com/company/northstar-analytics"]
 }`}
                     </div>
                 </div>
@@ -58,7 +57,7 @@ export default function ProductFlowShowcase() {
             preview: (
                 <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-mono text-indigo-400">
-                        <span>PROBE: "What is the best AI partner for mid-market Manufacturing data strategy?"</span>
+                        <span>PROBE: "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?"</span>
                         <span className="animate-pulse">RUNNING...</span>
                     </div>
                     <div className="space-y-2">
@@ -101,11 +100,11 @@ export default function ProductFlowShowcase() {
                     <div className="space-y-2">
                         <div className="p-2 rounded bg-rose-500/10 border border-rose-500/20">
                             <p className="text-[10px] text-rose-400 font-bold mb-1">ACCENTURE (BASELINE)</p>
-                            <p className="text-[11px] text-slate-400">"Recommended based on global brand weight. Lacks niche manufacturing context."</p>
+                            <p className="text-[11px] text-slate-400">"Recommended for broad enterprise scale, but not for specialist analytics depth."</p>
                         </div>
                         <div className="p-2 rounded bg-indigo-500/10 border border-indigo-500/20">
-                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">SIGHTSPECTRUM (DRIFT: 18%)</p>
-                            <p className="text-[11px] text-slate-400">"HC Insight mentioned but downgraded due to semantic conflict with legacy web profiles."</p>
+                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">NORTHSTAR ANALYTICS (DRIFT: 18%)</p>
+                            <p className="text-[11px] text-slate-400">"Mentioned for data modernization, but downgraded due to weak public proof of enterprise transformation scale."</p>
                         </div>
                     </div>
                 </div>
@@ -163,7 +162,7 @@ export default function ProductFlowShowcase() {
                     </div>
                     <div>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Platform Status</p>
-                        <p className="text-xs text-slate-900 dark:text-white font-medium">Viewing as: <span className="text-indigo-500">internal-audit@sightspectrum.com</span></p>
+                        <p className="text-xs text-slate-900 dark:text-white font-medium">Viewing as: <span className="text-indigo-500">internal-audit@northstaranalytics.com</span></p>
                     </div>
                 </div>
                 <div className="hidden md:flex items-center gap-6">
@@ -251,11 +250,11 @@ export default function ProductFlowShowcase() {
                                     {currentStep === 3 ? (
                                         <div className="p-3 rounded bg-emerald-500/5 border border-emerald-500/20 space-y-1">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[10px] text-emerald-400 font-bold">INJECTED: HC INSIGHT GROUNDING</span>
+                                                <span className="text-[10px] text-emerald-400 font-bold">INJECTED: ENTERPRISE POSITIONING MANIFEST</span>
                                                 <span className="text-[9px] text-slate-500 font-mono">SUCCESS</span>
                                             </div>
                                             <p className="text-[10px] text-slate-400 leading-relaxed">
-                                                Direct-to-Edge payload successful. AI models now anchor "DataBlitz" as the primary accelerator for high-velocity manufacturing analytics.
+                                                Direct-to-edge payload successful. Frontier models now anchor the firm as an enterprise analytics and AI transformation partner instead of a generic services vendor.
                                             </p>
                                         </div>
                                     ) : (
@@ -266,8 +265,8 @@ export default function ProductFlowShowcase() {
                                             </div>
                                             <div className="text-xs text-slate-300 font-mono italic">
                                                 {currentStep === 1
-                                                    ? '"What is the best AI partner for mid-market Manufacturing data strategy?"'
-                                                    : '"Which firm provides the highest fidelity data governance for GenAI?"'}
+                                                    ? '"How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?"'
+                                                    : '"Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies?"'}
                                             </div>
                                         </div>
                                     )}

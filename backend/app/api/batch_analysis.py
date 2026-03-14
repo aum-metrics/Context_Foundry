@@ -138,11 +138,11 @@ async def get_batch_status(
 # ============================================================================
 
 DEFAULT_AUDIT_PROMPTS = [
-    "What is {org_name}?",
-    "What is the pricing for {org_name}?",
-    "What features does {org_name} offer?",
-    "Who are {org_name}'s competitors?",
-    "Is {org_name} a good choice for enterprise?",
+    "Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does {org_name} fit?",
+    "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does {org_name} compare?",
+    "How does {org_name} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
+    "Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies, and why would a buyer shortlist {org_name}?",
+    "Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports {org_name}?",
 ]
 
 

@@ -1,128 +1,117 @@
-# AUM Context Foundry — Frequently Asked Questions
+# AUM Context Foundry - Frequently Asked Questions
 
----
+## Product
 
-## Product & Technology
+**What is AUM Context Foundry?**  
+AUM Context Foundry measures how frontier AI models describe a company, compares those answers with a verified context document, and shows where the public narrative is strong, missing, or drifting.
 
-**Q: What exactly is AUM Context Foundry?**
-AUM is an infrastructure platform that measures and improves how AI models (ChatGPT, Claude, Perplexity) represent your brand. It answers: *"When someone asks an AI about your product, does the AI answer correctly?"* — and gives you the math to prove it.
+**Which models does AUM evaluate today?**  
+The current runtime model set is:
+- GPT-4o
+- Claude 4.5 Sonnet
+- Gemini 3 Flash
 
-**Q: What is LCRS?**
-LCRS (Low-Latency Claim-based Reliability Scoring) is AUM's proprietary scoring methodology. It evaluates AI responses on a 0–100 scale:
-- **60% Claim Accuracy**: Verified claims against your uploaded ground-truth documents.
-- **40% Semantic Fidelity**: Cosine similarity between AI response embedding and your brand's verified knowledge base.
+**What is LCRS?**  
+LCRS is the product's representation score. It blends:
+- claim recall against the verified manifest
+- semantic alignment between the answer and the verified context
 
-**Q: Which AI models does AUM test?**
-GPT-4o (OpenAI), Claude 4.5 Sonnet (Anthropic), and Gemini 3 Flash (Google). All three are evaluated simultaneously for each simulation.
+The implementation uses a transparent 60/40 weighting. It is an engineering heuristic, not a peer-reviewed academic metric.
 
-**Q: What is a "Context Information Model" (CIM)?**
-The CIM is the mathematical representation of your brand's verified knowledge base. It's built from documents you upload — PDFs, product specs, FAQs, etc. — and stored as vector embeddings. All simulations test AI responses against this model.
+**What is the `/llms.txt` manifest?**  
+It is a machine-readable summary of the active verified context. AUM generates it from the current manifest so AI crawlers and answer engines have a cleaner representation of the company's approved claims, services, and links.
 
-**Q: What is the `/llms.txt` manifesto?**
-A machine-readable file served at your organization's URL that tells AI crawlers (SearchGPT, Perplexity) exactly who you are and what you stand for. AUM generates and hosts this automatically from your CIM.
+## Security and data handling
 
----
+**Do you store uploaded documents?**  
+Raw uploads are processed through the zero-retention ingestion pipeline and are not kept as source files. The generated manifest and embeddings are stored with TTL-based lifecycle handling.
 
-## Privacy & Data Security
+**Where is tenant data stored?**  
+Organization metadata, manifests, scores, and audit records are stored in Google Firestore.
 
-**Q: Do you store my documents?**
-**No.** Documents are processed entirely in volatile memory using our Zero-Retention pipeline. The raw file is deleted immediately after processing. Mathematical embeddings (the CIM) are stored for 24 hours and then automatically purged via platform-wide TTL. Only non-PII semantic vectors are persisted during this window.
+**Do users need to provide their own model API keys?**  
+No for normal product use. The platform can run simulations with platform-managed provider keys. BYOK and admin-managed key rotation are separate administrative concerns.
 
-**Q: Where is my data stored?**
-Vector embeddings and organization metadata are stored in Google Firestore (regional, encrypted at rest). No raw documents or PII from documents is stored.
+## Plans and packaging
 
-**Q: Is AUM SOC2 compliant?**
-AUM maintains an append-only SOC2 audit trail of all sensitive operations (ingestion, API key events, member changes) in Firestore. Organizations on Growth+ plans can query their audit logs via the API.
-
-**Q: Who can access my organization's data?**
-Only members of your organization (verified by Firestore user lookup). Backend uses `verify_user_org_access()` on every org-scoped endpoint — fail-closed on any database error.
-
----
-
-## Setup & Onboarding
-
-**Q: Do I need to provide my own OpenAI/Anthropic/Gemini API keys?**
-No. AUM provides platform-managed inference keys for all plans. You start running simulations immediately after sign-up with zero configuration. All keys are automatically redacted from API responses to prevent leakage.
-
-**Q: How do I get started?**
-1. Sign up at [aumcontextfoundry.com](https://aumcontextfoundry.com).
-2. Upload a PDF document (product spec, FAQ, data sheet).
-3. Run your first simulation by typing a customer question.
-4. Read your LCRS score for each AI model.
-
-No developer setup, no API keys required.
-
-**Q: How long does provisioning take?**
-Instant. Your organization, user record, and B2B API key are created in a single transaction as soon as you verify your email.
-
----
-
-## Plans & Billing
-
-**Q: What's included in the Explorer plan?**
+**What is included in Explorer?**  
+Explorer is the free proof-of-value tier:
 - 1 seat
-- 3 simulations per month
-- 1 document upload
-- Agent Manifesto (`/llms.txt`)
-- Free forever
+- 1 document ingestion
+- 1 simulation run / one free report
+- `/llms.txt` preview
+- no scoring history
+- no paid exports
+- no API-key generation
 
-**Q: What's the difference between Growth and Scale plans?**
+**What is included in Growth?**  
+Growth is the first paid operating tier:
+- 5 seats
+- 100 simulations per billing cycle
+- full tri-model comparison
+- full dashboard access
+- SEO + GEO readiness
+- report export
+- API-key generation
 
-| Feature | Growth | Scale |
-|---------|--------|-------|
-| Seats | 5 | 25 |
-| Simulations/mo | 100 | 500 | Custom |
-| Batch Stability Check | ✓ | ✓ | ✓ |
-| Priority Support | ✓ | ✓ | ✓ |
-| Enterprise SSO | — | ✓ | ✓ |
-| Custom Model Training | — | — | ✓ |
+Public price:
+- USD: $79/month
+- INR: Rs6,499/month
 
-**Q: What payment methods are accepted?**
-All major credit/debit cards, UPI, and Net Banking via Razorpay.
+**What is included in Scale?**  
+Scale is the higher-volume team tier:
+- 25 seats
+- 500 simulations per billing cycle
+- everything in Growth
+- competitor tracking
+- white-labeled exports
+- agency-oriented workflow
 
-**Q: What happens when I hit my simulation limit?**
-You'll see a "Limit Reached" message in the simulator. You can upgrade immediately to continue. Your data is never deleted.
+Public price:
+- USD: $249/month
+- INR: Rs20,999/month
 
-**Q: Can I get a refund?**
-Yes, within 7 days of purchase. Contact hello@aumcontextfoundry.com.
+**What is Enterprise?**  
+Enterprise is admin-managed and contract-driven. Current code defaults are:
+- 100 seats
+- 2000 simulations per billing cycle
 
----
+These values can be overridden by admin controls for a contracted tenant.
 
-## API & Developer Access
+**What happens when the simulation limit is reached?**  
+The product blocks new runs and prompts the user to upgrade or renew capacity. Stored results remain available according to plan access.
 
-**Q: Can I access AUM programmatically?**
-Yes. Every account comes with a `aum_...` B2B API key. Use it to:
-- Run simulations directly from your code.
-- Integrate LCRS scoring into your CI/CD pipeline.
-- Build custom dashboards.
+**What payment methods are supported?**  
+Razorpay is the active payment rail for the product. That supports cards, UPI, and common India-first payment methods.
 
-See the [B2B API section in the User Guide](./User_Guide.md).
+## API and integrations
 
-**Q: What rate limits apply to the API?**
-- 5 requests/second per IP (configurable in enterprise agreements).
-- Per-org simulation quotas enforced same as dashboard usage.
+**Does every account get an API key automatically?**  
+No. Explorer does not auto-provision an external API key. API-key generation is available on paid tiers through the API Keys screen.
 
-**Q: Is the API versioned?**
-Yes. The public B2B API is at `/api/simulation/v1/run`. Internal dashboard APIs are at `/api/*`.
+**Which tiers can generate API keys?**  
+Growth, Scale, and Enterprise.
 
----
+**What is the API used for?**  
+It exposes simulation and related programmatic workflows so a paid organization can integrate scoring into its own internal systems.
 
-## Enterprise
+## Enterprise controls
 
-**Q: Does AUM support SSO?**
-Yes. Enterprise plans support Okta, Azure Active Directory, and Google Workspace SSO.
+**Does AUM support SSO?**  
+Yes. Scale and Enterprise organizations can configure SSO for supported providers such as Okta, Azure AD, and Google Workspace.
 
-**Q: Can we deploy AUM on-premise?**
-Yes, for enterprise agreements. The backend is fully containerized (Docker). Contact hello@aumcontextfoundry.com.
+**Can AUM be deployed in a private environment?**  
+The product is containerized and can be discussed for private deployment or custom enterprise environments. That is a commercial / implementation discussion, not the default self-serve path.
 
-**Q: Is there a white-label option?**
-Contact hello@aumcontextfoundry.com for OEM and white-label licensing.
+**How should buyers think about GEO vs drift?**  
+They are not the same metric:
+- drift / LCRS measures how well model answers match the verified context on tested prompts
+- GEO measures page-level readiness and manifest alignment for generative discovery
 
----
+A company can improve one without automatically improving the other.
 
-**Q: How reliable are the background simulations?**
-A: High. AUM features a persistent task queue with an automated recovery worker that restarts jobs in case of worker process interruptions.
+## Support
 
----
+**How do customers contact AUM?**  
+hello@aumcontextfoundry.com
 
-*AUM Context Foundry — FAQ v5.1.0*

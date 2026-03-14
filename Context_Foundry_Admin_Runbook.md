@@ -89,13 +89,18 @@ When a new Enterprise signs up:
        "simsThisCycle": 0
    }
    ```
+   Current defaults used by the product:
+   - explorer: 1 simulation run, 1 seat
+   - growth: 100 simulations, 5 seats
+   - scale: 500 simulations, 25 seats
+   - enterprise: 2000 simulations, 100 seats (admin-overridable)
 4. **AI Key Injection:** If the client "Brings Their Own Key" (BYOK), it is injected via the dashboard. If using Platform-Managed keys, set backend overrides to `"internal_platform_managed"`.
 
 ---
 
 ## 4. Enterprise SSO Configuration
 
-Enterprise clients (Scale/Enterprise tiers) require SSO (Okta, Azure AD, Google).
+Scale and Enterprise clients can configure SSO (Okta, Azure AD, Google).
 
 ### Admin Requirements per Tenant
 The tenant IT admin must provide:
@@ -128,6 +133,8 @@ The LCRS Engine utilizes strictly enforced transactional billing.
 
 ### Understanding the Billing Cycle
 Every time an AI simulation runs, the `@firestore.transactional` lock increments `simsThisCycle`. If it exceeds `maxSimulations`, a `402 Payment Required` is thrown.
+
+Explorer is intentionally limited to a one-time free run. Do not treat it as a recurring monthly quota tier.
 
 ### How-To: Resetting Quotas Monthly
 You must invoke the automated Cron endpoint on the 1st of the month:
@@ -176,9 +183,9 @@ If jobs (e.g., scraping competitor sites) fail, they enter the DLQ (Dead Letter 
 * **Cause:** Semantic Document (Context Manifest) failed to partition into vector chunks.
 * **Fix:** Ensure the API server has sufficient RAM to run the embeddings model. Ask the user to re-upload the Context Document to trigger a fresh `/api/ingestion/parse` transaction. 
 
-### Issue 5: SearchGPT or Perplexity Missing from Matrix
-* **Cause:** The Explorer Plan intentionally limits simulation access to GPT-4o to preserve API budget. The UI locks Gemini 3 Flash and Claude 4.5 Sonnet behind paid tiers.
-* **Fix:** Advise user to upgrade to Growth or Scale plan.
+### Issue 5: Paid models or paid reports are locked
+* **Cause:** Explorer intentionally exposes only the free proof-of-value flow. Full dashboard, exports, and paid operational features are locked behind paid tiers.
+* **Fix:** Advise the user to upgrade to Growth, Scale, or an enterprise-configured plan.
 
 ---
 

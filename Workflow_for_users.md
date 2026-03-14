@@ -1,221 +1,144 @@
-# AUM Context Foundry — Workflow Guide
-**Step-by-step user workflows**
-**v5.0.0 | March 2026**
+# AUM Context Foundry - Workflow Guide
+**March 2026**
 
----
+## Workflow 1: First-time workspace setup
 
-## Workflow 1: First-Time Setup (New Organization)
+**Who**: first user at a company  
+**Result**: workspace created and ready for context ingestion
 
-**Who**: First user at a company, signing up for the first time.
-**Result**: Organization provisioned, first simulation ready to run.
+1. Sign in at [https://aumcontextfoundry.com](https://aumcontextfoundry.com)
+2. Verify your email if required
+3. The platform provisions your organization workspace
+4. You land in the product on the Explorer tier unless a paid plan is already assigned
 
-```
-1. Navigate to https://aumcontextfoundry.com
-2. Click "Sign Up" → Enter business email + password
-3. Verify email (check inbox)
-4. First login triggers auto-provisioning:
-   - Organization created
-   - B2B API key generated
-   - Explorer plan active
-5. Land on Dashboard ✓
-```
+Current Explorer scope:
+- 1 seat
+- 1 document ingestion
+- 1 simulation run / one free report
 
-**Expected time**: < 60 seconds from sign-up to first dashboard view.
+## Workflow 2: Create the active context
 
----
+**Who**: admin or member  
+**Result**: manifest created for the company being analyzed
 
-## Workflow 2: Uploading Your First Document (Building the CIM)
+1. Open the context / ingestion workflow
+2. Upload a PDF or submit a public URL
+3. Wait for the zero-retention parse and manifest generation
+4. Confirm the active context is the company you want to analyze
 
-**Who**: Admin or Member.
-**Result**: Brand's ground truth indexed and ready for simulation.
+## Workflow 3: Run a B2B enterprise simulation
 
-```
-1. Navigate to "Semantic Ingestion" in the sidebar
-2. Click "Upload Document"
-3. Select a PDF (< 10MB)
-   Good candidates: Product spec, FAQ, Company overview, Data sheet
-4. Click "Process Document"
-5. Wait 15–45 seconds for processing
-6. See success confirmation: "CIM Updated — Version 1.0.0"
-```
+**Who**: admin or member  
+**Result**: model-by-model prompt evaluation
 
-**What happens behind the scenes**:
-- PDF read into memory → extracted → chunked → embedded → JSON-LD synthesized → written to Firestore → raw file deleted.
-- Your `/llms.txt` manifesto is automatically updated.
+1. Open `Co-Intelligence`
+2. Confirm the active context
+3. Use one of the enterprise buyer-intent prompts, for example:
+   - "Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does this firm fit?"
+   - "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?"
+   - "Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies, and why would a buyer shortlist this firm?"
+4. Run the simulation
+5. Review:
+   - score per model
+   - grounded vs drifting output
+   - claim support
+   - competitor narrative pressure
 
-**Explorer Plan**: 1 document maximum. Upgrade for unlimited.
+## Workflow 4: Move from simulation to decision view
 
----
+**Who**: paid-tier user  
+**Result**: a unified operating surface instead of isolated screens
 
-## Workflow 3: Running a Simulation
+1. Open the command center / dashboard
+2. Review the KPI strip
+3. Review the winning and losing query clusters
+4. Review competitor intelligence
+5. Review the remediation panel
+6. Export the executive report
 
-**Who**: Admin or Member.
-**Prerequisites**: At least one document ingested (CIM built).
-**Result**: LCRS scores for GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash on your question.
+This is the main product flow for Growth, Scale, and Enterprise users.
 
-```
-1. Navigate to "Co-Intelligence Simulator"
-2. Enter a customer question in the prompt box
-   Example: "What is Acme Corp's return policy?"
-   Example: "Does TechCo integrate with Salesforce?"
-3. Click "Run Simulation"
-4. Wait 8–15 seconds for tri-model evaluation
-5. Review results:
-   ├── LCRS Score per model (0–100)
-   ├── Grade: High Fidelity / Minor Drift / Critical Drift
-   ├── Per-model response text
-   └── Which claims were supported vs. hallucinated
-```
+## Workflow 5: Understand remediation guidance
 
-**If you see a 402 error**: You've hit your simulation limit. Upgrade your plan.
-**If you see a 503 error**: API keys are being provisioned. Wait 30 seconds and retry.
+**Who**: marketing, comms, growth, or strategy owner  
+**Result**: exact next actions to improve representation
 
----
+For weak clusters, the product surfaces:
+- observed outcome
+- winning competitor
+- missing claims
+- manifest-backed URLs to update
+- suggested copy block
+- suggested schema / FAQ / `llms.txt` additions
 
-## Workflow 4: Viewing & Sharing Your Agent Manifesto
+## Workflow 6: Compare before vs after
 
-**Who**: Admin or Member.
-**Result**: Live `/llms.txt` URL ready to share with AI crawlers and partners.
+**Who**: team proving ROI internally  
+**Result**: baseline vs current improvement evidence
 
-```
-1. Navigate to "Agent Manifest" in the sidebar
-2. View the auto-generated manifesto content
-3. Copy the shareable URL:
-   https://aumcontextfoundry.com/llms.txt?orgId=your_org_id
-4. (Optional) Submit to AI crawler indexing services
-```
+1. Refresh the context after making content changes
+2. Re-run the same query cluster
+3. Open the report
+4. Review the remediation delta section:
+   - baseline LCRS
+   - current LCRS
+   - hallucination-rate delta
+   - historical prompt comparison
 
-Your manifesto updates automatically whenever you upload a new document.
+## Workflow 7: Invite the team
 
----
+**Who**: organization admin  
+**Result**: additional members added within plan limits
 
-## Workflow 5: Inviting Team Members
+Seat limits currently enforced:
+- Explorer: 1
+- Growth: 5
+- Scale: 25
+- Enterprise: 100 by default
 
-**Who**: Admin only.
-**Result**: New member added to organization, seat count updated.
+## Workflow 8: Generate API keys
 
-```
-1. Navigate to "Settings → Team"
-2. View current member list
-3. Enter colleague's email in the invite field
-4. Click "Send Invite"
-5. Member receives email (or you share the signup link)
-6. When they sign up, they are linked to your organization
-```
+**Who**: paid-tier admin  
+**Result**: programmatic access for external integrations
 
-**Seat Limits**: Explorer: 1 • Growth: 5 • Scale: 25
+1. Open the API Keys screen
+2. Generate a new `aum_...` key
+3. Store it securely
+4. Use it against the paid-tier API surface
 
----
+Explorer does not auto-provision or expose external API keys.
 
-## Workflow 6: Running a Batch Stability Check
+## Workflow 9: Upgrade
 
-**Who**: Admin or Member (Growth/Scale plan).
-**Result**: Stability report across your top customer questions.
+**Who**: organization admin  
+**Result**: higher limits and more workflow depth
 
-```
-1. Navigate to "SoM Command Center"
-2. Click "Run Batch Stability Check"
-3. Wait for background processing (30–120 seconds)
-4. Review batch results:
-   ├── Per-question LCRS scores
-   ├── Model consistency (which model is most reliable)
-   └── Lowest-scoring questions to focus improvement on
-```
+Current public plans:
+- Growth: $79 / Rs6,499 monthly
+- Scale: $249 / Rs20,999 monthly
 
----
+Upgrade flow:
+1. Trigger checkout from landing page or in-product paywall
+2. Complete Razorpay checkout
+3. Plan activates and quotas reset for the billing cycle
 
-## Workflow 7: Running an SEO & LLM Audit
+## Workflow 10: Configure SSO
 
-**Who**: Admin.
-**Result**: Audit of your website's AI-crawler readiness.
+**Who**: Scale or Enterprise admin  
+**Result**: centralized login for the team
 
-```
-1. Navigate to "SoM Command Center"
-2. Click "Run SEO Audit"
-3. Wait for async job completion (30–60 seconds)
-4. Review results:
-   ├── Core Web Vitals
-   ├── JSON-LD structured data gaps
-   ├── LLM readability score
-   └── Recommended improvements
-```
+1. Open SSO settings
+2. Configure the provider credentials
+3. Register the callback URL with the IdP
+4. Test tenant login
 
----
+## Workflow 11: Export the executive artifact
 
-## Workflow 8: B2B API Integration
+**Who**: paid-tier user  
+**Result**: stakeholder-ready PDF
 
-**Who**: Developer.
-**Result**: LCRS scoring integrated into your own system.
+1. Open the executive report
+2. Confirm the active context and query set
+3. Export the PDF
+4. Share the report with buyers, operators, or leadership
 
-```
-1. Navigate to "Settings → API Keys"
-2. Copy your aum_... key (shown once at provision time; regenerate if lost)
-3. Make API calls:
-
-   POST https://api.aumcontextfoundry.com/v1/run
-   Authorization: Bearer aum_your_key
-   Content-Type: application/json
-
-   {
-     "orgId": "your_org_id",
-     "prompt": "Customer question here",
-     "manifestVersion": "latest"
-   }
-
-4. Parse the response:
-   {
-     "results": [
-       { "model": "gpt-4o", "lcrsScore": 92.1, "grade": "high_fidelity" },
-       { "model": "Claude 4.5 Sonnet", "lcrsScore": 78.3, "grade": "minor_drift" },
-       { "model": "gemini-2-0-flash", "lcrsScore": 65.7, "grade": "minor_drift" }
-     ]
-   }
-```
-
----
-
-## Workflow 9: Upgrading Your Plan
-
-**Who**: Admin.
-**Result**: Plan upgraded, additional simulations and seats unlocked.
-
-```
-1. Navigate to "Settings → Billing"
-2. Click "Upgrade Plan"
-3. Select Growth or Scale
-4. Enter payment details (Razorpay — card / UPI / Net Banking)
-5. Confirm payment
-6. Plan upgrades instantly — no restart needed
-```
-
----
-
-## Workflow 10: Revoking an API Key
-
-**Who**: Admin.
-**Result**: Old API key deactivated, breach risk eliminated.
-
-```
-1. Navigate to "Settings → API Keys"
-2. Find the key to revoke
-3. Click "Revoke Key"
-4. Key is immediately deactivated
-5. Generate a new key if needed
-```
-
-## Workflow 11: Configuring Enterprise SSO
-
-**Who**: Admin (Scale plan).
-**Result**: Organization-wide SSO enabled.
-
-```
-1. Navigate to "Settings → Enterprise SSO"
-2. Choose your provider (Okta / Azure AD / Google)
-3. Input Client ID, Client Secret, and Domain
-4. Click "Configure SSO"
-5. Verify status shows "Active"
-```
-
----
-
-*AUM Context Foundry — Workflow Guide v5.0.0*

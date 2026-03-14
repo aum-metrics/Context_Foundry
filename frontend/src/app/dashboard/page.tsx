@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { LayoutDashboard, Database, RadioReceiver, Cpu, Settings, LogOut, Sun, Moon, Shield, Lock } from "lucide-react";
+import { LayoutDashboard, Database, Cpu, Settings, LogOut, Sun, Moon, Shield, Lock, ArrowRight, Layers3 } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
-import SemanticIngestion from "@/components/SemanticIngestion";
-import AgentManifest from "@/components/AgentManifest";
 import CoIntelligenceSimulator from "@/components/CoIntelligenceSimulator";
 import { useTheme } from "@/components/ThemeProvider";
 import { useOrganization } from "@/components/OrganizationContext";
@@ -15,6 +13,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { auth } from "@/lib/firebase";
 import { useSearchParams } from "next/navigation";
 import { useRazorpay } from "@/hooks/useRazorpay";
+import ContextStudio from "@/components/ContextStudio";
 
 interface AdminOrgOption {
   id: string;
@@ -23,6 +22,7 @@ interface AdminOrgOption {
 
 export default function AUMContextFoundry() {
   const [activeView, setActiveView] = useState("som");
+  const [contextStudioTab, setContextStudioTab] = useState<"ingestion" | "manifest">("ingestion");
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeFeatureName, setUpgradeFeatureName] = useState("Premium Features");
   const { theme, toggleTheme } = useTheme();
@@ -60,6 +60,36 @@ export default function AUMContextFoundry() {
       setActiveView("simulator");
     }
   }, [organization?.subscriptionTier, activeView]);
+
+  const openWorkspaceView = (view: string) => {
+    if (view === "ingestion" || view === "manifest") {
+      setContextStudioTab(view);
+      setActiveView("context");
+      return;
+    }
+    setActiveView(view);
+  };
+
+  const workspaceViews = [
+    {
+      id: "som",
+      label: "Command Center",
+      icon: LayoutDashboard,
+      locked: organization?.subscriptionTier === "explorer",
+    },
+    {
+      id: "context",
+      label: "Context Studio",
+      icon: Layers3,
+      locked: false,
+    },
+    {
+      id: "simulator",
+      label: "Co-Intelligence",
+      icon: Cpu,
+      locked: false,
+    },
+  ];
 
   useEffect(() => {
     if (autoCheckoutTriggeredRef.current) return;
@@ -153,7 +183,7 @@ export default function AUMContextFoundry() {
                   setIsUpgradeModalOpen(true);
                   return;
                 }
-                setActiveView("som");
+                openWorkspaceView("som");
               }}
               className={`flex items-center text-sm px-3 py-2.5 rounded-xl transition-all ${activeView === "som"
                 ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium border border-indigo-500/20"
@@ -163,25 +193,16 @@ export default function AUMContextFoundry() {
               {organization?.subscriptionTier === "explorer" ? <Lock className="w-4 h-4 mr-3" /> : <LayoutDashboard className="w-4 h-4 mr-3" />} Dashboard (SoM)
             </button>
             <button
-              onClick={() => setActiveView("ingestion")}
-              className={`flex items-center text-sm px-3 py-2.5 rounded-xl transition-all ${activeView === "ingestion"
+              onClick={() => openWorkspaceView("context")}
+              className={`flex items-center text-sm px-3 py-2.5 rounded-xl transition-all ${activeView === "context"
                 ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-medium border border-cyan-500/20"
                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
                 }`}
             >
-              <Database className="w-4 h-4 mr-3" /> Data Ingestion
+              <Layers3 className="w-4 h-4 mr-3" /> Context Studio
             </button>
             <button
-              onClick={() => setActiveView("manifest")}
-              className={`flex items-center text-sm px-3 py-2.5 rounded-xl transition-all ${activeView === "manifest"
-                ? "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 font-medium border border-fuchsia-500/20"
-                : "text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
-                }`}
-            >
-              <RadioReceiver className="w-4 h-4 mr-3" /> Agent Manifest
-            </button>
-            <button
-              onClick={() => setActiveView("simulator")}
+              onClick={() => openWorkspaceView("simulator")}
               className={`flex items-center text-sm px-3 py-2.5 rounded-xl transition-all ${activeView === "simulator"
                 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/20"
                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
@@ -239,9 +260,65 @@ export default function AUMContextFoundry() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none -translate-y-20"></div>
-        {activeView === "som" && organization?.subscriptionTier !== "explorer" && <SoMCommandCenter setActiveView={setActiveView} />}
-        {activeView === "ingestion" && <SemanticIngestion />}
-        {activeView === "manifest" && <AgentManifest />}
+        <div className="relative z-10 mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-4 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Enterprise Workspace</p>
+              <h2 className="mt-1 text-lg font-medium text-slate-900 dark:text-white">One operating surface for context, market evidence, and buyer-facing reporting</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-slate-200 dark:border-white/10 px-3 py-1 text-xs text-slate-500">
+                Plan: {organization?.subscriptionTier || "explorer"}
+              </span>
+              <span className="rounded-full border border-slate-200 dark:border-white/10 px-3 py-1 text-xs text-slate-500">
+                Context: {activeContextName || organization?.name || "Current"}
+              </span>
+              <span className="rounded-full border border-slate-200 dark:border-white/10 px-3 py-1 text-xs text-slate-500">
+                Version: {activeManifestVersion}
+              </span>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {workspaceViews.map((view) => {
+              const Icon = view.icon;
+              const isActive = activeView === view.id;
+              return (
+                <button
+                  key={view.id}
+                  type="button"
+                  onClick={() => {
+                    if (view.locked) {
+                      setUpgradeFeatureName("SoM Dashboard + Historical Trends");
+                      setIsUpgradeModalOpen(true);
+                      return;
+                    }
+                    openWorkspaceView(view.id);
+                  }}
+                  className={`inline-flex items-center rounded-xl border px-3 py-2 text-sm transition-all ${
+                    isActive
+                      ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {view.locked ? <Lock className="mr-2 h-4 w-4" /> : <Icon className="mr-2 h-4 w-4" />}
+                  {view.label}
+                </button>
+              );
+            })}
+            <div className="ml-auto hidden items-center gap-2 text-xs text-slate-500 xl:flex">
+              <Database className="h-3.5 w-3.5" />
+              Ingest
+              <ArrowRight className="h-3.5 w-3.5" />
+              Manifest
+              <ArrowRight className="h-3.5 w-3.5" />
+              Simulation
+              <ArrowRight className="h-3.5 w-3.5" />
+              Executive report
+            </div>
+          </div>
+        </div>
+        {activeView === "som" && organization?.subscriptionTier !== "explorer" && <SoMCommandCenter setActiveView={openWorkspaceView} />}
+        {activeView === "context" && <ContextStudio initialTab={contextStudioTab} onReturnToInsights={() => openWorkspaceView("som")} />}
         {activeView === "simulator" && <CoIntelligenceSimulator />}
         {activeView === "team" && <TeamSettings />}
         {activeView === "sso" && <SSOSettings />}

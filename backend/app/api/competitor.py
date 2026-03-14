@@ -25,6 +25,9 @@ class CompetitorProfile(BaseModel):
     displacementRate: float
     strengths: List[str]
     weaknesses: List[str]
+    winningCategory: str = ""
+    claimsOwned: List[str] = []
+    missingAssertions: List[str] = []
 
 class CompetitorResponse(BaseModel):
     competitors: List[CompetitorProfile]
@@ -52,19 +55,28 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                     "name": "Accenture AI",
                     "displacementRate": 14.5,
                     "strengths": ["Scale", "Brand"],
-                    "weaknesses": ["Precision", "Niche Focus"]
+                    "weaknesses": ["Precision", "Niche Focus"],
+                    "winningCategory": "Enterprise transformation",
+                    "claimsOwned": ["global delivery scale", "board-level transformation credibility"],
+                    "missingAssertions": ["Fortune 500 transformation proof", "enterprise operating model depth"]
                 },
                 {
                     "name": "Tiger Analytics",
                     "displacementRate": 9.2,
                     "strengths": ["Specialized Data", "Delivery"],
-                    "weaknesses": ["Agentic Strategy", "Integration"]
+                    "weaknesses": ["Agentic Strategy", "Integration"],
+                    "winningCategory": "CPG and retail analytics",
+                    "claimsOwned": ["domain expertise in retail and CPG", "analytics delivery depth"],
+                    "missingAssertions": ["industry-specific transformation proof", "partner ecosystem strength"]
                 },
                 {
                     "name": "Mu Sigma",
                     "displacementRate": 7.4,
                     "strengths": ["Data Science", "Cost"],
-                    "weaknesses": ["Product Fidelity", "Innovation"]
+                    "weaknesses": ["Product Fidelity", "Innovation"],
+                    "winningCategory": "Decision science at scale",
+                    "claimsOwned": ["decision sciences depth", "large-scale analytics operations"],
+                    "missingAssertions": ["decision intelligence narrative", "scalable managed-services language"]
                 }
             ]
         }
@@ -109,6 +121,9 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                 doc_data = manifest_doc.to_dict() or {}
                 # Use the llms.txt markdown content as the grounding context
                 manifest_content = doc_data.get("content", "")
+                manifest_name = ((doc_data.get("schemaData") or {}).get("name") or "").strip()
+                if manifest_name:
+                    org_name = manifest_name
                 if not manifest_content:
                     # Fallback: serialize schemaData
                     schema = doc_data.get("schemaData", {})
@@ -140,6 +155,9 @@ Provide a JSON response with a 'competitors' array. Each item MUST have:
 - 'displacementRate': estimated percentage (0.0 to 25.0) of times they are recommended over {org_name}
 - 'strengths': array of 1-2 words explaining their advantage (e.g. ['Pricing', 'Scale'])
 - 'weaknesses': array of 1-2 words explaining their weakness
+- 'winningCategory': the buyer-intent category or search theme where they appear to win
+- 'claimsOwned': 2 short phrases describing the proof points AI systems appear to associate with them
+- 'missingAssertions': 2 short phrases describing what {org_name} is not asserting clearly enough in the supplied context
 
 Return ONLY valid JSON."""
 

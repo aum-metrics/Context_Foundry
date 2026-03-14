@@ -1,8 +1,8 @@
 # backend/app/api/api_keys.py
 # Author: Sambath Kumar Natarajan
 # Company: AUM Context Foundry
-# Purpose: API Key Management - Professional tier ONLY
-# Tiers: explorer, growth, scale (only growth and scale get API access)
+# Purpose: API Key Management - paid tiers only
+# Tiers: explorer, growth, scale, enterprise (paid tiers get API access)
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
@@ -59,8 +59,8 @@ def generate_api_key() -> tuple[str, str]:
 
 def check_api_tier_subscription(user_id: str) -> bool:
     """
-    Check if user has a Growth or Scale subscription in Firestore.
-    ONLY growth and scale tiers get API access.
+    Check if user has a paid subscription in Firestore.
+    Growth, Scale, and Enterprise tiers get API access.
     """
     if not db:
         return False
@@ -113,8 +113,8 @@ async def generate_api_key_endpoint(
     current_user: dict = Depends(get_auth_context)
 ):
     """
-    Generate a new API key (Growth/Scale tier ONLY).
-    Tiers: explorer, growth, scale
+    Generate a new API key (paid tier only).
+    Tiers: explorer, growth, scale, enterprise
     The key is shown only once - store it securely!
     """
     try:
@@ -130,7 +130,7 @@ async def generate_api_key_endpoint(
                 status_code=403,
                 detail={
                     "error": "API keys are only available for Growth, Scale, and Enterprise subscribers",
-                    "message": "Upgrade to a Professional or Enterprise plan to generate API keys. Available tiers: explorer, growth, scale, enterprise",
+                    "message": "Upgrade to a Growth, Scale, or Enterprise plan to generate API keys. Available tiers: explorer, growth, scale, enterprise",
                     "upgrade_url": "https://aumcontextfoundry.com/pricing"
                 }
             )
@@ -270,5 +270,5 @@ async def health():
         "status": "ok",
         "service": "api_keys",
         "database_connected": db is not None,
-        "tier_requirement": ["growth", "scale"]
+        "tier_requirement": ["growth", "scale", "enterprise"]
     }

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
 
 export interface Organization {
     id: string;
@@ -129,42 +130,47 @@ export function OrganizationProvider({ children, user }: { children: React.React
             }
 
             try {
-                // Fetch the user's document
-                const userDocRef = doc(db, "users", user.uid);
-                const userDocSnap = await getDoc(userDocRef);
-
                 let currentOrgUser: OrgUser;
 
-                if (userDocSnap.exists()) {
-                    currentOrgUser = userDocSnap.data() as OrgUser;
+                if (isLocalMockMode()) {
+                    const mockSession = getLocalMockSession();
+                    currentOrgUser = {
+                        uid: mockSession.orgId === "demo_org_id" ? "demo_uid" : "mock_uid_dev",
+                        email: mockSession.email,
+                        orgId: mockSession.orgId,
+                        role: "admin",
+                    };
                 } else {
-                    // Auto-provision via backend
-                    if (user && typeof window !== 'undefined') {
-                        const token = await user.getIdToken();
-                        const response = await fetch("/api/workspaces/provision", {
-                            method: "POST",
-                            headers: {
-                                "Authorization": `Bearer ${token}`
-                            }
-                        });
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
 
-                        if (!response.ok) {
-                            throw new Error("Failed to provision organization");
-                        }
-                        const provisionData = await response.json();
-
-                        if (provisionData.apiKey && typeof window !== 'undefined') {
-                            localStorage.setItem('aum_b2b_api_key', provisionData.apiKey);
-                        }
-
-                        currentOrgUser = {
-                            uid: user.uid,
-                            email: user.email || "",
-                            orgId: provisionData.orgId,
-                            role: "admin",
-                        };
+                    if (userDocSnap.exists()) {
+                        currentOrgUser = userDocSnap.data() as OrgUser;
                     } else {
-                        throw new Error("Cannot provision without user session");
+                        // Auto-provision via backend
+                        if (user && typeof window !== 'undefined') {
+                            const token = await user.getIdToken();
+                            const response = await fetch("/api/workspaces/provision", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Bearer ${token}`
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Failed to provision organization");
+                            }
+                            const provisionData = await response.json();
+
+                            currentOrgUser = {
+                                uid: user.uid,
+                                email: user.email || "",
+                                orgId: provisionData.orgId,
+                                role: "admin",
+                            };
+                        } else {
+                            throw new Error("Cannot provision without user session");
+                        }
                     }
                 }
 
@@ -200,12 +206,23 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
                 // Fetch the Organization details via safe backend endpoint (P0 Hardening)
                 if (targetOrgId) {
-                    const token = await user.getIdToken();
-                    const orgResponse = await fetch(`/api/workspaces/${targetOrgId}/profile?version=${encodeURIComponent(activeManifestVersion)}`, {
+                    const localMock = isLocalMockMode() ? getLocalMockSession() : null;
+                    const token = localMock?.token || await user.getIdToken();
+                    let orgResponse = await fetch(`/api/workspaces/${targetOrgId}/profile?version=${encodeURIComponent(activeManifestVersion)}`, {
                         headers: {
                             "Authorization": `Bearer ${token}`
                         }
                     });
+
+                    if (!orgResponse.ok && localMock && targetOrgId !== "demo_org_id") {
+                        targetOrgId = "demo_org_id";
+                        setActiveOrgIdState(targetOrgId);
+                        orgResponse = await fetch(`/api/workspaces/${targetOrgId}/profile?version=${encodeURIComponent(activeManifestVersion)}`, {
+                            headers: {
+                                "Authorization": `Bearer mock-demo-token`
+                            }
+                        });
+                    }
 
                     if (orgResponse.ok) {
                         const orgData = await orgResponse.json();

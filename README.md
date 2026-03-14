@@ -33,14 +33,14 @@
 
 ## 1. What This Product Does
 
-Current LLMs (ChatGPT, Gemini, Claude) often "hallucinate" — they invent facts confidently. For a business, if an AI chatbot lies about a refund policy or a product feature, it creates legal liability and destroys brand trust.
+Current frontier models often compress, omit, or distort company positioning. For a business, that can mean the wrong capability story, the wrong competitor framing, or the wrong shortlist outcome at the point of buyer intent.
 
 **AUM Context Foundry solves this.** Companies upload their "source of truth" documents (pricing PDFs, feature lists, security white papers). Our platform then:
 
-1. **Ingests** the document into a zero-retention semantic pipeline (no raw data persists).
-2. **Simulates** queries against GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash simultaneously.
-3. **Scores** each AI's response using our LCRS (Logical Contextual Representation Score) — a 60/40 blend of claim accuracy and semantic alignment.
-4. **Publishes** a verified `/llms.txt` manifesto that forces RAG agents (SearchGPT, Perplexity) to prioritize the company's ground truth.
+1. **Ingests** the source material into a zero-retention semantic pipeline (no raw source file persists).
+2. **Simulates** buyer-intent queries against GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash simultaneously.
+3. **Scores** each response using LCRS - a 60/40 blend of claim recall and semantic alignment.
+4. **Publishes** a verified `/llms.txt` manifesto for AI crawlers and answer-engine retrieval workflows.
 
 ### Feature Maturity Matrix
 
@@ -543,13 +543,14 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 
 ### Identity Syndication (`/llms.txt`)
 - Every tenant gets a dynamic `/llms.txt` manifesto served from their Firestore manifest.
-- Forces RAG agents to prioritize ground truth over hallucinated training data.
+- Gives AI crawlers and answer engines a machine-readable source of the latest verified context.
 - Hardened: org-specific fetch failures return `503` (never hardcoded marketing text for tenant queries).
 
-### Zero-Friction B2B Onboarding
-- `POST /api/workspaces/provision` auto-creates org + user + API key from Firebase JWT.
-- No JSON body needed — everything inferred from token.
-- Platform manages inference keys (no BYOK).
+### Zero-Friction Workspace Onboarding
+- `POST /api/workspaces/provision` auto-creates org + user from Firebase JWT.
+- No JSON body needed - everything is inferred from the token.
+- Platform-managed inference keys are attached to the org for normal product use.
+- External API keys are generated separately on paid tiers.
 
 ---
 
@@ -576,7 +577,7 @@ The LCRS engine (`backend/app/api/simulation.py`, 810 lines) produces reproducib
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/workspaces/provision` | Firebase JWT | Auto-provision org + API key |
+| POST | `/api/workspaces/provision` | Firebase JWT | Auto-provision org + user workspace |
 | GET | `/api/workspaces/list` | Firebase JWT | List user's workspaces |
 | GET | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | List members + pending invites |
 | POST | `/api/workspaces/{orgId}/members` | Firebase JWT + org-verify | Create pending invitation |
@@ -780,8 +781,8 @@ Every security gate defaults to **deny**:
 |------|-------|----------------|----------------|-------|---------|
 | Explorer | 1 | 1 (one-time report) | ✗ | Free | `explorer` |
 | Growth   | 5 | 100/month | ✓ | $79/mo | `growth` |
-| Scale    | Unlimited | 500/month | ✓ | $249/mo | `scale` |
-| Enterprise | Custom | Unlimited | ✓ | Custom | `enterprise` |
+| Scale    | 25 | 500/month | ✓ | $249/mo / Rs20,999/mo | `scale` |
+| Enterprise | 100 default | 2000 default | ✓ | Custom / admin-managed | `enterprise` |
 
 ### Payment Flow
 1. Frontend calls `POST /api/payments/create-order` → backend creates Razorpay order.

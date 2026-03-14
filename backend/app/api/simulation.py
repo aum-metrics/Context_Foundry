@@ -502,10 +502,10 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
 
     # Fallback prompts if no LLM key or no manifest
     fallback = [
-        f"What is {org_name}'s core business and key offerings?",
-        f"What are the key facts and figures in this document?",
-        f"What are {org_name}'s main strengths according to this document?",
-        f"Compare {org_name} against its main competitors.",
+        f"Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does {org_name} fit?",
+        f"Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does {org_name} compare?",
+        f"How does {org_name} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
+        f"Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports {org_name}?",
     ]
 
     if not api_key or not manifest_content:
@@ -514,7 +514,7 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
     try:
         client = OpenAI(api_key=api_key)
         prompt = f"""You are helping test how well AI models know the company '{org_name}'.
-Based on the following business context, generate exactly 4 specific, factual test questions that would be relevant to ask an AI about this company's actual business. These should NOT be generic SaaS questions.
+Based on the following business context, generate exactly 4 specific, factual test questions that mirror how B2B enterprise buyers compare analytics, consulting, and AI-transformation partners. These should NOT be generic SaaS questions.
 
 <Context>
 {manifest_content[:2000]}
@@ -522,7 +522,8 @@ Based on the following business context, generate exactly 4 specific, factual te
 
 Rules:
 - Each question should probe a specific, real aspect of this company based only on what's in the context above.
-- Do NOT ask about pricing, API integration, or software features unless those are clearly in the context.
+- Prioritize enterprise buyer-intent themes: industry expertise, cloud/data modernization, enterprise transformation credibility, competitive differentiation, and partner fit.
+- Do NOT ask about pricing unless pricing is explicitly in the context.
 - Return ONLY a JSON object: {{"prompts": ["question1", "question2", "question3", "question4"]}}"""
 
         completion = client.chat.completions.create(
@@ -564,30 +565,30 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     if request.orgId == "demo_org_id" and _demo_mode_enabled():
         logger.info(f"👤 Serving Mock Simulation for Demo Account: {request.prompt}")
         
-        # Predefined "Sight Spectrum" responses to showcase brand drift
+        # Predefined enterprise-style responses to showcase brand drift
         mock_responses = {
-            "How much does HC Insight cost per month?": [
-                {"model": "GPT-4o", "accuracy": 12.4, "hasHallucination": True, "claimScore": "1/5 claims supported", "answer": "HC Insight is generally free for individual users, with a pro tier starting at $49/month for small teams."},
-                {"model": "Claude 4.5 Sonnet", "accuracy": 98.2, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "HC Insight costs $499/month for the Growth plan. There is no free tier; only a 14-day trial for new users."},
-                {"model": "Gemini 3 Flash", "accuracy": 8.1, "hasHallucination": True, "claimScore": "0/5 claims supported", "answer": "HC Insight pricing is not public; you must contact their sales team for a custom quote starting around $2,000/mo."}
+            "How does SightSpectrum compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?": [
+                {"model": "GPT-4o", "accuracy": 62.4, "hasHallucination": False, "claimScore": "3/5 claims supported", "answer": "SightSpectrum is credible for focused enterprise analytics delivery, but larger firms such as Accenture and Fractal appear stronger on transformation-scale proof and operating-model depth."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 94.2, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "SightSpectrum differentiates through domain-led analytics delivery in healthcare, manufacturing, and logistics, though it needs clearer enterprise transformation language to outrank large consulting competitors."},
+                {"model": "Gemini 3 Flash", "accuracy": 58.1, "hasHallucination": False, "claimScore": "3/5 claims supported", "answer": "SightSpectrum appears specialized and credible, but the public narrative is thinner than the broad enterprise transformation messaging used by larger competitors."}
             ],
-            "Does DataBlitz support Salesforce integration?": [
-                {"model": "GPT-4o", "accuracy": 85.0, "hasHallucination": False, "claimScore": "4/5 claims supported", "answer": "Yes, DataBlitz supports Salesforce integration to pull manufacturing pipeline data."},
-                {"model": "Claude 4.5 Sonnet", "accuracy": 92.0, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "Yes, DataBlitz provides a read-only Salesforce API integration specifically for fetching manufacturing data."},
-                {"model": "Gemini 3 Flash", "accuracy": 35.0, "hasHallucination": True, "claimScore": "2/5 claims supported", "answer": "DataBlitz has deep bidirectional Salesforce integration, allowing you to update manufacturing records directly from their dashboard."}
+            "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does SightSpectrum compare?": [
+                {"model": "GPT-4o", "accuracy": 78.0, "hasHallucination": False, "claimScore": "4/5 claims supported", "answer": "SightSpectrum is competitive in cloud and data modernization, though the public proof is not as explicit as larger firms that lead with named Databricks, Snowflake, and Google Cloud programs."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 93.0, "hasHallucination": False, "claimScore": "5/5 claims supported", "answer": "SightSpectrum is strongest when buyers want focused analytics modernization rather than broad systems integration. It still needs more explicit partner and platform proof to outrank larger competitors."},
+                {"model": "Gemini 3 Flash", "accuracy": 61.0, "hasHallucination": False, "claimScore": "3/5 claims supported", "answer": "SightSpectrum appears credible in data modernization, but its enterprise cloud ecosystem narrative is under-asserted compared with larger analytics consultancies."}
             ],
-            "In which sectors does SightSpectrum primarily deliver its data analytics consulting services?": [
-                {"model": "GPT-4o", "accuracy": 91.5, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, Logistics, and Media sectors, leveraging a workforce of 500+ experts."},
-                {"model": "Claude 4.5 Sonnet", "accuracy": 97.8, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum focuses on Manufacturing (via DataBlitz), Healthcare & Lifesciences (via HC Insight), and Logistics sectors. With 500 employees, they provide specialized AI services for enterprises."},
-                {"model": "Gemini 3 Flash", "accuracy": 42.0, "hasHallucination": True, "claimScore": "2/5", "answer": "SightSpectrum is a leader in Manufacturing and Logistics analytics with 500 employees, though some legacy models incorrectly report them as a retail-only firm with a smaller headcount."}
+            "Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports SightSpectrum?": [
+                {"model": "GPT-4o", "accuracy": 86.5, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum shows evidence of domain-led analytics across manufacturing, healthcare, logistics, and adjacent enterprise sectors, but it needs stronger public proof for retail, CPG, and BFSI breadth."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 95.8, "hasHallucination": False, "claimScore": "5/5", "answer": "SightSpectrum demonstrates credible domain expertise, especially where industry-specific analytics and delivery depth matter more than global transformation scale."},
+                {"model": "Gemini 3 Flash", "accuracy": 70.0, "hasHallucination": False, "claimScore": "4/5", "answer": "SightSpectrum appears specialized and domain-aware, but broader vertical proof is still less explicit than what larger consulting competitors publish."}
             ]
         }
         
         # Default fallback for custom demo prompts
         default_results = [
-            {"model": "GPT-4o", "accuracy": 45.0, "hasHallucination": True, "claimScore": "2/5", "answer": "This is a high-quality hallucinated response to demonstrate AI Brand Drift for Sight Spectrum."},
-            {"model": "Claude 4.5 Sonnet", "accuracy": 95.0, "hasHallucination": False, "claimScore": "5/5", "answer": "This model is correctly following the Sight Spectrum / HC Insight manifest."},
-            {"model": "Gemini 3 Flash", "accuracy": 40.0, "hasHallucination": True, "claimScore": "1/5", "answer": "Another example of context drift in Agentic Search affecting Sight Spectrum's brand perception."}
+            {"model": "GPT-4o", "accuracy": 58.0, "hasHallucination": False, "claimScore": "3/5", "answer": "This answer is directionally relevant but still misses enough enterprise proof points to demonstrate narrative drift."},
+            {"model": "Claude 4.5 Sonnet", "accuracy": 93.0, "hasHallucination": False, "claimScore": "5/5", "answer": "This answer stays closely aligned to the verified enterprise context and its primary claims."},
+            {"model": "Gemini 3 Flash", "accuracy": 55.0, "hasHallucination": False, "claimScore": "3/5", "answer": "This answer remains non-fabricated but under-represents key enterprise differentiators from the manifest."}
         ]
         
         results = mock_responses.get(request.prompt, default_results)
@@ -653,7 +654,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         "explorer": 1,
         "growth": 100,
         "scale": 500,
-        "enterprise": 500,
+        "enterprise": 2000,
     }
     plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 1))
 
@@ -1071,31 +1072,31 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
     if org_id == "demo_org_id" and _demo_mode_enabled():
         history = [
             {
-                "prompt": "How much does HC Insight cost per month?",
+                "prompt": "How does SightSpectrum compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
                 "results": [
-                    {"model": "GPT-4o", "accuracy": 12.4, "hasHallucination": True},
-                    {"model": "Claude 4.5 Sonnet", "accuracy": 98.2, "hasHallucination": False},
-                    {"model": "Gemini 3 Flash", "accuracy": 8.1, "hasHallucination": True}
+                    {"model": "GPT-4o", "accuracy": 62.4, "hasHallucination": False},
+                    {"model": "Claude 4.5 Sonnet", "accuracy": 94.2, "hasHallucination": False},
+                    {"model": "Gemini 3 Flash", "accuracy": 58.1, "hasHallucination": False}
                 ],
                 "timestamp": datetime.now(timezone.utc) - timedelta(days=2),
                 "version": "v1_baseline"
             },
             {
-                "prompt": "Does DataBlitz support Salesforce integration?",
+                "prompt": "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does SightSpectrum compare?",
                 "results": [
-                    {"model": "GPT-4o", "accuracy": 85.0, "hasHallucination": False},
-                    {"model": "Claude 4.5 Sonnet", "accuracy": 92.0, "hasHallucination": False},
-                    {"model": "Gemini 3 Flash", "accuracy": 35.0, "hasHallucination": True}
+                    {"model": "GPT-4o", "accuracy": 78.0, "hasHallucination": False},
+                    {"model": "Claude 4.5 Sonnet", "accuracy": 93.0, "hasHallucination": False},
+                    {"model": "Gemini 3 Flash", "accuracy": 61.0, "hasHallucination": False}
                 ],
                 "timestamp": datetime.now(timezone.utc) - timedelta(days=1),
                 "version": "latest-demo"
             },
             {
-                "prompt": "Is Sight Spectrum HIPAA compliant?",
+                "prompt": "Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports SightSpectrum?",
                 "results": [
-                    {"model": "GPT-4o", "accuracy": 95.0, "hasHallucination": False},
-                    {"model": "Claude 4.5 Sonnet", "accuracy": 96.0, "hasHallucination": False},
-                    {"model": "Gemini 3 Flash", "accuracy": 88.0, "hasHallucination": False}
+                    {"model": "GPT-4o", "accuracy": 86.5, "hasHallucination": False},
+                    {"model": "Claude 4.5 Sonnet", "accuracy": 95.8, "hasHallucination": False},
+                    {"model": "Gemini 3 Flash", "accuracy": 70.0, "hasHallucination": False}
                 ],
                 "timestamp": datetime.now(timezone.utc) - timedelta(hours=4),
                 "version": "latest-demo"

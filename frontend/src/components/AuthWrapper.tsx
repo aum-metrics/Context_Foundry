@@ -5,6 +5,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { OrganizationProvider } from "./OrganizationContext";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
 
 const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/llms-full.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login", "/blog"];
 const PUBLIC_PREFIXES = ["/blog/"];
@@ -18,43 +19,29 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname) || PUBLIC_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix));
 
     useEffect(() => {
-        const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
-        const isLocalHost = typeof window !== 'undefined' && ["localhost", "127.0.0.1"].includes(window.location.hostname);
-        /**
-         * 🛡️ DEMO MODE AUTHENTICATION BYPASS (Intentional)
-         * ------------------------------------------------
-         * This bypass allows the application to be explored using the 'demo@demo.com' user
-         * or via local development mock mode without requiring a functional Firebase connection.
-         * 
-         * Logic:
-         * 1. If 'mock_auth_user' in localStorage is 'demo@demo.com' -> High-privilege Demo access.
-         * 2. If 'NEXT_PUBLIC_ALLOW_MOCK_AUTH' is true -> Local development/testing access.
-         * 
-         * Security Note: This should be disabled or strictly gated in final production 
-         * releases unless a public-facing sandbox mode is explicitly required.
-         */
-        const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true" && isLocalHost;
-        const isDemoUser = savedMockUser === "demo@demo.com" && isMockMode;
+        const isMockMode = isLocalMockMode();
+        const { email, token, orgId } = getLocalMockSession();
+        const isDemoUser = email === "demo@demo.com" && isMockMode;
 
         if (isDemoUser || isMockMode) {
             console.warn(isDemoUser ? "👤 DEMO ACCOUNT ACTIVE" : "🔓 MOCK AUTH MODE ACTIVE");
 
             const mockUser = {
                 uid: isDemoUser ? "demo_uid" : "mock_uid_dev",
-                email: isDemoUser ? "demo@demo.com" : (savedMockUser || "dev@localhost"),
+                email: isDemoUser ? "demo@demo.com" : email,
                 displayName: isDemoUser ? "Demo Account" : "Dev User",
-                getIdToken: async () => isDemoUser ? "mock-demo-token" : "mock-dev-token",
+                getIdToken: async () => token,
                 getIdTokenResult: async () => ({
                     claims: {
                         org_role: "admin",
-                        org_id: isDemoUser ? "demo_org_id" : "mock_org_id"
+                        org_id: orgId
                     }
                 }),
             } as unknown as User;
 
             setUser(mockUser);
             setLoading(false);
-            if (!isPublicPath && pathname === "/login") {
+            if (pathname === "/login") {
                 router.push("/dashboard");
             }
             return;

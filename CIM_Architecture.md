@@ -108,8 +108,9 @@ Overlap ensures semantic continuity across chunk boundaries.
 ### Plan Limits
 ```
 Explorer:  1 manifest document allowed
-Growth+:    Unlimited
-Enterprise: Unlimited (Priority indexing)
+Growth:    Unlimited manifest ingestion
+Scale:     Unlimited manifest ingestion
+Enterprise: Unlimited manifest ingestion (admin-managed tenant)
 ```
 Limit check queries the `manifests` collection document count (not `documents`).
 
@@ -171,7 +172,7 @@ The CIM is synthesized into an AI-crawler-friendly manifesto:
 - /privacy: Zero-Retention Compliance
 ```
 
-Served at `/llms.txt?orgId=...` from the Next.js edge, fetched from the backend which uses Firebase Admin SDK (bypasses client Firestore auth rules). Cached for 1 hour at the CDN layer.
+Served at `/llms.txt?orgId=...` from the Next.js edge, fetched from the backend which uses Firebase Admin SDK (bypasses client Firestore auth rules). Cached for 1 hour at the CDN layer. It is a machine-readable context artifact, not a guarantee that any external model will prioritize the tenant narrative.
 
 ---
 

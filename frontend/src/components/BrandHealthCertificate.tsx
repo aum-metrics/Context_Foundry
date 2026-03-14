@@ -8,6 +8,8 @@ import { Logo } from "./Logo";
 import { useOrganization } from "./OrganizationContext";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { auth } from "@/lib/firebase";
+import { describeGeoMethod } from "@/lib/geoMethod";
+import type { RemediationPageTarget } from "@/lib/remediationTargets";
 
 interface ModelResult {
     model: string;
@@ -21,6 +23,33 @@ interface ScoringRecord {
     prompt: string;
     results: ModelResult[];
     timestamp: { toDate: () => Date } | null;
+}
+
+interface QueryClusterInsight {
+    prompt: string;
+    category: string;
+    avgAccuracy: number;
+    claimRecall: number;
+    hallucinationCount: number;
+    winnerModel: string;
+    weakestModel: string;
+    observedOutcome: string;
+    winningCompetitor: string;
+    claimsOwned: string[];
+    missingClaims: string[];
+}
+
+interface RemediationRecommendation {
+    title: string;
+    category: string;
+    observedOutcome: string;
+    winningCompetitor: string;
+    missingClaims: string[];
+    pageTargets: RemediationPageTarget[];
+    copyBlock: string;
+    schemaSuggestion: string;
+    faqSuggestion: string;
+    llmsSuggestion: string;
 }
 
 interface BrandHealthCertificateProps {
@@ -38,8 +67,10 @@ interface BrandHealthCertificateProps {
         geoMethod?: string;
         recommendation: string;
     };
-    competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[] }[];
+    competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[]; winningCategory?: string; claimsOwned?: string[]; missingAssertions?: string[] }[];
     activeContextName?: string;
+    clusterInsights?: QueryClusterInsight[];
+    remediationRecommendations?: RemediationRecommendation[];
     allowPdfDownload?: boolean;
     onUpgradeRequired?: () => void;
 }
@@ -108,6 +139,8 @@ export default function BrandHealthCertificate({
     seoResult,
     competitors = [],
     activeContextName,
+    clusterInsights = [],
+    remediationRecommendations = [],
     allowPdfDownload = true,
     onUpgradeRequired,
 }: BrandHealthCertificateProps) {
@@ -361,9 +394,20 @@ export default function BrandHealthCertificate({
             writeHeading("Query Tested");
             writeBody(currentPrompt);
 
+            writeHeading("Winning and Losing Query Clusters");
+            if (clusterInsights.length === 0) {
+                writeBody("No buyer-intent cluster analysis available yet. Run the enterprise batch to populate this section.");
+            } else {
+                clusterInsights.slice(0, 5).forEach((cluster) => {
+                    writeBody(`${cluster.category}: ${cluster.avgAccuracy}% avg fidelity | Winner ${cluster.winnerModel} | Weakest ${cluster.weakestModel} | Winning competitor ${cluster.winningCompetitor}`);
+                    writeBody(`Observed outcome: ${cluster.observedOutcome}`);
+                    writeBody(`Missing claims: ${cluster.missingClaims.join(", ")}`);
+                });
+            }
+
             writeHeading("Search Readiness Snapshot");
             writeBody(`SEO Score: ${seoResult?.seoScore ?? 0}% | GEO Score: ${seoResult?.geoScore ?? 0}% | Overall: ${seoResult?.overallScore ?? 0}%`);
-            writeBody(`GEO Method: ${seoResult?.geoMethod || "Not available"}`);
+            writeBody(`GEO Method: ${describeGeoMethod(seoResult?.geoMethod)}`);
             writeBody(seoResult?.recommendation || "No SEO/GEO recommendation available for this run.");
 
             writeHeading("Remediation Delta");
@@ -378,6 +422,27 @@ export default function BrandHealthCertificate({
 
             writeHeading("Competitor Displacement");
             writeBody(competitorSummary);
+            competitors.slice(0, 3).forEach((competitor) => {
+                writeBody(`${competitor.name}: wins on ${competitor.winningCategory || "a competitor-favored category"} | claims owned: ${(competitor.claimsOwned || competitor.strengths || []).join(", ")}`);
+                writeBody(`What you are not asserting clearly enough: ${(competitor.missingAssertions || competitor.weaknesses || []).join(", ") || "Not available"}`);
+            });
+
+            writeHeading("Prescriptive Remediation Plan");
+            if (remediationRecommendations.length === 0) {
+                writeBody("No prescriptive remediation plan generated yet.");
+            } else {
+                remediationRecommendations.slice(0, 3).forEach((item) => {
+                    writeBody(`${item.title} (${item.category})`);
+                    writeBody(`Observed outcome: ${item.observedOutcome}`);
+                    writeBody(`Winning competitor: ${item.winningCompetitor}`);
+                    item.pageTargets.forEach((target) => {
+                        writeBody(`Page to update: ${target.label}${target.url ? ` — ${target.url}` : ""}`);
+                        writeBody(`Why this page: ${target.reason}`);
+                    });
+                    writeBody(`Suggested copy block: ${item.copyBlock}`);
+                    writeBody(`Structured additions: ${item.schemaSuggestion} | ${item.faqSuggestion} | ${item.llmsSuggestion}`);
+                });
+            }
 
             writeHeading("How To Read This Report");
             writeBody("LCRS blends semantic grounding and claim recall. A higher value indicates the response stayed close to the verified manifest context.");
@@ -553,6 +618,31 @@ export default function BrandHealthCertificate({
                                 </div>
                             )}
 
+                            {clusterInsights.length > 0 && (
+                                <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">Winning and Losing Query Clusters</p>
+                                    <div className="space-y-3">
+                                        {clusterInsights.slice(0, 5).map((cluster) => (
+                                            <div key={`${cluster.category}-${cluster.prompt}`} className="rounded-xl bg-slate-50 dark:bg-slate-900 p-4 border border-slate-200 dark:border-white/5">
+                                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+                                                    <div>
+                                                        <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">{cluster.category}</p>
+                                                        <p className="text-sm text-slate-800 dark:text-slate-200">{cluster.prompt}</p>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-lg font-semibold text-slate-900 dark:text-white">{cluster.avgAccuracy}%</p>
+                                                        <p className="text-[10px] text-slate-500">avg fidelity</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{cluster.observedOutcome}</p>
+                                                <p className="text-[11px] text-slate-500">Winner: {cluster.winnerModel} · Weakest: {cluster.weakestModel} · Competitor: {cluster.winningCompetitor}</p>
+                                                <p className="text-[11px] text-slate-500 mt-1">Missing claims: {cluster.missingClaims.join(", ")}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* EXECUTIVE INTERPRETATION */}
                             <div className="mb-8 p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5">
                                 <div className="flex items-center gap-2 mb-3">
@@ -614,6 +704,9 @@ export default function BrandHealthCertificate({
                                             </div>
                                             <p className="text-xs text-slate-600 dark:text-slate-400">{seoResult.recommendation}</p>
                                             <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
+                                                GEO method: {describeGeoMethod(seoResult.geoMethod)}
+                                            </p>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
                                                 GEO reflects page-level generative readiness and manifest alignment, not the same thing as simulation drift on an individual prompt.
                                             </p>
                                         </div>
@@ -631,6 +724,13 @@ export default function BrandHealthCertificate({
                                                         <p className="text-xs text-slate-500">
                                                             Strengths: {competitor.strengths.join(", ") || "N/A"} · Weaknesses: {competitor.weaknesses.join(", ") || "N/A"}
                                                         </p>
+                                                        {(competitor.winningCategory || competitor.claimsOwned?.length || competitor.missingAssertions?.length) && (
+                                                            <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                                                                <p>Winning category: {competitor.winningCategory || "Not available"}</p>
+                                                                <p>Claims owned: {(competitor.claimsOwned || []).join(", ") || "Not available"}</p>
+                                                                <p>Missing assertions: {(competitor.missingAssertions || []).join(", ") || "Not available"}</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -689,6 +789,43 @@ export default function BrandHealthCertificate({
                                     </p>
                                 )}
                             </div>
+
+                            {remediationRecommendations.length > 0 && (
+                                <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">Prescriptive Remediation Plan</p>
+                                    <div className="space-y-4">
+                                        {remediationRecommendations.slice(0, 3).map((item) => (
+                                            <div key={`${item.category}-${item.title}`} className="rounded-xl bg-slate-50 dark:bg-slate-900 p-4 border border-slate-200 dark:border-white/5">
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.title}</p>
+                                                <p className="text-xs text-slate-500 mt-1">Winning competitor: {item.winningCompetitor}</p>
+                                                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">{item.observedOutcome}</p>
+                                                <div className="mt-2 space-y-2">
+                                                    <p className="text-xs text-slate-500">Page(s) to update:</p>
+                                                    {item.pageTargets.map((target) => (
+                                                        <div key={`${target.label}-${target.url}`} className="text-xs text-slate-500">
+                                                            <a
+                                                                href={target.url || undefined}
+                                                                target={target.url ? "_blank" : undefined}
+                                                                rel={target.url ? "noreferrer" : undefined}
+                                                                className="font-medium text-indigo-600 dark:text-indigo-300 hover:underline break-all"
+                                                            >
+                                                                {target.url ? `${target.label} — ${target.url}` : target.label}
+                                                            </a>
+                                                            <p className="mt-1">{target.reason}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-2">Suggested copy block: {item.copyBlock}</p>
+                                                <div className="mt-3 space-y-1 text-[11px] text-slate-500">
+                                                    <p>{item.schemaSuggestion}</p>
+                                                    <p>{item.faqSuggestion}</p>
+                                                    <p>{item.llmsSuggestion}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* GRADE BADGE */}
                             <div className="flex items-center justify-center mb-8">

@@ -53,6 +53,8 @@ PLANS = {
         "currency_display": "USD/INR",
         "period": "once",
         "description": "1 simulation run, 1 document ingestion, basic ASoV score",
+        "maxSimulations": 1,
+        "seatLimit": 1,
     },
     "growth": {
         "name": "Growth",
@@ -63,6 +65,8 @@ PLANS = {
         "currency_display": "$79/₹6,499",
         "period": "monthly",
         "description": "All 3 models, 100 simulations/month, /llms.txt deploy",
+        "maxSimulations": 100,
+        "seatLimit": 5,
     },
     "scale": {
         "name": "Scale",
@@ -73,6 +77,8 @@ PLANS = {
         "currency_display": "$249/₹20,999",
         "period": "monthly",
         "description": "500 simulations/month, priority queue, batch domain analysis",
+        "maxSimulations": 500,
+        "seatLimit": 25,
     },
 }
 
@@ -207,9 +213,12 @@ async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get
                 logger.warning(f"Could not fetch planId for order {request.razorpay_order_id}, defaulting to growth: {e}")
 
             now = datetime.now(timezone.utc)
+            selected_plan = PLANS.get(plan_id, PLANS["growth"])
             db.collection("organizations").document(request.orgId).update({
                 "subscription.planId": plan_id,
                 "subscription.status": "active",
+                "subscription.maxSimulations": selected_plan["maxSimulations"],
+                "subscription.simsThisCycle": 0,
                 "subscription.paymentId": request.razorpay_payment_id,
                 "subscription.orderId": request.razorpay_order_id,
                 "subscription.activatedAt": now,
@@ -250,12 +259,14 @@ async def generate_payment_link(request: PaymentLinkRequest, auth: dict = Depend
             if org_doc.exists:
                 org_data = org_doc.to_dict() or {}
                 plan_id = org_data.get("subscription", {}).get("planId", "growth")
+                if plan_id == "explorer":
+                    plan_id = "growth"
                 plan = PLANS.get(plan_id, PLANS["growth"])
-                amount = plan["amount"]
+                amount = plan["amounts"]["INR"]
         except Exception:
             pass
     if not amount:
-        amount = PLANS["growth"]["amount"]
+        amount = PLANS["growth"]["amounts"]["INR"]
 
     try:
         link = client.payment_link.create({
@@ -270,6 +281,7 @@ async def generate_payment_link(request: PaymentLinkRequest, auth: dict = Depend
             },
             "notes": {
                 "orgId": request.orgId,
+                "planId": plan_id if 'plan_id' in locals() else "growth",
             },
             "callback_url": os.getenv("PAYMENT_CALLBACK_URL", "https://app.aumcontextfoundry.com/payment/success"),
             "callback_method": "get",
@@ -351,9 +363,12 @@ async def razorpay_webhook(request: Request):
                         return True
                     
                     now = datetime.now(timezone.utc)
+                    selected_plan = PLANS.get(p_plan, PLANS["growth"])
                     transaction.update(org_ref, {
                         "subscription.planId": p_plan,
                         "subscription.status": "active",
+                        "subscription.maxSimulations": selected_plan["maxSimulations"],
+                        "subscription.simsThisCycle": 0,
                         "subscription.lastWebhookEvent": evt,
                         "subscription.lastPaymentId": p_id,
                         "subscription.activatedAt": now,

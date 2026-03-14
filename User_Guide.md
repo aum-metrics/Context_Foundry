@@ -1,218 +1,136 @@
-# AUM Context Foundry — User Guide
-**v5.1.0 | March 2026**
+# AUM Context Foundry - User Guide
+**March 2026**
 
----
+## 1. What the product does
 
-## Welcome to AUM Context Foundry
+AUM Context Foundry helps a company understand how GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash describe it in public-answer workflows. The product compares model answers against a verified context document and surfaces:
+- representation accuracy
+- missing claims
+- competitor displacement
+- remediation suggestions
 
-AUM Context Foundry answers a critical question every brand now faces:
-**"When someone asks an AI about your product, does the AI answer correctly?"**
+## 2. First login
 
-This guide covers everything you need to get started — from uploading your first document to reading your simulation results.
+1. Go to [https://aumcontextfoundry.com](https://aumcontextfoundry.com).
+2. Sign in with your work email.
+3. The platform creates a workspace for your organization.
+4. New workspaces start on the `Explorer` plan unless an admin has assigned a paid tier.
 
----
+Explorer currently includes:
+- 1 seat
+- 1 document ingestion
+- 1 simulation run / one free report
 
-## 1. Getting Started
+## 3. Workspace model
 
-### 1.1 Creating Your Account
-1. Go to [aumcontextfoundry.com](https://aumcontextfoundry.com).
-2. Click **Sign Up** and use your business email.
-3. Verify your email address.
-4. Your workspace is automatically created — **no credit card required** to start on the Explorer plan.
+The product has two separate ideas that users should not confuse:
+- **Workspace organization**: the tenant that owns billing, users, and admin settings
+- **Active context**: the company / manifest currently being analyzed
 
-### 1.2 Your Workspace
-When you first log in, AUM automatically:
-- Creates an **Organization** for your company.
-- Provisions a **B2B API Key** for direct API access.
-- Sets you up on the **Explorer plan** (3 simulations/month, free).
-- Supports **Enterprise** scale out with priority support.
+Analytical screens and reports follow the **active context**.
 
-You'll be taken straight to the Dashboard.
+## 4. Context setup
 
----
+Use the `Context Studio` / ingestion workflow to create or refresh the active context.
 
-## 2. Setting Up Your Context (Ingestion)
+Supported setup path:
+1. Upload a PDF or parse a public URL
+2. Let the ingestion pipeline generate a manifest
+3. Review the generated context
+4. Publish it as the latest active version
 
-> **What is a Context Information Model (CIM)?**
-> It's the mathematical "ground truth" AUM uses to evaluate AI responses. Think of it as your brand's verified knowledge base — the source all AI answers should match.
+Explorer allows one ingestion. Paid tiers remove that cap.
 
-### 2.1 Uploading Your First Document
-1. Navigate to **Semantic Ingestion** in the sidebar.
-2. Click **Upload Document** and select a PDF.
-   - Accepted files: PDFs (< 10MB).
-   - Example documents: Product specs, FAQs, company overviews, technical data sheets.
-3. Click **Process Document**.
-4. AUM processes your document entirely in-memory (zero-retention) and builds your CIM.
-5. You'll see a success confirmation when embedding is complete.
+## 5. Running a simulation
 
-> **Explorer Plan**: You can upload 1 document. Upgrade to Growth or Scale for unlimited documents.
+The `Co-Intelligence` surface is the prompt-level evaluation screen.
 
-### 2.2 What Happens to My Document?
-- The raw PDF is **never stored**. It is processed in volatile memory and immediately purged.
-- Only the mathematical embeddings and structured JSON-LD schema are persisted.
-- This is AUM's Zero-Retention guarantee — compliance-friendly for regulated industries.
+1. Select the active context
+2. Choose or edit a buyer-intent prompt
+3. Run the simulation
+4. Review the model-by-model output
 
----
+The current default prompts are B2B enterprise-oriented. They focus on:
+- enterprise analytics consulting ranking
+- cloud and data modernization fit
+- named competitor comparisons
+- buyer shortlist rationale
+- domain expertise coverage
 
-## 3. Running Your First Simulation
+## 6. Understanding the scores
 
-### 3.1 The Co-Intelligence Simulator
+### LCRS
+LCRS is the core answer-quality score. It combines:
+- claim recall against the verified manifest
+- semantic alignment with the active context
 
-1. Navigate to **Co-Intelligence Simulator** in the sidebar.
-2. **Context Switching (v1.2.6)**: Select the manifest version you wish to test against. By default, "Latest" is selected.
-3. Enter a question a customer might ask an AI about your brand:
-   - Example: *"What is Acme Corp's data retention policy?"*
-   - Example: *"Does TechBrand support integration with Salesforce?"*
-3. Click **Run Simulation**.
+### ASoV
+ASoV is the broader visibility / representation lens. It is intended to show how strongly the company shows up with the right narrative across the model outputs.
 
-### 3.2 Reading Your Results
+### GEO
+GEO is not the same thing as prompt-level drift. GEO focuses on:
+- page readiness
+- structured data quality
+- manifest alignment
+- generative-discovery friendliness
 
-AUM runs your question through **GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash** simultaneously and scores each response:
+## 7. Dashboard workflow
 
-```
-LCRS Score = (60% × Claim Accuracy) + (40% × Semantic Alignment)
-```
+Paid plans unlock the full command layer.
 
-| Score Range | Grade | What It Means |
-|-------------|-------|---------------|
-| 85–100 | 🟢 High Fidelity | AI is accurately representing your brand |
-| 60–84 | 🟡 Minor Drift | Some narrative deviation — worth monitoring |
-| 0–59 | 🔴 Critical Drift | AI is actively misrepresenting your brand |
+The main operating flow is:
+1. Set or switch the active context
+2. Run the enterprise query pack
+3. Review KPI strip and model comparison
+4. Review winning and losing query clusters
+5. Review competitor intelligence
+6. Review prescriptive remediation guidance
+7. Export the executive report
 
-**Per-Model Breakdown**: See which AI model represents you best (and which is the worst offender).
+## 8. Reports
 
-**Claim Analysis**: See exactly which factual claims each model got right or wrong.
+The executive report is the buyer-facing artifact. It includes:
+- average LCRS
+- model breakdown
+- executive interpretation
+- GEO snapshot
+- competitor displacement summary
+- ASoV radar explanation
+- remediation delta when historical baseline is available
 
-> **Explorer Plan**: 3 simulations per month. Upgrade for more.
+Explorer can view the teaser/free-report experience. Paid tiers unlock the full export workflow.
 
----
+## 9. Team management
 
-## 4. The SoM (Share of Mind) Command Center
+Seat limits currently enforced by plan:
+- Explorer: 1
+- Growth: 5
+- Scale: 25
+- Enterprise: 100 by default, admin-managed
 
-Access via **SoM Command Center** in the sidebar. This is your proactive monitoring dashboard.
+Admins can invite users from the team settings area. Members can run allowed workflows but should not assume billing or admin privileges.
 
-### 4.1 Batch Stability Check
-Runs your key customer questions across all three AI models in one click. Identifies which questions produce inconsistent answers across AI models. (Growth/Scale plans only.)
+## 10. API access
 
-### 4.2 SEO & LLM Audit
-Analyzes your website for:
-- JSON-LD structured data completeness.
-- LLM-readability of your key pages.
-- Core Web Vitals (Lighthouse score).
+API access is a paid-tier capability.
 
-> This is an async process — results appear within 30–60 seconds.
+Current behavior:
+- Explorer: no external API-key generation
+- Growth / Scale / Enterprise: can generate `aum_...` API keys from the API Keys screen
 
-### 4.3 Brand Health Certificate (v1.2.6)
-Generate a comprehensive PDF-ready report containing Google SEO scores, GEO competitor displacement analysis, and LCRS stability metrics. 
+## 11. Billing
 
----
+Current public pricing:
+- Growth: $79/month or Rs6,499/month
+- Scale: $249/month or Rs20,999/month
 
-## 5. The Agent Manifest (`/llms.txt`)
+Enterprise is not publicly self-serve on the landing page. It is admin-managed / contract-driven.
 
-Every AUM account gets a dynamic **Agent Manifesto** — a machine-readable file at:
-```
-https://aumcontextfoundry.com/llms.txt?orgId=your_org_id
-```
+## 12. SSO
 
-This is automatically indexed by AI crawlers (SearchGPT, Perplexity, Claude). It tells them:
-- Who you are.
-- What you offer.
-- Your canonical ground-truth URLs.
+Scale and Enterprise organizations can configure SSO. Supported provider patterns in the product include Okta, Azure AD, and Google Workspace.
 
-No configuration needed — it updates automatically as you update your CIM.
+## 13. Support
 
-You can also view and copy your manifesto from the **Agent Manifest** page in the dashboard.
+Contact: hello@aumcontextfoundry.com
 
----
-
-## 6. Managing Your Team
-
-Navigate to **Settings → Team** to:
-- Invite team members by email.
-- Set roles: **Admin** (full access) or **Member** (read + simulate).
-- View active seats.
-
-> **Seat Limits**: Explorer: 1 seat. Growth: 5 seats. Scale: 25 seats. Enterprise: Unlimited.
-
-### 6.1 Accepting an Invitation
-1. Check your email for an invitation from AUM Context Foundry.
-2. Click the **Join Organization** link.
-3. Sign in or create an account to activate your seat.
-4. Your name will now appear as "Seat Active" in the team directory.
-
-### 6.2 Enterprise SSO
-Organizations on the **Scale** plan can configure Single Sign-On (Okta, Azure AD, Google) via **Settings → Enterprise SSO**.
-1. Select your provider.
-2. Enter your Domain, Client ID, and Client Secret.
-3. Click **Configure SSO**.
-4. Once active, your team can sign in via your company's IdP using the centralized callback flow.
-
----
-
-## 7. API Access (Developer Mode)
-
-Your **B2B API Key** (format: `aum_...`) is shown on the **API Keys** page. Use it to:
-
-### Run a Simulation via API
-```bash
-curl -X POST https://api.aumcontextfoundry.com/api/simulation/v1/run \
-  -H "Authorization: Bearer aum_your_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "orgId": "your_org_id",
-    "prompt": "What is your data retention policy?",
-    "manifestVersion": "latest"
-  }'
-```
-
-### Response
-```json
-{
-  "results": [
-    {
-      "model": "gpt-4o",
-      "response": "...",
-      "accuracy": 91.5,
-      "status": "high_fidelity",
-      "metrics": {
-        "semantic_divergence": 0.085,
-        "claim_recall": 1.0
-      }
-    }
-    ...
-  ],
-  "prompt": "What is your data retention policy?",
-  "version": "latest"
-}
-```
-
----
-
-## 8. Upgrading Your Plan
-
-1. Go to **Settings → Billing**.
-2. Choose **Growth** (5 seats, 100 sims/mo) or **Scale** (25 seats, 500 sims/mo).
-3. Complete checkout via Razorpay (cards, UPI, Net Banking accepted).
-4. Your plan upgrades instantly after payment confirmation.
-
----
-
-## 9. Frequently Asked Questions
-
-See `FAQ.md` for a full list. Quick answers:
-
-**Q: Do you store my documents?**
-A: No. Raw documents are processed in memory and immediately purged. Mathematical embeddings (the CIM) are stored for 24 hours and then automatically deleted via platform-wide TTL.
-
-**Q: Which AI models are tested?**
-A: GPT-4o (OpenAI), Claude 4.5 Sonnet (Anthropic), Gemini 3 Flash (Google).
-
-**Q: Do I need to provide my own API keys?**
-A: No. AUM provides platform-managed inference keys for all plans.
-
-**Q: What happens when I hit my simulation limit?**
-A: You'll see a clear "Limit Reached" message. You can upgrade immediately to continue.
-
----
-
-*AUM Context Foundry — User Guide v5.1.0*

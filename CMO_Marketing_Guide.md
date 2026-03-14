@@ -1,166 +1,108 @@
-# AUM Context Foundry — CMO & Marketing Guide
-**v5.1.0 | March 2026**
+# AUM Context Foundry - Marketing Guide
+**March 2026**
 
----
+## Positioning
 
-## The Positioning
+The strongest current market position is not generic SEO.
 
-**AUM Context Foundry is the Smoke Detector for your brand in the AI-answer layer.**
+It is:
+**AI competitor ranking intelligence for B2B enterprise firms**
 
-Traditional SEO was about winning on Google's search results page. Agentic SEO — the category AUM defines — is about winning inside AI responses. When a customer asks ChatGPT, Claude, or Perplexity about your product, does the AI answer accurately? Or does it hallucinate, deflect, or recommend your competitor?
+That means the message should focus on:
+- how frontier models rank and compare enterprise vendors
+- whether the company is being shortlisted correctly
+- what exact claims and proof points are missing
 
-**AUM gives you the math to answer that question — and fix it.**
+## Core message
 
----
+When a buyer asks frontier models who the strongest analytics, data, or AI transformation partners are, does the answer include your firm in the right position - or does it favor competitors with better public proof?
 
-## Core Messaging
+AUM Context Foundry measures that outcome, shows the gap, and tells the team what to change.
 
-### Primary Tagline
-> *"The Verified Identity Router for the Agentic Era."*
+## Current buyer language
 
-### One-Liner (for LinkedIn, email signatures, pitches)
-> *AUM Context Foundry measures your brand's Agentic Share of Voice — quantifying whether AI models accurately represent you versus your competitors, and fixing the gap.*
+Use language like:
+- enterprise AI visibility
+- competitor ranking in model answers
+- buyer-intent query monitoring
+- representation drift
+- remediation proof
 
-### Elevator Pitch (30 seconds)
-> "We're entering an era where most purchase journeys start with an AI answer, not a Google search. AUM Context Foundry is infrastructure that ensures AI models cite your brand accurately. We run your customer questions through GPT-4o, Claude, and Gemini, score the accuracy of each response mathematically, and inject your ground truth directly into the AI ecosystem so the right answer wins. Our customers see measurable improvement in brand representation within 30 days."
+Avoid leading with:
+- FMCG pricing mismatch
+- broad consumer-brand safety
+- generic SEO terminology without enterprise context
 
----
+## Product narrative
 
-## The Problem (Market Education First)
+### 1. Measure
+Run enterprise buyer-intent prompts through GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash.
 
-Before pitching the solution, ensure the prospect understands the problem:
+### 2. Compare
+See which competitors win which categories and what claims they appear to own.
 
-1. **The Shift**: 30%+ of search-like queries in 2025 were answered by AI assistants, not traditional search. This is growing at ~40% YoY. *(Source: Gartner, "The Future of Search Engine Marketing", 2024)*
-2. **The Risk**: AI models hallucinate, interpolate from stale training data, and mix brand facts with competitor narratives.
-3. **The Invisibility**: Most brands have zero visibility into what AI says about them. There's no Google Search Console for AI.
-4. **The Stakes**: A misrepresented brand in AI responses = lost consideration at the exact moment intent is highest.
+### 3. Remediate
+Get exact manifest-backed URLs, missing assertions, and suggested copy / schema / FAQ / `llms.txt` updates.
 
----
+### 4. Prove
+Use the executive report and remediation delta to show before-vs-after movement.
 
-## The Solution Story
+## Best-fit segments
 
-AUM's three-layer story:
+Current strongest wedge:
+- analytics consulting firms
+- data and AI transformation firms
+- enterprise technology services firms
+- B2B firms with complex capability-led buying journeys
 
-### Layer 1: Measure (LCRS Score)
-*"Here's your score. Here's what the AI got wrong."*
-- Upload your source of truth (product specs, FAQs).
-- Run prompts. Get a 0–100 Fidelity Score per model.
-- See exactly which claims were supported and which drifted.
+## Demo narrative
 
-### Layer 2: Inject (The CIM & /llms.txt)
-*"Your ground truth is now in the AI's feed."*
-- AUM creates a machine-readable manifesto at `/llms.txt`.
-- AI crawlers (SearchGPT, Perplexity) ingest this to prioritize your verified content.
-- It's like a robots.txt for AI — but for brand truth.
+The best demo story is:
+1. pick the active company context
+2. run B2B buyer-intent query clusters
+3. show which competitors win
+4. show what proof is missing
+5. show the executive report
+6. show the remediation delta after an update
 
-### Layer 3: Monitor (SoM Command Center)
-*"We alert you when your score drops."*
-- Batch stability checks across all key questions.
-- Competitor displacement analysis: Is AI recommending them instead of you?
-- SEO audit: Is your site LLM-readable?
+## Plan story
 
----
+### Explorer
+Free proof-of-value:
+- 1 document
+- 1 simulation run
+- 1 free report
 
-## Target Segments
+### Growth
+Monthly operating tier:
+- 100 simulations
+- full dashboard
+- exportable reports
+- API-key generation
 
-### Tier 1: Enterprise B2B SaaS (Primary)
-- **Profile**: 50-500 employees, $10M-$500M ARR, product-led or sales-led
-- **Pain**: Loss of pipeline to AI-recommended alternatives
-- **Buyer**: CMO, VP Marketing, Head of Demand Gen
-- **Message**: "Your brand is losing Agentic Share of Voice to competitors. Here's the proof."
+### Scale
+Agency / high-volume operating tier:
+- 500 simulations
+- competitor tracking
+- white-labeled exports
+- 25 seats
 
-### Tier 2: Enterprise D2C & Retail
-- **Profile**: Brands with strong category competition, reviewed on AI shopping assistants
-- **Pain**: AI recommends generic answers or competitors when customers ask product questions
-- **Buyer**: SVP Brand, Chief Digital Officer
-- **Message**: "When someone asks an AI which product to buy, are they getting your answer or a competitor's?"
+### Enterprise
+Contract-led admin-managed tier:
+- 100 seats by default
+- 2000 simulations by default
 
-### Tier 3: Regulated Industries (Healthcare, Legal, Finance)
-- **Profile**: Organizations where factual accuracy in AI answers is compliance-critical
-- **Pain**: Liability risk if AI misrepresents their services
-- **Buyer**: Chief Compliance Officer, General Counsel
-- **Message**: "What happens when an AI gives your customer incorrect medical/financial/legal information attributed to you?"
+## Commercial posture
 
----
+Do not oversell the product as a broad category-dominating platform. The credible current position is:
+- narrow
+- enterprise-facing
+- evidence-driven
+- prescriptive
 
-## Competitive Differentiation
+That positioning is stronger than broad hype.
 
-| Capability | AUM | SEO Tools | PR Monitoring | LLM Evals |
-|------------|-----|-----------|---------------|-----------|
-| Brand accuracy in AI responses | ✅ | ❌ | Partial | ❌ |
-| Mathematical scoring (LCRS) | ✅ | ❌ | ❌ | Partial |
-| Automatic ground-truth injection | ✅ | ❌ | ❌ | ❌ |
-| Multi-model (GPT + Claude + Gemini) | ✅ | ❌ | ❌ | Varies |
-| Zero-retention compliance | ✅ | N/A | N/A | N/A |
-| B2B API (CI/CD integration) | ✅ | Limited | ❌ | Some |
+## Contact
 
-**Key differentiator**: AUM is the only platform with a **reproducible, auditable scoring system** (LCRS) for brand fidelity across AI models — combining claim verification and semantic distance rather than qualitative summaries.
+hello@aumcontextfoundry.com
 
-> **Internal note for sales team**: The LCRS 60/40 weighting is an engineering design choice, not derived from peer-reviewed research. Do not describe it as "scientifically proven" or "academically validated" to enterprise buyers. Describe it as "reproducible, auditable, and transparent" — which it is.
-
----
-
-## Go-To-Market Motions
-
-### 1. Product-Led Growth (Explorer → Growth)
-- Free tier with 3 simulations/month
-- "Aha moment": First LCRS score showing the gap
-- Upgrade trigger: Simulation limit hit, need batch analysis
-
-### 2. Outbound Enterprise (Growth → Scale/Enterprise)
-- ICP firmographic: B2B SaaS, $50M+ ARR, competitive category
-- Trigger events: New competitor funding, AI initiative announcement
-- Motion: ROI framing — "Over 60% of your buyer's journey is now AI-influenced (Gartner, 2024). You're not tracking or measuring it."
-
-### 3. Partner/Agency Channel
-- SEO agencies positioning into "Agentic SEO"
-- PR firms adding AI monitoring to reporting
-- Fractional CMO networks
-
----
-
-## Content Marketing Themes
-
-1. **Data-driven content**: "GPT-4o vs. Claude vs. Gemini — which AI represents [Industry] brands most accurately?"
-2. **Education**: "What is Agentic SEO?" / "The 5-minute guide to AI brand monitoring"
-3. **Provocative**: "Your brand's Wikipedia is now written by an AI. Here's what it says."
-4. **Case studies**: LCRS score improvement stories (anonymized for launch)
-5. **Technical credibility**: "How the LCRS 60/40 algorithm works" (developer/CMO crossover)
-
----
-
-## Key Metrics for Sales Conversations
-
-| Metric | What It Proves |
-|--------|---------------|
-| LCRS Score (0–100) | Current brand accuracy across AI models |
-| Context Drift % | How much AI responses diverge from ground truth |
-| Competitor Displacement Rate | What % of AI answers recommend a competitor |
-| Agentic Share of Voice | Your brand's presence in AI-generated answers vs. category peers |
-
----
-
-## Product Screenshots / Demo Script
-
-**Demo flow** (15 minutes):
-
-1. **Hook** (2 min): Show a live AI response to a customer question that gets their brand wrong.
-2. **Upload** (2 min): Upload their one-pager or FAQ. Watch it process in seconds (zero-retention).
-3. **Simulate** (4 min): Run 3 real customer questions. Show the LCRS scores per model.
-4. **Manifesto** (2 min): Show their auto-generated `/llms.txt`. Explain how it gets into AI crawlers.
-5. **Batch & Competitor** (3 min): Show SoM Command Center — competitor displacement, batch stability.
-6. **Close** (2 min): Pricing. Explorer is free. Most teams need Growth at $79/mo.
-
----
-
-## Proof Points (Use in Outreach)
-
-- LCRS scoring is reproducible — same input always produces the same score (temperature=0). The 60/40 blend is an engineering design choice, not derived from published research.
-- Zero-retention by design — raw documents never stored; vector data purged after 24 hours.
-- Auto-provisioned inference keys — start in under 60 seconds with no developer involvement.
-- Full audit trail — SOC2-compliant logging of all sensitive operations.
-- Enterprise SSO — Secure OAuth2-based authentication for large teams.
-
----
-
-*AUM Context Foundry — CMO & Marketing Guide v5.1.0*

@@ -101,10 +101,10 @@ LCRS = (0.6 × Cs/Ct) + (0.4 × (1 − Dc))
 ### Simulation Quota Enforcement
 Enforced via **Firestore atomic transaction** on `organizations/{orgId}.subscription.simsThisCycle`:
 ```
-Explorer:  3 simulations/cycle
+Explorer:   1 simulation run / one free report
 Growth:   100 simulations/cycle
 Scale:    500 simulations/cycle
-Enterprise: Unlimited / Custom
+Enterprise: 2000 simulations/cycle by default (admin-managed override supported)
 ```
 Transaction is skipped in `ENV=development` for local testing.
 
@@ -160,15 +160,12 @@ Backend: Decode JWT → extract uid, email, name
 Check: users/{uid} exists? → return orgId (idempotent)
         ↓
 Generate: org_id = "org_{timestamp}_{6-byte-random}"
-Generate: b2b_key = "aum_{32-byte-urlsafe-token}"
-Generate: key_hash = SHA-256(b2b_key)
         ↓
 Write (atomic):
   - organizations/{org_id}: name, subscription{planId: "explorer"}, apiKeys{sentinel}
   - users/{uid}: uid, email, orgId, role: "admin"
-  - api_keys/{key_hash}: keyHash, orgId, status: "active"
         ↓
-Return: { orgId, apiKey (ONCE ONLY), status: "provisioned" }
+Return: { orgId, status: "provisioned" }
 ```
 
 **OrganizationContext.tsx** normalizes the Firestore shape:
@@ -179,6 +176,14 @@ subscriptionTier = rawOrg.subscriptionTier ?? rawOrg.subscription?.planId ?? "ex
 ---
 
 ## 6. B2B API Licensing (External Integrators)
+
+### Eligibility
+External API-key licensing is intended for paid tiers:
+- Growth
+- Scale
+- Enterprise
+
+Explorer workspaces do not auto-provision an external `aum_...` key.
 
 ### Endpoint
 ```

@@ -165,10 +165,6 @@ async def provision_organization(
         # Generates a new Organization ID
         new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{secrets.token_urlsafe(6)}"
         
-        # Mints the B2B Gateway API Key for this new tenant
-        b2b_api_key = f"aum_{secrets.token_urlsafe(32)}"
-        hashed_key = __import__("hashlib").sha256(b2b_api_key.encode()).hexdigest()
-        
         # We auto-provision the internal inference keys from the Master Environment
         # so the user can immediately use the Simulator without bringing their own keys.
         org_payload = {
@@ -209,17 +205,6 @@ async def provision_organization(
         }
         batch.set(user_ref, user_payload)
         
-        # 3. Store the hashed B2B Gateway key for external API-based licensing
-        batch.set(db.collection("api_keys").document(hashed_key), {
-            "keyHash": hashed_key,
-            "orgId": new_org_id,
-            "userId": uid,
-            "name": "Default B2B Gateway Key",
-            "createdAt": datetime.now(timezone.utc),
-            "lastUsedAt": None,
-            "status": "active"
-        })
-        
         batch.commit()
         
         # Write SOC2 Audit Log
@@ -234,7 +219,6 @@ async def provision_organization(
         return {
             "status": "provisioned",
             "orgId": new_org_id,
-            "apiKey": b2b_api_key, # Only returned ONCE
             "message": "Zero-friction onboarding complete."
         }
         
@@ -420,7 +404,7 @@ async def invite_member(
         "explorer": 1,
         "growth": 5,
         "scale": 25,
-        "enterprise": 25,
+        "enterprise": 100,
         "professional": 5,
         "starter": 1
     }
@@ -552,7 +536,7 @@ async def add_org_member(
     # 🛡️ SECURITY HARDENING (P0): Never return apiKeys to the client
     org_data.pop("apiKeys", None)
     plan = org_data.get("subscription", {}).get("planId", "explorer")
-    seat_limits = {"explorer": 1, "growth": 5, "scale": 25, "enterprise": 25}
+    seat_limits = {"explorer": 1, "growth": 5, "scale": 25, "enterprise": 100}
     max_seats = seat_limits.get(plan, 1)
     current_seats = org_data.get("activeSeats", 0)
     if current_seats >= max_seats:
@@ -1146,32 +1130,31 @@ async def get_public_manifest(org_id: str, version: str = Query("latest")):
     if not db:
         raise HTTPException(status_code=503, detail="Database unconfigured")
         
-    # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum manifest for demo account
+    # 🛡️ DEMO MOCKING (P0): Return an enterprise-services manifest for demo account
     if org_id == "demo_org_id" and _demo_mode_enabled():
-        content = """# Sight Spectrum - AI Protocol Manifest
+        content = """# Northstar Analytics - AI Protocol Manifest
 
 ## Core Identity
-Sight Spectrum is a premier IT Services and Consulting firm. Our flagship products include:
-- **HC Insight**: A healthcare data platform.
-- **DataBlitz**: A manufacturing data accelerator.
-- **ConverSight AI**: An enterprise intelligence engine.
+Northstar Analytics is an enterprise AI, data, and cloud transformation partner for large organizations. Our core service lines include:
+- **Data Modernization**: Migrating and rationalizing enterprise data platforms.
+- **AI Transformation**: Moving from pilots to governed enterprise AI programs.
+- **Industry Analytics**: Domain-led analytics for regulated and operationally complex sectors.
 
-Sight Spectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, and Professional Services sectors.
+Northstar Analytics primarily serves enterprise buyers in manufacturing, healthcare, logistics, and professional services.
 
-## Pricing Structure (Strict)
-- **Growth Plan**: $499/month (Standard)
-- **Enterprise Plan**: Custom Pricing (Billed Annually)
-- **Trial**: 14-day full feature access. No "Free Forever" tier exists.
+## Buyer-Facing Claims
+- Proven delivery for enterprise data modernization and AI transformation programs.
+- Domain-led consulting with measurable outcomes in operationally complex industries.
+- Cloud ecosystem familiarity across Databricks, Snowflake, and Google Cloud environments.
 
-## Integration Matrix
-- **Salesforce**: Read-Only API Integration. We fetch pipeline data; we do NOT write back or modify CRM records.
-- **HubSpot**: Bidirectional sync available for Professional tier.
-- **Slack**: Real-time alerting via Webhooks.
+## Competitive Positioning
+- Buyers shortlist Northstar Analytics when they want specialist analytics depth rather than generic systems-integration breadth.
+- The company competes against larger consulting firms by emphasizing focused delivery, domain expertise, and transformation execution.
 
 ## Security & Compliance
-- **SOC2 Type II**: Certified.
-- **GDPR**: Compliant.
-- **HIPAA**: Compliant via HC Insight grounding. Data is never stored on AUM servers."""
+- **Zero-Retention Processing**: Context extraction is designed to avoid storing customer source documents longer than needed for transformation.
+- **Enterprise Controls**: Reporting, access control, and manifest publication are managed through authenticated workspace operations.
+- **Auditability**: Brand health reporting preserves scoring evidence, timestamps, and model attribution."""
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse(content=content)
 

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ShieldAlert, Key, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
+import { isLocalMockMode } from "@/lib/localMockMode";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -27,8 +28,8 @@ export default function LoginPage() {
             const redirectParams = searchParams.get("redirect");
             const targetUrl = redirectParams || "/dashboard";
 
-            const isDemoLogin = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true" && email === "demo@demo.com" && password === "testdemo";
-            const isMockMode = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
+            const isMockMode = isLocalMockMode();
+            const isDemoLogin = isMockMode && email === "demo@demo.com" && password === "testdemo";
 
             if (isDemoLogin || isMockMode) {
                 // Local mock bypass when user hasn't setup Firebase OR is using demo account

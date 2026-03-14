@@ -444,7 +444,7 @@ export default function LandingPage() {
 -H "Authorization: Bearer aum_..." \\
 -d {
   "orgId": "org_2F3a...",
-  "prompt": "What is their current pricing?",
+  "prompt": "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
   "manifestVersion": "latest"
 }`}
                                         </div>
@@ -465,7 +465,7 @@ export default function LandingPage() {
       }
     }
   ],
-  "prompt": "What is their current pricing?",
+  "prompt": "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
   "version": "latest"
 }`}
                                         </div>
@@ -583,7 +583,7 @@ export default function LandingPage() {
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Everything in Growth</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Competitor tracking</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> White-labeled exports</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">Unlimited</strong>{" "}team seats</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">25</strong>{" "}team seats included</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Agency SLA</li>
                             </ul>
                             <button

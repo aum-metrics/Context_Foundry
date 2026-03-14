@@ -14,6 +14,7 @@ import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { UpgradeModal } from "./UpgradeModal";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
 
 interface ModelResult {
     model: string;
@@ -35,9 +36,9 @@ export default function CoIntelligenceSimulator() {
     const [upgradeFeatureName, setUpgradeFeatureName] = useState("");
     const [upgradeLimitReason, setUpgradeLimitReason] = useState<string | undefined>();
     const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
-        "What is the best enterprise solution for this category?",
-        "How much does it cost?",
-        "Does it have an AI integration?",
+        "Who are the top enterprise analytics consulting firms for retail and CPG transformation?",
+        "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization?",
+        "How does this company compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?",
     ]);
     const [activePrompt, setActivePrompt] = useState("");
     const [loading, setLoading] = useState(false);
@@ -50,12 +51,22 @@ export default function CoIntelligenceSimulator() {
     const [byokError, setByokError] = useState(false);
     const isExplorer = organization?.subscriptionTier === "explorer";
     const analysisSubject = organization ? (analysisContexts.find((context) => context.version === activeManifestVersion)?.name || organization.name) : "your company";
+
+    const getEffectiveToken = async () => {
+        const token = await auth.currentUser?.getIdToken();
+        if (token) return token;
+        if (isLocalMockMode()) {
+            return getLocalMockSession().token;
+        }
+        return undefined;
+    };
+
     useEffect(() => {
         if (!organization) return;
 
         const fetchData = async () => {
             try {
-                const token = await auth.currentUser?.getIdToken();
+                const token = await getEffectiveToken();
                 if (!token) throw new Error("Authentication required");
                 const manifestResp = await fetch(`/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -94,15 +105,15 @@ export default function CoIntelligenceSimulator() {
                     const lines = manifestContent.split("\n").filter((l: string) => l.trim().startsWith("##") || l.trim().startsWith("-")).slice(0, 8);
                     const topics = lines.map((l: string) => l.replace(/^#+\s*/, "").replace(/^-\s*/, "").trim()).filter((l: string) => l.length > 5).slice(0, 3);
                     const fallbackPrompts = topics.length >= 2 ? [
-                        `What is ${analysisSubject}'s core business and key offerings?`,
-                        `What does the document say about ${topics[0]}?`,
-                        topics.length > 1 ? `How does ${analysisSubject} approach ${topics[1]}?` : `What are ${analysisSubject}'s main differentiators?`,
-                        `Compare ${analysisSubject} against its main competitors.`
+                        `Which enterprise buyers would shortlist ${analysisSubject} based on ${topics[0]}?`,
+                        `How does ${analysisSubject} compare against major analytics and consulting competitors on ${topics[0]}?`,
+                        topics.length > 1 ? `What proof does ${analysisSubject} present around ${topics[1]} for enterprise transformation buyers?` : `What enterprise differentiators does ${analysisSubject} assert most clearly?`,
+                        `Which vendors have stronger domain expertise than ${analysisSubject}, and where does ${analysisSubject} still win?`
                     ] : [
-                        `What is ${analysisSubject}'s core business and key offerings?`,
-                        `What are the key facts and figures in this document?`,
-                        `What are ${analysisSubject}'s main strengths according to this document?`,
-                        `Compare ${analysisSubject} against its main competitors.`
+                        `Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`,
+                        `Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does ${analysisSubject} compare?`,
+                        `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?`,
+                        `Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports ${analysisSubject}?`
                     ];
                     setDynamicPrompts(fallbackPrompts);
                     setActivePrompt(fallbackPrompts[0]);
@@ -110,12 +121,12 @@ export default function CoIntelligenceSimulator() {
                     setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
                     // No manifest yet — show generic but sensible prompts
                     setDynamicPrompts([
-                        `What is ${analysisSubject}'s core business?`,
-                        `What are ${analysisSubject}'s key products or services?`,
-                        `What are ${analysisSubject}'s main strengths?`,
-                        `Compare ${analysisSubject} against its main competitors.`
+                        `Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`,
+                        `Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does ${analysisSubject} compare?`,
+                        `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?`,
+                        `Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`
                     ]);
-                    setActivePrompt(`What is ${analysisSubject}'s core business?`);
+                    setActivePrompt(`Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`);
                 }
             } catch (e) {
                 console.error("Manifest fetch error:", e);
@@ -139,7 +150,7 @@ export default function CoIntelligenceSimulator() {
         setLoading(true);
 
         try {
-            const token = await auth.currentUser?.getIdToken();
+            const token = await getEffectiveToken();
 
             if (!token) throw new Error("Authentication required to run simulations.");
 
@@ -213,7 +224,7 @@ export default function CoIntelligenceSimulator() {
             return;
         }
         try {
-            const token = await auth.currentUser?.getIdToken();
+            const token = await getEffectiveToken();
             const response = await fetch(`/api/simulation/export/${organization.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
