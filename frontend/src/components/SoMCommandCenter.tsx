@@ -227,12 +227,35 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
     const [seoLoading, setSeoLoading] = useState(false);
     const [seoResult, setSeoResult] = useState<SEOResult | null>(null);
     const [isCertificateOpen, setIsCertificateOpen] = useState(false);
-    const [currentManifestVersion, setCurrentManifestVersion] = useState<string | null>(null);
-    const [manifestSnapshot, setManifestSnapshot] = useState<ManifestSnapshot | null>(null);
-    const [historicalData, setHistoricalData] = useState<{ date: string; score: number }[]>([]);
-    const [competitors, setCompetitors] = useState<CompetitorInsight[]>([]);
+    
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const analysisSubject = activeContextName || organization?.name || "the selected context";
+
+    const fetcher = async (url: string) => {
+        const token = await getEffectiveToken();
+        if (!token) return null;
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) return null;
+        return res.json();
+    };
+
+    // Consolidated SWR Data Fetching
+    const { data: competitorsData } = useSWR(
+        organization ? `/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}&cache=${refreshKey}` : null,
+        fetcher
+    );
+    const competitors = competitorsData?.competitors || [];
+
+    const { data: manifestData } = useSWR(
+        organization ? `/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}&cache=${refreshKey}` : null,
+        fetcher
+    );
+    const manifestSnapshot: ManifestSnapshot | null = manifestData ? {
+        sourceUrl: manifestData.sourceUrl,
+        name: manifestData.name,
+        schemaData: manifestData.schemaData || {},
+    } : null;
+    const currentManifestVersion = manifestData?.version || null;
 
     const getEffectiveToken = async () => {
         const token = await auth.currentUser?.getIdToken();
@@ -249,60 +272,6 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
         };
     }, []);
 
-    useEffect(() => {
-        if (!organization) return;
-        const fetchCompetitors = async () => {
-            try {
-                const effectiveToken = await getEffectiveToken();
-                if (!effectiveToken) return;
-
-                const res = await fetch(`/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}`, {
-                    headers: { 'Authorization': `Bearer ${effectiveToken}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setCompetitors(data.competitors || []);
-                }
-            } catch (err) {
-                console.error("Failed to fetch competitors", err);
-            }
-        };
-        fetchCompetitors();
-    }, [organization, refreshKey, activeManifestVersion]);
-
-    useEffect(() => {
-        if (!organization?.id) {
-            setCurrentManifestVersion(null);
-            return;
-        }
-
-        const fetchManifestMeta = async () => {
-            try {
-                const token = await getEffectiveToken();
-                if (!token) return;
-                const response = await fetch(`/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (!response.ok) {
-                    setCurrentManifestVersion(null);
-                    return;
-                }
-                const data = await response.json();
-                setCurrentManifestVersion(data.version || null);
-                setManifestSnapshot({
-                    sourceUrl: data.sourceUrl,
-                    name: data.name,
-                    schemaData: data.schemaData || {},
-                });
-            } catch (error) {
-                console.error("Failed to fetch manifest metadata", error);
-                setCurrentManifestVersion(null);
-                setManifestSnapshot(null);
-            }
-        };
-
-        fetchManifestMeta();
-    }, [organization?.id, refreshKey, activeManifestVersion]);
 
     const fetchHistory = async (orgId: string) => {
         try {
@@ -322,7 +291,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                     : entry.timestamp
             }));
 
-            return entries.reverse(); // oldest first for chart
+            return entries.slice().reverse(); // oldest first for chart
         } catch (err) {
             console.error("Failed to fetch history from API", err);
             return null;
@@ -499,7 +468,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                 || `${category} prompts are currently scoring ${avgAccuracy}% average fidelity across the audited model set.`;
             const fallbackClaims = getCategoryFallbackClaims(category);
             const missingClaims: string[] = (matchedCompetitor?.missingAssertions && matchedCompetitor.missingAssertions.length > 0)
-                ? matchedCompetitor.missingAssertions.map(a => typeof a === "string" ? a : a.assertion)
+                ? matchedCompetitor.missingAssertions.map((a: any) => typeof a === "string" ? a : a.assertion)
                 : fallbackClaims;
 
 
@@ -798,37 +767,6 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
         }
     };
 
-    useEffect(() => {
-        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) {
-            // No real data yet — show empty state, not fake numbers
-            setHistoricalData([]);
-            return;
-        }
-
-        const dayMap: Record<string, { score: number, count: number }> = {};
-        filteredHistoryEntries.forEach((entry: ScoringHistoryEntry) => {
-            const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
-            const label = ts.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-            if (entry.results && entry.results.length > 0) {
-                const totalAccuracy = entry.results.reduce((s: number, r: { accuracy: number }) => s + r.accuracy, 0);
-                const avg = totalAccuracy / entry.results.length;
-
-                if (!dayMap[label]) dayMap[label] = { score: 0, count: 0 };
-                dayMap[label].score += avg;
-                dayMap[label].count += 1;
-            }
-        });
-
-        const realData = Object.keys(dayMap).map(day => ({
-            date: day,
-            score: Math.round(dayMap[day].score / dayMap[day].count)
-        }));
-
-        if (realData.length > 0) {
-            setHistoricalData(realData.reverse()); // Set to oldest first
-        }
-    }, [filteredHistoryEntries]);
 
     const chartData = useMemo(() => {
         if (loading) return [];
@@ -849,6 +787,25 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
 
         return dataPoints;
     }, [filteredHistoryEntries, activeTab, loading, _error]);
+
+    const longitudinalHistoryData = useMemo(() => {
+        if (!filteredHistoryEntries) return [];
+        const entries = filteredHistoryEntries.map((entry: any) => {
+            const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
+            const dateStr = ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            
+            // Average across models for this specific snapshot
+            const avg = entry.results?.length > 0 
+              ? entry.results.reduce((acc: number, r: { accuracy: number }) => acc + (r.accuracy || 0), 0) / entry.results.length
+              : 0;
+              
+            return {
+                date: dateStr,
+                score: Math.round(avg)
+            };
+        });
+        return [...entries].reverse(); // oldest first
+    }, [filteredHistoryEntries]);
 
     const fidelityRisks = useMemo(() => {
         if (!filteredHistoryEntries) return [];
@@ -1237,7 +1194,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                             <TrendingUp className="w-4 h-4 mr-2 text-indigo-500" />
                             Historical Competitor Ranking
                         </h2>
-                        {historicalData.length === 0 ? (
+                        {longitudinalHistoryData.length === 0 ? (
                             <div className="h-[250px] flex flex-col items-center justify-center text-center">
                                 <TrendingUp className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-3" />
                                 <p className="text-sm text-slate-500 dark:text-slate-400">No trend data yet.</p>
@@ -1246,7 +1203,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                         ) : (
                             <div className="h-[250px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={historicalData}>
+                                    <LineChart data={longitudinalHistoryData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                                         <XAxis dataKey="date" stroke="#64748b" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} />
                                         <YAxis stroke="#64748b" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} domain={[0, 100]} />
@@ -1274,11 +1231,11 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                         ) : (
                             <div className="space-y-5">
                                 {competitorRanking.map((competitor) => {
-                                    const gaps: GapAssertion[] = (competitor.missingAssertions || []).map(a =>
+                                    const gaps: GapAssertion[] = (competitor.missingAssertions || []).map((a: any) =>
                                         typeof a === "string"
                                             ? { assertion: a, gapConfidence: 70, somImpact: 5 }
                                             : a
-                                    ).sort((a, b) => b.gapConfidence - a.gapConfidence);
+                                    ).sort((a: any, b: any) => b.gapConfidence - a.gapConfidence);
                                     const totalSomImpact = gaps.reduce((s, g) => s + g.somImpact, 0);
 
                                     return (
@@ -1302,7 +1259,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                                 <div className="px-5 pb-3">
                                                     <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Buyer queries they're winning</p>
                                                     <div className="space-y-1">
-                                                        {competitor.buyerQueries.map((q) => (
+                                                        {competitor.buyerQueries.map((q: string) => (
                                                             <div key={q} className="flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
                                                                 <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
                                                                 <span>{q}</span>
@@ -1359,7 +1316,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                                 <div className="border-t border-slate-100 dark:border-white/5 px-5 py-3">
                                                     <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">What AI says about them</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {competitor.claimsOwned.map((claim) => (
+                                                        {competitor.claimsOwned.map((claim: string) => (
                                                             <span key={claim} className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20">{claim}</span>
                                                         ))}
                                                     </div>
@@ -1500,9 +1457,9 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                         modelResults={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.results : undefined}
                         lastPrompt={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.prompt : undefined}
                         seoResult={seoResult || undefined}
-                         competitors={competitors.map(c => ({
+                         competitors={competitors.map((c: any) => ({
                                 ...c,
-                                missingAssertions: (c.missingAssertions || []).map(a => typeof a === "string" ? a : a.assertion)
+                                missingAssertions: (c.missingAssertions || []).map((a: any) => typeof a === "string" ? a : a.assertion)
                             }))}
                         activeContextName={analysisSubject}
                         clusterInsights={queryClusterInsights}

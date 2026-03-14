@@ -44,6 +44,8 @@ export default function AUMContextFoundry() {
   const { checkout } = useRazorpay();
   const autoCheckoutTriggeredRef = useRef(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const isManualScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleRename = async () => {
     if (!renameValue.trim() || renameValue === (activeContextName || organization?.name)) {
@@ -91,9 +93,20 @@ export default function AUMContextFoundry() {
   }, [searchParams, organization?.id, orgUser?.email, checkout]);
 
   const scrollToStep = useCallback((stepId: string) => {
+    isManualScrollingRef.current = true;
     setActiveStep(stepId);
+    
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    
     const el = sectionRefs.current[stepId];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // Release the manual scroll lock after the smooth scroll finishes (~800ms)
+    scrollTimeoutRef.current = setTimeout(() => {
+      isManualScrollingRef.current = false;
+    }, 1000);
   }, []);
 
   const toggleSection = (id: string) =>
@@ -303,6 +316,7 @@ export default function AUMContextFoundry() {
               onToggle={() => toggleSection("ingest")}
               onStepVisible={() => setActiveStep("ingest")}
               sectionRef={setSectionRef("ingest")}
+              isManualScrollingRef={isManualScrollingRef}
             >
               <SemanticIngestion />
             </WorkflowSection>
@@ -320,6 +334,7 @@ export default function AUMContextFoundry() {
               onToggle={() => toggleSection("manifest")}
               onStepVisible={() => setActiveStep("manifest")}
               sectionRef={setSectionRef("manifest")}
+              isManualScrollingRef={isManualScrollingRef}
             >
               <AgentManifest />
             </WorkflowSection>
@@ -337,6 +352,7 @@ export default function AUMContextFoundry() {
               onToggle={() => toggleSection("intelligence")}
               onStepVisible={() => setActiveStep("intelligence")}
               sectionRef={setSectionRef("intelligence")}
+              isManualScrollingRef={isManualScrollingRef}
               locked={isExplorer}
               onUnlock={() => { setUpgradeFeatureName("Competitor Rankings & Prescriptive Remediation"); setIsUpgradeModalOpen(true); }}
               lockedMessage="Upgrade to Growth to unlock continuous Share of Model tracking, competitor displacement rates, and prescriptive remediation copy."
@@ -357,6 +373,7 @@ export default function AUMContextFoundry() {
               onToggle={() => toggleSection("simulate")}
               onStepVisible={() => setActiveStep("simulate")}
               sectionRef={setSectionRef("simulate")}
+              isManualScrollingRef={isManualScrollingRef}
             >
               <CoIntelligenceSimulator />
             </WorkflowSection>
@@ -374,6 +391,7 @@ export default function AUMContextFoundry() {
               onToggle={() => toggleSection("report")}
               onStepVisible={() => setActiveStep("report")}
               sectionRef={setSectionRef("report")}
+              isManualScrollingRef={isManualScrollingRef}
             >
               <div className="rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-10 text-center">
                 <Award className="w-10 h-10 mx-auto text-emerald-500 mb-4" />
@@ -420,6 +438,7 @@ interface WorkflowSectionProps {
   locked?: boolean;
   onUnlock?: () => void;
   lockedMessage?: string;
+  isManualScrollingRef: React.RefObject<boolean>;
 }
 
 const accentMap = {
@@ -430,7 +449,7 @@ const accentMap = {
   emerald: { badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20", bar: "bg-emerald-500", ring: "ring-emerald-500/20", connector: "border-emerald-500/30" },
 };
 
-function WorkflowSection({ id, stepNumber, title, description, accentColor, isCollapsed, onToggle, onStepVisible, sectionRef, children, locked, onUnlock, lockedMessage }: WorkflowSectionProps) {
+function WorkflowSection({ id, stepNumber, title, description, accentColor, isCollapsed, onToggle, onStepVisible, sectionRef, children, locked, onUnlock, lockedMessage, isManualScrollingRef }: WorkflowSectionProps) {
   const accent = accentMap[accentColor];
   const observerRef = useRef<HTMLElement | null>(null);
 
@@ -442,12 +461,16 @@ function WorkflowSection({ id, stepNumber, title, description, accentColor, isCo
   useEffect(() => {
     if (!observerRef.current) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onStepVisible(); },
-      { threshold: 0.2 }
+      ([entry]) => { 
+        if (entry.isIntersecting && !isManualScrollingRef.current) {
+          onStepVisible(); 
+        }
+      },
+      { threshold: 0.2, rootMargin: "-10% 0px -80% 0px" }
     );
     observer.observe(observerRef.current);
     return () => observer.disconnect();
-  }, [onStepVisible]);
+  }, [onStepVisible, isManualScrollingRef]);
 
   return (
     <section ref={setRef} id={id} className="relative scroll-mt-16">
