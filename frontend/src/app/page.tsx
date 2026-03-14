@@ -517,7 +517,7 @@ export default function LandingPage() {
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">1</strong>{" "}simulation run (all 3 models, so users see real value)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic LCRS score</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic SoM score</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code>{" "}preview</li>
                                 <li className="flex items-start text-slate-400 dark:text-slate-500"><CheckCircle2 className="w-4 h-4 mr-2.5 mt-0.5 shrink-0" /> No scoring history</li>
                                 <li className="flex items-start text-slate-400 dark:text-slate-500"><CheckCircle2 className="w-4 h-4 mr-2.5 mt-0.5 shrink-0" /> No team seats</li>
@@ -549,7 +549,7 @@ export default function LandingPage() {
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">100</strong>{" "}simulations/month</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full ASoV dashboard</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full Share of Model dashboard</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Download <code>/llms.txt</code>{" "}manifest</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
