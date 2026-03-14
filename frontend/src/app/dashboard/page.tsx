@@ -173,7 +173,17 @@ export default function AUMContextFoundry() {
                       className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-2.5 py-2 text-xs text-slate-900 dark:text-slate-200 outline-none focus:border-indigo-500"
                     >
                       <option value="latest">Latest — {organization?.name || "Current"}</option>
-                      {analysisContexts.map((context) => (<option key={context.version} value={context.version}>{context.name}</option>))}
+                      {analysisContexts
+                        .filter(ctx => ctx.id !== "latest") // Safety check
+                        .map((context) => {
+                          const dateObj = context.createdAt ? new Date(context.createdAt) : null;
+                          const dateStr = dateObj ? dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                          return (
+                            <option key={context.version} value={context.version}>
+                              {context.name} {dateStr ? `(${dateStr})` : ''}
+                            </option>
+                          );
+                        })}
                     </select>
                     <p className="mt-1.5 text-[10px] text-indigo-500 font-medium truncate">
                       {activeContextName || organization?.name || "—"}

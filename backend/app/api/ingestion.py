@@ -186,13 +186,10 @@ async def parse_document(
         org_hint_clause = f"The known organization name for this context is '{hint_org_name}'. " if hint_org_name else ""
 
         prompt = (
-            "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema from the document below.\n"
-            f"{org_hint_clause}"
-            "CRITICAL: identify the PRIMARY BRAND or ORGANIZATION name. Do NOT use navigation headers, service lists (e.g. 'Wi-Fi, Postpaid'), or slogans as the organization name.\n"
-            "If the document is for a major brand (e.g. 'Airtel'), the name should be that brand name, not a list of their products.\n"
-            "Be strictly faithful to the document content — do NOT invent, hallucinate, or use placeholder data.\n"
-            "The schema type and fields must reflect the actual document: use 'ScholarlyArticle', 'Organization' or 'SoftwareApplication' for research/tech PDFs.\n"
-            "Only include entities, claims, and attributes that are explicitly stated in the document.\n\n"
+            "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema (@type: Organization) from this document.\n"
+            "CRITICAL: Identify the PRIMARY BRAND or ORGANIZATION name. Do NOT use descriptive headers, mission statements, or SEO taglines as the entity name.\n"
+            "The 'name' field MUST be the clean company name (e.g., 'Airtel', not 'Airtel: Best Postpaid Plans').\n"
+            "Respond ONLY with the JSON-LD object.\n"
             f"<Doc>\n{doc_sample}\n</Doc>"
         )
         completion = client.chat.completions.create(
@@ -265,10 +262,14 @@ async def parse_document(
 
             extracted_name = schema_data.get("name")
             if isinstance(extracted_name, str) and extracted_name.strip():
-                db.collection("organizations").document(orgId).set(
-                    {"name": extracted_name.strip()},
-                    merge=True
-                )
+                org_ref = db.collection("organizations").document(orgId)
+                org_snap = org_ref.get()
+                current_org_data = org_snap.to_dict() if org_snap.exists else {}
+                current_org_name = (current_org_data or {}).get("name")
+                
+                # Only overwrite if current name is a placeholder
+                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company", "sight spectrum", "sightspectrum"}:
+                    org_ref.set({"name": extracted_name.strip()}, merge=True)
 
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="document_ingestion", resource_id=manifest_id, metadata={"chunks": len(chunks)})
             
@@ -461,10 +462,14 @@ async def parse_url(
 
             extracted_name = schema_data.get("name")
             if isinstance(extracted_name, str) and extracted_name.strip():
-                db.collection("organizations").document(orgId).set(
-                    {"name": extracted_name.strip()},
-                    merge=True
-                )
+                org_ref = db.collection("organizations").document(orgId)
+                org_snap = org_ref.get()
+                current_org_data = org_snap.to_dict() if org_snap.exists else {}
+                current_org_name = (current_org_data or {}).get("name")
+                
+                # Only overwrite if current name is a placeholder
+                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company", "sight spectrum", "sightspectrum"}:
+                    org_ref.set({"name": extracted_name.strip()}, merge=True)
 
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="url_ingestion",
                             resource_id=manifest_id, metadata={"url": request.url, "chunks": len(chunks)})

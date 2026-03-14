@@ -1,0 +1,9 @@
+
+steps:
+- name: 'python:3.11-slim'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    pip install google-cloud-firestore firebase-admin
+    python debug_find_org.py
