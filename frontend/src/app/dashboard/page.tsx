@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Logo } from "@/components/Logo";
-import { Settings, LogOut, Sun, Moon, Shield, Database, RadioReceiver, Activity, Award, ChevronDown, ChevronUp } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Shield, Database, RadioReceiver, Activity, Award, ChevronDown, ChevronUp, Check, X, Pencil } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
 import CoIntelligenceSimulator from "@/components/CoIntelligenceSimulator";
 import { useTheme } from "@/components/ThemeProvider";
@@ -128,46 +128,59 @@ export default function AUMContextFoundry() {
                 </select>
               </div>
             )}
-            <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1.5">Analysis Context</label>
-              <select
-                value={activeManifestVersion}
-                onChange={(e) => setActiveManifestVersion(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-2.5 py-2 text-xs text-slate-900 dark:text-slate-200 outline-none focus:border-indigo-500"
-              >
-                <option value="latest">Latest — {organization?.name || "Current"}</option>
-                {analysisContexts.map((context) => (<option key={context.version} value={context.version}>{context.name}</option>))}
-              </select>
-              <div className="mt-1.5 flex items-center justify-between group">
-                {isRenaming ? (
-                  <div className="flex items-center gap-1 w-full">
-                    <input
-                      autoFocus
-                      className="bg-white dark:bg-slate-800 border border-indigo-500 rounded px-1.5 py-0.5 text-[10px] w-full outline-none"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={handleRename}
-                      onKeyDown={(e) => e.key === "Enter" && handleRename()}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-[10px] text-slate-500 truncate pr-4">
-                      Analyzing: {activeContextName || organization?.name || "—"}
-                    </p>
+              <div className="mt-1.5 flex flex-col gap-1 group">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Analysis Context</p>
+                  {!isRenaming && (
                     <button
                       onClick={() => {
                         setRenameValue(activeContextName || organization?.name || "");
                         setIsRenaming(true);
                       }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded"
+                      title="Rename Organization"
                     >
-                      <Settings className="w-2.5 h-2.5 text-slate-400" />
+                      <Pencil className="w-2.5 h-2.5 text-slate-400" />
                     </button>
-                  </>
+                  )}
+                </div>
+                {isRenaming ? (
+                  <div className="flex items-center gap-1 w-full bg-white dark:bg-slate-800 border border-indigo-500 rounded p-1 shadow-lg shadow-indigo-500/10">
+                    <input
+                      autoFocus
+                      className="bg-transparent text-[10px] w-full outline-none px-1"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleRename();
+                        if (e.key === "Escape") setIsRenaming(false);
+                      }}
+                    />
+                    <div className="flex items-center gap-0.5 border-l border-slate-200 dark:border-slate-700 pl-1">
+                      <button onClick={handleRename} className="p-0.5 hover:bg-emerald-500/20 text-emerald-500 rounded transition-colors" title="Save">
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => setIsRenaming(false)} className="p-0.5 hover:bg-rose-500/20 text-rose-500 rounded transition-colors" title="Cancel">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    <select
+                      value={activeManifestVersion}
+                      onChange={(e) => setActiveManifestVersion(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-2.5 py-2 text-xs text-slate-900 dark:text-slate-200 outline-none focus:border-indigo-500"
+                    >
+                      <option value="latest">Latest — {organization?.name || "Current"}</option>
+                      {analysisContexts.map((context) => (<option key={context.version} value={context.version}>{context.name}</option>))}
+                    </select>
+                    <p className="mt-1.5 text-[10px] text-indigo-500 font-medium truncate">
+                      {activeContextName || organization?.name || "—"}
+                    </p>
+                  </div>
                 )}
               </div>
-            </div>
           </div>
 
           {/* Pipeline Nav */}

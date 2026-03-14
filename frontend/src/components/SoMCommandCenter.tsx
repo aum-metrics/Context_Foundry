@@ -707,9 +707,16 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                 console.error("Batch Job Failed:", statusData.error);
                                 setBatchLoading(false);
                             }
+                        } else {
+                            // Non-OK response from status endpoint
+                            clearInterval(pollInterval);
+                            console.error("Batch status check failed:", statusRes.statusText);
+                            setBatchLoading(false);
                         }
                     } catch (pollErr) {
+                        clearInterval(pollInterval);
                         console.error("Polling error:", pollErr);
+                        setBatchLoading(false);
                     }
                 }, 3000); // Poll every 3 seconds
             }
