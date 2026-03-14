@@ -148,14 +148,14 @@ export default function AgentManifest() {
                     </div>
                 </div>
 
-                <div className="flex-1 p-6 overflow-auto">
-                    <pre className="text-sm font-mono text-slate-800 dark:text-slate-300 leading-relaxed max-w-4xl overflow-x-auto">
+                <div className="flex-1 relative bg-transparent">
+                    <pre className="absolute inset-0 p-6 overflow-auto text-sm font-mono text-slate-800 dark:text-slate-300 leading-relaxed">
                         {content.split("\n").map((line, i) => {
                             if (line.startsWith("#")) return <div key={i} className="text-fuchsia-600 dark:text-fuchsia-400 font-bold mt-4 mb-2">{line}</div>;
                             if (line.startsWith(">")) return <div key={i} className="text-slate-500 dark:text-slate-500 italic border-l-2 border-slate-300 dark:border-slate-700 pl-3 my-1">{line}</div>;
                             if (line.startsWith("-")) return <div key={i} className="text-cyan-700 dark:text-cyan-200 ml-4"><span className="text-fuchsia-500 mr-2">-</span>{line.substring(2)}</div>;
                             if (line.includes("DO NOT")) return <div key={i} className="text-rose-600 dark:text-rose-400 ml-4 bg-rose-50 dark:bg-rose-500/10 px-2 rounded"><span className="text-fuchsia-500 mr-2">-</span>{line.substring(2)}</div>;
-                            return <div key={i} className="my-1 whitespace-pre-wrap">{line || ' '}</div>;
+                            return <div key={i} className="my-1 whitespace-pre">{line || ' '}</div>;
                         })}
                     </pre>
                 </div>
