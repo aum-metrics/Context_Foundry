@@ -199,7 +199,7 @@ export default function AUMContextFoundry() {
                         })}
                     </select>
                     <p className="mt-1.5 text-[10px] text-indigo-500 font-medium truncate">
-                      {activeContextName || organization?.name || "—"}
+                      Context: {activeContextName || organization?.name || "—"}
                     </p>
                   </div>
                 )}
@@ -314,7 +314,7 @@ export default function AUMContextFoundry() {
               accentColor="cyan"
               isCollapsed={!!collapsedSections["ingest"]}
               onToggle={() => toggleSection("ingest")}
-              onStepVisible={() => setActiveStep("ingest")}
+              onStepVisible={useCallback(() => setActiveStep("ingest"), [])}
               sectionRef={setSectionRef("ingest")}
               isManualScrollingRef={isManualScrollingRef}
             >
@@ -332,7 +332,7 @@ export default function AUMContextFoundry() {
               accentColor="fuchsia"
               isCollapsed={!!collapsedSections["manifest"]}
               onToggle={() => toggleSection("manifest")}
-              onStepVisible={() => setActiveStep("manifest")}
+              onStepVisible={useCallback(() => setActiveStep("manifest"), [])}
               sectionRef={setSectionRef("manifest")}
               isManualScrollingRef={isManualScrollingRef}
             >
@@ -350,7 +350,7 @@ export default function AUMContextFoundry() {
               accentColor="indigo"
               isCollapsed={!!collapsedSections["intelligence"]}
               onToggle={() => toggleSection("intelligence")}
-              onStepVisible={() => setActiveStep("intelligence")}
+              onStepVisible={useCallback(() => setActiveStep("intelligence"), [])}
               sectionRef={setSectionRef("intelligence")}
               isManualScrollingRef={isManualScrollingRef}
               locked={isExplorer}
@@ -371,7 +371,7 @@ export default function AUMContextFoundry() {
               accentColor="amber"
               isCollapsed={!!collapsedSections["simulate"]}
               onToggle={() => toggleSection("simulate")}
-              onStepVisible={() => setActiveStep("simulate")}
+              onStepVisible={useCallback(() => setActiveStep("simulate"), [])}
               sectionRef={setSectionRef("simulate")}
               isManualScrollingRef={isManualScrollingRef}
             >
@@ -389,7 +389,7 @@ export default function AUMContextFoundry() {
               accentColor="emerald"
               isCollapsed={!!collapsedSections["report"]}
               onToggle={() => toggleSection("report")}
-              onStepVisible={() => setActiveStep("report")}
+              onStepVisible={useCallback(() => setActiveStep("report"), [])}
               sectionRef={setSectionRef("report")}
               isManualScrollingRef={isManualScrollingRef}
             >

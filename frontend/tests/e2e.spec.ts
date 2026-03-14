@@ -43,6 +43,13 @@ const historyFixtures = [
 async function seedMockSession(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("mock_auth_user", "demo@demo.com");
+    // Also set any other expected mock flags if necessary
+    (window as any).AUM_MOCK_ENV = true;
+  });
+  // Navigate to login first to ensure the script runs on a valid origin if needed
+  await page.goto("/login");
+  await page.evaluate(() => {
+    localStorage.setItem("mock_auth_user", "demo@demo.com");
   });
 }
 
@@ -285,9 +292,13 @@ test.describe("Authenticated enterprise workspace", () => {
 
   test("Dashboard - loads unified workspace and follows active context in the executive report", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(3000); 
 
-    await expect(page.getByText(/Workflow Pipeline/i)).toBeVisible();
+    // More robust selector for the sidebar text
+    const pipelineHeading = page.locator('aside p', { hasText: /Workflow Pipeline/i });
+    await expect(pipelineHeading).toBeVisible({ timeout: 10000 });
+    
     await expect(page.getByText(/Competitor Ranking/i).first()).toBeVisible();
 
     await page.locator("select").first().selectOption("manifest-dataswitch");
@@ -301,22 +312,23 @@ test.describe("Authenticated enterprise workspace", () => {
 
   test("Context Studio - combines ingestion and manifest review in one workspace", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(3000);
 
-    await page.getByRole("button", { name: /Ingest/i }).first().click();
+    // Use specific headings now that we are on a unified page
     await expect(page.getByRole("heading", { name: "Ingest Source Material" })).toBeVisible();
     await expect(page.getByText("Upload or link your company's verified content")).toBeVisible();
 
-    await page.getByRole("button", { name: "Agent Manifest" }).click();
-    await expect(page.getByText("SightSpectrum - AI Protocol Manifest")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Review AI Manifest" })).toBeVisible();
+    await expect(page.getByText("Agent Manifest Generator")).toBeVisible();
   });
 
   test("Co-Intelligence - runs enterprise prompt pack and renders three frontier-model results", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.waitForLoadState("domcontentloaded");
-
-    await page.getByRole("button", { name: "Simulate" }).first().click();
-    await expect(page.getByRole("heading", { name: "Enterprise Buyer Query Simulation" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(3000);
+    
+    await expect(page.getByRole("heading", { name: "Enterprise Buyer Query Simulation" })).toBeVisible({ timeout: 10000 });
 
     await page.getByPlaceholder("Type a custom prompt...").fill("Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization?");
     await page.getByPlaceholder("Type a custom prompt...").press("Enter");

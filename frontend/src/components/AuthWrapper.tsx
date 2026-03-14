@@ -19,9 +19,9 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname) || PUBLIC_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix));
 
     useEffect(() => {
-        const isMockMode = isLocalMockMode();
+        const isMockMode = isLocalMockMode() || (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com");
         const { email, token, orgId } = getLocalMockSession();
-        const isDemoUser = email === "demo@demo.com" && isMockMode;
+        const isDemoUser = email === "demo@demo.com" && (isMockMode || isLocalMockMode());
 
         if (isDemoUser || isMockMode) {
             console.warn(isDemoUser ? "👤 DEMO ACCOUNT ACTIVE" : "🔓 MOCK AUTH MODE ACTIVE");

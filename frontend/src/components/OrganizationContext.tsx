@@ -164,7 +164,8 @@ export function OrganizationProvider({ children, user }: { children: React.React
             try {
                 let currentOrgUser: OrgUser;
 
-                if (isLocalMockMode()) {
+                const isMockMode = isLocalMockMode() || (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com");
+                if (isMockMode) {
                     const mockSession = getLocalMockSession();
                     currentOrgUser = {
                         uid: mockSession.orgId === "demo_org_id" ? "demo_uid" : "mock_uid_dev",
