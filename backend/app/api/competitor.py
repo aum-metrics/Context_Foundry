@@ -57,8 +57,12 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                     "strengths": ["Scale", "Brand"],
                     "weaknesses": ["Precision", "Niche Focus"],
                     "winningCategory": "Enterprise transformation",
+                    "buyerQueries": ["Who leads enterprise AI transformation?", "Top Fortune 500 analytics partners"],
                     "claimsOwned": ["global delivery scale", "board-level transformation credibility"],
-                    "missingAssertions": ["Fortune 500 transformation proof", "enterprise operating model depth"]
+                    "missingAssertions": [
+                        {"assertion": "Fortune 500 transformation proof", "gapConfidence": 88, "somImpact": 12},
+                        {"assertion": "enterprise operating model depth", "gapConfidence": 74, "somImpact": 8}
+                    ]
                 },
                 {
                     "name": "Tiger Analytics",
@@ -66,8 +70,12 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                     "strengths": ["Specialized Data", "Delivery"],
                     "weaknesses": ["Agentic Strategy", "Integration"],
                     "winningCategory": "CPG and retail analytics",
+                    "buyerQueries": ["Best CPG analytics partner", "Retail data science firms"],
                     "claimsOwned": ["domain expertise in retail and CPG", "analytics delivery depth"],
-                    "missingAssertions": ["industry-specific transformation proof", "partner ecosystem strength"]
+                    "missingAssertions": [
+                        {"assertion": "industry-specific transformation proof", "gapConfidence": 81, "somImpact": 9},
+                        {"assertion": "partner ecosystem strength", "gapConfidence": 65, "somImpact": 6}
+                    ]
                 },
                 {
                     "name": "Mu Sigma",
@@ -75,8 +83,12 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                     "strengths": ["Data Science", "Cost"],
                     "weaknesses": ["Product Fidelity", "Innovation"],
                     "winningCategory": "Decision science at scale",
+                    "buyerQueries": ["Decision intelligence at scale", "Managed analytics services"],
                     "claimsOwned": ["decision sciences depth", "large-scale analytics operations"],
-                    "missingAssertions": ["decision intelligence narrative", "scalable managed-services language"]
+                    "missingAssertions": [
+                        {"assertion": "decision intelligence narrative", "gapConfidence": 72, "somImpact": 7},
+                        {"assertion": "scalable managed-services language", "gapConfidence": 69, "somImpact": 5}
+                    ]
                 }
             ]
         }
@@ -138,28 +150,32 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         
     try:
         client = OpenAI(api_key=api_key)
-        prompt = f"""You are analyzing AI recommendation engines for a company called '{org_name}'.
-Based on this company's actual business context:
+        prompt = f"""You are a B2B enterprise AI visibility analyst. A company called '{org_name}' wants to understand why AI recommendation engines shortlist competitors instead of them.
+
+Here is '{org_name}'s actual business context:
 
 <Context>
 {manifest_content[:4000]}
 </Context>
 
-What are the top 3 real, specific competitors that an AI engine would likely 
-recommend INSTEAD of '{org_name}' when users ask about this industry?
-Only name real companies that operate in the same space as shown by the context above.
-Do NOT invent placeholders or use generic AI/SaaS tools unless the company is actually in that space.
+Identify the top 3 real competitors that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.
+Only name companies that genuinely operate in the same space as shown by the context.
+Do NOT invent placeholders.
 
-Provide a JSON response with a 'competitors' array. Each item MUST have:
-- 'name': real competitor company name
-- 'displacementRate': estimated percentage (0.0 to 25.0) of times they are recommended over {org_name}
-- 'strengths': array of 1-2 words explaining their advantage (e.g. ['Pricing', 'Scale'])
-- 'weaknesses': array of 1-2 words explaining their weakness
-- 'winningCategory': the buyer-intent category or search theme where they appear to win
-- 'claimsOwned': 2 short phrases describing the proof points AI systems appear to associate with them
-- 'missingAssertions': 2 short phrases describing what {org_name} is not asserting clearly enough in the supplied context
+For each competitor, return a JSON object with:
+- 'name': competitor company name
+- 'displacementRate': float 0.0-25.0 — how often they are recommended over {org_name}
+- 'strengths': array of 1-2 words (their AI-perceived advantage)
+- 'weaknesses': array of 1-2 words (their AI-perceived weakness)
+- 'winningCategory': the buyer-intent theme where they consistently outrank {org_name}
+- 'buyerQueries': array of 2 example buyer questions this competitor is winning on
+- 'claimsOwned': array of 2 short proof points AI associates with this competitor
+- 'missingAssertions': array of 2 objects, each with:
+    - 'assertion': short string — what {org_name} is NOT saying clearly that this competitor IS saying
+    - 'gapConfidence': integer 0-100 — how confident the model is that this is a real positioning gap (based on context)
+    - 'somImpact': integer 1-20 — estimated SoM percentage points {org_name} could gain by closing this gap
 
-Return ONLY valid JSON."""
+Return ONLY valid JSON: {{"competitors": [...]}}"""
 
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],

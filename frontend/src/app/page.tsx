@@ -120,7 +120,7 @@ export default function LandingPage() {
                                 Industry forecasts indicate that by 2028, over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B sales work</strong> will be driven by generative AI interfaces.
                             </span>
                             <span className="block mt-2">
-                                AUM ensures OpenAI, Anthropic Claude, and Google Gemini recommend your brand accurately instead of <span className="text-rose-600 dark:text-rose-400 font-medium">hallucinating features or promoting your competitors.</span>
+                                AUM ensures OpenAI, Anthropic Claude, and Google Gemini <span className="text-emerald-600 dark:text-emerald-400 font-medium">recommend your firm first</span> — so enterprise buyers shortlist you, not a competitor, when they ask an AI for the best vendor.
                             </span>
                             <p className="text-xs text-slate-500 dark:text-slate-500 italic mt-4">
                                 [1] Gartner. "Future of Sales" (2024 Prediction).
@@ -151,10 +151,10 @@ export default function LandingPage() {
                                 Drive Pipeline with <span className="font-semibold text-emerald-600 dark:text-emerald-400">Agentic SEO</span>
                             </h2>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                <strong>Track your Agentic Share of Voice (ASoV).</strong> We audit what AI says about you, alert you to hallucinations, and provide the exact data pipeline to inject the facts.
+                                <strong>Track your Share of Model (SoM).</strong> We run enterprise buyer queries across AI engines, rank how often your firm is shortlisted over competitors, and prescribe exactly what to change to reclaim those queries.
                             </p>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                Stop losing leads to outdated AI models. We ensure your brand is cited accurately and prominently across every major generative engine.
+                                Stop losing pipeline to competitors favoured by AI. Get the exact positioning gaps — with confidence scores — so your marketing team can close them this sprint.
                             </p>
 
                             <div className="space-y-4">
@@ -172,8 +172,8 @@ export default function LandingPage() {
                                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-medium text-slate-900 dark:text-white">Hallucination Alerts</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Get immediate pings when AI models invent false limitations about your product.</p>
+                                        <h4 className="font-medium text-slate-900 dark:text-white">Competitive Displacement Alerts</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Get pinged when GPT-4o, Gemini, or Claude shortlist a named competitor instead of you for a buyer query in your category.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">
@@ -233,7 +233,6 @@ export default function LandingPage() {
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-12 relative z-10">
-                        {/* Moat 1: LCRS */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -245,13 +244,13 @@ export default function LandingPage() {
                                 <Binary className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white transition-colors group-hover:text-indigo-500">
-                                <Link href="/methods">LCRS Scoring</Link>
+                                <Link href="/methods">SoM Scoring Engine</Link>
                             </h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Our <strong>Latent Contextual Rigor Scoring</strong> engine uses claim extraction and vector divergence to mathematically prove AI accuracy against your verified ground truth.
+                                Our <strong>Share of Model (SoM)</strong> engine runs enterprise buyer queries across AI models and scores how often your firm is shortlisted, with gap confidence bars and estimated SoM recovery per fix.
                             </p>
                             <div className="font-mono text-[10px] bg-slate-100 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-white/5 text-slate-500 dark:text-indigo-300/60 leading-relaxed">
-                                d = 1.0 - (v_manifest ⋅ v_answer) / (||v_manifest|| ||v_answer||)
+                                SoM% = visible_assertions / total_buyer_assertions × 100
                             </div>
                         </motion.div>
 
@@ -420,7 +419,8 @@ export default function LandingPage() {
                                 <div className="flex gap-6 group">
                                     <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">02</div>
                                     <div>
-                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time mathematical scores (60/40 blend) for brand fidelity across OpenAI, Anthropic Claude, and Google Gemini to power your own analytics.</p>
+                                        <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">Live Competitive Positioning Scores</h3>
+                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time Share of Model (SoM) scores showing how often your firm is recommended over named competitors across OpenAI, Anthropic Claude, and Google Gemini — power your own analytics dashboards.</p>
                                     </div>
                                 </div>
                             </div>
@@ -458,14 +458,16 @@ export default function LandingPage() {
     {
       "model": "gpt-4o",
       "accuracy": 92.4,
-      "status": "high_fidelity",
+      "status": "strong_presence",
+      "hasHallucination": false,
+      "claimScore": "5/6 assertions visible to enterprise buyers",
       "metrics": {
         "semantic_divergence": 0.076,
-        "claim_recall": 1.0
+        "claim_recall": 0.833
       }
     }
   ],
-  "prompt": "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
+  "prompt": "How does this firm compare with Accenture for enterprise AI?",
   "version": "latest"
 }`}
                                         </div>
@@ -572,7 +574,7 @@ export default function LandingPage() {
                         >
                             <div className="mb-8">
                                 <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-1">SCALE</h4>
-                                <p className="text-sm text-slate-500">For agencies managing high-volume brands.</p>
+                                <p className="text-sm text-slate-500">For enterprise teams running multi-context, multi-competitor programs.</p>
                             </div>
                             <div className="flex items-baseline mb-8">
                                 <span className="text-5xl font-light tracking-tighter text-slate-900 dark:text-white">{currency === 'inr' ? '₹20,999' : '$249'}</span>
@@ -664,9 +666,9 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-6 text-left">
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
-                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Brand Probe&quot;?</h4>
+                            <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Buyer Query Simulation&quot;?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                A Brand Probe is a single diagnostic query tested across all three major model families simultaneously. One probe against OpenAI, Anthropic Claude, and Google Gemini counts as one unit. We align these to a &quot;Weekly Probe&quot; rhythm to match how enterprise comms teams track narrative drift.
+                                A Buyer Query Simulation tests a single enterprise procurement question (e.g. &quot;Who are the top analytics firms for Fortune 500 retail transformation?&quot;) simultaneously across all three major model families. One simulation against OpenAI, Anthropic Claude, and Google Gemini builds your Share of Model score and surfaces which competitors are being recommended instead of you.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">

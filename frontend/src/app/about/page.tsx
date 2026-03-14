@@ -26,7 +26,7 @@ export default function AboutPage() {
                         Defending Narrative<br />in the Agentic Era
                     </h1>
                     <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                        AUM Context Foundry is the enterprise standard for tracking, scoring, and defending brand fidelity across global language models and autonomous AI agents.
+                        AUM Context Foundry is the enterprise standard for tracking, scoring, and improving your Share of Model (SoM) — how often AI engines shortlist your firm over competitors in enterprise buyer queries.
                     </p>
                 </div>
             </section>
@@ -44,10 +44,10 @@ export default function AboutPage() {
                             For two decades, enterprises optimized for PageRank. You controlled the keywords, you controlled the landing pages, and you controlled the narrative. But the transition to Generative Engine Optimization (GEO) and Agentic web-browsing has shattered the traditional funnel.
                         </p>
                         <p>
-                            Today, your customers aren&apos;t clicking links—they are asking an AI. If your brand context isn&apos;t perfectly structured, hallucination-resistant, and injected directly into the LLM&apos;s context window, <strong className="text-slate-900 dark:text-white">your competition will become the synthetic ground truth.</strong>
+                            Today, your customers aren&apos;t clicking links—they are asking an AI. If your firm isn&apos;t clearly positioned in machine-readable context, <strong className="text-slate-900 dark:text-white">a competitor becomes the AI&apos;s default recommendation for your category.</strong>
                         </p>
                         <p>
-                            We built AUM Context Foundry to give enterprise marketing, PR, and engineering teams a unified &quot;Smoke Detector&quot; for narrative drift. We run parallel queries across OpenAI, Anthropic Claude, and Google Gemini, mathematically scoring your Agentic Share of Voice (ASoV).
+                            We built AUM Context Foundry to give enterprise marketing and strategy teams a unified dashboard for their Share of Model (SoM). We run parallel buyer-intent queries across OpenAI, Anthropic Claude, and Google Gemini, rank which competitors AI shortlists instead of you, and prescribe the exact positioning changes to close each gap.
                         </p>
                     </div>
                 </div>
@@ -72,9 +72,9 @@ export default function AboutPage() {
                             <div className="w-12 h-12 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center mb-6">
                                 <Shield className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
-                            <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Fidelity Defense</h4>
+                            <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Competitive Displacement Intelligence</h4>
                             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                                Identify hallucination risks and narrative drift before they impact your pipeline. We alert you when AI models misrepresent your core IP.
+                                See exactly which competitors are shortlisted instead of you on each buyer query, with gap confidence scores and estimated SoM recovery per fix.
                             </p>
                         </div>
 

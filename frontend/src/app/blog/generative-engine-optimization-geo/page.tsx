@@ -88,7 +88,7 @@ export default function GeoArticlePage() {
 
             <h2>How to think about GEO scores</h2>
             <p>
-                A GEO score is not the same thing as low drift in one simulation. A company can answer one tested question well and still have weak page-level readiness if the site lacks clear descriptions, canonical structure, or well-aligned public claims. That is why GEO and LCRS should be read together, not as substitutes.
+                A GEO score is not the same thing as a high Share of Model on one tested query. A company can score well on one tested question and still have weak page-level readiness if the site lacks clear descriptions, canonical structure, or well-aligned public claims. That is why GEO and SoM should be read together, not as substitutes.
             </p>
 
             <h2>The practical outcome</h2>

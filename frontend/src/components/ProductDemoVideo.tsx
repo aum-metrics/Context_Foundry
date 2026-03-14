@@ -48,11 +48,11 @@ export default function ProductFlowShowcase() {
         {
             id: 1,
             title: "Narrative Simulation",
-            subtitle: "Stress-test OpenAI, Anthropic Claude, and Google Gemini for Context Drift.",
+            subtitle: "Test buyer-intent queries across OpenAI, Anthropic Claude, and Google Gemini for Competitive Displacement.",
             icon: Search,
             tag: "The Process",
-            outputLabel: "Drift Analysis Log",
-            outputDetail: "Detecting where AI hallucinations deviate from your manifest.",
+            outputLabel: "Displacement Risk Analysis",
+            outputDetail: "Ranking which competitors AI shortlists when a buyer asks your category question.",
             accent: "indigo",
             preview: (
                 <div className="space-y-4">
@@ -62,16 +62,16 @@ export default function ProductFlowShowcase() {
                     </div>
                     <div className="space-y-2">
                         {[
-                            { name: 'OpenAI', score: 92, status: 'Fidelity' },
-                            { name: 'Anthropic Claude', score: 45, status: 'Drift' },
-                            { name: 'Google Gemini', score: 88, status: 'Fidelity' }
+                            { name: 'OpenAI', score: 92, status: 'Visible' },
+                            { name: 'Anthropic Claude', score: 45, status: 'Displaced' },
+                            { name: 'Google Gemini', score: 88, status: 'Visible' }
                         ].map((m) => (
                             <div key={m.name} className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/5">
                                 <div className="text-[9px] w-16">{m.name}</div>
                                 <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                                    <div className={`h-full bg-${m.status === 'Fidelity' ? 'indigo' : 'emerald'}-500`} style={{ width: `${m.score}%` }}></div>
+                                    <div className={`h-full bg-${m.status === 'Visible' ? 'indigo' : 'emerald'}-500`} style={{ width: `${m.score}%` }}></div>
                                 </div>
-                                <div className={`text-[9px] text-${m.status === 'Fidelity' ? 'indigo' : 'rose'}-400 font-bold`}>{m.score}%</div>
+                                <div className={`text-[9px] text-${m.status === 'Visible' ? 'indigo' : 'rose'}-400 font-bold`}>{m.score}%</div>
                             </div>
                         ))}
                     </div>
@@ -80,12 +80,12 @@ export default function ProductFlowShowcase() {
         },
         {
             id: 2,
-            title: "Global ASoV Dashboard",
-            subtitle: "Centralized intelligence for your Brand Fidelity.",
+            title: "SoM Command Center",
+            subtitle: "Live competitive ranking: see which AI buyers see first, second, or not at all.",
             icon: Activity,
             tag: "The Result",
-            outputLabel: "Agentic Share of Voice Index",
-            outputDetail: "Real-time auditing of how the AI ecosystem represents you.",
+            outputLabel: "Share of Model Index",
+            outputDetail: "Real-time ranking of how AI engines shortlist your firm across buyer-intent queries.",
             accent: "cyan",
             preview: (
                 <div className="relative aspect-video rounded-xl bg-slate-900 border border-white/10 overflow-hidden p-6">
@@ -103,8 +103,8 @@ export default function ProductFlowShowcase() {
                             <p className="text-[11px] text-slate-400">"Recommended for broad enterprise scale, but not for specialist analytics depth."</p>
                         </div>
                         <div className="p-2 rounded bg-indigo-500/10 border border-indigo-500/20">
-                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">NORTHSTAR ANALYTICS (DRIFT: 18%)</p>
-                            <p className="text-[11px] text-slate-400">"Mentioned for data modernization, but downgraded due to weak public proof of enterprise transformation scale."</p>
+                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">NORTHSTAR ANALYTICS (SoM: 18% — Displaced)</p>
+                            <p className="text-[11px] text-slate-400">&quot;Recommended for data modernization, but displaced on enterprise transformation scale by Accenture.&quot;</p>
                         </div>
                     </div>
                 </div>

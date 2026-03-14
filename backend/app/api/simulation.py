@@ -88,17 +88,23 @@ def cosine_sim(v1, v2):
 
 def extract_claims(manifest_content: str, question: str, api_keys: dict) -> list:
     """
-    Extract verifiable factual claims from the Context Document.
-    Uses OpenAI by default, falls back to Gemini if available.
+    Extract enterprise buyer positioning assertions from the Context Document.
+    These are the claims a shortlisting AI engine SHOULD make about this company
+    when answering the buyer's question — not atomic facts, but competitive proof points.
     """
     openai_key = api_keys.get("openai")
     gemini_key = api_keys.get("gemini")
     
     prompt = (
-        "Extract only the claims from this document that are relevant to the user question. "
-        "Return JSON array of strings under key 'claims'. Keep each claim atomic and verifiable. "
-        "Include at most 6 claims, prioritized by relevance.\n\n"
-        f"USER QUESTION: {question}"
+        "You are preparing a competitive evaluation dossier for an enterprise procurement team. "
+        "From the company context below, extract the 5-6 strongest POSITIONING ASSERTIONS that "
+        "should appear in an AI model's answer when a buyer asks the following question. "
+        "Each assertion should be specific, buyer-relevant, and verifiable from the document. "
+        "Focus on: industry expertise, delivery proof, competitive differentiators, "
+        "named technology/platform credentials, and client transformation evidence. "
+        "Do NOT include generic claims like 'we deliver value'. "
+        "Return JSON array of strings under key 'claims'. Short, factual, specific.\n\n"
+        f"BUYER QUESTION: {question}"
     )
     
     try:
@@ -132,26 +138,29 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict) -> list
 
 def verify_claims(claims: list, ai_response: str, api_keys: dict) -> list:
     """
-    Verify each extracted claim against the AI response.
-    Returns a list of {claim, verdict, explanation} objects.
+    Score each enterprise positioning assertion against the AI model's response.
+    Measures competitive visibility: did the AI surface this company's proof points
+    the way a shortlisting engine should? Not hallucination detection — buyer-displacement scoring.
     """
     if not claims: return []
     openai_key = api_keys.get("openai")
     gemini_key = api_keys.get("gemini")
     
-    sys_prompt = """Compare each claim against the AI response. For each claim, determine:
-- "supported": The AI response correctly states this fact OR provides a semantically consistent value (e.g., "500+" supports "500").
-- "contradicted": The AI response directly denies this fact or gives an incompatible value.
-- "not_mentioned": The AI response doesn't address this fact.
+    sys_prompt = """You are scoring an AI engine's response from the perspective of an enterprise procurement committee.
 
-Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|not_mentioned", "detail": "brief explanation"}]}"""
+For each POSITIONING ASSERTION below, evaluate whether the AI response:
+- "visible": The AI mentions this assertion (explicitly or with equivalent evidence) as a reason to consider this vendor.
+- "displaced": The AI credited this strength to a COMPETITOR instead, or positioned a competitor above this company for this assertion.
+- "absent": The AI did not mention this company or this assertion at all — the company is invisible for this claim.
+
+Return JSON: {"results": [{"claim": "...", "verdict": "visible|displaced|absent", "detail": "brief evidence from the AI response"}]}"""
 
     try:
         if openai_key:
             client = OpenAI(api_key=openai_key)
             resp = client.chat.completions.create(
                 messages=[{"role": "system", "content": sys_prompt}, 
-                          {"role": "user", "content": f"CLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"}],
+                          {"role": "user", "content": f"POSITIONING ASSERTIONS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"}],
                 model=OPENAI_CLAIM_MODEL,
                 response_format={"type": "json_object"},
                 temperature=0,
@@ -162,7 +171,7 @@ Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|no
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
                 model=api_model,
-                contents=[f"{sys_prompt}\n\nCLAIMS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"],
+                contents=[f"{sys_prompt}\n\nPOSITIONING ASSERTIONS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"],
                 config={'response_mime_type': 'application/json'}
             )
             result = json.loads(resp.text)
@@ -172,6 +181,7 @@ Return JSON: {"results": [{"claim": "...", "verdict": "supported|contradicted|no
     except Exception as e:
         logger.error(f"Claim verification failed: {e}")
         return []
+
 
 
 def compute_divergence(api_key: str, manifest_embedding: list, answer: str) -> float:
@@ -363,59 +373,66 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
 
         openai_key = api_keys.get("openai")
         
-        # Embedding-based divergence
+        # Embedding-based divergence (measures how closely the AI answer relates to the Context)
         if openai_key:
             divergence = compute_divergence(openai_key, manifest_embedding, answer)
         else:
             divergence = 0.5
 
-        # Fine-grained claim verification (Hardened with fallback)
+        # === ENTERPRISE BUYER POSITIONING SCORE ===
+        # Measures: how visibly did the AI engine surface this company as a shortlistable vendor?
         claim_results = []
         claim_score = None
-        supported = 0
+        visible = 0
+        displaced = 0
         total = 0
         
         if claims:
             claim_results = verify_claims(claims, answer, api_keys)
-            supported = sum(1 for c in claim_results if c.get("verdict") == "supported")
+            visible = sum(1 for c in claim_results if c.get("verdict") == "visible")
+            displaced = sum(1 for c in claim_results if c.get("verdict") == "displaced")
+            absent = sum(1 for c in claim_results if c.get("verdict") == "absent")
             total = len(claim_results)
-            claim_score = f"{supported}/{total} claims supported"
+            # Weighted positioning score: visible=1.0, absent=0.3 (not catastrophic), displaced=0.0
+            weighted_visible = visible + (absent * 0.3)
+            claim_score = f"{visible}/{total} assertions visible to enterprise buyers"
 
-        # LCRS Blend (Spec Section 10.F): 40% semantic, 60% claim accuracy
+        # Share of Model (SoM) Blend: 40% semantic proximity, 60% positioning visibility
         if total > 0:
-            claim_accuracy = supported / total
+            positioning_rate = weighted_visible / total
             semantic_accuracy = max(0.0, 1.0 - divergence)
-            blended = (0.4 * semantic_accuracy) + (0.6 * claim_accuracy)
+            blended = (0.4 * semantic_accuracy) + (0.6 * positioning_rate)
             accuracy = round(blended * 100, 1)
             
-            # Fidelity Status Mapping
-            if accuracy > 85: status = "high_fidelity"
-            elif accuracy > 65: status = "minor_drift"
-            else: status = "critical_drift"
+            # SoM Status Mapping (enterprise framing)
+            if accuracy > 85: status = "strong_presence"
+            elif accuracy > 65: status = "partial_presence"
+            else: status = "displaced"
             
-            # HALLUCINATION DETECTION FIX v1.2.18:
-            # Only mark as hallucination if:
-            # 1. There are actual contradictions in verified claims, OR
-            # 2. Claims are mostly unsupported (< 40% supported) AND semantic divergence is high
-            contradictions = sum(1 for c in claim_results if c.get("verdict") == "contradicted")
-            has_drift = (contradictions > 0) or (claim_accuracy < 0.4 and semantic_accuracy < 0.5)
+            # Displacement detection: company is being bypassed in buyer shortlists
+            # Triggered when competitors are recommended in place of us (displaced > 0)
+            # OR when fewer than 40% of key positioning assertions appear
+            has_drift = (displaced > 0) or (positioning_rate < 0.4)
         else:
             accuracy = round(max(0.0, 1.0 - divergence) * 100, 1)
-            status = "high_fidelity" if accuracy > 75 else "critical_drift"
-            # Without extracted claims, only mark hallucination if accuracy is critically low
-            has_drift = accuracy < 30
+            status = "strong_presence" if accuracy > 75 else "displaced"
+            has_drift = accuracy < 40
 
         return {
             "model": normalized_name,
             "answer": answer,
             "accuracy": accuracy,
             "status": status,
-            "hasHallucination": has_drift,
+            # hasDisplacement: true when competitor is recommended instead of us,
+            # or when fewer than 40% of key positioning assertions appear in the answer.
+            # NOT a hallucination — the model may be stating facts accurately but about a rival.
+            "hasDisplacement": has_drift,
+            "hasHallucination": has_drift,  # kept for backward-compatibility with existing Firestore history records
             "claimResults": claim_results,
             "claimScore": claim_score,
             "metrics": {
                 "semantic_divergence": round(divergence, 3),
-                "claim_recall": round(supported/total, 3) if total > 0 else 1.0
+                "claim_recall": round(visible/total, 3) if total > 0 else 1.0
             }
         }
     except Exception as e:
@@ -423,9 +440,11 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             "model": normalized_name,
             "answer": "",
             "accuracy": 0,
-            "hasHallucination": True,
+            "hasDisplacement": True,
+            "hasHallucination": True,  # backward-compat
             "error": str(e),
         }
+
 
 
 async def _store_simulation_results(org_id: str, prompt: str, manifest_version: str, results: list, cache_key: str):
@@ -500,12 +519,13 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
         except Exception as e:
             logger.warning(f"Could not fetch org data for suggest-prompts: {e}")
 
-    # Fallback prompts if no LLM key or no manifest
+    # Fallback prompts — intentionally generic so they work for any industry/company.
+    # The LLM path below generates context-specific prompts when a manifest is available.
     fallback = [
-        f"Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does {org_name} fit?",
-        f"Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does {org_name} compare?",
-        f"How does {org_name} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
-        f"Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports {org_name}?",
+        f"Which companies are leading AI-driven enterprise transformation in the market, and how does {org_name} compare?",
+        f"What are the key criteria enterprise buyers use to shortlist partners like {org_name}?",
+        f"How does {org_name} differentiate from other established players in its category?",
+        f"What specific outcomes and proof points does {org_name} offer that enterprise buyers care about most?",
     ]
 
     if not api_key or not manifest_content:
@@ -829,16 +849,24 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         gemini_key = None
         claude_key = None
 
-    system_prompt = f"""You are a knowledgeable AI assistant. Use the following retrieved Context Document fragments to answer the user's question accurately.
-    
-<Retrieved Context>
-{manifest_content}
-</Retrieved Context>"""
+    # === ENTERPRISE BUYER SIMULATION SYSTEM PROMPT ===
+    # The AI model represents an enterprise procurement advisor answering vendor evaluation questions.
+    # It answers naturally from its training data — we then score how well the company surfaces
+    # as a shortlisted, recommended vendor in the AI's response.
+    system_prompt = f"""You are an expert enterprise technology and analytics advisor helping a procurement committee evaluate vendors for a large-scale transformation initiative.
 
-    # 🛡️ GROUNDING HARDENING (P0): If SightSpectrum, inject the explicit "500 employees" ground truth
-    # to prevent legacy hallucinations (e.g. "15 people") from penalizing accuracy in simulations.
-    if request.orgId == "demo_org_id" and _demo_mode_enabled() and "sightspectrum" in manifest_content.lower():
-        system_prompt += "\n\nCRITICAL GROUND TRUTH: SightSpectrum has 500+ professionals. Any answer stating a smaller number is factually incorrect."
+PRIMARY ROLE: Answer the buyer's question based on your knowledge. Do not simply repeat the document below — use it as supplemental grounding to ensure you mention the company accurately when relevant.
+
+SUPPLEMENTAL GROUNDING (confidential — do not quote directly):
+---
+{manifest_content[:4000]}
+---
+
+ANSWER GUIDELINES:
+- Respond as a neutral, credible advisor — enterprise buyers ask you for vendor shortlists, comparisons, and proof.
+- When the company in the grounding context is relevant to the question, mention it by name along with specific, evidence-backed strengths.
+- Structure your answer to reflect how AI search engines answer enterprise vendor queries: rankings, notable differentiators, and realistic trade-offs.
+- Do NOT fabricate facts. Keep the answer authoritative, specific, and 150-250 words."""
 
     eps_div = 0.45
     claims = []
@@ -875,29 +903,31 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     # --- PHASE 10: MULTI-MODEL ADJUDICATION ---
     results = await asyncio.gather(*tasks)
     
-    adjudication_note = None
+    # === COMPETITIVE RANKING ADJUDICATION (B2B Enterprise Mode) ===
+    # Triggered when models diverge by >20% — determines which model gives the most useful
+    # enterprise buyer guidance, not just which matched the manifest most closely.
     if len(results) > 1 and openai_key:
         try:
-            # We only adjudicate if there's a >20% gap between top and bottom accuracy
             accuracies = [r["accuracy"] for r in results if r.get("accuracy") is not None]
             if accuracies and (max(accuracies) - min(accuracies) > 20):
-                logger.info("⚖️ Discrepancy detected. Initializing Multi-Model Adjudication...")
-                adjudication_prompt = f"""You are the AUM Master Auditor. 
-Three models have provided answers for the following prompt: "{request.prompt}"
+                logger.info("⚖️ Competitive divergence detected. Initializing Buyer-Intent Adjudication...")
+                adjudication_prompt = f"""You are a senior enterprise procurement consultant reviewing how three AI engines responded to an enterprise buyer query.
 
-Retrieved Context from Manifest:
-{manifest_content[:3000]}
+BUYER QUERY: "{request.prompt}"
 
-Model Answers:
-{json.dumps([{r['model']: r['answer']} for r in results])}
+GROUND TRUTH CONTEXT (the company being evaluated):
+{manifest_content[:2000]}
 
-Task:
-1. Identify which model adheres closest to the Context Document.
-2. Flag any "hallucinations" (claims not in context).
-3. Provide a concise "Consensus Verdict".
+AI ENGINE RESPONSES:
+{json.dumps([{{r['model']: r['answer']}} for r in results])}
 
-Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"""
-                
+YOUR TASK:
+1. Identify which AI engine's response most credibly positions the company-in-context as a shortlistable vendor for an enterprise buyer asking this question.
+2. Note if any engine failed to mention the company, positioned a competitor more strongly, or gave a response a buyer would NOT act on.
+3. Write a concise "Competitive Verdict" a VP of Procurement would trust.
+
+Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model name", "audit_notes": "which competitors were ranked above or instead, and why"}}"""
+
                 client = OpenAI(api_key=openai_key)
                 adj_resp = client.chat.completions.create(
                     model=OPENAI_SCHEMA_MODEL,
@@ -908,6 +938,7 @@ Return JSON: {{"master_verdict": "...", "winner": "...", "audit_notes": "..."}}"
                 adjudication_note = json.loads(adj_resp.choices[0].message.content)
         except Exception as e:
             logger.error(f"Adjudication failed: {e}")
+
 
     # ----- 5. ATOMIC BILLING & CACHE UPDATE (Background) -----
     if db:

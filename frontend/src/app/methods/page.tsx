@@ -52,7 +52,7 @@ export default function MethodsPage() {
                         className={`text-xl md:text-2xl leading-relaxed max-w-4xl font-light ${textMuted}`}
                     >
                         AUM Context Foundry replaces "proprietary magic" with auditable science.
-                        We evaluate LLM outputs using a deterministic blend of high-dimensional geometric distance and claim-level verification.
+                        We run enterprise buyer queries deterministically across AI models and measure how often your firm is shortlisted over competitors — your Share of Model (SoM).
                     </motion.p>
                 </div>
 
@@ -65,25 +65,25 @@ export default function MethodsPage() {
                     >
                         <h2 className="text-2xl font-bold mb-8 flex items-center text-slate-900 dark:text-white">
                             <span className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mr-4 text-sm font-mono">01</span>
-                            The LCRS Formula
+                            The SoM Formula
                         </h2>
 
                         <div className="bg-slate-900/90 dark:bg-black/40 p-10 rounded-[2rem] border border-slate-200 dark:border-white/5 font-mono text-2xl mb-8 text-center text-indigo-400 dark:text-indigo-300 shadow-inner">
-                            LCRS = (0.4 × S<sub>acc</sub>) + (0.6 × C<sub>acc</sub>)
+                            SoM = visible<sub>assertions</sub> ÷ total<sub>assertions</sub>
                         </div>
 
                         <p className={`text-sm italic text-center mb-10 ${textMuted}`}>
-                            Formal Latent Contextual Rigor Score (v{methodology?.version || '1.2.0'})
+                            Share of Model Score (v{methodology?.version || '1.2.0'})
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="p-6 rounded-[1.5rem] bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 leading-relaxed shadow-sm">
-                                <span className="text-indigo-500 dark:text-indigo-400 font-bold block mb-2 text-xs uppercase tracking-widest">Semantic Alignment (S_acc)</span>
-                                <p className="text-sm font-light leading-relaxed">1.0 - Cosine Distance calculated across 1536-dimensional vector embeddings of the inference output vs. the verified manifest.</p>
+                                <span className="text-indigo-500 dark:text-indigo-400 font-bold block mb-2 text-xs uppercase tracking-widest">Semantic Alignment</span>
+                                <p className="text-sm font-light leading-relaxed">Cosine distance across 1536-dim embeddings of the buyer query response vs. verified manifest — measures how close AI output is to your positioning.</p>
                             </div>
                             <div className="p-6 rounded-[1.5rem] bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 leading-relaxed shadow-sm">
-                                <span className="text-cyan-500 dark:text-cyan-400 font-bold block mb-2 text-xs uppercase tracking-widest">Claim Integrity (C_acc)</span>
-                                <p className="text-sm font-light leading-relaxed">Percentage of extracted entities and technical specifications that exist within the ground truth document collection.</p>
+                                <span className="text-cyan-500 dark:text-cyan-400 font-bold block mb-2 text-xs uppercase tracking-widest">Assertion Presence</span>
+                                <p className="text-sm font-light leading-relaxed">Fraction of your positioning assertions that appear as "visible", "partial", or "absent" when an enterprise buyer asks an AI the equivalent of your RFP shortlist question.</p>
                             </div>
                         </div>
                     </motion.div>
@@ -100,7 +100,7 @@ export default function MethodsPage() {
                                 Multi-Model Adjudication
                             </h3>
                             <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                                We don't just "guess." LCRS uses the currently configured OpenAI frontier model as the primary auditor for claim verification, while your AUM manifest serves as the immutable Ground Truth.
+                                Every buyer query runs across GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet simultaneously. The adjudication layer determines which model provides the most useful evidence for enterprise buyer shortlisting and identifies which competitor is most likely to be ranked above you on that query.
                             </p>
                         </motion.div>
 
@@ -176,28 +176,28 @@ export default function MethodsPage() {
                                 </h4>
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-white/5">
-                                        <span className="text-sm font-light">Claim: "Zero-Retention"</span>
-                                        <span className="text-rose-500 text-[10px] font-bold px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 uppercase tracking-widest">CONTRADICTED</span>
+                                        <span className="text-sm font-light">Assertion: "Enterprise transformation depth"</span>
+                                        <span className="text-rose-500 text-[10px] font-bold px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 uppercase tracking-widest">ABSENT</span>
                                     </div>
                                     <div className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-white/5">
-                                        <span className="text-sm font-light text-slate-500">Semantic Alignment (S_acc)</span>
+                                        <span className="text-sm font-light text-slate-500">Semantic Alignment</span>
                                         <span className="font-mono text-sm text-indigo-500">0.68</span>
                                     </div>
                                     <div className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-white/5">
-                                        <span className="text-sm font-light text-slate-500">Claim Accuracy (C_acc)</span>
+                                        <span className="text-sm font-light text-slate-500">Assertion Presence</span>
                                         <span className="font-mono text-sm text-rose-500">0.00</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-6">
-                                        <span className="font-black text-xl uppercase tracking-tighter">Final LCRS Score</span>
+                                        <span className="font-black text-xl uppercase tracking-tighter">Final SoM Score</span>
                                         <div className="flex items-baseline space-x-1">
-                                            <span className="text-5xl font-black text-rose-500 tracking-tighter">0.27</span>
-                                            <span className="text-xs font-bold text-rose-500/50 uppercase">Fail</span>
+                                            <span className="text-5xl font-black text-rose-500 tracking-tighter">18%</span>
+                                            <span className="text-xs font-bold text-rose-500/50 uppercase">Displaced</span>
                                         </div>
                                     </div>
                                     <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 mt-6">
                                         <p className="text-[10px] text-slate-500 leading-relaxed font-mono">
-                                            CALC: (0.4 × 0.68) + (0.6 × 0.00) = 0.272. <br />
-                                            RESULT: CRITICAL NARRATIVE DRIFT DETECTED.
+                                            RESULT: COMPETITIVE DISPLACEMENT DETECTED. <br />
+                                            Accenture ranked first on 2/3 models for this buyer query.
                                         </p>
                                     </div>
                                 </div>
@@ -214,9 +214,9 @@ export default function MethodsPage() {
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Inference Logging</h4>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">SoM Run Logging</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            Every LCRS score includes a unique audit-footprint of the exact Model ID and hyperparameters used during evaluation for reproducibility and compliance documentation.
+                            Every SoM run includes a unique audit-footprint of the exact Model ID, buyer query, and assertion verdicts used — for reproducibility and compliance documentation.
                         </p>
                     </div>
                     <div>

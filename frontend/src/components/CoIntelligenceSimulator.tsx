@@ -20,7 +20,8 @@ interface ModelResult {
     model: string;
     answer: string;
     accuracy: number;
-    hasHallucination: boolean;
+    hasDisplacement: boolean;  // true when a competitor is recommended instead of this company
+    hasHallucination: boolean; // backward-compat alias — same value as hasDisplacement
     status?: string;
     metrics?: {
         semantic_divergence: number;
@@ -106,14 +107,14 @@ export default function CoIntelligenceSimulator() {
                     const topics = lines.map((l: string) => l.replace(/^#+\s*/, "").replace(/^-\s*/, "").trim()).filter((l: string) => l.length > 5).slice(0, 3);
                     const fallbackPrompts = topics.length >= 2 ? [
                         `Which enterprise buyers would shortlist ${analysisSubject} based on ${topics[0]}?`,
-                        `How does ${analysisSubject} compare against major analytics and consulting competitors on ${topics[0]}?`,
+                        `How does ${analysisSubject} compare against established competitors on ${topics[0]}?`,
                         topics.length > 1 ? `What proof does ${analysisSubject} present around ${topics[1]} for enterprise transformation buyers?` : `What enterprise differentiators does ${analysisSubject} assert most clearly?`,
                         `Which vendors have stronger domain expertise than ${analysisSubject}, and where does ${analysisSubject} still win?`
                     ] : [
-                        `Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`,
-                        `Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does ${analysisSubject} compare?`,
-                        `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?`,
-                        `Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports ${analysisSubject}?`
+                        `Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`,
+                        `What are the key criteria enterprise buyers use to shortlist a partner like ${analysisSubject}?`,
+                        `How does ${analysisSubject} differentiate from other established players in its market category?`,
+                        `What specific outcomes and proof points does ${analysisSubject} offer that enterprise buyers care most about?`
                     ];
                     setDynamicPrompts(fallbackPrompts);
                     setActivePrompt(fallbackPrompts[0]);
@@ -121,12 +122,12 @@ export default function CoIntelligenceSimulator() {
                     setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
                     // No manifest yet — show generic but sensible prompts
                     setDynamicPrompts([
-                        `Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`,
-                        `Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does ${analysisSubject} compare?`,
-                        `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?`,
-                        `Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`
+                        `Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`,
+                        `What are the key criteria enterprise buyers use to shortlist a partner like ${analysisSubject}?`,
+                        `How does ${analysisSubject} differentiate from other established players in its market category?`,
+                        `Which partner is best for large-scale enterprise transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`
                     ]);
-                    setActivePrompt(`Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`);
+                    setActivePrompt(`Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`);
                 }
             } catch (e) {
                 console.error("Manifest fetch error:", e);
@@ -190,6 +191,7 @@ export default function CoIntelligenceSimulator() {
                 model: "Error",
                 answer: error instanceof Error ? error.message : "Unknown error",
                 accuracy: 0,
+                hasDisplacement: true,
                 hasHallucination: true,
                 error: error instanceof Error ? error.message : "Unknown error",
             }]);
@@ -249,9 +251,9 @@ export default function CoIntelligenceSimulator() {
             <header className="mb-2">
                 <h2 className="text-2xl font-light text-slate-900 dark:text-white flex items-center">
                     <Beaker className="w-6 h-6 mr-3 text-amber-500" />
-                    RAG Fidelity Monitoring
+                    Enterprise Buyer Query Simulation
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">Monitor how accurately AI engines (GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet) represent your business. We score each response against your verified Ground Truth with deterministic LCRS methodology.</p>
+                <p className="text-sm text-slate-500 mt-1">Test how AI engines recommend your business versus competitors when enterprise buyers ask complex, vendor-agnostic questions.</p>
             </header>
 
             <div className="flex-1 w-full flex flex-col lg:flex-row gap-6">
@@ -413,13 +415,13 @@ export default function CoIntelligenceSimulator() {
                                         <p className={`text-3xl font-light ${getAccuracyColor(result.accuracy)}`}>
                                             {result.error ? "—" : `${result.accuracy}%`}
                                         </p>
-                                        <p className="text-[10px] mt-1 flex items-center justify-center space-x-1">
+                                        <p className={`text-[10px] mt-1 flex items-center justify-center space-x-1`}>
                                             {result.error ? (
                                                 <span className="text-slate-400">Unavailable</span>
                                             ) : result.hasHallucination ? (
-                                                <><XCircle className="w-3 h-3 text-rose-500" /><span className="text-rose-600 dark:text-rose-400">Hallucination Detected</span></>
+                                                <><XCircle className="w-3 h-3 text-rose-500" /><span className="text-rose-600 dark:text-rose-400">Displaced by Competitor</span></>
                                             ) : (
-                                                <><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-emerald-600 dark:text-emerald-400">Faithful to Context</span></>
+                                                <><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-emerald-600 dark:text-emerald-400">Visible to Enterprise Buyers</span></>
                                             )}
                                         </p>
                                     </motion.div>
@@ -556,8 +558,8 @@ export default function CoIntelligenceSimulator() {
                                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div className="flex-1">
                                         <div className="flex items-center space-x-2 mb-2">
-                                            <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold">Master Audit Verdict</span>
-                                            <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold border border-emerald-500/30">LCRS Verified</span>
+                                            <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold">Buyer Ranking Verdict</span>
+                                            <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold border border-emerald-500/30">SoM Verified</span>
                                         </div>
                                         <h4 className="text-xl font-medium mb-2 leading-tight">{adjudication.master_verdict}</h4>
                                         <p className="text-indigo-100 text-sm opacity-80 leading-relaxed italic">&ldquo;{adjudication.audit_notes}&rdquo;</p>

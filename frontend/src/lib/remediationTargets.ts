@@ -152,7 +152,30 @@ export function resolveRemediationTargets(params: {
   }
 
   const candidates = dedupeCandidates(rawCandidates);
-  if (candidates.length === 0) {
+
+  // Bug 6 fix: filter to same-domain URLs only — manifests from PDFs often contain
+  // CDN assets, Salesforce doc links, and internal tool URLs that are not public pages.
+  let sameDomainCandidates = candidates;
+  if (sourceUrl) {
+    try {
+      const parseBase = sourceUrl.includes("://") ? sourceUrl : `https://${sourceUrl}`;
+      const sourceHost = new URL(parseBase).hostname.replace(/^www\./, "");
+      if (sourceHost) {
+        const filtered = candidates.filter((c) => {
+          try {
+            return new URL(c.url).hostname.replace(/^www\./, "") === sourceHost;
+          } catch {
+            return false;
+          }
+        });
+        if (filtered.length > 0) sameDomainCandidates = filtered;
+      }
+    } catch {
+      // If we can't parse the source URL, fall through to unfiltered candidates
+    }
+  }
+
+  if (sameDomainCandidates.length === 0) {
     return buildFallbackTargets(sourceUrl, category);
   }
 
@@ -170,7 +193,7 @@ export function resolveRemediationTargets(params: {
     }
   }
 
-  const scored = candidates.map((candidate) => {
+  const scored = sameDomainCandidates.map((candidate) => {
     const haystack = `${candidate.label} ${candidate.url} ${candidate.sourceType}`.toLowerCase();
     const matches = weightedKeywords.filter((keyword) => haystack.includes(keyword));
     const urlPath = (() => {

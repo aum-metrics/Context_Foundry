@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Logo } from "@/components/Logo";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from "recharts";
 import { TrendingUp, Search, Globe, Activity, ShieldAlert, ArrowUpRight, Lock, FilePenLine, BriefcaseBusiness, ClipboardList, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,14 +21,14 @@ interface BatchResult {
     modelAverages?: Record<string, number>;
     results?: Array<{
         prompt?: string;
-        results?: { model: string; accuracy: number; hasHallucination: boolean; claimScore?: string; answer?: string }[];
+        results?: { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean; claimScore?: string; answer?: string }[];
         error?: string;
     }>;
 }
 
 interface ScoringHistoryEntry {
     prompt: string;
-    results: { model: string; accuracy: number; hasHallucination: boolean; claimScore?: string; answer?: string }[];
+    results: { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean; claimScore?: string; answer?: string }[];
     timestamp: { seconds: number };
 }
 
@@ -43,14 +42,21 @@ interface SEOResult {
     recommendation: string;
 }
 
+interface GapAssertion {
+    assertion: string;
+    gapConfidence: number;  // 0-100: how confident the model is this is a real positioning gap
+    somImpact: number;      // 1-20: estimated SoM % points recoverable by closing this gap
+}
+
 interface CompetitorInsight {
     name: string;
     displacementRate: number;
     strengths: string[];
     weaknesses: string[];
     winningCategory?: string;
+    buyerQueries?: string[];  // example buyer questions this competitor is winning on
     claimsOwned?: string[];
-    missingAssertions?: string[];
+    missingAssertions?: (GapAssertion | string)[];  // supports both old string[] and new object[] format
 }
 
 interface ManifestSnapshot {
@@ -61,7 +67,7 @@ interface ManifestSnapshot {
 
 interface PromptRun {
     prompt: string;
-    results: { model: string; accuracy: number; hasHallucination: boolean; claimScore?: string; answer?: string }[];
+    results: { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean; claimScore?: string; answer?: string }[];
 }
 
 interface QueryClusterInsight {
@@ -207,7 +213,7 @@ function buildLlmsSuggestion(category: string, subject: string, missingClaims: s
     return `llms.txt: Add a ${category} section for ${subject} with direct claims on ${claims}.`;
 }
 
-export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (view: string) => void }) {
+export default function SoMCommandCenter({ setActiveView: _setActiveView }: { setActiveView?: (view: string) => void }) {
     const { organization, refreshKey, activeManifestVersion, activeContextName } = useOrganization();
     const { models } = useModelCatalog();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o");
@@ -492,16 +498,17 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
             const observedOutcome = getFirstSentence(sortedResults[0]?.answer)
                 || `${category} prompts are currently scoring ${avgAccuracy}% average fidelity across the audited model set.`;
             const fallbackClaims = getCategoryFallbackClaims(category);
-            const missingClaims = (matchedCompetitor?.missingAssertions && matchedCompetitor.missingAssertions.length > 0)
-                ? matchedCompetitor.missingAssertions
+            const missingClaims: string[] = (matchedCompetitor?.missingAssertions && matchedCompetitor.missingAssertions.length > 0)
+                ? matchedCompetitor.missingAssertions.map(a => typeof a === "string" ? a : a.assertion)
                 : fallbackClaims;
+
 
             return {
                 prompt: run.prompt,
                 category,
                 avgAccuracy,
                 claimRecall,
-                hallucinationCount: sortedResults.filter((result) => result.hasHallucination).length,
+                hallucinationCount: sortedResults.filter((result) => result.hasDisplacement ?? result.hasHallucination).length,
                 winnerModel: sortedResults[0]?.model || "No data",
                 weakestModel: sortedResults[sortedResults.length - 1]?.model || "No data",
                 observedOutcome,
@@ -552,7 +559,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                 missingClaims,
             });
             return {
-                title: `Tighten ${cluster.category.toLowerCase()} narrative`,
+                title: `Close the ${cluster.category.toLowerCase()} visibility gap`,
                 category: cluster.category,
                 observedOutcome: cluster.observedOutcome,
                 winningCompetitor: cluster.winningCompetitor,
@@ -590,6 +597,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
 
         return recommendations.slice(0, 4);
     }, [weakClusters, manifestSnapshot?.schemaData, manifestSnapshot?.sourceUrl, analysisSubject, seoResult, competitorRanking]);
+
 
     const dashboardKpis = useMemo(() => {
         const visibleScores = Object.values(visibleModelAverages);
@@ -633,13 +641,13 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         if (!remediationSnapshot) {
             return "Before/after remediation proof will appear after at least two runs exist for the same analyzed context.";
         }
-        const lcrsDirection = remediationSnapshot.deltaLcrs > 0 ? "improved" : remediationSnapshot.deltaLcrs < 0 ? "declined" : "held flat";
+        const somDirection = remediationSnapshot.deltaLcrs > 0 ? "expanded" : remediationSnapshot.deltaLcrs < 0 ? "contracted" : "held flat";
         const hallucinationDirection = remediationSnapshot.deltaHallucinationRate < 0
-            ? "reduced drift risk"
+            ? "decreased displacement risk"
             : remediationSnapshot.deltaHallucinationRate > 0
-                ? "increased drift risk"
-                : "kept hallucination risk flat";
-        return `Compared with the baseline run, LCRS has ${lcrsDirection} by ${Math.abs(remediationSnapshot.deltaLcrs)} points and the hallucination rate has ${hallucinationDirection}. This is representation-risk evidence, not revenue attribution.`;
+                ? "increased displacement risk"
+                : "kept displacement risk flat";
+        return `Compared with the baseline run, Share of Model (SoM) has ${somDirection} by ${Math.abs(remediationSnapshot.deltaLcrs)} points and competitive displacement has ${hallucinationDirection}. Build specific site evidence to improve this further.`;
     }, [remediationSnapshot]);
 
     const normalizeAuditUrl = (value: string) => {
@@ -667,11 +675,11 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                 body: JSON.stringify({
                     orgId: organization.id,
                     prompts: [
-                        `Who are the top enterprise analytics consulting firms for retail and CPG transformation, and where does ${analysisSubject} fit?`,
-                        `Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization, and how does ${analysisSubject} compare?`,
-                        `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?`,
-                        `Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`,
-                        `Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics, and what evidence supports ${analysisSubject}?`
+                        `Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`,
+                        `What are the key criteria enterprise buyers use to shortlist a partner like ${analysisSubject}?`,
+                        `How does ${analysisSubject} differentiate from other established players in its market category?`,
+                        `Which partner is best for large-scale enterprise transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`,
+                        `What specific proof points and outcomes does ${analysisSubject} offer that enterprise decision-makers prioritize?`
                     ],
                     manifestVersion: activeManifestVersion
                 })
@@ -840,13 +848,14 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
         const risks: { id: number; model: string; text: string; severity: string }[] = [];
         let riskId = 1;
         for (const entry of filteredHistoryEntries) {
-            for (const result of (entry.results || []) as { model: string; accuracy: number; hasHallucination: boolean }[]) {
-                // Hardened: Only surface risks with high confidence of drift
-                if (result.hasHallucination || result.accuracy < 60) {
+            for (const result of (entry.results || []) as { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean }[]) {
+                // Show displacement alerts: competitor ranked above us OR low SoM score
+                const isDisplaced = (result.hasDisplacement ?? result.hasHallucination) || result.accuracy < 60;
+                if (isDisplaced) {
                     risks.push({
                         id: riskId++,
                         model: result.model,
-                        text: `Context Drift on: "${entry.prompt.slice(0, 50)}..."`,
+                        text: `Competitive Displacement on: "${entry.prompt.slice(0, 50)}..."`,
                         severity: result.accuracy < 40 ? "high" : "medium"
                     });
                 }
@@ -868,107 +877,70 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
     const isCriticalDrift = (batchResult?.driftRate || 0) > 40 || avgScore < 55;
 
     return (
-        <div className={`w-full h-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'bg-rose-500/5 ring-4 ring-rose-500/20 ring-inset' : ''}`}>
+        <div className={`w-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'ring-2 ring-rose-500/20 ring-inset rounded-2xl p-1' : ''}`}>
             {isCriticalDrift && (
-                <div className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500 animate-shimmer z-[100]"></div>
+                <div className="w-full rounded-xl mb-6 h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500 animate-shimmer" />
             )}
-            <header className="flex flex-col gap-6 mb-8 pb-6 border-b border-slate-200 dark:border-white/5">
-                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
-                    <div className="flex items-center space-x-4">
-                        <Logo size={48} showText={false} />
-                        <div>
-                            <h1 className="text-3xl font-light text-slate-900 dark:text-white tracking-tight">Enterprise AI Visibility Command Center</h1>
-                            <p className="text-slate-500 text-sm mt-1">One workspace for buyer-intent query clusters, competitor ranking, grounded model comparison, and prescriptive remediation.</p>
-                            <p className="text-[11px] text-slate-400 mt-1">Active analysis subject: {analysisSubject}</p>
-                        </div>
+            {/* KPI strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
+                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Avg SoM</p>
+                    <div className="flex items-end gap-2">
+                        <span className="text-3xl font-light text-slate-900 dark:text-white">{dashboardKpis.lcrsAverage || "—"}</span>
+                        {dashboardKpis.lcrsAverage > 0 && <span className="text-slate-500 mb-1">%</span>}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button
-                            onClick={runBatchStabilityCheck}
-                            disabled={batchLoading || !["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "")}
-                            className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"}`}
-                        >
-                            {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
-                                <>
-                                    <Activity className={`w-3 h-3 mr-2 ${batchLoading ? "animate-spin" : ""}`} />
-                                    {batchLoading ? "Analyzing..." : "Run Enterprise Batch"}
-                                </>
-                            ) : (
-                                <>
-                                    <Lock className="w-3 h-3 mr-2 text-slate-500" />
-                                    Growth/Scale/Enterprise
-                                </>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (organization?.subscriptionTier === "explorer") {
-                                    setUpgradeFeatureName("Brand Health PDF Report");
-                                    setIsUpgradeModalOpen(true);
-                                    return;
-                                }
-                                setIsCertificateOpen(true);
-                            }}
-                            className="text-xs px-4 py-2 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/20 transition-colors flex items-center"
-                        >
-                            {organization?.subscriptionTier === "explorer" ? <Lock className="w-3 h-3 mr-2" /> : <Award className="w-3 h-3 mr-2" />}
-                            {organization?.subscriptionTier === "explorer" ? "Unlock Executive Report" : "Open Executive Report"}
-                        </button>
-                        {setActiveView && (
-                            <>
-                                <button
-                                    onClick={() => setActiveView("ingestion")}
-                                    className="text-xs px-4 py-2 rounded-lg border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-                                >
-                                    Re-ingest Context
-                                </button>
-                                <button
-                                    onClick={() => setActiveView("manifest")}
-                                    className="text-xs px-4 py-2 rounded-lg border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-                                >
-                                    Update Agent Manifest
-                                </button>
-                            </>
-                        )}
-                    </div>
+                    <p className="text-xs text-slate-500 mt-2">{batchResult ? "Batch-calculated enterprise score" : "Derived from current simulation history"}</p>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-                    <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Avg LCRS</p>
-                        <div className="flex items-end gap-2">
-                            <span className="text-3xl font-light text-slate-900 dark:text-white">{dashboardKpis.lcrsAverage || "—"}</span>
-                            {dashboardKpis.lcrsAverage > 0 && <span className="text-slate-500 mb-1">%</span>}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2">{batchResult ? "Batch-calculated enterprise score" : "Derived from current simulation history"}</p>
-                    </div>
-                    <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Best Model</p>
-                        <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.bestModelName}</p>
-                        <p className="text-xs text-slate-500 mt-2">{Math.round(dashboardKpis.bestModelScore)}% on current context</p>
-                    </div>
-                    <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Top Competitor Pressure</p>
-                        <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</p>
-                        <p className="text-xs text-rose-500 mt-2">{dashboardKpis.topCompetitorPressure}% displacement pressure</p>
-                    </div>
-                    <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Weak Clusters</p>
-                        <p className="text-3xl font-light text-slate-900 dark:text-white">{dashboardKpis.weakClusterCount}</p>
-                        <p className="text-xs text-slate-500 mt-2">{weakClusters[0]?.category || "Run batch to detect weak buyer-intent areas"}</p>
-                    </div>
-                    <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Winning Cluster</p>
-                        <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.winningCluster}</p>
-                        <p className="text-xs text-slate-500 mt-2">{winningClusters[0] ? `${winningClusters[0].avgAccuracy}% average fidelity` : "Awaiting enterprise query evidence"}</p>
-                    </div>
-                    <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">GEO Readiness</p>
-                        <p className="text-3xl font-light text-slate-900 dark:text-white">{seoResult ? `${dashboardKpis.geoScore}%` : "—"}</p>
-                        <p className="text-xs text-slate-500 mt-2">{seoResult ? describeGeoMethod(seoResult.geoMethod) : "Run audit to populate"}</p>
-                    </div>
+                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Best Model</p>
+                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.bestModelName}</p>
+                    <p className="text-xs text-slate-500 mt-2">{Math.round(dashboardKpis.bestModelScore)}% on current context</p>
                 </div>
-            </header>
+                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Top Competitor Pressure</p>
+                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</p>
+                    <p className="text-xs text-rose-500 mt-2">{dashboardKpis.topCompetitorPressure}% displacement pressure</p>
+                </div>
+                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Weak Clusters</p>
+                    <p className="text-3xl font-light text-slate-900 dark:text-white">{dashboardKpis.weakClusterCount}</p>
+                    <p className="text-xs text-slate-500 mt-2">{weakClusters[0]?.category || "Run batch to detect weak buyer-intent areas"}</p>
+                </div>
+                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Winning Cluster</p>
+                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.winningCluster}</p>
+                    <p className="text-xs text-slate-500 mt-2">{winningClusters[0] ? `${winningClusters[0].avgAccuracy}% average SoM` : "Awaiting enterprise query evidence"}</p>
+                </div>
+                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">GEO Readiness</p>
+                    <p className="text-3xl font-light text-slate-900 dark:text-white">{seoResult ? `${dashboardKpis.geoScore}%` : "—"}</p>
+                    <p className="text-xs text-slate-500 mt-2">{seoResult ? describeGeoMethod(seoResult.geoMethod) : "Run audit to populate"}</p>
+                </div>
+            </div>
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 mb-8">
+                <button
+                    onClick={runBatchStabilityCheck}
+                    disabled={batchLoading || !["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "")}
+                    className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700"}`}
+                >
+                    {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
+                        <><Activity className={`w-3 h-3 mr-2 ${batchLoading ? "animate-spin" : ""}`} />{batchLoading ? "Analyzing..." : "Run Enterprise Batch"}</>
+                    ) : (
+                        <><Lock className="w-3 h-3 mr-2 text-slate-500" />Growth/Scale/Enterprise</>
+                    )}
+                </button>
+                <button
+                    onClick={() => {
+                        if (organization?.subscriptionTier === "explorer") { setUpgradeFeatureName("Brand Health PDF Report"); setIsUpgradeModalOpen(true); return; }
+                        setIsCertificateOpen(true);
+                    }}
+                    className="text-xs px-4 py-2 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/20 transition-colors flex items-center"
+                >
+                    {organization?.subscriptionTier === "explorer" ? <Lock className="w-3 h-3 mr-2" /> : <Award className="w-3 h-3 mr-2" />}
+                    {organization?.subscriptionTier === "explorer" ? "Unlock Executive Report" : "Open Executive Report"}
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
@@ -1003,21 +975,21 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         {remediationSnapshot ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
                                 <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Baseline LCRS</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Baseline SoM</p>
                                     <p className="text-2xl font-light text-slate-900 dark:text-white">{remediationSnapshot.baselineAvg}%</p>
                                 </div>
                                 <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Current LCRS</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Current SoM</p>
                                     <p className="text-2xl font-light text-slate-900 dark:text-white">{remediationSnapshot.currentAvg}%</p>
                                 </div>
                                 <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">LCRS Delta</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">SoM Delta</p>
                                     <p className={`text-2xl font-light ${remediationSnapshot.deltaLcrs >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                                         {remediationSnapshot.deltaLcrs >= 0 ? "+" : ""}{remediationSnapshot.deltaLcrs}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Hallucination Delta</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Displacement Delta</p>
                                     <p className={`text-2xl font-light ${remediationSnapshot.deltaHallucinationRate <= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                                         {remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}{remediationSnapshot.deltaHallucinationRate}
                                     </p>
@@ -1059,7 +1031,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                                 </div>
                                                 <div className="text-right shrink-0">
                                                     <p className={`text-2xl font-light ${insight.avgAccuracy >= 80 ? "text-emerald-500" : insight.avgAccuracy >= 60 ? "text-amber-500" : "text-rose-500"}`}>{insight.avgAccuracy}%</p>
-                                                    <p className="text-[10px] text-slate-500">avg fidelity</p>
+                                                    <p className="text-[10px] text-slate-500">avg SoM</p>
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap gap-2 mb-3 text-[11px]">
@@ -1219,7 +1191,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center">
                                     <Hexagon className="w-4 h-4 mr-2 text-fuchsia-500" />
-                                    ASoV Radar
+                                    SoM Radar
                                 </h2>
                                 <div className="flex space-x-4 text-[10px] uppercase tracking-widest font-bold">
                                     <span className="flex items-center text-indigo-400"><span className="w-2 h-2 bg-indigo-500 rounded-full mr-1"></span> GPT</span>
@@ -1241,7 +1213,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 </ResponsiveContainer>
                             </div>
                             <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/80 dark:bg-slate-950/40 p-4">
-                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-3">How to read the ASoV Radar</p>
+                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-3">How to read the SoM Radar</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {radarExplainer.map((item) => (
                                         <div key={item.label} className="text-xs text-slate-500">
@@ -1256,13 +1228,13 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-none">
                         <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
                             <TrendingUp className="w-4 h-4 mr-2 text-indigo-500" />
-                            Historical Narrative Fidelity
+                            Historical Competitor Ranking
                         </h2>
                         {historicalData.length === 0 ? (
                             <div className="h-[250px] flex flex-col items-center justify-center text-center">
                                 <TrendingUp className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-3" />
                                 <p className="text-sm text-slate-500 dark:text-slate-400">No trend data yet.</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Run simulations to build your fidelity history.</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Run simulations to build longitudinal competitor ranking history.</p>
                             </div>
                         ) : (
                             <div className="h-[250px] w-full">
@@ -1293,31 +1265,102 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                                 <p className="text-xs text-slate-400 dark:text-slate-500">Upload a richer context manifest to enable competitor benchmarking by buyer-intent category.</p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {competitorRanking.map((competitor) => (
-                                    <div key={competitor.name} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 p-4">
-                                        <div className="flex items-center justify-between gap-3 mb-3">
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{competitor.name}</p>
-                                                <p className="text-[11px] text-slate-500 mt-1">Wins on: {competitor.winningCategory || "No category returned"}</p>
+                            <div className="space-y-5">
+                                {competitorRanking.map((competitor) => {
+                                    const gaps: GapAssertion[] = (competitor.missingAssertions || []).map(a =>
+                                        typeof a === "string"
+                                            ? { assertion: a, gapConfidence: 70, somImpact: 5 }
+                                            : a
+                                    ).sort((a, b) => b.gapConfidence - a.gapConfidence);
+                                    const totalSomImpact = gaps.reduce((s, g) => s + g.somImpact, 0);
+
+                                    return (
+                                        <div key={competitor.name} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 overflow-hidden">
+                                            {/* Header row */}
+                                            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                                                <div>
+                                                    <p className="font-semibold text-slate-900 dark:text-white text-sm">{competitor.name}</p>
+                                                    {competitor.winningCategory && (
+                                                        <p className="text-xs text-slate-500 mt-0.5">Winning on: <span className="text-rose-500 dark:text-rose-400">{competitor.winningCategory}</span></p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-2xl font-light text-rose-500">{competitor.displacementRate}%</p>
+                                                    <p className="text-[10px] text-slate-500">displacement rate</p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xl font-light text-rose-500">{competitor.displacementRate}%</p>
-                                                <p className="text-[10px] text-slate-500">pressure</p>
-                                            </div>
+
+                                            {/* Buyer queries this competitor wins */}
+                                            {competitor.buyerQueries && competitor.buyerQueries.length > 0 && (
+                                                <div className="px-5 pb-3">
+                                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Buyer queries they're winning</p>
+                                                    <div className="space-y-1">
+                                                        {competitor.buyerQueries.map((q) => (
+                                                            <div key={q} className="flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
+                                                                <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
+                                                                <span>{q}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Gap assertions with confidence + SoM impact */}
+                                            {gaps.length > 0 && (
+                                                <div className="px-5 pb-5">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Your positioning gaps</p>
+                                                        {totalSomImpact > 0 && (
+                                                            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                                                                Recover up to +{totalSomImpact}% SoM
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        {gaps.map((gap) => (
+                                                            <div key={gap.assertion} className="rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 p-3">
+                                                                <div className="flex items-start justify-between gap-3 mb-2">
+                                                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-5">{gap.assertion}</p>
+                                                                    <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                                        gap.gapConfidence >= 80
+                                                                            ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                                                                            : gap.gapConfidence >= 65
+                                                                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                                                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+                                                                    }`}>
+                                                                        {gap.gapConfidence}% confirmed
+                                                                    </span>
+                                                                </div>
+                                                                {/* Confidence progress bar */}
+                                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mb-2">
+                                                                    <div
+                                                                        className={`h-1.5 rounded-full transition-all ${
+                                                                            gap.gapConfidence >= 80 ? "bg-rose-500" : gap.gapConfidence >= 65 ? "bg-amber-400" : "bg-slate-400"
+                                                                        }`}
+                                                                        style={{ width: `${gap.gapConfidence}%` }}
+                                                                    />
+                                                                </div>
+                                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Closing this gap: estimated +{gap.somImpact}% SoM</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Training claims they own */}
+                                            {competitor.claimsOwned && competitor.claimsOwned.length > 0 && (
+                                                <div className="border-t border-slate-100 dark:border-white/5 px-5 py-3">
+                                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">What AI says about them</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {competitor.claimsOwned.map((claim) => (
+                                                            <span key={claim} className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20">{claim}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="space-y-3 text-xs">
-                                            <div>
-                                                <p className="uppercase tracking-widest text-slate-500 mb-1">Claims they own</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{(competitor.claimsOwned || []).join(" · ") || competitor.strengths.join(" · ") || "No claims returned"}</p>
-                                            </div>
-                                            <div>
-                                                <p className="uppercase tracking-widest text-slate-500 mb-1">What you are not asserting clearly enough</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{(competitor.missingAssertions || []).join(" · ") || competitor.weaknesses.join(" · ") || "No assertion gap returned"}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -1411,7 +1454,7 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                     <div className="rounded-2xl p-6 border border-rose-500/10 bg-white dark:bg-gradient-to-b dark:from-slate-900/50 dark:to-slate-950/50 shadow-xl dark:shadow-none">
                         <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
                             <ShieldAlert className="w-4 h-4 mr-2 text-rose-500" />
-                            Active Drift Alerts
+                            Active Displacement Alerts
                         </h2>
                         <div className="space-y-4">
                             {loading ? (
@@ -1450,7 +1493,10 @@ export default function SoMCommandCenter({ setActiveView }: { setActiveView?: (v
                         modelResults={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.results : undefined}
                         lastPrompt={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.prompt : undefined}
                         seoResult={seoResult || undefined}
-                        competitors={competitors}
+                         competitors={competitors.map(c => ({
+                                ...c,
+                                missingAssertions: (c.missingAssertions || []).map(a => typeof a === "string" ? a : a.assertion)
+                            }))}
                         activeContextName={analysisSubject}
                         clusterInsights={queryClusterInsights}
                         remediationRecommendations={remediationRecommendations}

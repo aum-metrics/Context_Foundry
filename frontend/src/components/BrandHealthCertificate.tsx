@@ -14,7 +14,8 @@ import type { RemediationPageTarget } from "@/lib/remediationTargets";
 interface ModelResult {
     model: string;
     accuracy: number;
-    hasHallucination: boolean;
+    hasDisplacement?: boolean;  // true when a competitor is recommended ahead of this company
+    hasHallucination?: boolean; // backward-compat alias — same value
     claimScore?: string;
     answer?: string;
 }
@@ -222,8 +223,8 @@ export default function BrandHealthCertificate({
         .map((result) => ({ ...result, model: normalizeModelName(result.model) }))
         .sort((a, b) => CANONICAL_MODEL_ORDER.indexOf(a.model) - CANONICAL_MODEL_ORDER.indexOf(b.model));
     const avgLcrs = results.length > 0 ? averageAccuracy(results) : asovScore;
-    const hallucinationCount = results.filter((r: ModelResult) => r.hasHallucination).length;
-    const fidelityPct = results.length > 0 ? Math.round((results.filter((r: ModelResult) => !r.hasHallucination).length / results.length) * 100) : (100 - driftRate);
+    const hallucinationCount = results.filter((r: ModelResult) => r.hasDisplacement ?? r.hasHallucination).length;
+    const fidelityPct = results.length > 0 ? Math.round((results.filter((r: ModelResult) => !(r.hasDisplacement ?? r.hasHallucination)).length / results.length) * 100) : (100 - driftRate);
     const remediationSnapshot = useMemo(() => {
         if (historyRecords.length < 2) return null;
         const chronological = [...historyRecords].reverse();
@@ -276,7 +277,7 @@ export default function BrandHealthCertificate({
     }, [results]);
 
     const getExecutiveSummary = (score: number, orgName: string) => {
-        const hCount = results.filter((r: ModelResult) => r.hasHallucination).length;
+        const hCount = results.filter((r: ModelResult) => r.hasDisplacement ?? r.hasHallucination).length;
         const totalMod = results.length;
 
         if (score >= 85 && hCount === 0) {
@@ -294,6 +295,7 @@ export default function BrandHealthCertificate({
         return `WARNING: ${orgName} suffers from Critical Data Drift. Even without explicit hallucinations, models are failing to recall enough verified claims from your context, causing under-representation of your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
     };
     const GradeBadgeIcon = avgLcrs >= 85 ? CheckCircle2 : avgLcrs >= 55 ? Shield : AlertTriangle;
+    const isDisplaced = (r: ModelResult) => r.hasDisplacement ?? r.hasHallucination;
 
     const handleDownload = async () => {
         setIsDownloading(true);
@@ -377,17 +379,17 @@ export default function BrandHealthCertificate({
             writeBody(executiveSummary);
 
             writeHeading("Core Metrics");
-            writeBody(`LCRS Average: ${avgLcrs}% (${gradeLabel(avgLcrs)})`);
-            writeBody(`AI Visibility (ASoV): ${asovScore}%`);
+            writeBody(`SoM Average: ${avgLcrs}%`);
+            writeBody(`AI Visibility (Share of Model): ${asovScore}%`);
             writeBody(`Fidelity Rate: ${fidelityPct}%`);
-            writeBody(`Hallucinations: ${hallucinationCount}/${results.length}`);
+            writeBody(`Competitive Displacement: ${hallucinationCount}/${results.length} models`);
 
-            writeHeading("Model Accuracy Comparison");
+            writeHeading("Multi-Model SoM Breakdown");
             if (results.length === 0) {
                 writeBody("No model outputs found for this context/version.");
             } else {
                 results.forEach((result) => {
-                    writeBody(`${result.model}: ${result.accuracy}% | ${result.hasHallucination ? "Hallucination Detected" : "Grounded"}${result.claimScore ? ` | ${result.claimScore}` : ""}`);
+                    writeBody(`${result.model}: ${result.accuracy}% | ${(result.hasDisplacement ?? result.hasHallucination) ? "Displaced" : "Visible"}${result.claimScore ? ` | ${result.claimScore}` : ""}`);
                 });
             }
 
@@ -445,23 +447,20 @@ export default function BrandHealthCertificate({
             }
 
             writeHeading("How To Read This Report");
-            writeBody("LCRS blends semantic grounding and claim recall. A higher value indicates the response stayed close to the verified manifest context.");
-            writeBody("AI Visibility measures how strongly your brand appears across retrieval answers.");
+            writeBody("SoM blends semantic grounding and claim recall. A higher value means AI-generated answers stayed close to your verified manifest context and ranked you ahead of competitors.");
+            writeBody("AI Visibility (Share of Model) measures how strongly your brand appears across retrieval answers relative to competitors.");
             writeBody("Fidelity Rate shows the share of model outputs that remained grounded.");
-            writeBody("Hallucinations count outputs with contradictions or unsupported claims.");
-            writeBody("Critical Drift can appear even when Hallucinations are 0/3: this means responses were mostly non-fabricated but still missed too many required claims, reducing claim recall and therefore LCRS.");
-            writeBody("GEO is not the same metric as drift. GEO measures page-level generative readiness and manifest alignment, while LCRS measures how well a tested model answer stayed grounded on a specific prompt.");
+            writeBody("Competitive Displacement counts outputs where a competitor was recommended ahead of your company.");
+            writeBody("Critical Drift can appear even when Displacement is 0/3: this means responses were mostly non-fabricated but still missed too many required claims, reducing claim recall and therefore SoM.");
+            writeBody("GEO is not the same metric as drift. GEO measures page-level generative readiness and manifest alignment, while SoM measures how well a tested model answer stayed grounded on a specific prompt.");
 
-            writeHeading("ASoV Radar Context (5-D)");
-            writeBody("The ASoV Radar is a contextual decomposition of the same run. It maps each model into Consistency, Factuality, Sentiment, Safety, and Authority using observed accuracy, claim recall, and hallucination flags.");
+            writeHeading("SoM Radar Context (5-D)");
+            writeBody("The SoM Radar is a contextual decomposition of the same run. It maps each model into Consistency, Factuality, Sentiment, Safety, and Authority using observed accuracy, claim recall, and competitive displacement flags.");
             CANONICAL_MODEL_ORDER.forEach((model) => {
                 const metrics = radarMetrics[model];
                 writeBody(`${model}: Consistency ${metrics.consistency} | Factuality ${metrics.factuality} | Sentiment ${metrics.sentiment} | Safety ${metrics.safety} | Authority ${metrics.authority}`);
             });
-            writeBody("Interpretation rule: farther-out dimensions indicate stronger narrative preservation. A narrow or inward radar footprint indicates retrieval weakness in that contextual dimension.");
-
-            writeHeading("Inference Audit");
-            writeBody(inferenceAudit || "No runtime model catalog available.");
+            writeBody("How To Read LCRS movement: positive SoM delta means AI answers are getting more grounded and competitive. Negative means more ground lost to competitors.");
             writeBody(`Generated At (UTC): ${isoTimestamp}`);
 
             const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
@@ -552,7 +551,7 @@ export default function BrandHealthCertificate({
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                                             <span className="text-2xl font-bold text-slate-900 dark:text-white">{avgLcrs}%</span>
-                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg LCRS</span>
+                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg SoM</span>
                                         </div>
                                     </div>
                                 </div>
@@ -562,8 +561,8 @@ export default function BrandHealthCertificate({
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Cpu className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Multi-Model LCRS Breakdown</p>
-                                    <span className="ml-auto text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-2 py-0.5 rounded-full">Latent Contextual Rigor Score</span>
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Multi-Model SoM Breakdown</p>
+                                    <span className="ml-auto text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-2 py-0.5 rounded-full">Share of Model Score</span>
                                 </div>
                                 {loadingHistory ? (
                                     <div className="text-center text-slate-500 text-xs py-6">Loading simulation data...</div>
@@ -599,8 +598,8 @@ export default function BrandHealthCertificate({
                                                     <span className="text-sm font-bold" style={{ color: scoreColor(r.accuracy) }}>{r.accuracy}%</span>
                                                 </div>
                                                 <div className="w-6 shrink-0">
-                                                    {r.hasHallucination
-                                                        ? <XCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
+                                                    {r.hasDisplacement ?? r.hasHallucination
+                                                        ? <XCircle className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                                                         : <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                                     }
                                                 </div>
@@ -655,19 +654,19 @@ export default function BrandHealthCertificate({
                             </div>
 
                             <div className="mb-8 p-5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10">
-                                <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-3">How to read this report</p>
+                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-3">How to read this report</p>
                                 <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">AI Visibility:</span> how strongly your brand shows up with the right narrative in model outputs.</p>
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">Fidelity Rate:</span> the share of models that stayed grounded instead of drifting.</p>
-                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Hallucinations:</span> how many models invented, contradicted, or omitted material facts.</p>
-                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">LCRS:</span> a blended score using semantic alignment plus claim recall against your verified context.</p>
-                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Why Critical Drift can still happen at 0/3 hallucinations:</span> this usually means models stayed non-fabricated but missed too many required claims, so claim recall stayed low and LCRS remained in drift territory.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Competitive Displacement:</span> how many models recommended a competitor instead of you or omitted your material claims.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">SoM Score:</span> a blended score using semantic alignment plus claim recall against your verified context.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Why Critical Drift can still happen at 0/3 displacement:</span> this usually means models stayed non-fabricated but missed too many required claims, so claim recall stayed low and SoM remained in drift territory.</p>
                                 </div>
                             </div>
 
                             {results.length > 0 && (
                                 <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
-                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">ASoV Radar Context (5-D)</p>
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">SoM Radar Context (5-D)</p>
                                     <p className="text-xs text-slate-500 mb-4">
                                         These contextual dimensions are derived from this exact run&apos;s observed accuracy, claim recall, and hallucination flags.
                                         They explain where narrative preservation is strong vs weak across model families.
@@ -745,7 +744,7 @@ export default function BrandHealthCertificate({
                                     <Globe className="w-5 h-5 mx-auto mb-2 text-indigo-500 dark:text-indigo-400" />
                                     <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">AI Visibility</p>
                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{asovScore}%</p>
-                                    <p className="text-[9px] text-slate-500">ASoV Score</p>
+                                    <p className="text-[9px] text-slate-500">Share of Model</p>
                                 </div>
                                 <div className="p-4 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8 text-center shadow-sm dark:shadow-none">
                                     <Shield className="w-5 h-5 mx-auto mb-2 text-emerald-500 dark:text-emerald-400" />
@@ -758,7 +757,7 @@ export default function BrandHealthCertificate({
                                         ? <CheckCircle2 className="w-5 h-5 mx-auto mb-2 text-emerald-500 dark:text-emerald-400" />
                                         : <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-amber-500 dark:text-amber-400" />
                                     }
-                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Hallucinations</p>
+                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Displacement Risk</p>
                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{hallucinationCount}/{results.length || "—"}</p>
                                     <p className="text-[9px] text-slate-500">models affected</p>
                                 </div>
