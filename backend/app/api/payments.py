@@ -343,23 +343,32 @@ async def razorpay_webhook(request: Request):
         # Handle successful payment or subscription activation
         if event in ["payment.captured", "subscription.activated", "order.paid"]:
             # Extract orgId and paymentId for idempotency
-            entity = payload.get("payment", {}).get("entity") or payload.get("subscription", {}).get("entity") or {}
+            entity = payload.get("payment", {}).get("entity") or payload.get("subscription", {}).get("entity") or payload.get("order", {}).get("entity") or {}
             notes = entity.get("notes", {})
             org_id = notes.get("orgId")
             plan_id = notes.get("planId", "growth")
             payment_id = entity.get("id")
+            order_id = entity.get("order_id") or payload.get("order", {}).get("entity", {}).get("id")
 
             if org_id and db:
                 import google.cloud.firestore
                 @google.cloud.firestore.transactional
-                def atomic_activate(transaction, org_ref, p_id, p_plan, evt):
+                def atomic_activate(transaction, org_ref, p_id, o_id, p_plan, evt):
                     snapshot = org_ref.get(transaction=transaction)
                     if not snapshot.exists:
                         return False
                     
                     data = snapshot.to_dict() or {}
-                    # Idempotency check: if this specific payment was already processed
-                    if data.get("subscription", {}).get("lastPaymentId") == p_id:
+                    # Idempotency check: block duplicate order retries or already-processed payments
+                    # We prioritize lastOrderId as the unique constraint for activations.
+                    last_order = data.get("subscription", {}).get("lastOrderId")
+                    if o_id and last_order == o_id:
+                        logger.info(f"♻️ Webhook Idempotency: Order {o_id} already processed for {org_id}")
+                        return True
+                    
+                    # Fallback to paymentId only if orderId is missing (rare for Razorpay)
+                    last_payment = data.get("subscription", {}).get("lastPaymentId")
+                    if p_id and last_payment == p_id:
                         logger.info(f"♻️ Webhook Idempotency: Payment {p_id} already processed for {org_id}")
                         return True
                     
@@ -373,6 +382,7 @@ async def razorpay_webhook(request: Request):
                         "subscription.lastUsageResetAt": now,
                         "subscription.lastWebhookEvent": evt,
                         "subscription.lastPaymentId": p_id,
+                        "subscription.lastOrderId": o_id,
                         "subscription.activatedAt": now,
                         "subscription.currentPeriodStart": now,
                         "subscription.currentPeriodEnd": now + timedelta(days=30),
@@ -380,7 +390,7 @@ async def razorpay_webhook(request: Request):
                     return True
 
                 org_ref = db.collection("organizations").document(org_id)
-                success = atomic_activate(db.transaction(), org_ref, payment_id, plan_id, event)
+                success = atomic_activate(db.transaction(), org_ref, payment_id, order_id, plan_id, event)
                 
                 if success:
                     logger.info(f"✅ Webhook: Org {org_id} upgraded to {plan_id} via {event}")

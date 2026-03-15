@@ -145,7 +145,9 @@ async def lookup_sso_by_domain(request: Request, domain: str):
         if not results or not config_data.get("is_active"):
             # To perfectly mask, we execute a literal DB fetch unconditionally on reject
             # This normalizes the 1query + 1fetch latency of identical hardware latency across all rejections.
-            _ = db.collection("sso_configs").document("fake_timing_mask").get()
+            # 🛡️ ANTI-ENUMERATION (P1): Mask response time with a real document lookup
+            # Using 'default_config' which exists, ensuring timing matches a valid hit/miss cycle.
+            _ = db.collection("sso_configs").document("default_config").get()
             fake_payload = {"org_id": "none", "provider": "none", "exp": (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()}
             return {
                 "success": True,
@@ -242,7 +244,8 @@ async def sso_provider_login(intent: str):
     # Active Anti-Enumeration mask - identically mimic disabled state with a real firestore fetch
     if org == "none" or provider == "none":
         # Wait precisely long enough to act like a real firestore document fetch by executing one
-        _ = db.collection("sso_configs").document("fake_timing_mask").get()
+        # 🛡️ ANTI-ENUMERATION (P1): Mask response time
+        _ = db.collection("sso_configs").document("default_config").get()
         raise HTTPException(status_code=400, detail="SSO is currently disabled for this organization")
 
     if not org or not provider or provider not in SSO_PROVIDERS:

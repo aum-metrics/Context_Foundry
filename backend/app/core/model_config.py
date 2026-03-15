@@ -32,3 +32,9 @@ API_MODEL_MAPPING = {
     "claude-sonnet-4-5": "claude-sonnet-4-20250514",
     "gpt-4o": "gpt-4o",
 }
+# ── Automated Health Monitoring (Future: P1) ──────────────────────────────────
+# In production, a background job should periodically ping these models 
+# to detect provider-side deprecation before it hits the user path.
+def check_model_availability():
+    """Future: Implement provider pings (FastAPI Startup / Task Queue)"""
+    return True

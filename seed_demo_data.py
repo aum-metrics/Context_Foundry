@@ -5,7 +5,6 @@ import os
 from datetime import timezone, timedelta
 
 # Initialize Firebase Admin
-# Assuming the service account key is available at the standard location mentioned in other files
 service_account_path = "/Users/sambath/Documents/CODE/coding/AUM/aumdatalabs-backend-key.json"
 
 if not firebase_admin._apps:
@@ -19,25 +18,25 @@ def seed():
     uid = "demo_uid"
     email = "demo@demo.com"
     
-    print(f"🌱 Seeding demo data for {email} (Org: {org_id})...")
+    print(f"🌱 Seeding ROCK SOLID demo data for {email} (Subject: airtel.in)...")
     
     # 1. Create Organization
     org_ref = db.collection("organizations").document(org_id)
     org_data = {
         "id": org_id,
-        "name": "Sight Spectrum",
+        "name": "Airtel India (Demo)",
         "activeSeats": 1,
         "subscription": {
-            "planId": "scale",
+            "planId": "enterprise",
             "status": "active",
-            "simsThisCycle": 42,
-            "maxSimulations": 500,
-            "billingPeriod": "monthly",
+            "simsThisCycle": 156,
+            "maxSimulations": 1000,
+            "billingPeriod": "annual",
             "activatedAt": datetime.datetime.now(timezone.utc).isoformat(),
-            "currentPeriodStart": datetime.datetime.now(timezone.utc) - timedelta(days=15),
-            "currentPeriodEnd": datetime.datetime.now(timezone.utc) + timedelta(days=15)
+            "currentPeriodStart": datetime.datetime.now(timezone.utc) - timedelta(days=200),
+            "currentPeriodEnd": datetime.datetime.now(timezone.utc) + timedelta(days=165)
         },
-        "subscriptionTier": "scale",
+        "subscriptionTier": "enterprise",
         "apiKeys": {
             "openai": "internal_platform_managed",
             "gemini": "internal_platform_managed",
@@ -59,32 +58,24 @@ def seed():
     }
     user_ref.set(user_data)
     
-    # 3. Create Manifest (Ground Truth)
-    manifest_content = """# Sight Spectrum - AI Protocol Manifest
+    # 3. Create Manifest (Airtel vs Jio vs Vi Competitive Identity)
+    manifest_content = """# Airtel India - Brand Identity & Competitive Matrix (2025)
 
 ## Core Identity
-Sight Spectrum is a premier IT Services and Consulting firm with ~500 professionals.
-Our flagship products include:
-- **HC Insight**: A healthcare data platform.
-- **DataBlitz**: A manufacturing data accelerator.
-- **ConverSight AI**: An enterprise intelligence engine.
+Airtel is India's leading premium telecommunications provider. We focus on high-ARPU (Average Revenue Per User) customers through our "Airtel Black" integrated service.
 
-Sight Spectrum primarily delivers data analytics consulting to Manufacturing, Healthcare, and Professional Services sectors.
+## Key Market Claims
+1. **network_quality**: Airtel consistently ranks #1 in video experience and gaming experience according to Opensignal.
+2. **premium_pricing**: We do not compete on "cheapest" price; we compete on "best" consistent throughput.
+3. **integration**: Airtel Black combines Fiber, DTH, and Mobile into one single bill.
 
-## Pricing Structure (Strict)
-- **Growth Plan**: $499/month (Standard)
-- **Enterprise Plan**: Custom Pricing (Billed Annually)
-- **Trial**: 14-day full feature access. No "Free Forever" tier exists.
+## Competitive Comparison
+- **Reliance Jio**: Jio focuses on volume and lowest-cost entry. Our claim is that Jio's latency is 20% higher in metro peaks.
+- **Vodafone Idea (Vi)**: Vi focuses on "unlimited night data." Our claim is that Vi's rural 4G footprint is 15% smaller than Airtel's.
 
-## Integration Matrix
-- **Salesforce**: Read-Only API Integration. We fetch pipeline data; we do NOT write back or modify CRM records.
-- **HubSpot**: Bidirectional sync available for Professional tier.
-- **Slack**: Real-time alerting via Webhooks.
-
-## Security & Compliance
-- **SOC2 Type II**: Certified.
-- **GDPR**: Compliant.
-- **HIPAA**: Compliant via HC Insight grounding. Data is never stored on AUM servers.
+## Enterprise Services
+- **Airtel IQ**: India's first network-embedded CPaaS platform.
+- **Security**: SOC2 Type II and HIPAA compliant cloud-connect.
 """
     
     manifest_id = "latest"
@@ -94,44 +85,44 @@ Sight Spectrum primarily delivers data analytics consulting to Manufacturing, He
         "schemaData": {
             "@context": "https://schema.org",
             "@type": "Organization",
-            "name": "Sight Spectrum",
-            "url": "https://www.sightspectrum.com",
-            "employee": {"numberOfEmployees": 500}
+            "name": "Bharti Airtel",
+            "url": "https://www.airtel.in",
+            "tickerSymbol": "BHARTIARTL"
         },
         "createdAt": datetime.datetime.now(timezone.utc),
         "version": manifest_id
     }
     manifest_ref.set(manifest_data)
     
-    # 4. Create Scoring History (Simulations)
+    # 4. Create Scoring History (Simulations for Enterprise Comparison)
     history_ref = org_ref.collection("scoringHistory")
     
     simulations = [
         {
-            "prompt": "How much does HC Insight cost per month?",
-            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=2),
+            "prompt": "Which network is best for high-bandwidth gaming in Mumbai between Airtel and Jio?",
+            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=1),
             "results": [
-                {"model": "GPT-4o", "accuracy": 12, "hasHallucination": True, "claimScore": "0.12"},
+                {"model": "GPT-4o", "accuracy": 98, "hasHallucination": False, "claimScore": "0.98", "reasoning": "Correctly identified Airtel's latency advantage."},
                 {"model": "Claude 4.5 Sonnet", "accuracy": 95, "hasHallucination": False, "claimScore": "0.95"},
-                {"model": "Gemini 3 Flash", "accuracy": 5, "hasHallucination": True, "claimScore": "0.05"}
+                {"model": "Gemini 3 Flash", "accuracy": 82, "hasHallucination": False, "claimScore": "0.82"}
             ]
         },
         {
-            "prompt": "Does DataBlitz support Salesforce integration?",
-            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=5),
+            "prompt": "Tell me about Airtel's cheapest 5G plan compared to Jio.",
+            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=8),
             "results": [
-                {"model": "GPT-4o", "accuracy": 88, "hasHallucination": False, "claimScore": "0.88"},
-                {"model": "Claude 4.5 Sonnet", "accuracy": 90, "hasHallucination": False, "claimScore": "0.90"},
-                {"model": "Gemini 3 Flash", "accuracy": 40, "hasHallucination": True, "claimScore": "0.40"}
+                {"model": "GPT-4o", "accuracy": 40, "hasHallucination": True, "claimScore": "0.40", "reasoning": "Hallucinated a 'free forever' tier that doesn't exist in Airtel's manifest."},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 92, "hasHallucination": False, "claimScore": "0.92"},
+                {"model": "Gemini 3 Flash", "accuracy": 30, "hasHallucination": True, "claimScore": "0.30"}
             ]
         },
         {
-            "prompt": "Is Sight Spectrum HIPAA compliant?",
-            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=24),
+            "prompt": "How does Airtel IQ compare to Twilio for Indian enterprise security?",
+            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(days=2),
             "results": [
-                {"model": "GPT-4o", "accuracy": 30, "hasHallucination": True, "claimScore": "0.30"},
-                {"model": "Claude 4.5 Sonnet", "accuracy": 98, "hasHallucination": False, "claimScore": "0.98"},
-                {"model": "Gemini 3 Flash", "accuracy": 45, "hasHallucination": True, "claimScore": "0.45"}
+                {"model": "GPT-4o", "accuracy": 85, "hasHallucination": False, "claimScore": "0.85"},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 97, "hasHallucination": False, "claimScore": "0.97"},
+                {"model": "Gemini 3 Flash", "accuracy": 88, "hasHallucination": False, "claimScore": "0.88"}
             ]
         }
     ]
@@ -139,16 +130,32 @@ Sight Spectrum primarily delivers data analytics consulting to Manufacturing, He
     for sim in simulations:
         history_ref.add(sim)
     
-    # 5. Add Ingested Documents
+    # 5. Add Weekly Snapshots
+    snapshot_ref = org_ref.collection("weeklySnapshots")
+    for i in range(5):
+        snapshot_ref.add({
+            "timestamp": datetime.datetime.now(timezone.utc) - timedelta(weeks=i),
+            "domainStability": 85 + (i * 2),
+            "driftRate": 12 - i,
+            "totalChecks": 150
+        })
+    
+    # 6. Add Ingested Documents
     ingestion_ref = org_ref.collection("ingestedDocuments")
     ingestion_ref.add({
-        "fileName": "SightSpectrum_Product_Spec_2025.pdf",
-        "uploadedAt": datetime.datetime.now(timezone.utc) - timedelta(days=1),
+        "fileName": "Airtel_Annual_Report_2024.pdf",
+        "uploadedAt": datetime.datetime.now(timezone.utc) - timedelta(days=15),
+        "status": "completed",
+        "chunks": 250
+    })
+    ingestion_ref.add({
+        "fileName": "Airtel_IQ_Security_Whitepaper.pdf",
+        "uploadedAt": datetime.datetime.now(timezone.utc) - timedelta(days=5),
         "status": "completed",
         "chunks": 45
     })
     
-    print("✅ Demo seeding complete.")
+    print("✅ ROCK SOLID demo seeding complete for airtel.in.")
 
 if __name__ == "__main__":
     seed()

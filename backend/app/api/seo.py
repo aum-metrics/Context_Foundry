@@ -276,24 +276,7 @@ async def get_seo_status(
 
     uid = current_user.get("uid")
 
-    # 🛡️ DEMO MOCKING (P0): Deterministic SEO metrics for Sight Spectrum
-    if org_id == "demo_org_id" and settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False):
-        return {
-            "status": "completed",
-            "jobId": job_id,
-            "url": "https://www.sightspectrum.com",
-            "seoScore": 82,
-            "geoScore": 75,
-            "overallScore": 78,
-            "checks": [
-                {"check": "Title Tag", "status": "pass", "detail": "Sight Spectrum | IT Services & Solutions"},
-                {"check": "Meta Description", "status": "warn", "detail": "Meta description is slightly truncated on mobile."},
-                {"check": "H1 Heading", "status": "pass", "detail": "Sight Spectrum"},
-                {"check": "Schema.org JSON-LD", "status": "pass", "detail": "Valid SoftwareApplication schema found"},
-                {"check": "AI Crawler Readiness", "status": "pass", "detail": "llms.txt detected and valid"}
-            ],
-            "recommendation": "Maintain your manifest at /llms.txt to ensure GPT-4o and Claude 4.5 Sonnet continue indexing your verified identity."
-        }
+    # Remove demo@demo.com hardcoded logic (Clean for due diligence)
 
     if not verify_user_org_access(uid, org_id):
         raise HTTPException(status_code=403, detail="Unauthorized access")

@@ -1,5 +1,6 @@
 # backend/app/core/config.py
 import os
+import sys
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -50,13 +51,17 @@ class Settings(BaseSettings):
         super().__init__(**values)
         if self.ENV == "production":
             # 🛡️ SECURITY ADVISORY (P0): In production, these should never be default.
-            # We log critical errors but don't hard-fail the boot to allow for infra-level configuration.
+            # Hard-fail if any default secrets are present.
+            invalid = []
             if self.JWT_SECRET == "your-secret-key-change-in-production":
-                print("🚨 CRITICAL SECURITY ALERT: Default JWT_SECRET detected in production!")
+                invalid.append("JWT_SECRET")
             if self.SSO_ENCRYPTION_KEY == "aum-sso-encryption-dev-fallback1":
-                print("🚨 CRITICAL SECURITY ALERT: Default SSO_ENCRYPTION_KEY detected in production!")
+                invalid.append("SSO_ENCRYPTION_KEY")
             if self.SSO_JWT_SECRET == "aum-sso-jwt-intent-dev-fallback1":
-                print("🚨 CRITICAL SECURITY ALERT: Default SSO_JWT_SECRET detected in production!")
+                invalid.append("SSO_JWT_SECRET")
+            if invalid:
+                print(f"🚨 CRITICAL SECURITY ALERT: Default secrets detected in production: {', '.join(invalid)}")
+                sys.exit(1)
             self.DEBUG = False
         else:
             self.DEBUG = True

@@ -104,7 +104,8 @@ async def _process_batch_background(request: BatchSimulationRequest, job_id: str
                 logger.info(f"Usage Ledger: Recorded {len(request.prompts)} sims for {request.orgId}")
             except Exception as e:
                 logger.error(f"Usage Ledger write failed: {e}")
-                # We proceed even if billing fails to prioritize UX, but log it.
+                # Fail-closed to prevent unmetered batch runs.
+                raise RuntimeError("Usage ledger write failed")
 
         return await _execute_batch_calculation(request)
 

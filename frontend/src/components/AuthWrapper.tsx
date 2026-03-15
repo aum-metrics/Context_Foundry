@@ -5,7 +5,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { OrganizationProvider } from "./OrganizationContext";
-import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
+import { getLocalMockSession, isLocalHostRuntime, isLocalMockMode } from "@/lib/localMockMode";
 
 const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/llms-full.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login", "/blog"];
 const PUBLIC_PREFIXES = ["/blog/"];
@@ -19,9 +19,11 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname) || PUBLIC_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix));
 
     useEffect(() => {
-        const isMockMode = isLocalMockMode() || (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com");
+        const isLocalRuntime = isLocalHostRuntime();
+        const hasMockStorage = isLocalRuntime && typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com";
+        const isMockMode = (isLocalRuntime && isLocalMockMode()) || hasMockStorage;
         const { email, token, orgId } = getLocalMockSession();
-        const isDemoUser = email === "demo@demo.com" && (isMockMode || isLocalMockMode());
+        const isDemoUser = email === "demo@demo.com" && isMockMode;
 
         if (isDemoUser || isMockMode) {
             console.warn(isDemoUser ? "👤 DEMO ACCOUNT ACTIVE" : "🔓 MOCK AUTH MODE ACTIVE");

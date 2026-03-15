@@ -47,24 +47,40 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 AUM ANALYTICS API STARTUP - v2.2.0-hardened")
     logger.info("="*60)
     
-    # Check Required Environment Variables
-    required_secrets = [
+    # Check Required Environment Variables & Security Secrets
+    required_env = [
         "OPENAI_API_KEY",
         "GEMINI_API_KEY",
         "ANTHROPIC_API_KEY",
         "RAZORPAY_KEY_ID",
-        "RAZORPAY_KEY_SECRET"
+        "RAZORPAY_KEY_SECRET",
+        "JWT_SECRET",
+        "SSO_ENCRYPTION_KEY",
+        "SSO_JWT_SECRET"
     ]
-    missing = [s for s in required_secrets if not os.getenv(s)]
-    if missing:
-        if settings.ENV == "production":
+    missing = [s for s in required_env if not os.getenv(s)]
+    
+    # Check for default secrets in production
+    default_secrets = []
+    if settings.ENV == "production":
+        if settings.JWT_SECRET == "your-secret-key-change-in-production":
+            default_secrets.append("JWT_SECRET")
+        if settings.SSO_ENCRYPTION_KEY == "aum-sso-encryption-dev-fallback1":
+            default_secrets.append("SSO_ENCRYPTION_KEY")
+        if settings.SSO_JWT_SECRET == "aum-sso-jwt-intent-dev-fallback1":
+            default_secrets.append("SSO_JWT_SECRET")
+
+    if (missing or default_secrets) and settings.ENV == "production":
+        if missing:
             logger.critical(f"❌ MISSING MISSION-CRITICAL SECRETS IN PRODUCTION: {', '.join(missing)}")
-            logger.critical("🛑 APPLICATION SHUTDOWN INITIATED — cannot run prod without all keys.")
-            import sys
-            sys.exit(1)
-        else:
-            logger.warning(f"⚠️  Missing secrets (degraded mode): {', '.join(missing)}")
-            logger.warning("⚠️  Endpoints requiring these keys will return HTTP 503 instead of crashing.")
+        if default_secrets:
+            logger.critical(f"🚨 CRITICAL SECURITY ALERT: Default secrets detected in production: {', '.join(default_secrets)}")
+        
+        logger.critical("🛑 APPLICATION SHUTDOWN INITIATED — cannot run prod without all keys and hardened secrets.")
+        sys.exit(1)
+    elif missing:
+        logger.warning(f"⚠️  Missing secrets (degraded mode): {', '.join(missing)}")
+        logger.warning("⚠️  Endpoints requiring these keys will return HTTP 503 instead of crashing.")
     
     # Check environment
     logger.info(f"Environment: {settings.ENV}")

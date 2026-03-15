@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
-import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
+import { getLocalMockSession, isLocalHostRuntime, isLocalMockMode } from "@/lib/localMockMode";
 
 export interface Organization {
     id: string;
@@ -164,7 +164,9 @@ export function OrganizationProvider({ children, user }: { children: React.React
             try {
                 let currentOrgUser: OrgUser;
 
-                const isMockMode = isLocalMockMode() || (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com");
+                const isLocalRuntime = isLocalHostRuntime();
+                const hasMockStorage = isLocalRuntime && typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com";
+                const isMockMode = isLocalMockMode() || hasMockStorage;
                 if (isMockMode) {
                     const mockSession = getLocalMockSession();
                     currentOrgUser = {

@@ -60,7 +60,7 @@ def _extract_manifest_entity_name(manifest_data: Dict[str, Any]) -> Optional[str
 
 def _is_placeholder_org_name(name: Optional[str]) -> bool:
     normalized = (name or "").strip().lower()
-    return normalized in {"", "unnamed organization", "your company", "sightspectrum", "sight spectrum"}
+    return normalized in {"", "unnamed organization", "your company"}
 
 
 def _get_manifest_doc(org_id: str, version: str = "latest"):

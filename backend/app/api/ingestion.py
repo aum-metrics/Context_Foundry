@@ -344,7 +344,7 @@ async def parse_document(
                 current_org_name = (current_org_data or {}).get("name")
                 
                 # Only overwrite if current name is a placeholder
-                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company", "sight spectrum", "sightspectrum"}:
+                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company"}:
                     org_ref.set({"name": extracted_name.strip()}, merge=True)
 
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="document_ingestion", resource_id=manifest_id, metadata={"chunks": len(chunks)})
@@ -556,7 +556,7 @@ async def parse_url(
                 current_org_name = (current_org_data or {}).get("name")
                 
                 # Only overwrite if current name is a placeholder
-                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company", "sight spectrum", "sightspectrum"}:
+                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company"}:
                     org_ref.set({"name": extracted_name.strip()}, merge=True)
 
             log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="url_ingestion",
