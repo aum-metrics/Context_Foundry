@@ -39,7 +39,7 @@ export default function CoIntelligenceSimulator() {
     const [dynamicPrompts, setDynamicPrompts] = useState<string[]>([
         "Who are the top enterprise analytics consulting firms for retail and CPG transformation?",
         "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization?",
-        "How does this company compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?",
+        "How does this company compare with Accenture, Fractal, and Mu Sigma?",
     ]);
     const [activePrompt, setActivePrompt] = useState("");
     const [loading, setLoading] = useState(false);

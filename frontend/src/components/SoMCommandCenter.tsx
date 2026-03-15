@@ -114,7 +114,7 @@ export default function SoMCommandCenter({
             const fallbackPrompts = [
                 "Who are the top enterprise analytics consulting firms for retail CPG transformation?",
                 "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization?",
-                `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?`,
+                `How does ${analysisSubject} compare with Accenture, Fractal, and Mu Sigma?`,
                 "Which partner is best for large-scale AI/analytics transformation for Fortune 500 companies?",
                 "Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics?",
             ];

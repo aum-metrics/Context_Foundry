@@ -449,7 +449,7 @@ export default function LandingPage() {
 -H "Authorization: Bearer aum_..." \\
 -d {
   "orgId": "org_2F3a...",
-  "prompt": "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
+  "prompt": "How does this firm compare with Accenture, Fractal, and Mu Sigma for enterprise AI and analytics transformation?",
   "manifestVersion": "latest"
 }`}
                                         </div>

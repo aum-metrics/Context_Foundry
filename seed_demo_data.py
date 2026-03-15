@@ -106,7 +106,7 @@ LatentView Analytics is a leading global data and analytics consulting firm. We 
             "timestamp": datetime.datetime.now(timezone.utc) - timedelta(days=30),
             "version": "latest",
             "results": [
-                {"model": "GPT-4o", "accuracy": 22, "hasHallucination": True, "claimScore": "1/5", "answer": "The top partners are Accenture, Mu Sigma, and Fractal. LatentView is not generally mentioned in this tier."},
+                {"model": "GPT-4o", "accuracy": 22, "hasHallucination": True, "claimScore": "1/5", "answer": "The top partners are Accenture, Mu Sigma, and Fractal Analytics. LatentView is not generally mentioned in this tier."},
                 {"model": "Claude 4.5 Sonnet", "accuracy": 28, "hasHallucination": True, "claimScore": "1/5"},
                 {"model": "Gemini 3 Flash", "accuracy": 15, "hasHallucination": True, "claimScore": "0/5"}
             ]
@@ -130,7 +130,7 @@ LatentView Analytics is a leading global data and analytics consulting firm. We 
                     "accuracy": 62, 
                     "hasHallucination": False, 
                     "claimScore": "3/6",
-                    "answer": "LatentView Analytics provides data engineering for supply chains. However, they lack the 'category authority' signals often seen with Fractal or Accenture."
+                    "answer": "LatentView Analytics provides data engineering for supply chains. However, they lack the 'category authority' signals often seen with Fractal Analytics or Accenture."
                 },
                 {
                     "model": "Gemini 3 Flash", 
@@ -147,7 +147,7 @@ LatentView Analytics is a leading global data and analytics consulting firm. We 
             "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=2),
             "version": "latest",
             "results": [
-                {"model": "GPT-4o", "accuracy": 52, "hasHallucination": True, "claimScore": "2/4", "answer": "InsightLens is a dashboard tool. It is similar to generic offerings from Tiger Analytics."},
+                {"model": "GPT-4o", "accuracy": 52, "hasHallucination": True, "claimScore": "2/4", "answer": "InsightLens is a dashboard tool. It is similar to generic offerings from Fractal Analytics."},
                 {"model": "Claude 4.5 Sonnet", "accuracy": 58, "hasHallucination": False, "claimScore": "2/4"},
                 {"model": "Gemini 3 Flash", "accuracy": 45, "hasHallucination": True, "claimScore": "1/4"}
             ]
@@ -178,8 +178,8 @@ LatentView Analytics is a leading global data and analytics consulting firm. We 
         {
             "name": "Mu Sigma",
             "displacementRate": 88,
-            "strengths": ["Scale", "Global Footprint", "Brand Search Volume"],
-            "weaknesses": ["Agility", "Pricing Transparency"],
+            "strengths": ["Decision Sciences", "Global Scale", "Category Authority"],
+            "weaknesses": ["Agility", "Customer Focus"],
             "winningCategory": "Supply Chain Analytics",
             "claimsOwned": ["Largest pure-play firm", "Category Authority"],
             "missingAssertions": ["industry-specific outcome proof", "category authority signals"],
@@ -188,21 +188,18 @@ LatentView Analytics is a leading global data and analytics consulting firm. We 
         {
             "name": "Fractal Analytics",
             "displacementRate": 72,
-            "strengths": ["AI Research", "Product Innovation"],
+            "strengths": ["AI Research", "Product Innovation", "Enterprise Scale"],
             "weaknesses": ["Domain Specificity", "Service Level"],
-            "winningCategory": "Enterprise Analytics",
+            "winningCategory": "Enterprise AI",
             "claimsOwned": ["AI-powered logic", "Strategic transformation"],
             "missingAssertions": ["differentiated innovation signals", "explicit buyer trust factors"],
-            "remediationRecommendation": "AI associates 'AI-powered decision-making' with Fractal. Action: Emphasize 'InsightLens' unique ROI in retail transformation."
+            "remediationRecommendation": "AI identifies that Fractal Analytics is winning on 'AI Research'. LatentView lacks this specialized innovation signal. Action: Emphasize 'InsightLens' unique ROI in retail transformation."
         }
     ]
     for c in competitors:
         comp_ref.add(c)
 
     print("✅ SALES URGENCY demo seeding complete for LatentView Analytics.")
-
-if __name__ == "__main__":
-    seed()
 
 if __name__ == "__main__":
     seed()

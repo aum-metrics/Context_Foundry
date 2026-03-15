@@ -57,7 +57,7 @@ export default function ProductFlowShowcase() {
             preview: (
                 <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-mono text-indigo-400">
-                        <span>PROBE: "How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?"</span>
+                        <span>PROBE: "How does this firm compare with Accenture, Fractal, and Mu Sigma?"</span>
                         <span className="animate-pulse">RUNNING...</span>
                     </div>
                     <div className="space-y-2">
@@ -265,7 +265,7 @@ export default function ProductFlowShowcase() {
                                             </div>
                                             <div className="text-xs text-slate-300 font-mono italic">
                                                 {currentStep === 1
-                                                    ? '"How does this firm compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?"'
+                                                    ? '"How does this firm compare with Accenture, Fractal, and Mu Sigma?"'
                                                     : '"Which partner is best for large-scale AI and analytics transformation for Fortune 500 companies?"'}
                                             </div>
                                         </div>
