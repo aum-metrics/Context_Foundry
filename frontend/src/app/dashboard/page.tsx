@@ -348,7 +348,7 @@ export default function AUMContextFoundry() {
               id="intelligence"
               stepNumber={2}
               title="Share of Model & Buyer-Intent Ranking"
-              description="See how AI engines rank your brand against rivals like Reliance Digital and Amazon. Discover which query clusters you win and where buyer intent is being lost."
+              description="See how AI engines rank your brand against rivals like Mu Sigma and Fractal Analytics. Discover which query clusters you win and where buyer intent is being lost."
               accentColor="indigo"
               isCollapsed={!!collapsedSections["intelligence"]}
               onToggle={() => toggleSection("intelligence")}
