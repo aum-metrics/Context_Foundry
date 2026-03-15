@@ -5,7 +5,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { OrganizationProvider } from "./OrganizationContext";
-import { getLocalMockSession, isLocalHostRuntime, isLocalMockMode } from "@/lib/localMockMode";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
 
 const PUBLIC_PATHS = ["/", "/login", "/llms.txt", "/llms-full.txt", "/privacy", "/terms", "/contact", "/status", "/methods", "/security", "/about", "/legal", "/admin", "/admin/login", "/blog"];
 const PUBLIC_PREFIXES = ["/blog/"];
