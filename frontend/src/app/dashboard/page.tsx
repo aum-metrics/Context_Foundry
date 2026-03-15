@@ -22,11 +22,9 @@ interface AdminOrgOption {
 }
 
 const PIPELINE_STEPS = [
-  { id: "ingest", label: "1. Ingest", sublabel: "Source material", icon: Database },
-  { id: "manifest", label: "2. Manifest", sublabel: "AI context review", icon: RadioReceiver },
-  { id: "intelligence", label: "3. Intelligence", sublabel: "Competitor ranking", icon: Activity },
-  { id: "simulate", label: "4. Simulate", sublabel: "Buyer queries", icon: Activity },
-  { id: "report", label: "5. Report", sublabel: "Executive output", icon: Award },
+  { id: "analyze", label: "1. Analyze", sublabel: "Ingest & ground truth", icon: Database },
+  { id: "intelligence", label: "2. Intelligence", sublabel: "AI Share of Voice", icon: Activity },
+  { id: "action", label: "3. Action", sublabel: "Remediation & Report", icon: Award },
 ];
 
 export default function AUMContextFoundry() {
@@ -305,48 +303,39 @@ export default function AUMContextFoundry() {
         {activeSettingsView === "workspace" && (
           <div className="px-8 py-8 max-w-[1400px] mx-auto space-y-0">
 
-            {/* STEP 1: Ingest */}
+            {/* STEP 1: Analyze */}
             <WorkflowSection
-              id="ingest"
+              id="analyze"
               stepNumber={1}
-              title="Ingest Source Material"
-              description="Upload or link your company's verified content — product pages, case studies, whitepapers. This becomes the ground truth AI models are scored against."
+              title="Analyze & Verify Ground Truth"
+              description="Upload your company's verified content and review the generated AI Manifest. This technical foundation ensures models are scored against your real brand position."
               accentColor="cyan"
-              isCollapsed={!!collapsedSections["ingest"]}
-              onToggle={() => toggleSection("ingest")}
-              onStepVisible={useCallback(() => setActiveStep("ingest"), [])}
-              sectionRef={setSectionRef("ingest")}
+              isCollapsed={!!collapsedSections["analyze"]}
+              onToggle={() => toggleSection("analyze")}
+              onStepVisible={useCallback(() => setActiveStep("analyze"), [])}
+              sectionRef={setSectionRef("analyze")}
               isManualScrollingRef={isManualScrollingRef}
             >
-              <SemanticIngestion />
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4 px-1">1.1 Ingest Source Material</h3>
+                  <SemanticIngestion />
+                </div>
+                <div className="pt-8 border-t border-slate-100 dark:border-white/5">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4 px-1">1.2 AI Context Review</h3>
+                  <AgentManifest />
+                </div>
+              </div>
             </WorkflowSection>
 
-            <PipelineConnector label="Context processed → AI manifest generated" />
+            <PipelineConnector label="Context grounded → Assessing AI Share of Voice" />
 
-            {/* STEP 2: Manifest */}
-            <WorkflowSection
-              id="manifest"
-              stepNumber={2}
-              title="Review AI Manifest"
-              description="Your llms.txt and llms-full.txt files define what AI engines know about you. Review and confirm these are accurate before running competitive analysis."
-              accentColor="fuchsia"
-              isCollapsed={!!collapsedSections["manifest"]}
-              onToggle={() => toggleSection("manifest")}
-              onStepVisible={useCallback(() => setActiveStep("manifest"), [])}
-              sectionRef={setSectionRef("manifest")}
-              isManualScrollingRef={isManualScrollingRef}
-            >
-              <AgentManifest />
-            </WorkflowSection>
-
-            <PipelineConnector label="Manifest verified → Running competitor ranking" />
-
-            {/* STEP 3: Intelligence */}
+            {/* STEP 2: Intelligence */}
             <WorkflowSection
               id="intelligence"
-              stepNumber={3}
-              title="Competitor Ranking & Share of Model"
-              description="Run enterprise batch analysis to see which buyer-intent queries your competitors win and why. Get prescriptive remediation down to exact copy blocks and schema markup."
+              stepNumber={2}
+              title="Share of Model & Buyer-Intent Ranking"
+              description="See how AI engines rank your brand against rivals like Reliance Digital and Amazon. Discover which query clusters you win and where buyer intent is being lost."
               accentColor="indigo"
               isCollapsed={!!collapsedSections["intelligence"]}
               onToggle={() => toggleSection("intelligence")}
@@ -358,45 +347,62 @@ export default function AUMContextFoundry() {
               lockedMessage="Upgrade to Growth to unlock continuous Share of Model tracking, competitor displacement rates, and prescriptive remediation copy."
             >
               <SoMCommandCenter setActiveView={() => {}} />
+              
+              <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500 px-1">Deep Simulation Lab</h3>
+                  <span className="text-[10px] text-slate-400">Advanced query testing</span>
+                </div>
+                <CoIntelligenceSimulator />
+              </div>
             </WorkflowSection>
 
-            <PipelineConnector label="Intelligence complete → Validate with buyer queries" />
+            <PipelineConnector label="Intelligence verified → Executive Action Center" />
 
-            {/* STEP 4: Simulate */}
+            {/* STEP 3: Action */}
             <WorkflowSection
-              id="simulate"
-              stepNumber={4}
-              title="Enterprise Buyer Query Simulation"
-              description="Test live buyer queries across GPT-4o, Gemini, and Claude. See which model recommends you, which recommends a competitor, and exactly what they say."
-              accentColor="amber"
-              isCollapsed={!!collapsedSections["simulate"]}
-              onToggle={() => toggleSection("simulate")}
-              onStepVisible={useCallback(() => setActiveStep("simulate"), [])}
-              sectionRef={setSectionRef("simulate")}
-              isManualScrollingRef={isManualScrollingRef}
-            >
-              <CoIntelligenceSimulator />
-            </WorkflowSection>
-
-            <PipelineConnector label="Simulations scored → Executive report ready" />
-
-            {/* STEP 5: Report */}
-            <WorkflowSection
-              id="report"
-              stepNumber={5}
-              title="Executive Report"
-              description="Export a boardroom-ready PDF with SoM scores, competitor displacement evidence, and the exact site copy needed to reclaim AI-recommended market position."
+              id="action"
+              stepNumber={3}
+              title="Prescriptive Action Center"
+              description="Deploy actionable messaging fixes to reclaim your AI position and export a boardroom-ready executive report."
               accentColor="emerald"
-              isCollapsed={!!collapsedSections["report"]}
-              onToggle={() => toggleSection("report")}
-              onStepVisible={useCallback(() => setActiveStep("report"), [])}
-              sectionRef={setSectionRef("report")}
+              isCollapsed={!!collapsedSections["action"]}
+              onToggle={() => toggleSection("action")}
+              onStepVisible={useCallback(() => setActiveStep("action"), [])}
+              sectionRef={setSectionRef("action")}
               isManualScrollingRef={isManualScrollingRef}
             >
-              <div className="rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-10 text-center">
-                <Award className="w-10 h-10 mx-auto text-emerald-500 mb-4" />
-                <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-2">Generate Executive Report</h3>
-                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">Open the Command Center above and use the <strong>&quot;Open Executive Report&quot;</strong> button to generate and download your boardroom PDF.</p>
+              <div className="grid grid-cols-1 gap-6">
+                <div className="rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="text-center md:text-left">
+                    <Award className="w-10 h-10 text-emerald-500 mb-2 md:inline-block md:mr-4 md:align-middle" />
+                    <div className="md:inline-block md:align-middle">
+                      <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-1">Executive Visibility Report</h3>
+                      <p className="text-sm text-slate-500 max-w-md">Generate a boardroom-ready PDF summarizing AI Share of Voice and prioritized actions.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (organization?.subscriptionTier === "explorer") { setUpgradeFeatureName("Brand Health PDF Report"); setIsUpgradeModalOpen(true); return; }
+                      // The report button is inside SoMCommandCenter usually, but we can expose it here or link it.
+                      // For now, guide the user.
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all shadow-lg shadow-emerald-500/20 shrink-0"
+                  >
+                    Open Executive View
+                  </button>
+                </div>
+                
+                <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-900/40 p-6">
+                   <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-4">Immediate Prioritized Actions</h3>
+                   <p className="text-xs text-slate-500 mb-6 font-light">The AI engine recommends these 3 messaging fixes to immediately improve your Shave of Model score.</p>
+                   {/* We will refactor SoMCommandCenter to allow exposing these remediation blocks standalone or we can keep them in Intelligence. 
+                       In the next step, I will move the remediation recommendations specifically to this section or deep link them.
+                   */}
+                   <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      <p className="text-xs text-slate-400">Remediation blocks will appear here based on the Intelligence analysis above.</p>
+                   </div>
+                </div>
               </div>
             </WorkflowSection>
 

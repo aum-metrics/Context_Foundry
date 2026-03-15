@@ -214,7 +214,13 @@ function buildLlmsSuggestion(category: string, subject: string, missingClaims: s
     return `llms.txt: Add a ${category} section for ${subject} with direct claims on ${claims}.`;
 }
 
-export default function SoMCommandCenter({ setActiveView: _setActiveView }: { setActiveView?: (view: string) => void }) {
+export default function SoMCommandCenter({ 
+    setActiveView: _setActiveView,
+    view = "all" 
+}: { 
+    setActiveView?: (view: string) => void,
+    view?: "all" | "intelligence" | "action" 
+}) {
     const { organization, refreshKey, activeManifestVersion, activeContextName } = useOrganization();
     const { models } = useModelCatalog();
     const [activeTab, setActiveTab] = useState<string>("GPT-4o");
@@ -651,12 +657,16 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                 body: JSON.stringify({
                     orgId: organization.id,
                     prompts: [
-                        `best cyber resilience training platform`,
-                        `cyber crisis simulation tools`,
-                        `cyber tabletop exercise software`,
+                        `Who is the best partner for cyber resilience training and exercises?`,
+                        `Compare ${analysisSubject} with CrisisSim for enterprise crisis tabletop exercises.`,
+                        `Which platform provides the most actionable executive cyber crisis reporting?`,
+                        `Top tools for automating cyber response training and incident readiness.`,
                         `Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`,
                         `What are the key criteria enterprise buyers use to shortlist a partner like ${analysisSubject}?`,
-                        `How does ${analysisSubject} differentiate from other established players in its market category?`
+                        `How does ${analysisSubject} differentiate from other established players in its market category?`,
+                        `Who should I choose for large-scale digital modernization: ${analysisSubject} or a Big 4 consultancy?`,
+                        `Industry-specific expertise of ${analysisSubject} in CPG and supply chain domains.`,
+                        `Recent case studies and ROI proof for ${analysisSubject} in financial services.`
                     ],
                     manifestVersion: activeManifestVersion
                 })
@@ -850,16 +860,22 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
 
     return (
         <div className={`w-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'ring-2 ring-rose-500/20 ring-inset rounded-2xl p-1' : ''}`}>
-            {isCriticalDrift && (
-                <div className="w-full rounded-xl mb-6 h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500 animate-shimmer" />
-            )}
+            {(view === "all" || view === "intelligence") && (
+                <>
+                    {isCriticalDrift && (
+                        <div className="w-full rounded-xl mb-6 h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500 animate-shimmer" />
+                    )}
             {/* KPI strip */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
                 <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Avg SoM</p>
-                    <div className="flex items-end gap-2">
-                        <span className="text-3xl font-light text-slate-900 dark:text-white">{dashboardKpis.lcrsAverage || "—"}</span>
+                    <div className="flex items-end gap-2 group relative">
+                        <span className="text-3xl font-light text-slate-900 dark:text-white cursor-help border-b border-dotted border-slate-300 dark:border-slate-700">{dashboardKpis.lcrsAverage || "—"}</span>
                         {dashboardKpis.lcrsAverage > 0 && <span className="text-slate-500 mb-1">%</span>}
+                        <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
+                            <p className="font-semibold mb-1">AI Share of Model (SoM)</p>
+                            <p className="text-slate-300">The percentage of AI responses that prioritize your brand's unique claims over competitors across all audited buyer-intent queries.</p>
+                        </div>
                     </div>
                     <p className="text-xs text-slate-500 mt-2">{batchResult ? "Batch-calculated enterprise score" : "Derived from current simulation history"}</p>
                 </div>
@@ -871,7 +887,15 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                 <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Top Competitor Pressure</p>
                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</p>
-                    <p className="text-xs text-rose-500 mt-2">{dashboardKpis.topCompetitorPressure}% AI Rec. Frequency</p>
+                    <div className="group relative">
+                        <p className="text-xs text-rose-500 mt-2 cursor-help font-medium">
+                            {dashboardKpis.topCompetitorPressure}% AI Rec. Frequency
+                        </p>
+                        <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
+                            <p className="font-semibold mb-1">AI Recommendation Frequency</p>
+                            <p className="text-slate-300">{dashboardKpis.topCompetitorPressure}% of tested buyer queries resulted in the AI specifically recommending this rival over your brand.</p>
+                        </div>
+                    </div>
                 </div>
                 <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Weak Clusters</p>
@@ -1001,9 +1025,13 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                                     <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-1">{insight.category}</p>
                                                     <p className="text-sm font-medium text-slate-900 dark:text-white leading-6">{insight.prompt}</p>
                                                 </div>
-                                                <div className="text-right shrink-0">
-                                                    <p className={`text-2xl font-light ${insight.avgAccuracy >= 80 ? "text-emerald-500" : insight.avgAccuracy >= 60 ? "text-amber-500" : "text-rose-500"}`}>{insight.avgAccuracy}%</p>
+                                                <div className="text-right shrink-0 group relative">
+                                                    <p className={`text-2xl font-light cursor-help ${insight.avgAccuracy >= 80 ? "text-emerald-500" : insight.avgAccuracy >= 60 ? "text-amber-500" : "text-rose-500"}`}>{insight.avgAccuracy}%</p>
                                                     <p className="text-[10px] text-slate-500">avg SoM</p>
+                                                    <div className="absolute top-full right-0 mt-2 w-56 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
+                                                        <p className="font-semibold mb-1">Cluster Fidelity</p>
+                                                        <p className="text-slate-300">How accurately AI models represent your brand across this specific query category.</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap gap-2 mb-3 text-[11px]">
@@ -1028,84 +1056,6 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                         </div>
                                     );
                                 })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <div className="flex items-center gap-2 mb-5">
-                            <FilePenLine className="w-4 h-4 text-fuchsia-500" />
-                            <h2 className="text-lg font-medium text-slate-900 dark:text-white">Prescriptive Remediation Recommendations</h2>
-                        </div>
-                        {remediationRecommendations.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Remediation guidance will appear after we have scored at least one buyer-intent cluster.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {remediationRecommendations.map((recommendation) => (
-                                    <div key={`${recommendation.category}-${recommendation.title}`} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 p-5">
-                                        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-4">
-                                            <div>
-                                                <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-1">{recommendation.category}</p>
-                                                <h3 className="text-base font-semibold text-slate-900 dark:text-white">{recommendation.title}</h3>
-                                            </div>
-                                            <span className="inline-flex px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
-                                                Winning competitor: {recommendation.winningCompetitor}
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
-                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
-                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Observed outcome</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.observedOutcome}</p>
-                                            </div>
-                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
-                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Missing claims</p>
-                                                <ul className="space-y-1 text-slate-700 dark:text-slate-300">
-                                                    {recommendation.missingClaims.map((claim) => (
-                                                        <li key={claim}>• {claim}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
-                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Page(s) to update</p>
-                                                <ul className="space-y-3 text-slate-700 dark:text-slate-300">
-                                                    {recommendation.pageTargets.map((target) => (
-                                                        <li key={`${target.label}-${target.url}`}>
-                                                            <a
-                                                                href={target.url || undefined}
-                                                                target={target.url ? "_blank" : undefined}
-                                                                rel={target.url ? "noreferrer" : undefined}
-                                                                className="font-medium text-indigo-600 dark:text-indigo-300 hover:underline break-all"
-                                                            >
-                                                                {target.url ? `${target.label} — ${target.url}` : target.label}
-                                                            </a>
-                                                            <p className="text-xs text-slate-500 mt-1">{target.reason}</p>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
-                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Suggested copy block</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.copyBlock}</p>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mt-4 text-xs">
-                                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10 p-4">
-                                                <p className="uppercase tracking-widest text-indigo-500 mb-2">Schema</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.schemaSuggestion}</p>
-                                            </div>
-                                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10 p-4">
-                                                <p className="uppercase tracking-widest text-indigo-500 mb-2">FAQ</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.faqSuggestion}</p>
-                                            </div>
-                                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10 p-4">
-                                                <p className="uppercase tracking-widest text-indigo-500 mb-2">llms.txt</p>
-                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.llmsSuggestion}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
                         )}
                     </div>
@@ -1251,9 +1201,18 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                             {/* Header row */}
                                             <div className="flex items-center justify-between px-5 pt-5 pb-3">
                                                 <div>
-                                                    <p className="font-semibold text-slate-900 dark:text-white text-sm">{competitor.name}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-semibold text-slate-900 dark:text-white text-sm">{competitor.name}</p>
+                                                        {competitor.displacementRate > 30 ? (
+                                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold uppercase tracking-wider">Primary Displacer</span>
+                                                        ) : competitor.displacementRate > 15 ? (
+                                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold uppercase tracking-wider">Niche Threat</span>
+                                                        ) : (
+                                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-bold uppercase tracking-wider">Monitoring</span>
+                                                        )}
+                                                    </div>
                                                     {competitor.winningCategory && (
-                                                        <p className="text-xs text-slate-500 mt-0.5">Winning on: <span className="text-rose-500 dark:text-rose-400">{competitor.winningCategory}</span></p>
+                                                        <p className="text-xs text-slate-500 mt-0.5">Winning on: <span className="text-rose-500 dark:text-rose-400 font-medium">{competitor.winningCategory}</span></p>
                                                     )}
                                                 </div>
                                                 <div className="text-right">
@@ -1357,7 +1316,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                         )}
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-xl dark:shadow-none">
+                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-6 shadow-xl dark:shadow-none">
                         <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-6">Model Comparison</h3>
                         <div className="space-y-6">
                             {Object.entries(visibleModelAverages).map(([modelName, score], i) => (
@@ -1470,9 +1429,93 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                 </div>
                             )}
                         </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {(view === "all" || view === "action") && (
+                <div className="space-y-6">
+                     <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
+                        <div className="flex items-center gap-2 mb-5">
+                            <FilePenLine className="w-4 h-4 text-fuchsia-500" />
+                            <h2 className="text-lg font-medium text-slate-900 dark:text-white">Prescriptive Remediation Recommendations</h2>
+                        </div>
+                        {remediationRecommendations.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Remediation guidance will appear after we have scored at least one buyer-intent cluster.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {remediationRecommendations.map((recommendation) => (
+                                    <div key={`${recommendation.category}-${recommendation.title}`} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 p-5">
+                                        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-4">
+                                            <div>
+                                                <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-1">{recommendation.category}</p>
+                                                <h3 className="text-base font-semibold text-slate-900 dark:text-white">{recommendation.title}</h3>
+                                            </div>
+                                            <span className="inline-flex px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
+                                                Winning competitor: {recommendation.winningCompetitor}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
+                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
+                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Observed outcome</p>
+                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.observedOutcome}</p>
+                                            </div>
+                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
+                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Missing claims</p>
+                                                <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                                                    {recommendation.missingClaims.map((claim) => (
+                                                        <li key={claim}>• {claim}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
+                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Page(s) to update</p>
+                                                <ul className="space-y-3 text-slate-700 dark:text-slate-300">
+                                                    {recommendation.pageTargets.map((target) => (
+                                                        <li key={`${target.label}-${target.url}`}>
+                                                            <a
+                                                                href={target.url || undefined}
+                                                                target={target.url ? "_blank" : undefined}
+                                                                rel={target.url ? "noreferrer" : undefined}
+                                                                className="font-medium text-indigo-600 dark:text-indigo-300 hover:underline break-all"
+                                                            >
+                                                                {target.url ? `${target.label} — ${target.url}` : target.label}
+                                                            </a>
+                                                            <p className="text-xs text-slate-500 mt-1">{target.reason}</p>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            <div className="rounded-xl bg-white dark:bg-black/10 border border-slate-200 dark:border-white/5 p-4">
+                                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Suggested copy block</p>
+                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.copyBlock}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mt-4 text-xs">
+                                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10 p-4">
+                                                <p className="uppercase tracking-widest text-indigo-500 mb-2">Schema</p>
+                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.schemaSuggestion}</p>
+                                            </div>
+                                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10 p-4">
+                                                <p className="uppercase tracking-widest text-indigo-500 mb-2">FAQ</p>
+                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.faqSuggestion}</p>
+                                            </div>
+                                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/10 p-4">
+                                                <p className="uppercase tracking-widest text-indigo-500 mb-2">llms.txt</p>
+                                                <p className="text-slate-700 dark:text-slate-300">{recommendation.llmsSuggestion}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Brand Health Certificate Modal */}
             <AnimatePresence>

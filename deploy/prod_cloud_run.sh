@@ -14,7 +14,7 @@ PROJECT_ID="gen-lang-client-0350122978"
 REGION="asia-southeast1"
 SERVICE_NAME="aum-api"
 AR_REPO="aum-backend"
-IMAGE_TAG="prod-1"
+IMAGE_TAG="prod-2"
 
 # Your domains
 API_DOMAIN="api.aumcontextfoundry.com"
