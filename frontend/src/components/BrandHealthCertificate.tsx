@@ -428,21 +428,138 @@ export default function BrandHealthCertificate({
             y += 5;
             writeDivider();
 
-            // REMEDIATION PLAN (The "Sales" asset)
-            writeHeading("Prescriptive Remediation Plan", [99, 102, 241]);
-            if (remediationRecommendations.length === 0) {
-                writeBody("Simulation data implies baseline grounding. No immediate remediation actions generated.");
-            } else {
-                remediationRecommendations.slice(0, 3).forEach((item) => {
-                    ensureSpace(20);
+            // 5. QUERY CLUSTERS
+            if (clusterInsights.length > 0) {
+                writeHeading("Winning and Losing Query Clusters");
+                clusterInsights.slice(0, 5).forEach((cluster) => {
+                    ensureSpace(35);
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.rect(margin, y, contentWidth, 25, 'F');
+                    
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.text(cluster.category.toUpperCase(), margin + 5, y + 6);
+                    
+                    pdf.setFontSize(14);
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.text(`${cluster.avgAccuracy}%`, margin + contentWidth - 15, y + 15, { align: "right" });
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.text("avg fidelity", margin + contentWidth - 15, y + 19, { align: "right" });
+
+                    pdf.setFontSize(10);
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.text(pdf.splitTextToSize(cluster.prompt, contentWidth - 40), margin + 5, y + 12);
+                    
+                    y += 28;
+                    writeBody(cluster.observedOutcome, 9, [71, 85, 105]);
+                    writeBody(`Winner: ${cluster.winnerModel} · Weakest: ${cluster.weakestModel} · Competitor: ${cluster.winningCompetitor}`, 8, [148, 163, 184]);
+                    writeBody(`Missing claims: ${cluster.missingClaims.join(", ")}`, 8, [148, 163, 184]);
+                    y += 4;
+                });
+                writeDivider();
+            }
+
+            // 6. RADAR CONTEXT
+            if (results.length > 0) {
+                writeHeading("SoM Radar Context (5-D)");
+                writeBody("These contextual dimensions explain where narrative preservation is strong vs weak across model families.", 9);
+                CANONICAL_MODEL_ORDER.forEach((model) => {
+                    const m = radarMetrics[model];
+                    if (m) {
+                        ensureSpace(12);
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(10);
+                        pdf.setTextColor(30, 41, 59);
+                        pdf.text(model, margin, y);
+                        y += 5;
+                        pdf.setFont("helvetica", "normal");
+                        pdf.setFontSize(9);
+                        pdf.setTextColor(71, 85, 105);
+                        pdf.text(`Consistency: ${m.consistency}% | Factuality: ${m.factuality}% | Sentiment: ${m.sentiment}% | Safety: ${m.safety}% | Authority: ${m.authority}%`, margin + 5, y);
+                        y += 6;
+                    }
+                });
+                writeDivider();
+            }
+
+            // 7. COMPETITOR DISPLACEMENT
+            if (competitors.length > 0) {
+                writeHeading("Competitor Displacement Summary");
+                competitors.slice(0, 3).forEach((comp) => {
+                    ensureSpace(40);
+                    pdf.setFillColor(254, 242, 242); // rose-50
+                    pdf.rect(margin, y, contentWidth, 35, 'F');
+                    
                     pdf.setFont("helvetica", "bold");
                     pdf.setFontSize(11);
                     pdf.setTextColor(30, 41, 59);
-                    pdf.text(`PRIORITY: ${item.title}`, margin, y);
-                    y += 6;
-                    writeBody(`Observed Outcome: ${item.observedOutcome}`, 9);
-                    writeBody(`Win Condition: ${item.winningCompetitor} is currently winning on these claims.`, 9);
+                    pdf.text(comp.name, margin + 5, y + 8);
                     
+                    pdf.setTextColor(225, 29, 72); // rose-600
+                    pdf.text(`${comp.displacementRate}%`, margin + contentWidth - 5, y + 8, { align: "right" });
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(153, 27, 27);
+                    pdf.text("AI REC. FREQUENCY", margin + contentWidth - 5, y + 12, { align: "right" });
+
+                    pdf.setFontSize(9);
+                    pdf.setTextColor(71, 85, 105);
+                    pdf.text(`Strengths: ${comp.strengths.join(", ")}`, margin + 5, y + 16);
+                    pdf.text(`Weaknesses: ${comp.weaknesses.join(", ")}`, margin + 5, y + 21);
+                    
+                    if (comp.remediationRecommendation) {
+                        pdf.setFont("helvetica", "italic");
+                        pdf.setTextColor(79, 70, 229);
+                        pdf.text(pdf.splitTextToSize(`" ${comp.remediationRecommendation} "`, contentWidth - 10), margin + 5, y + 28);
+                    }
+                    y += 42;
+                });
+                writeDivider();
+            }
+
+            // 8. REMEDIATION DELTA
+            if (remediationSnapshot) {
+                writeHeading("Remediation Delta");
+                writeBody(`SoM movement: ${remediationSnapshot.baselineAvg}% to ${remediationSnapshot.currentAvg}% (${remediationSnapshot.deltaSom >= 0 ? "+" : ""}${remediationSnapshot.deltaSom} points)`);
+                writeBody(`Hallucination-rate movement: ${remediationSnapshot.baselineHallucinationRate}% to ${remediationSnapshot.currentHallucinationRate}% (${remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}${remediationSnapshot.deltaHallucinationRate} points)`);
+                writeDivider();
+            }
+
+            // 9. ENHANCED REMEDIATION PLAN
+            writeHeading("Prescriptive Remediation Plan", [99, 102, 241]);
+            const recs = remediationRecommendations.length > 0 ? remediationRecommendations : [];
+            if (recs.length === 0) {
+                writeBody("Simulation data implies baseline grounding. No immediate remediation actions generated.");
+            } else {
+                recs.slice(0, 3).forEach((item) => {
+                    ensureSpace(50);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(12);
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.text(item.title, margin, y);
+                    y += 6;
+                    
+                    pdf.setFontSize(9);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.text(`Winning competitor: ${item.winningCompetitor}`, margin, y);
+                    y += 5;
+
+                    writeBody(`Observed Outcome: ${item.observedOutcome}`, 9);
+                    
+                    // Page Targets
+                    if (item.pageTargets && item.pageTargets.length > 0) {
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(9);
+                        pdf.text("Page(s) to update:", margin, y);
+                        y += 5;
+                        item.pageTargets.forEach(target => {
+                            writeBody(`• ${target.label}: ${target.url}`, 8, [79, 70, 229]);
+                            writeBody(`  Reason: ${target.reason}`, 8);
+                        });
+                    }
+
+                    // Copy Block
                     pdf.setFillColor(249, 250, 251);
                     const copyLines = pdf.splitTextToSize(`SUGGESTED UPDATE: ${item.copyBlock}`, contentWidth - 10);
                     pdf.rect(margin, y, contentWidth, (copyLines.length * 5) + 6, 'F');
@@ -451,17 +568,44 @@ export default function BrandHealthCertificate({
                     pdf.setTextColor(79, 70, 229);
                     pdf.text(copyLines, margin + 5, y + 6);
                     y += (copyLines.length * 5) + 12;
+
+                    // Technical Suggestions
+                    ensureSpace(15);
+                    pdf.setFont("helvetica", "normal");
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(100);
+                    if (item.schemaSuggestion) writeBody(`• ${item.schemaSuggestion}`, 8);
+                    if (item.faqSuggestion) writeBody(`• ${item.faqSuggestion}`, 8);
+                    if (item.llmsSuggestion) writeBody(`• ${item.llmsSuggestion}`, 8);
+                    y += 5;
                 });
             }
 
-            // FOOTER BRANDING
-            const footerY = pageHeight - 15;
+            // 10. METHODOLOGY FOOTER
+            ensureSpace(40);
             pdf.setDrawColor(226, 232, 240);
-            pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+            pdf.line(margin, y, pageWidth - margin, y);
+            y += 8;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(9);
+            pdf.setTextColor(71, 85, 105);
+            pdf.text("SoM Formula", margin, y);
+            pdf.text("Inference Audit", margin + colWidth, y);
+            y += 5;
+            pdf.setFont("helvetica", "normal");
             pdf.setFontSize(8);
+            pdf.text("SoM = (0.4 × Semantic) + (0.6 × Claim Recall)", margin, y);
+            pdf.text(`GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet`, margin + colWidth, y);
+            y += 4;
+            pdf.text("Aligned to: ISO/IEC 42001 · NIST AI RMF", margin, y);
+            pdf.text(`Timestamp: ${isoTimestamp}`, margin + colWidth, y);
+
+            // FOOTER BRANDING
+            const footerY = pageHeight - 10;
+            pdf.setFontSize(7);
             pdf.setTextColor(148, 163, 184);
             pdf.text("CONFIDENTIAL - FOR BOARD OF DIRECTORS ONLY", margin, footerY);
-            pdf.text("© 2026 AUM CONTEXT FOUNDRY - ALL RIGHTS RESERVED", pageWidth - margin - 80, footerY);
+            pdf.text("© 2026 AUM CONTEXT FOUNDRY - ALL RIGHTS RESERVED", pageWidth - margin - 70, footerY);
 
             const fileName = `AUM-Executive-Report-${organizationName.replace(/\s+/g, "-")}.pdf`;
             pdf.save(fileName);
