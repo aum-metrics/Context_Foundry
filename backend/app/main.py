@@ -6,34 +6,26 @@ Product: "AUM Context Foundry"
 Description: AUM Analytics API - Main Application Entry Point
 """
 
+# Ensure ./app is in path (Must happen before imports from app subdirectories)
+from pathlib import Path
+import sys
+app_path = str(Path(__file__).parent)
+if app_path not in sys.path:
+    sys.path.insert(0, app_path)
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from core.config import settings
 from fastapi.responses import JSONResponse
-from fastapi.responses import JSONResponse
 import logging
-import sys
 import os
 import asyncio
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-
-# Force UTF-8 encoding
-try:
-    sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
-# Ensure ./app is in path
-app_path = str(Path(__file__).parent)
-if app_path not in sys.path:
-    sys.path.insert(0, app_path)
 
 # ============================================================================
 # LOGGING SETUP

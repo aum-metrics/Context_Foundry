@@ -22,12 +22,13 @@ router = APIRouter()
 
 class CompetitorProfile(BaseModel):
     name: str
-    displacementRate: float
+    displacementRate: float # "AI Recommendation Frequency" 0-100
     strengths: List[str]
     weaknesses: List[str]
     winningCategory: str = ""
     claimsOwned: List[str] = []
-    missingAssertions: List[dict | str] = []
+    missingAssertions: List[dict | str] = [] # Legacy field
+    remediationRecommendation: str = "" # Prescriptive advice
 
 class CompetitorResponse(BaseModel):
     competitors: List[CompetitorProfile]
@@ -47,48 +48,39 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         if auth.get("orgId") != org_id:
             raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
-    # 🛡️ DEMO MOCKING (P0): Deterministic competitor metrics for Sight Spectrum
+    # 🛡️ DEMO MOCKING (P0): Prescriptive metrics for iluminr (Cyber Resilience)
     if org_id == "demo_org_id" and settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False):
         return {
             "competitors": [
                 {
-                    "name": "Accenture AI",
-                    "displacementRate": 14.5,
-                    "strengths": ["Scale", "Brand"],
-                    "weaknesses": ["Precision", "Niche Focus"],
-                    "winningCategory": "Enterprise transformation",
-                    "buyerQueries": ["Who leads enterprise AI transformation?", "Top Fortune 500 analytics partners"],
-                    "claimsOwned": ["global delivery scale", "board-level transformation credibility"],
-                    "missingAssertions": [
-                        {"assertion": "Fortune 500 transformation proof", "gapConfidence": 88, "somImpact": 12},
-                        {"assertion": "enterprise operating model depth", "gapConfidence": 74, "somImpact": 8}
-                    ]
+                    "name": "Immersive Labs",
+                    "displacementRate": 38.0,
+                    "strengths": ["Leader", "Platform Depth"],
+                    "weaknesses": ["Legacy Focus", "Slower Setup"],
+                    "winningCategory": "Cyber Resilience Platforms",
+                    "buyerQueries": ["Best cyber resilience training platform", "Enterprise cyber crisis simulation"],
+                    "claimsOwned": ["market-leading platform depth", "integrated workforce resilience"],
+                    "remediationRecommendation": "AI systems frequently associate 'workforce resilience' with Immersive Labs. Strengthening messaging around instant tabletop deployment could improve AI recommendation rates for iluminr."
                 },
                 {
-                    "name": "Tiger Analytics",
-                    "displacementRate": 9.2,
-                    "strengths": ["Specialized Data", "Delivery"],
-                    "weaknesses": ["Agentic Strategy", "Integration"],
-                    "winningCategory": "CPG and retail analytics",
-                    "buyerQueries": ["Best CPG analytics partner", "Retail data science firms"],
-                    "claimsOwned": ["domain expertise in retail and CPG", "analytics delivery depth"],
-                    "missingAssertions": [
-                        {"assertion": "industry-specific transformation proof", "gapConfidence": 81, "somImpact": 9},
-                        {"assertion": "partner ecosystem strength", "gapConfidence": 65, "somImpact": 6}
-                    ]
+                    "name": "RangeForce",
+                    "displacementRate": 24.0,
+                    "strengths": ["Challenger", "Skills-based"],
+                    "weaknesses": ["Scenario Breadth", "Executive UI"],
+                    "winningCategory": "Hands-on Cyber Training",
+                    "buyerQueries": ["Skills-based cyber training", "Hands-on incident response labs"],
+                    "claimsOwned": ["deep blue-team labs", "individual skill tracking"],
+                    "remediationRecommendation": "RangeForce wins on 'skills validation'. Benchmarking iluminr's impact on executive decision-making speed (vs technical skills) will decouple these options in AI shortlists."
                 },
                 {
-                    "name": "Mu Sigma",
-                    "displacementRate": 7.4,
-                    "strengths": ["Data Science", "Cost"],
-                    "weaknesses": ["Product Fidelity", "Innovation"],
-                    "winningCategory": "Decision science at scale",
-                    "buyerQueries": ["Decision intelligence at scale", "Managed analytics services"],
-                    "claimsOwned": ["decision sciences depth", "large-scale analytics operations"],
-                    "missingAssertions": [
-                        {"assertion": "decision intelligence narrative", "gapConfidence": 72, "somImpact": 7},
-                        {"assertion": "scalable managed-services language", "gapConfidence": 69, "somImpact": 5}
-                    ]
+                    "name": "CrisisSim",
+                    "displacementRate": 18.0,
+                    "strengths": ["Niche", "Scenario Logic"],
+                    "weaknesses": ["Scale", "Global Support"],
+                    "winningCategory": "Alternative Crisis Simulations",
+                    "buyerQueries": ["Crisis tabletop software alternatives", "Boutique cyber simulation providers"],
+                    "claimsOwned": ["bespoke scenario logic", "high-touch delivery"],
+                    "remediationRecommendation": "CrisisSim is viewed as a high-touch alternative. iluminr can unseat this by emphasizing its automated, globally scalable scenario generation."
                 }
             ]
         }
@@ -166,37 +158,37 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         
     try:
         client = OpenAI(api_key=api_key)
-        prompt = f"""You are a B2B enterprise AI visibility analyst. A company called '{org_name}' wants to understand why AI recommendation engines shortlist competitors instead of them.
-
+        prompt = f"""You are a B2B enterprise AI Analyst. A company called '{org_name}' wants to understand why AI recommendation engines shortlist competitors instead of them.
+ 
 Here is '{org_name}'s actual business context:
-
+ 
 <Context>
-{manifest_content[:4000]}
+{manifest_content[:6000]}
 </Context>
-
+ 
 Identify exactly 3 real-world competitor companies that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.
-CRITICAL PEER-MATCHING RULE: You must analyze the scale, geographic focus, and service niche of '{org_name}' from the context. Select competitors that are actual peer alternatives (similar revenue bucket, headcount, or target market size). DO NOT simply list Tier-1 industry giants (e.g., do not compare a $10M boutique to a $30B global systems integrator like Accenture unless the context explicitly proves they compete for the exact same enterprise accounts).
-If the context does not explicitly mention competitors, infer the top 3 established peer competitors in their specific market tier based on the described services.
-Do NOT invent fake company names; use actual companies in this specific market.
+
+CRITICAL PEER-MATCHING RULES:
+1. Analyze the EXACT service niche. (e.g., if they do 'Cyber Crisis Simulation', do not match with 'Process Simulation' or 'Healthcare Logistics').
+2. Match the market tier: Compare boutique to boutique, or enterprise platform to enterprise platform.
+3. Use ACTUAL, real-world companies. Do not hallucinate.
 
 For each competitor, return a JSON object with:
 - 'name': competitor company name
-- 'displacementRate': float 0.0-25.0 — how often they are recommended over {org_name}
-- 'strengths': array of 1-2 words (their AI-perceived advantage)
-- 'weaknesses': array of 1-2 words (their AI-perceived weakness)
+- 'displacementRate': float 0.0-100.0 — This is the 'AI Recommendation Frequency'. How often is this specific rival mentioned in AI responses compared to {org_name}?
+- 'strengths': array of 1-2 words (their AI-perceived advantages)
+- 'weaknesses': array of 1-2 words (their AI-perceived weaknesses)
 - 'winningCategory': the buyer-intent theme where they consistently outrank {org_name}
 - 'buyerQueries': array of 2 example buyer questions this competitor is winning on
 - 'claimsOwned': array of 2 short proof points AI associates with this competitor
-- 'missingAssertions': array of 2 objects, each with:
-    - 'assertion': short string — what {org_name} is NOT saying clearly that this competitor IS saying
-    - 'gapConfidence': integer 0-100 — how confident the model is that this is a real positioning gap (based on context)
-    - 'somImpact': integer 1-20 — estimated SoM percentage points {org_name} could gain by closing this gap
+- 'remediationRecommendation': A short, PRESCRIPTIVE sentence telling {org_name} exactly what to change in their messaging to unseat this competitor. 
+  Example: "AI systems associate 'predictive analytics' with [Competitor]; {org_name} must restate its 'real-time simulation results' to differentiate."
 
 Return ONLY valid JSON: {{"competitors": [...]}}"""
 
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="gpt-4o-mini",
+            model="gpt-4o",
             response_format={"type": "json_object"},
             temperature=0.2
         )

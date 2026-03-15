@@ -68,7 +68,7 @@ interface BrandHealthCertificateProps {
         geoMethod?: string;
         recommendation: string;
     };
-    competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[]; winningCategory?: string; claimsOwned?: string[]; missingAssertions?: string[] }[];
+    competitors?: { name: string; displacementRate: number; strengths: string[]; weaknesses: string[]; winningCategory?: string; claimsOwned?: string[]; missingAssertions?: string[]; remediationRecommendation?: string }[];
     activeContextName?: string;
     clusterInsights?: QueryClusterInsight[];
     remediationRecommendations?: RemediationRecommendation[];
@@ -718,18 +718,26 @@ export default function BrandHealthCertificate({
                                                     <div key={competitor.name} className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3">
                                                         <div className="flex items-center justify-between mb-1">
                                                             <span className="text-sm font-medium text-slate-900 dark:text-white">{competitor.name}</span>
-                                                            <span className="text-sm font-semibold text-rose-500">{competitor.displacementRate}%</span>
-                                                        </div>
-                                                        <p className="text-xs text-slate-500">
-                                                            Strengths: {competitor.strengths.join(", ") || "N/A"} · Weaknesses: {competitor.weaknesses.join(", ") || "N/A"}
-                                                        </p>
-                                                        {(competitor.winningCategory || competitor.claimsOwned?.length || competitor.missingAssertions?.length) && (
-                                                            <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                                                             <div className="group relative text-right">
+                                                                <span className="text-sm font-semibold text-rose-500 block">{competitor.displacementRate}%</span>
+                                                                <span className="text-[8px] text-slate-400 dark:text-slate-500 uppercase tracking-tighter">AI Rec. Frequency</span>
+                                                             </div>
+                                                         </div>
+                                                         <p className="text-xs text-slate-500 mb-2">
+                                                             Strengths: {competitor.strengths.join(", ") || "N/A"} · Weaknesses: {competitor.weaknesses.join(", ") || "N/A"}
+                                                         </p>
+                                                         {competitor.remediationRecommendation && (
+                                                            <div className="mb-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10">
+                                                                <p className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Actionable Remediation</p>
+                                                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                                                                    "{competitor.remediationRecommendation}"
+                                                                </p>
+                                                            </div>
+                                                         )}
+                                                                  <div className="mt-2 space-y-1 text-[11px] text-slate-500">
                                                                 <p>Winning category: {competitor.winningCategory || "Not available"}</p>
                                                                 <p>Claims owned: {(competitor.claimsOwned || []).join(", ") || "Not available"}</p>
-                                                                <p>Missing assertions: {(competitor.missingAssertions || []).join(", ") || "Not available"}</p>
-                                                            </div>
-                                                        )}
+                                                             </div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -757,9 +765,9 @@ export default function BrandHealthCertificate({
                                         ? <CheckCircle2 className="w-5 h-5 mx-auto mb-2 text-emerald-500 dark:text-emerald-400" />
                                         : <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-amber-500 dark:text-amber-400" />
                                     }
-                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Displacement Risk</p>
-                                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{hallucinationCount}/{results.length || "—"}</p>
-                                    <p className="text-[9px] text-slate-500">models affected</p>
+                                                                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">AI Rec. Proximity</p>
+                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{hallucinationCount}/{results.length || "—"}</p>
+                                     <p className="text-[9px] text-slate-500">models affected</p>
                                 </div>
                             </div>
 

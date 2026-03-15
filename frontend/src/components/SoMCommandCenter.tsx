@@ -50,13 +50,14 @@ interface GapAssertion {
 
 interface CompetitorInsight {
     name: string;
-    displacementRate: number;
+    displacementRate: number; // AI Recommendation Frequency
     strengths: string[];
     weaknesses: string[];
     winningCategory?: string;
     buyerQueries?: string[];  // example buyer questions this competitor is winning on
     claimsOwned?: string[];
-    missingAssertions?: (GapAssertion | string)[];  // supports both old string[] and new object[] format
+    missingAssertions?: (GapAssertion | string)[];  // Legacy
+    remediationRecommendation?: string; // New Prescriptive Field
 }
 
 interface ManifestSnapshot {
@@ -603,7 +604,13 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
         const weakLine = weakest
             ? `The clearest gap is ${weakest.category.toLowerCase()}, where the system is missing claims around ${weakest.missingClaims.slice(0, 2).join(" and ")}.`
             : "The weakest enterprise query cluster will appear after the batch analysis runs.";
-        return `${strongLine} ${weakLine} ${competitorLine} ${geoLine}`;
+        
+        // Use remediation recommendations from competitors if available
+        const topRemediation = topCompetitor?.remediationRecommendation 
+            ? ` ${topCompetitor.remediationRecommendation}` 
+            : "";
+
+        return `${strongLine} ${weakLine}${topRemediation} ${competitorLine} ${geoLine}`;
     }, [analysisSubject, competitorRanking, winningClusters, weakClusters, seoResult]);
 
     const remediationNarrative = useMemo(() => {
@@ -644,11 +651,12 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                 body: JSON.stringify({
                     orgId: organization.id,
                     prompts: [
+                        `best cyber resilience training platform`,
+                        `cyber crisis simulation tools`,
+                        `cyber tabletop exercise software`,
                         `Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`,
                         `What are the key criteria enterprise buyers use to shortlist a partner like ${analysisSubject}?`,
-                        `How does ${analysisSubject} differentiate from other established players in its market category?`,
-                        `Which partner is best for large-scale enterprise transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`,
-                        `What specific proof points and outcomes does ${analysisSubject} offer that enterprise decision-makers prioritize?`
+                        `How does ${analysisSubject} differentiate from other established players in its market category?`
                     ],
                     manifestVersion: activeManifestVersion
                 })
@@ -863,7 +871,7 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                 <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Top Competitor Pressure</p>
                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</p>
-                    <p className="text-xs text-rose-500 mt-2">{dashboardKpis.topCompetitorPressure}% displacement pressure</p>
+                    <p className="text-xs text-rose-500 mt-2">{dashboardKpis.topCompetitorPressure}% AI Rec. Frequency</p>
                 </div>
                 <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Weak Clusters</p>
@@ -1250,9 +1258,29 @@ export default function SoMCommandCenter({ setActiveView: _setActiveView }: { se
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-2xl font-light text-rose-500">{competitor.displacementRate}%</p>
-                                                    <p className="text-[10px] text-slate-500">displacement rate</p>
+                                                    <div className="group relative">
+                                                        <p className="text-[10px] text-slate-500 cursor-help border-b border-dotted border-slate-400">AI Rec. Frequency</p>
+                                                        <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                                                            Percentage of competitive simulations where this rival was ranked ahead of {analysisSubject} by independent models.
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+
+                                            {/* Prescriptive Remediation */}
+                                            {competitor.remediationRecommendation && (
+                                                <div className="px-5 pb-4">
+                                                    <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-4">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <Sparkles className="w-3 h-3 text-indigo-400" />
+                                                            <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold">Actionable Remediation</p>
+                                                        </div>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-100 leading-relaxed font-medium">
+                                                            {competitor.remediationRecommendation}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Buyer queries this competitor wins */}
                                             {competitor.buyerQueries && competitor.buyerQueries.length > 0 && (
