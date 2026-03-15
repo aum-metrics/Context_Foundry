@@ -317,7 +317,7 @@ test.describe("Authenticated enterprise workspace", () => {
 
     // Use specific headings now that we are on a unified page
     await expect(page.getByRole("heading", { name: "Ingest Source Material" })).toBeVisible();
-    await expect(page.getByText("Upload or link your company's verified content")).toBeVisible();
+    await expect(page.getByText("Upload raw marketing PDFs, documentation, or enter URLs")).toBeVisible();
 
     await expect(page.getByRole("heading", { name: "Review AI Manifest" })).toBeVisible();
     await expect(page.getByText("Agent Manifest Generator")).toBeVisible();
