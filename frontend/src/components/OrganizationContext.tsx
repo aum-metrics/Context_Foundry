@@ -164,8 +164,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
             try {
                 let currentOrgUser: OrgUser;
 
-                const hasMockStorage = typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com";
-                const isMockMode = isLocalMockMode() || hasMockStorage;
+                const isMockMode = isLocalMockMode();
                 if (isMockMode) {
                     const mockSession = getLocalMockSession();
                     currentOrgUser = {

@@ -19,8 +19,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const isPublicPath = PUBLIC_PATHS.includes(normalizedPathname) || PUBLIC_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix));
 
     useEffect(() => {
-        const hasMockStorage = typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com";
-        const isMockMode = (isLocalHostRuntime() && isLocalMockMode()) || hasMockStorage;
+        const isMockMode = isLocalMockMode();
         const { email, token, orgId } = getLocalMockSession();
         const isDemoUser = email === "demo@demo.com" && isMockMode;
 

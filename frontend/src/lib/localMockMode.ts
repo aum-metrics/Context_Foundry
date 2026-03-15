@@ -6,6 +6,10 @@ export function isLocalHostRuntime(): boolean {
 }
 
 export function isLocalMockMode(): boolean {
+  // Allow demo account mock mode even in production
+  if (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com") {
+    return true;
+  }
   if (!isLocalHostRuntime()) return false;
   const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
   const hasMockFirebaseConfig = !firebaseApiKey || firebaseApiKey === "mock-key-to-prevent-crash";
