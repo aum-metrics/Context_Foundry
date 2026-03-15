@@ -96,6 +96,7 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
     # 🛡️ DEMO MOCKING: Allow demo user access to demo org even in production
+    from core.config import settings
     if uid == "demo_uid" and target_org_id == "demo_org_id":
         return True
     if settings.ENV == "development" and uid in ["mock_uid_dev", "mock-dev-uid"] and target_org_id == "mock-org-123":
