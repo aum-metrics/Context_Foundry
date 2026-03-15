@@ -2,7 +2,11 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis } from "recharts";
-import { TrendingUp, Search, Globe, Activity, ShieldAlert, Lock, FilePenLine, BriefcaseBusiness, Sparkles, Zap, Award } from "lucide-react";
+import { 
+    Zap, Activity, Globe, ShieldAlert, Sparkles, TrendingUp, Award, 
+    ArrowRight, Copy, Check, Download, MousePointer2, BriefcaseBusiness,
+    FilePenLine, FileText, Lock
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { auth } from "../lib/firebase";
@@ -560,9 +564,11 @@ export default function SoMCommandCenter({
                                 </div>
                                 <div className="flex items-end gap-2 mb-1">
                                     <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{dashboardKpis.somAverage}%</h3>
-                                    <span className={`text-xs font-medium mb-1 ${remediationSnapshot && remediationSnapshot.deltaSom >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        {remediationSnapshot && (remediationSnapshot.deltaSom >= 0 ? `+${remediationSnapshot.deltaSom}` : remediationSnapshot.deltaSom)}
-                                    </span>
+                                    {remediationSnapshot && !remediationSnapshot.isDemoBypass && (
+                                        <span className={`text-xs font-medium mb-1 ${remediationSnapshot.deltaSom >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                            {remediationSnapshot.deltaSom >= 0 ? `+${remediationSnapshot.deltaSom}` : remediationSnapshot.deltaSom}
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-xs text-slate-500">Narrative share across LLM families</p>
                                 
@@ -591,35 +597,37 @@ export default function SoMCommandCenter({
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                                     <div className="p-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-[10px] shadow-2xl w-48 border border-white/10 ring-4 ring-black/5">
                                         <p className="font-bold mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3 text-rose-400" /> Defining ARF</p>
-                                        <p className="leading-relaxed opacity-80 italic">"How often AI prefers this rival over you." {dashboardKpis.topCompetitorPressure}% means out of 100 simulations, the competitor won preference in {dashboardKpis.topCompetitorPressure}.</p>
+                                        <p className="leading-relaxed opacity-80 italic">How often AI prefers {dashboardKpis.topCompetitorName} over you in buyer-intent scenarios.</p>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all text-emerald-500">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Winning Narrative</p>
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                                        <Award className="w-4 h-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-end gap-2 mb-1">
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white truncate max-w-[150px]">
+                                        {queryClusterInsights && queryClusterInsights.length > 0 ? queryClusterInsights[0].category : "None"}
+                                    </h3>
+                                </div>
+                                <p className="text-xs text-slate-500">Highest brand authority cluster</p>
                             </div>
 
                             <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all">
                                 <div className="flex items-center justify-between mb-4">
                                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Visibility Gaps</p>
                                     <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-                                        <Search className="w-4 h-4" />
+                                        <TrendingUp className="w-4 h-4 rotate-180" />
                                     </div>
                                 </div>
                                 <div className="flex items-end gap-2 mb-1">
-                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{dashboardKpis.weakClusterCount}</h3>
+                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{weakClusters.length}</h3>
                                 </div>
                                 <p className="text-xs text-slate-500">Buyer intent clusters requiring action</p>
-                            </div>
-
-                            <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all text-emerald-500">
-                                <div className="flex items-center justify-between mb-4">
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Winning Narrative</p>
-                                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                                        <TrendingUp className="w-4 h-4" />
-                                    </div>
-                                </div>
-                                <div className="mb-1">
-                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white truncate">{dashboardKpis.winningCluster}</h3>
-                                </div>
-                                <p className="text-xs text-slate-500">Highest brand authority identified</p>
                             </div>
                         </>
                     )}
@@ -660,7 +668,7 @@ export default function SoMCommandCenter({
                                     className="px-8 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center gap-3 shadow-xl shadow-indigo-500/30 transition-all active:scale-95"
                                 >
                                     <FilePenLine className="w-5 h-5" />
-                                    Download Brand Health Certificate
+                                    View Brand Health Report
                                 </button>
                                 <button
                                     onClick={runBatchStabilityCheck}
@@ -887,9 +895,18 @@ export default function SoMCommandCenter({
             {(view === "all" || view === "action") && (
                 <div className="space-y-6">
                      <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <div className="flex items-center gap-2 mb-5">
-                            <FilePenLine className="w-4 h-4 text-fuchsia-500" />
-                            <h2 className="text-lg font-medium text-slate-900 dark:text-white font-bold">Step 3: Action Center</h2>
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <FilePenLine className="w-4 h-4 text-fuchsia-500" />
+                                <h2 className="text-lg font-medium text-slate-900 dark:text-white font-bold">Step 3: Action Center</h2>
+                            </div>
+                            <button
+                                onClick={() => setIsCertificateOpen(true)}
+                                className="px-4 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-all flex items-center gap-2"
+                            >
+                                <FileText className="w-4 h-4" />
+                                View Full Report
+                            </button>
                         </div>
                         {remediationRecommendations.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">

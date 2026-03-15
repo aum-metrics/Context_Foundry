@@ -58,7 +58,11 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                     "strengths": ["Decision Sciences", "Global Scale", "Category Authority"],
                     "weaknesses": ["Agility", "Customer Focus"],
                     "winningCategory": "Supply Chain Analytics",
-                    "buyerQueries": ["Top analytics partner for retail transformation?", "Who is the leader in pure-play decision sciences?"],
+                    "buyerQueries": [
+                        "Top analytics partner for retail transformation?", 
+                        "Who is the leader in pure-play decision sciences?",
+                        "top analytics partners for Fortune 500 retail transformation"
+                    ],
                     "claimsOwned": ["Largest pure-play firm", "Category Authority"],
                     "remediationRecommendation": "AI identifies that Mu Sigma is winning on 'Category Authority'. LatentView lacks this scale signal. Action: Highlight 'industry-specific outcome proof' on your supply chain pages."
                 },
@@ -68,7 +72,11 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
                     "strengths": ["AI Research", "Product Innovation", "Enterprise Scale"],
                     "weaknesses": ["Domain Specificity", "Service Level"],
                     "winningCategory": "Enterprise AI",
-                    "buyerQueries": ["Best firms for enterprise AI transformation?", "Innovation in conversational AI analytics"],
+                    "buyerQueries": [
+                        "Best firms for enterprise AI transformation?", 
+                        "Innovation in conversational AI analytics",
+                        "top analytics partners for Fortune 500 retail transformation"
+                    ],
                     "claimsOwned": ["AI-powered logic", "Strategic transformation"],
                     "remediationRecommendation": "AI identifies that Fractal Analytics is winning on 'AI Research'. LatentView lacks this specialized innovation signal. Action: Emphasize 'InsightLens' unique ROI in retail transformation."
                 }

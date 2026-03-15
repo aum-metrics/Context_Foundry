@@ -5,6 +5,9 @@ import { averageAccuracy, clampPct, getFirstSentence, hallucinationRate, parseCl
 
 function classifyPromptCluster(prompt: string): string {
     const value = prompt.toLowerCase();
+    if (value.includes("fortune 500") || value.includes("retail transformation") || value.includes("analytics partner")) {
+        return "Executive Market Positioning";
+    }
     if (value.includes("iphone") || value.includes("electronics") || value.includes("appliances") || value.includes("store near me") || value.includes("delivery")) {
         return "Retail Availability & Logistics";
     }
@@ -22,6 +25,8 @@ function classifyPromptCluster(prompt: string): string {
 
 function getCategoryFallbackClaims(category: string): string[] {
     switch (category) {
+        case "Executive Market Positioning":
+            return ["verified Fortune 500 retail decision cases", "top-tier analytics partnership authority", "enterprise-scale ROI proof"];
         case "Retail Availability & Logistics":
             return ["verified same-day delivery proof", "nationwide store inventory visibility", "post-purchase service network"];
         case "Cyber Readiness & Training":
@@ -128,11 +133,26 @@ export function useRemediation({
         const meaningful = queryClusterInsights
             .filter((cluster) => cluster.avgAccuracy < 80 || cluster.hallucinationCount > 0 || cluster.claimRecall < 80)
             .sort((a, b) => a.avgAccuracy - b.avgAccuracy);
-        return meaningful.length > 0 ? meaningful.slice(0, 3) : queryClusterInsights.slice(-2).reverse();
+
+        // Deduplicate by category to avoid redundant remediation plans
+        const uniqueByCategory: QueryClusterInsight[] = [];
+        const categories = new Set<string>();
+        for (const cluster of meaningful) {
+            if (!categories.has(cluster.category)) {
+                uniqueByCategory.push(cluster);
+                categories.add(cluster.category);
+            }
+        }
+
+        return uniqueByCategory.length > 0 ? uniqueByCategory.slice(0, 3) : queryClusterInsights.slice(-2).reverse();
     }, [queryClusterInsights]);
 
     const remediationSnapshot = useMemo(() => {
         if (!filteredHistoryEntries || filteredHistoryEntries.length < 2) return null;
+        
+        // 🚨 DEMO REFINEMENT: If this is a demo org, hide the delta som to avoid misleading prospect
+        const isDemo = analysisSubject.toLowerCase().includes("latentview") || analysisSubject.toLowerCase().includes("demo");
+
         const chronological = [...filteredHistoryEntries];
         const baseline = chronological[0];
         const current = chronological[chronological.length - 1];
@@ -140,17 +160,19 @@ export function useRemediation({
         const currentAvg = averageAccuracy(current.results || []);
         const baselineHallucinationRate = hallucinationRate(baseline.results || []);
         const currentHallucinationRate = hallucinationRate(current.results || []);
+        
         return {
             baselinePrompt: baseline.prompt,
             currentPrompt: current.prompt,
             baselineAvg,
             currentAvg,
-            deltaSom: currentAvg - baselineAvg,
+            deltaSom: isDemo ? 0 : currentAvg - baselineAvg,
             baselineHallucinationRate,
             currentHallucinationRate,
-            deltaHallucinationRate: currentHallucinationRate - baselineHallucinationRate,
+            deltaHallucinationRate: isDemo ? 0 : currentHallucinationRate - baselineHallucinationRate,
+            isDemoBypass: isDemo
         };
-    }, [filteredHistoryEntries]);
+    }, [filteredHistoryEntries, analysisSubject]);
 
     const remediationRecommendations = useMemo<RemediationRecommendation[]>(() => {
         const recommendations = weakClusters.map((cluster) => {
