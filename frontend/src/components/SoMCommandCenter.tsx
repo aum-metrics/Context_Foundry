@@ -30,10 +30,14 @@ function detectVertical(name: string): string {
 
 export default function SoMCommandCenter({ 
     setActiveView: _setActiveView,
-    view = "all" 
+    view = "all",
+    showReport = false,
+    onReportClose
 }: { 
     setActiveView?: (view: string) => void,
-    view?: "all" | "analyze" | "intelligence" | "action" 
+    view?: "all" | "analyze" | "intelligence" | "action",
+    showReport?: boolean,
+    onReportClose?: () => void
 }) {
     const { organization, refreshKey, activeManifestVersion, activeContextName } = useOrganization();
     const { models } = useModelCatalog();
@@ -48,6 +52,15 @@ export default function SoMCommandCenter({
     const [seoLoading, setSeoLoading] = useState(false);
     const [seoResult, setSeoResult] = useState<SEOResult | null>(null);
     const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+
+    useEffect(() => {
+        if (showReport) setIsCertificateOpen(true);
+    }, [showReport]);
+
+    const handleCloseCertificate = useCallback(() => {
+        setIsCertificateOpen(false);
+        if (onReportClose) onReportClose();
+    }, [onReportClose]);
     
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const analysisSubject = activeContextName || organization?.name || "the selected context";
@@ -960,7 +973,7 @@ export default function SoMCommandCenter({
                         organizationName={analysisSubject}
                         asovScore={avgScore}
                         driftRate={batchResult?.driftRate || 0}
-                        onClose={() => setIsCertificateOpen(false)}
+                        onClose={handleCloseCertificate}
                         modelResults={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.results : undefined}
                         lastPrompt={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.prompt : undefined}
                         seoResult={seoResult || undefined}

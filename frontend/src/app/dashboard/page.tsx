@@ -12,6 +12,7 @@ import SSOSettings from "@/components/SSOSettings";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { auth } from "@/lib/firebase";
 import { useSearchParams } from "next/navigation";
+import { isLocalMockMode } from "@/lib/localMockMode";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import SemanticIngestion from "@/components/SemanticIngestion";
 import AgentManifest from "@/components/AgentManifest";
@@ -32,6 +33,7 @@ export default function AUMContextFoundry() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeFeatureName, setUpgradeFeatureName] = useState("Premium Features");
   const [activeStep, setActiveStep] = useState("ingest");
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const { theme, toggleTheme } = useTheme();
   const { orgUser, organization, activeOrgId, isPlatformAdmin, setActiveOrgId, analysisContexts, activeManifestVersion, activeContextName, setActiveManifestVersion, renameOrganization } = useOrganization();
@@ -252,9 +254,16 @@ export default function AUMContextFoundry() {
           )}
           <button
             onClick={async () => {
-              if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {
-                localStorage.removeItem("mock_auth_user"); window.dispatchEvent(new Event("mock_auth_change"));
-              } else { try { await auth.signOut(); } catch (error) { console.error("Failed to sign out", error); } }
+              if (isLocalMockMode()) {
+                localStorage.removeItem("mock_auth_user");
+                window.dispatchEvent(new Event("mock_auth_change"));
+              } else {
+                try {
+                  await auth.signOut();
+                } catch (error) {
+                  console.error("Failed to sign out", error);
+                }
+              }
             }}
             className="flex items-center text-xs px-2.5 py-2 w-full rounded-lg text-slate-500 dark:text-slate-400 hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
           >
@@ -350,7 +359,11 @@ export default function AUMContextFoundry() {
               onUnlock={() => { setUpgradeFeatureName("Competitor Rankings & Prescriptive Remediation"); setIsUpgradeModalOpen(true); }}
               lockedMessage="Upgrade to Growth to unlock continuous Share of Model tracking, competitor displacement rates, and prescriptive remediation copy."
             >
-              <SoMCommandCenter setActiveView={() => {}} />
+              <SoMCommandCenter 
+                setActiveView={() => {}} 
+                showReport={isReportOpen}
+                onReportClose={() => setIsReportOpen(false)}
+              />
               
               <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5">
                 <div className="flex items-center justify-between mb-4">
@@ -387,9 +400,12 @@ export default function AUMContextFoundry() {
                   </div>
                   <button 
                     onClick={() => {
-                      if (organization?.subscriptionTier === "explorer") { setUpgradeFeatureName("Brand Health PDF Report"); setIsUpgradeModalOpen(true); return; }
-                      // The report button is inside SoMCommandCenter usually, but we can expose it here or link it.
-                      // For now, guide the user.
+                      if (organization?.subscriptionTier === "explorer") { 
+                        setUpgradeFeatureName("Brand Health PDF Report"); 
+                        setIsUpgradeModalOpen(true); 
+                        return; 
+                      }
+                      setIsReportOpen(true);
                     }}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all shadow-lg shadow-emerald-500/20 shrink-0"
                   >
