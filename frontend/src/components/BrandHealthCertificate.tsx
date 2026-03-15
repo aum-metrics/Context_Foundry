@@ -429,7 +429,7 @@ export default function BrandHealthCertificate({
             writeDivider();
 
             // 5. QUERY CLUSTERS
-            if (clusterInsights.length > 0) {
+            if (clusterInsights && clusterInsights.length > 0) {
                 writeHeading("Winning and Losing Query Clusters");
                 clusterInsights.slice(0, 5).forEach((cluster) => {
                     ensureSpace(35);
@@ -528,7 +528,7 @@ export default function BrandHealthCertificate({
 
             // 9. ENHANCED REMEDIATION PLAN
             writeHeading("Prescriptive Remediation Plan", [99, 102, 241]);
-            const recs = remediationRecommendations.length > 0 ? remediationRecommendations : [];
+            const recs = (remediationRecommendations && remediationRecommendations.length > 0) ? remediationRecommendations : [];
             if (recs.length === 0) {
                 writeBody("Simulation data implies baseline grounding. No immediate remediation actions generated.");
             } else {
