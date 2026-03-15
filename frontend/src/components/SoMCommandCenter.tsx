@@ -860,6 +860,19 @@ export default function SoMCommandCenter({
 
     return (
         <div className={`w-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'ring-2 ring-rose-500/20 ring-inset rounded-2xl p-1' : ''}`}>
+            {/* Phase 1: ANALYZE (Ingestion & Content Definition) */}
+            {view === "analyze" && (
+                <div className="space-y-6">
+                    {/* Placeholder for Analyze View components - assuming they exist or need to be grouped here */}
+                    <div className="rounded-2xl p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 text-center">
+                        <Activity className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                        <h3 className="text-xl font-medium text-slate-900 dark:text-white mb-2">Analysis Engine Active</h3>
+                        <p className="text-slate-500 max-w-md mx-auto">Upload your website URL or documentation to begin the automated enterprise buyer-intent audit.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Phase 2: INTELLIGENCE (Leaderboard & Clusters) */}
             {(view === "all" || view === "intelligence") && (
                 <>
                     {isCriticalDrift && (
@@ -872,10 +885,10 @@ export default function SoMCommandCenter({
                     <div className="flex items-end gap-2 group relative">
                         <span className="text-3xl font-light text-slate-900 dark:text-white cursor-help border-b border-dotted border-slate-300 dark:border-slate-700">{dashboardKpis.lcrsAverage || "—"}</span>
                         {dashboardKpis.lcrsAverage > 0 && <span className="text-slate-500 mb-1">%</span>}
-                        <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
-                            <p className="font-semibold mb-1">AI Share of Model (SoM)</p>
-                            <p className="text-slate-300">The percentage of AI responses that prioritize your brand's unique claims over competitors across all audited buyer-intent queries.</p>
-                        </div>
+                                <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
+                                    <p className="font-semibold mb-1">AI Share of Model (SoM)</p>
+                                    <p className="text-slate-300">The metric of brand preference. A 42% SoM means that in 42 out of 100 competitive simulations, the AI explicitly prioritized your brand's unique claims over rivals.</p>
+                                </div>
                     </div>
                     <p className="text-xs text-slate-500 mt-2">{batchResult ? "Batch-calculated enterprise score" : "Derived from current simulation history"}</p>
                 </div>
@@ -891,10 +904,10 @@ export default function SoMCommandCenter({
                         <p className="text-xs text-rose-500 mt-2 cursor-help font-medium">
                             {dashboardKpis.topCompetitorPressure}% AI Rec. Frequency
                         </p>
-                        <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
-                            <p className="font-semibold mb-1">AI Recommendation Frequency</p>
-                            <p className="text-slate-300">{dashboardKpis.topCompetitorPressure}% of tested buyer queries resulted in the AI specifically recommending this rival over your brand.</p>
-                        </div>
+                                <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
+                                    <p className="font-semibold mb-1">AI Recommendation Frequency</p>
+                                    <p className="text-slate-300">The "Risk Level". An 85% frequency means this rival was recommended over you in 17 out of 20 tested buyer-intent queries.</p>
+                                </div>
                     </div>
                 </div>
                 <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
@@ -1435,6 +1448,7 @@ export default function SoMCommandCenter({
                 </>
             )}
 
+            {/* Phase 3: ACTION (Prescriptive Remediation) */}
             {(view === "all" || view === "action") && (
                 <div className="space-y-6">
                      <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">

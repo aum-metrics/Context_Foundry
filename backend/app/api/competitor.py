@@ -181,8 +181,10 @@ For each competitor, return a JSON object with:
 - 'winningCategory': the buyer-intent theme where they consistently outrank {org_name}
 - 'buyerQueries': array of 2 example buyer questions this competitor is winning on
 - 'claimsOwned': array of 2 short proof points AI associates with this competitor
-- 'remediationRecommendation': A short, PRESCRIPTIVE sentence telling {org_name} exactly what to change in their messaging to unseat this competitor. 
-  Example: "AI systems associate 'predictive analytics' with [Competitor]; {org_name} must restate its 'real-time simulation results' to differentiate."
+- 'remediationRecommendation': A short, HIGHLY PRESCRIPTIVE sentence telling {org_name} exactly what to change in their messaging to unseat this competitor. 
+  MANDATORY FORMAT: "AI associates [SPECIFIC SIGNAL] with [COMPETITOR]. {org_name} lacks this signal. Action: [ACTUAL MESSAGING FIX]."
+  Bad Example: "Clarify buyer-facing claims."
+  Good Example: "AI associates 'nationwide service network' with Reliance Digital. {org_name} lacks this coverage signal. Action: Add 'Supported by Tata's 24/7 service infrastructure' to your landing page."
 
 Return ONLY valid JSON: {{"competitors": [...]}}"""
 
