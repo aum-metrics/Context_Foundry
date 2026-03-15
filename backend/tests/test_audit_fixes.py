@@ -31,7 +31,7 @@ def test_sso_timing_mask_lookup():
     from api.sso import router
     # Check if 'fake_timing_mask' is present in the source (should be empty)
     import os
-    sso_path = "backend/app/api/sso.py"
+    sso_path = "app/api/sso.py"
     if os.path.exists(sso_path):
         with open(sso_path, "r") as f:
             content = f.read()

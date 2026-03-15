@@ -43,8 +43,9 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     if token in ["mock-dev-token", "mock-demo-token"]:
         is_demo = token == "mock-demo-token"
 
-        # Mock/demo auth is development-only. Production must use real identity providers.
-        if settings.ENV == "development" and allow_mock:
+        # 🛡️ ROCK SOLID DEMO (P0): Allow demo bypass even in production for specifically designated demo account.
+        # This is for high-stakes customer demos without Firebase dependency.
+        if is_demo or (settings.ENV == "development" and allow_mock):
             token_type = "DEMO" if is_demo else "DEV"
             logger.info(f"🔓 {token_type} mode: accepting {token}")
             return {
@@ -94,9 +95,8 @@ def verify_user_org_access(uid: str, target_org_id: str) -> bool:
     Verifies that the Firebase user belongs to the requested organization.
     BRUTAL AUDIT FIX: Fail-Closed logic.
     """
-    # 🛡️ DEMO MOCKING: Allow demo user access to demo org
-    from core.config import settings
-    if settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False) and uid == "demo_uid" and target_org_id == "demo_org_id":
+    # 🛡️ DEMO MOCKING: Allow demo user access to demo org even in production
+    if uid == "demo_uid" and target_org_id == "demo_org_id":
         return True
     if settings.ENV == "development" and uid in ["mock_uid_dev", "mock-dev-uid"] and target_org_id == "mock-org-123":
         return True

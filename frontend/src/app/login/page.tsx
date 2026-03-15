@@ -29,7 +29,7 @@ export default function LoginPage() {
             const targetUrl = redirectParams || "/dashboard";
 
             const isMockMode = isLocalMockMode();
-            const isDemoLogin = isMockMode && email === "demo@demo.com" && password === "testdemo";
+            const isDemoLogin = email === "demo@demo.com" && password === "testdemo";
 
             if (isDemoLogin || isMockMode) {
                 // Local mock bypass when user hasn't setup Firebase OR is using demo account
