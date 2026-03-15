@@ -48,39 +48,29 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         if auth.get("orgId") != org_id:
             raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
-    # 🛡️ DEMO MOCKING (P0): Prescriptive metrics for iluminr (Cyber Resilience)
-    if org_id == "demo_org_id" and settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False):
+    # 🛡️ DEMO MOCKING (P0): Prescriptive metrics for LatentView Analytics
+    if org_id == "demo_org_id":
         return {
             "competitors": [
                 {
-                    "name": "Immersive Labs",
-                    "displacementRate": 38.0,
-                    "strengths": ["Leader", "Platform Depth"],
-                    "weaknesses": ["Legacy Focus", "Slower Setup"],
-                    "winningCategory": "Cyber Resilience Platforms",
-                    "buyerQueries": ["Best cyber resilience training platform", "Enterprise cyber crisis simulation"],
-                    "claimsOwned": ["market-leading platform depth", "integrated workforce resilience"],
-                    "remediationRecommendation": "AI systems frequently associate 'workforce resilience' with Immersive Labs. Strengthening messaging around instant tabletop deployment could improve AI recommendation rates for iluminr."
+                    "name": "Mu Sigma",
+                    "displacementRate": 88.0,
+                    "strengths": ["Decision Sciences", "Global Scale", "Category Authority"],
+                    "weaknesses": ["Agility", "Customer Focus"],
+                    "winningCategory": "Supply Chain Analytics",
+                    "buyerQueries": ["Top analytics partner for retail transformation?", "Who is the leader in pure-play decision sciences?"],
+                    "claimsOwned": ["Largest pure-play firm", "Category Authority"],
+                    "remediationRecommendation": "AI identifies that Mu Sigma is winning on 'Category Authority'. LatentView lacks this scale signal. Action: Highlight 'industry-specific outcome proof' on your supply chain pages."
                 },
                 {
-                    "name": "RangeForce",
-                    "displacementRate": 24.0,
-                    "strengths": ["Challenger", "Skills-based"],
-                    "weaknesses": ["Scenario Breadth", "Executive UI"],
-                    "winningCategory": "Hands-on Cyber Training",
-                    "buyerQueries": ["Skills-based cyber training", "Hands-on incident response labs"],
-                    "claimsOwned": ["deep blue-team labs", "individual skill tracking"],
-                    "remediationRecommendation": "RangeForce wins on 'skills validation'. Benchmarking iluminr's impact on executive decision-making speed (vs technical skills) will decouple these options in AI shortlists."
-                },
-                {
-                    "name": "CrisisSim",
-                    "displacementRate": 18.0,
-                    "strengths": ["Niche", "Scenario Logic"],
-                    "weaknesses": ["Scale", "Global Support"],
-                    "winningCategory": "Alternative Crisis Simulations",
-                    "buyerQueries": ["Crisis tabletop software alternatives", "Boutique cyber simulation providers"],
-                    "claimsOwned": ["bespoke scenario logic", "high-touch delivery"],
-                    "remediationRecommendation": "CrisisSim is viewed as a high-touch alternative. iluminr can unseat this by emphasizing its automated, globally scalable scenario generation."
+                    "name": "Fractal Analytics",
+                    "displacementRate": 72.0,
+                    "strengths": ["AI Research", "Product Innovation", "Enterprise Scale"],
+                    "weaknesses": ["Domain Specificity", "Service Level"],
+                    "winningCategory": "Enterprise AI",
+                    "buyerQueries": ["Best firms for enterprise AI transformation?", "Innovation in conversational AI analytics"],
+                    "claimsOwned": ["AI-powered logic", "Strategic transformation"],
+                    "remediationRecommendation": "AI identifies that Fractal Analytics is winning on 'AI Research'. LatentView lacks this specialized innovation signal. Action: Emphasize 'InsightLens' unique ROI in retail transformation."
                 }
             ]
         }
