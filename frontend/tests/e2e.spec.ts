@@ -319,7 +319,7 @@ test.describe("Authenticated enterprise workspace", () => {
     await expect(page.getByRole("heading", { name: "Ingest Source Material" })).toBeVisible();
     await expect(page.getByText("Upload raw marketing PDFs, documentation, or enter URLs")).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: "Review AI Manifest" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Agent Manifest Generator" })).toBeVisible();
     await expect(page.getByText("Agent Manifest Generator")).toBeVisible();
   });
 

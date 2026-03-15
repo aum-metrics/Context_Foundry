@@ -126,7 +126,7 @@ export default function AUMContextFoundry() {
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 overflow-hidden font-sans transition-colors duration-300">
 
       {/* Sidebar */}
-      <aside className="w-60 border-r border-white/5 bg-slate-900/30 backdrop-blur-xl flex flex-col justify-between shrink-0">
+      <aside className="w-72 border-r border-white/5 bg-slate-900/30 backdrop-blur-xl flex flex-col justify-between shrink-0">
         <div>
           <div className="p-5 pb-2">
             <div className="flex items-center space-x-3 mb-6">
