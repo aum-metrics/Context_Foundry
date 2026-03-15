@@ -37,6 +37,49 @@ def _serialize_datetime(value: Any) -> Optional[str]:
     return str(value)
 
 
+def _coerce_datetime(value: Any) -> Optional[datetime.datetime]:
+    if not value:
+        return None
+    if isinstance(value, datetime.datetime):
+        return value if value.tzinfo else value.replace(tzinfo=datetime.timezone.utc)
+    if isinstance(value, str):
+        try:
+            cleaned = value.replace("Z", "+00:00")
+            parsed = datetime.datetime.fromisoformat(cleaned)
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=datetime.timezone.utc)
+        except Exception:
+            return None
+    return None
+
+
+def _resolve_usage_cycle_start(subscription: Dict[str, Any]) -> datetime.datetime:
+    now = datetime.datetime.now(datetime.timezone.utc)
+    current_start = _coerce_datetime(subscription.get("currentPeriodStart"))
+    activated_at = _coerce_datetime(subscription.get("activatedAt"))
+    reset_at = _coerce_datetime(subscription.get("lastUsageResetAt"))
+    base = current_start or activated_at or now
+    if reset_at and reset_at > base:
+        return reset_at
+    return base
+
+
+def _count_usage_since(org_id: str, cycle_start: datetime.datetime) -> int:
+    if not db:
+        return 0
+    usage_ref = db.collection("organizations").document(org_id).collection("usageLedger")
+    query = usage_ref.where("timestamp", ">=", cycle_start)
+    try:
+        count_snapshot = query.count().get()
+        if count_snapshot:
+            return int(count_snapshot[0].value)
+    except Exception:
+        pass
+    try:
+        return len(list(query.stream()))
+    except Exception:
+        return 0
+
+
 def _default_model_catalog() -> List[Dict[str, Any]]:
     return [
         {
@@ -419,6 +462,8 @@ async def get_org_details(org_id: str, admin_user: dict = Depends(verify_admin))
         data = org_doc.to_dict() or {}
         subscription = data.get("subscription", {})
         plan_id = subscription.get("planId", "explorer")
+        usage_cycle_start = _resolve_usage_cycle_start(subscription)
+        usage_count = _count_usage_since(org_id, usage_cycle_start)
         limits = PLAN_LIMITS.get(plan_id, PLAN_LIMITS["explorer"])
 
         users_docs = list(db.collection("users").where("orgId", "==", org_id).stream())
@@ -480,7 +525,7 @@ async def get_org_details(org_id: str, admin_user: dict = Depends(verify_admin))
                 "status": subscription.get("status", "active"),
                 "billingPeriod": subscription.get("billingPeriod", "monthly"),
                 "maxSimulations": subscription.get("maxSimulations", limits.get("maxSimulations", 1)),
-                "simsThisCycle": subscription.get("simsThisCycle", 0),
+                "simsThisCycle": usage_count,
                 "currentPeriodStart": _serialize_datetime(subscription.get("currentPeriodStart")),
                 "currentPeriodEnd": _serialize_datetime(subscription.get("currentPeriodEnd")),
                 "activatedAt": _serialize_datetime(subscription.get("activatedAt")),
@@ -536,6 +581,7 @@ async def update_org_subscription(
             updates["activeSeats"] = request_body.activeSeats
         if request_body.resetUsage:
             updates["subscription.simsThisCycle"] = 0
+            updates["subscription.lastUsageResetAt"] = datetime.datetime.now(datetime.timezone.utc)
         if request_body.currentPeriodEnd:
             updates["subscription.currentPeriodEnd"] = request_body.currentPeriodEnd
         if request_body.trialEndsAt is not None:

@@ -224,7 +224,8 @@ async def provision_organization(
                 "billingPeriod": "once",
                 "activatedAt": datetime.now(timezone.utc).isoformat(),
                 "currentPeriodStart": datetime.now(timezone.utc),
-                "currentPeriodEnd": datetime.now(timezone.utc)
+                "currentPeriodEnd": datetime.now(timezone.utc),
+                "lastUsageResetAt": datetime.now(timezone.utc),
             },
             "apiKeys": {
                 # These are NOT the user's B2B key. 
@@ -1111,6 +1112,8 @@ async def get_manifest_data(
             "updatedAt": data.get("updatedAt") or data.get("createdAt"),
             "version": data.get("version", version),
             "name": _extract_manifest_entity_name(data),
+            "industryTaxonomy": data.get("industryTaxonomy") or (data.get("metadata") or {}).get("industry_taxonomy"),
+            "industryTags": data.get("industryTags") or (data.get("metadata") or {}).get("industry_tags"),
         }
     except HTTPException:
         raise

@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ShieldCheck, Cpu, Lock, BarChart3, Binary, Scale, Sparkles as Sparkle, Activity, CheckCircle2, Crosshair, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import React from "react";
@@ -18,10 +18,12 @@ import { useRazorpay } from "@/hooks/useRazorpay";
 import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
+import BrandHealthCertificate from "@/components/BrandHealthCertificate";
 
 export default function LandingPage() {
     const [currency, setCurrency] = React.useState<'usd' | 'inr'>('usd');
     const [isUpgrading, setIsUpgrading] = React.useState<string | null>(null);
+    const [isSampleReportOpen, setIsSampleReportOpen] = React.useState(false);
     const { checkout, isScriptLoading } = useRazorpay();
 
     React.useEffect(() => {
@@ -134,12 +136,15 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: 0.3 }}
                         className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6"
                     >
-                        <Link href="/login" className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center transition-all shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 transform hover:-translate-y-1 glow-indigo">
+                        <Link href="/login" className="w-full sm:w-auto px-10 py-5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center transition-all shadow-2xl shadow-indigo-600/30 hover:shadow-indigo-600/50 transform hover:-translate-y-1 glow-indigo scale-110">
                             Start Private Audit <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <a href="#demo" className="w-full sm:w-auto px-8 py-4 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 font-medium flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                            View Platform Flow
-                        </a>
+                        <button 
+                            onClick={() => setIsSampleReportOpen(true)}
+                            className="w-full sm:w-auto px-10 py-5 rounded-full bg-white/10 dark:bg-white/5 backdrop-blur-xl text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 font-bold flex items-center justify-center hover:bg-white/20 dark:hover:bg-white/10 transition-all shadow-xl"
+                        >
+                            View Sample Executive Report
+                        </button>
                     </motion.div>
                 </section>
 
@@ -700,6 +705,58 @@ export default function LandingPage() {
 
             </main>
             <Footer />
-        </div >
+
+            <AnimatePresence>
+                {isSampleReportOpen && (
+                    <BrandHealthCertificate
+                        organizationName="DemoCorp Global"
+                        asovScore={84.2}
+                        driftRate={12}
+                        onClose={() => setIsSampleReportOpen(false)}
+                        modelResults={[
+                            { model: "GPT-4o", accuracy: 92.4, hasHallucination: false, claimScore: "5/6 assertions visible" },
+                            { model: "Gemini 3 Flash", accuracy: 81.5, hasHallucination: true, claimScore: "4/6 assertions visible" },
+                            { model: "Claude 4.5 Sonnet", accuracy: 78.7, hasHallucination: false, claimScore: "3/6 assertions visible" }
+                        ]}
+                        lastPrompt="How does DemoCorp Global compare with Enterprise Rivals for AI transformation?"
+                        competitors={[
+                            { name: "Rival Solutions", displacementRate: 18, strengths: ["Mobile SDK", "Offline Support"], weaknesses: ["Enterprise Security"], winningCategory: "Developer Experience" },
+                            { name: "Legacy Analytics", displacementRate: 4, strengths: ["Brand History"], weaknesses: ["Cloud Maturity"], winningCategory: "Market Longevity" }
+                        ]}
+                        activeContextName="Primary Brand Identity"
+                        clusterInsights={[
+                            {
+                                prompt: "Best platform for AI transformation?",
+                                category: "Market Leadership",
+                                avgAccuracy: 88,
+                                claimRecall: 0.83,
+                                hallucinationCount: 0,
+                                winnerModel: "GPT-4o",
+                                weakestModel: "Claude 4.5 Sonnet",
+                                observedOutcome: "Strong brand presence in 2/3 models.",
+                                winningCompetitor: "None",
+                                claimsOwned: ["Strategy Consulting", "Execution"],
+                                missingClaims: ["Pricing Detail"]
+                            }
+                        ]}
+                        remediationRecommendations={[
+                            {
+                                title: "Fix Security Signal Gap",
+                                category: "Enterprise Trust",
+                                observedOutcome: "Models miss SOC2 and PCI compliance claims.",
+                                winningCompetitor: "Rival Solutions",
+                                missingClaims: ["SOC2 Compliance", "PCI DSS"],
+                                pageTargets: [{ label: "Security Page", reason: "Direct source for trust signals", url: "https://democorp.com/security" }],
+                                copyBlock: "Add explicit SOC2 Type II seals and update the H1 to mention 'Bank-grade compliance' explicitly.",
+                                schemaSuggestion: "Add 'accreditedBy' to Organization schema.",
+                                faqSuggestion: "FAQ: Is DemoCorp SOC2 compliant?",
+                                llmsSuggestion: "llms.txt: Add Security section."
+                            }
+                        ]}
+                        allowPdfDownload={true}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
     );
 }

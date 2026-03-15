@@ -9,6 +9,7 @@ from typing import List, Dict
 import numpy as np
 
 from core.firebase_config import db
+from core.model_config import OPENAI_SIMULATION_MODEL
 from core.security import get_auth_context, verify_user_org_access
 
 logger = logging.getLogger(__name__)
@@ -150,7 +151,7 @@ Rules:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_SIMULATION_MODEL,
             messages=messages,
             temperature=0.3
         )

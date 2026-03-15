@@ -13,6 +13,18 @@ export const metadata: Metadata = {
 
 const posts = [
     {
+        href: "/blog/cmo-guide-ai-search",
+        category: "Executive Strategy",
+        title: "The CMO Guide to AI Search",
+        description: "Why SoM is the new KPI for marketing leaders, and how to protect your brand from AI-driven exclusion.",
+    },
+    {
+        href: "/blog/agentic-seo-operating-model",
+        category: "Technical Data",
+        title: "The Agentic SEO Operating Model",
+        description: "Shifting from human-readable SEO to machine-interpretability. A technical deep dive into ASOM.",
+    },
+    {
         href: "/blog/brand-safety-in-llms",
         category: "Brand Fidelity",
         title: "Brand Safety in LLMs",

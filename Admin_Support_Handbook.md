@@ -67,9 +67,10 @@
 
 ### 2.2 Manually Reset Simulation Quota
 ```
+organizations/{orgId}.subscription.lastUsageResetAt = now()
 organizations/{orgId}.subscription.simsThisCycle = 0
 ```
-Use Firestore Console or `firebase-admin` script.
+`lastUsageResetAt` controls the ledger counting window. Use Firestore Console or `firebase-admin` script.
 
 ### 2.3 Manually Upgrade Plan
 Edit `organizations/{orgId}.subscription`:
@@ -105,7 +106,7 @@ Client-side access is restricted:
 | Global | `slowapi` (in-process) | 100 req/min per IP | `429 Too Many Requests` |
 | Crawler | Firestore-backed per-IP | 100 req/15min per IP | `503` (fail-closed) |
 | Edge (`/llms.txt`) | Frontend checks backend | Non-OK → blocked | `503` (fail-closed) |
-| Token-level | Firestore atomic transaction | Per-tier simulation quota | Quota exceeded error |
+| Token-level | Usage ledger count (per billing cycle) | Per-tier simulation quota | Quota exceeded error |
 | Payload | FastAPI request size limit | 10MB per ingestion upload | `413 Payload Too Large` |
 | Webhook | HMAC signature validation | Reject on mismatch | `401 Unauthorized` |
 

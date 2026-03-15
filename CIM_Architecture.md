@@ -6,7 +6,7 @@
 
 ## What is the CIM?
 
-The **Context Information Model (CIM)** is the mathematical and semantic representation of an organization's verified ground truth. It is the core data structure that powers the LCRS evaluation engine — the authoritative source that AI responses are measured against.
+The **Context Information Model (CIM)** is the mathematical and semantic representation of an organization's verified ground truth. It is the core data structure that powers the SoM evaluation engine — the authoritative source that AI responses are measured against.
 
 Think of it as:
 > "A compressed, mathematically indexed copy of everything your brand wants to be known for — stored in a form that can be compared to anything an AI model says."
@@ -21,7 +21,7 @@ Think of it as:
   "@type": "TechArticle",
   "name": "Product Specification v3.0",
   "description": "AUM Context Foundry real-time evaluation platform features...",
-  "keywords": ["LCRS", "zero-retention", "agentic SEO", "context drift"],
+  "keywords": ["SoM", "zero-retention", "agentic SEO", "context drift"],
   "datePublished": "2026-03-02T00:00:00Z",
   "version": "1.0.0",
   "totalChunks": 42,
@@ -58,7 +58,7 @@ Raw PDF
    ├──[chunks] → parallel embedding (OpenAI text-embedding-3-small)
    │             16 chunks per API call (batched)
    │
-   └──[full doc summary] → GPT-4o-mini JSON-LD extraction
+   └──[full doc summary] → GPT-4o JSON-LD extraction
                             Schema type: TechArticle / FAQPage / Product
    │
    ▼
@@ -116,7 +116,7 @@ Limit check queries the `manifests` collection document count (not `documents`).
 
 ---
 
-## How the LCRS Engine Uses the CIM
+## How the SoM Engine Uses the CIM
 
 ### At Simulation Time
 
@@ -128,7 +128,7 @@ Limit check queries the `manifests` collection document count (not `documents`).
 2. Run user prompt through all active LLM providers concurrently
 
 3. For each LLM response:
-   a. Extract atomic claims via GPT-4o-mini
+   a. Extract atomic claims via GPT-4o
    b. Embed the response (text-embedding-3-small)
    c. Compare claim embeddings against manifest_embedding (cosine similarity)
    d. Verify claim support: does the CIM ground truth support this claim?

@@ -61,7 +61,7 @@ The backend talks to OpenAI, Gemini, and Claude concurrently.
 ### Step 5: Database Mutation & Return
 The backend writes the new simulation results to Firestore for billing and historical logging.
 *   **Where to find it:** A background task `_store_simulation_results()`. 
-*   **What happens:** We use a transaction (atomic lock) so that if two users run a simulation at the EXACT same millisecond, the billing engine doesn't get confused and undercount their usage. The JSON result is then returned to the frontend.
+*   **What happens:** We append a usage ledger entry per run and store scoring history for analytics. Ledger writes avoid per-document contention while still enforcing quotas by counting ledger entries in the current billing cycle.
 
 ---
 
@@ -81,7 +81,8 @@ Firestore is NoSQL. We don't have tables; we have Collections and Documents. It 
     *   **Structure:** `{orgId}` -> `{ name, allowedDomains, subscription, apiKeys }`
     *   **Subcollections:** An Org contains massive amounts of nested data:
         *   `organizations/{orgId}/manifests/`: Stores the uploaded Context Documents.
-        *   `organizations/{orgId}/scoringHistory/`: The atomic ledger tracking every simulation a client runs.
+        *   `organizations/{orgId}/usageLedger/`: Append-only ledger of simulation usage (source of truth for quota enforcement).
+        *   `organizations/{orgId}/scoringHistory/`: Simulation results for dashboards and reporting.
 
 3.  **`batchJobs/` & `seoJobs/` Collections**
     *   **Purpose:** Long-running analytics.
@@ -137,7 +138,7 @@ Here is the exact framework you take:
 
 If you hear senior engineers throw around these terms, here is what they mean:
 
-*   **LCRS (Logical Contextual Representation Score):** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. v1.2.6 introduces Zero-Burn caching to serve redundant evaluations instantly.
+*   **SoM (Share of Model):** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. v1.2.6 introduces Zero-Burn caching to serve redundant evaluations instantly.
 *   **DLQ (Dead Letter Queue):** The graveyard for background tasks that crashed. Jobs that fail 3 times are marked `failed_permanent`. Found in `backend/app/utils/task_queue_recovery.py`.
 *   **CIM (Context Information Model):** The mathematical and semantic representation of an organization's verified ground truth — JSON-LD schema + 1536-dimensional embeddings. Now supports **Versioned Context Switching**.
 *   **Manifest (`llms.txt`):** The CIM synthesized into AI-crawler-friendly plain text. Served at `/llms.txt?orgId=...`. Hardened: org-specific failures return 503 (no silent fallback).

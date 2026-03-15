@@ -51,8 +51,8 @@ export default function MethodsPage() {
                         transition={{ delay: 0.2 }}
                         className={`text-xl md:text-2xl leading-relaxed max-w-4xl font-light ${textMuted}`}
                     >
-                        AUM Context Foundry replaces "proprietary magic" with auditable science.
-                        We run enterprise buyer queries deterministically across AI models and measure how often your firm is shortlisted over competitors — your Share of Model (SoM).
+                        AUM Context Foundry replaces "proprietary magic" with <strong>Deterministic Decision Intelligence</strong>.
+                        We provide the scientific framework for measuring and optimizing your Share of Model (SoM) across the frontier LLM ecosystem.
                     </motion.p>
                 </div>
 
@@ -208,21 +208,21 @@ export default function MethodsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-slate-200 dark:border-white/10 pt-20">
                     <div>
-                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Zero-Retention Buffer</h4>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Zero-Retention Security</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            Vectors are stored in multi-tenant isolated Firestore. Raw binary PDF memory buffers are flushed via explicit <code>GC.Collect()</code> calls immediately after distillation.
+                            AUM is built on a "Privacy by Design" architecture. Intellectual property is processed in volatile memory and purged instantly after context extraction, satisfying the most stringent enterprise data governance requirements.
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">SoM Run Logging</h4>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Audit-Ready Logging</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            Every SoM run includes a unique audit-footprint of the exact Model ID, buyer query, and assertion verdicts used — for reproducibility and compliance documentation.
+                            Every SoM run generates a cryptographic audit trail, recording model versions, temperature parameters, and ground-truth assertions for complete reproducibility and investor due diligence.
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">ISO Compliance</h4>
+                        <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Global Scalability</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            The Context Foundry framework is designed with enterprise compliance requirements in mind. We maintain audit trails and zero-retention processing to support regulatory needs.
+                            Our infrastructure is designed for high-concurrency market auditing, enabling global brands to monitor thousand-query clusters across multiple geographies and languages in near real-time.
                         </p>
                     </div>
                 </div>

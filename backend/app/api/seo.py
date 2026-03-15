@@ -21,6 +21,7 @@ except ImportError:
     logger.warning("beautifulsoup4 not installed. SEO audits will be limited.")
 
 from core.firebase_config import db
+from core.model_config import OPENAI_SIMULATION_MODEL
 from core.security import get_current_user, verify_user_org_access
 
 router = APIRouter()
@@ -196,7 +197,7 @@ Rate GEO (Generative Engine Optimization) fidelity 0-100: how well would AI engi
 Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement tip"}}"""
                         resp = client.chat.completions.create(
                             messages=[{"role": "user", "content": geo_prompt}],
-                            model="gpt-4o-mini",
+                            model=OPENAI_SIMULATION_MODEL,
                             response_format={"type": "json_object"},
                             temperature=0
                         )

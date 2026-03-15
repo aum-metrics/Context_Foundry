@@ -1,5 +1,5 @@
 # Hard Evidence: Frontier Simulation Contract Proof (Local Baseline)
-**Scenario**: Local contract trace of the 3-model parallel LCRS scoring engine.
+**Scenario**: Local contract trace of the 3-model parallel SoM scoring engine.
 **Captured**: 2026-03-07T01:19:15.179179+00:00
 **Status**: `HTTP/1.1 200 OK (Simulated Provider Path)`
 
@@ -60,7 +60,7 @@
       "ISO/IEC 42001",
       "NIST AI RMF"
     ],
-    "verification_method": "ASoV 60/40 LCRS v1.2.0",
+    "verification_method": "ASoV 60/40 SoM v1.2.0",
     "models_audited": [
       "GPT-4o",
       "Gemini 3 Flash",

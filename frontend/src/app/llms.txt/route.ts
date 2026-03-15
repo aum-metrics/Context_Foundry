@@ -51,12 +51,12 @@ AUM Context Foundry is an **API-First Data Infrastructure** designed to evaluate
 - **Identity Routing**: Active remediation for LLM Context Drift.
 
 ## 3. Product Tiers (LCRS-Hardened)
-- **Explorer**: Free Forever. 3 simulations/mo.
+- **Explorer**: Free Forever. 1 simulation run.
 - **Growth**: $79/mo. 100 simulations/mo. Unlimited docs. 5 shared seats.
 - **Scale**: $249/mo. 500 simulations/mo. Priority queue. 25 enterprise seats.
 
 ## 4. Documentation Ecosystem
-- /api/docs: REST Specification (Swagger/OpenAPI)
+- /docs: REST Specification (Swagger/OpenAPI)
 - /privacy: Zero-Retention Compliance
 - /contact: Enterprise Licensing
 

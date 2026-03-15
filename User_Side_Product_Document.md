@@ -42,7 +42,7 @@ The place where the active company context is created or refreshed through:
 
 ### Brand Health Report
 The executive artifact. It summarizes:
-- average LCRS
+- average SoM
 - model breakdown
 - executive interpretation
 - GEO snapshot

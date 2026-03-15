@@ -197,7 +197,7 @@ export default function SupportChatbot() {
                             <button onClick={() => generateBotResponse("onboard")} className="flex items-center shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                                 <BookOpen className="w-3 h-3 mr-1" /> Onboarding
                             </button>
-                            <button onClick={() => generateBotResponse("lcrs")} className="flex items-center shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                            <button onClick={() => generateBotResponse("som")} className="flex items-center shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                                 <Shield className="w-3 h-3 mr-1" /> Context Drift
                             </button>
                         </div>

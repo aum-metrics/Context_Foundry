@@ -33,13 +33,15 @@ This is the exact structure of our production database.
 *   **Purpose:** The Tenant. All billing, settings, and historical data descend from here.
 *   **Fields:**
     *   `name` (string)
-    *   `subscription` (object) - *Contains `planId`, `simsThisCycle`, `status`.*
+    *   `subscription` (object) - *Contains `planId`, `simsThisCycle`, `lastUsageResetAt`, `status`.*
 *   **Subcollection: `/manifests/{manifestId}`**
     *   Contains the vector embeddings and raw text of the uploaded Context Documents. Now supports versioned context switching (v1.2.6).
 *   **Subcollection: `/simulationCache/{hash}`**
     *   SHA-256 keyed cache of simulation results. Implements "Zero-Burn" suppression of redundant compute.
+*   **Subcollection: `/usageLedger/{ledgerId}`**
+    *   Append-only usage ledger. Each simulation writes `{timestamp, prompt, manifestVersion, planId}` for quota enforcement.
 *   **Subcollection: `/scoringHistory/{simulationId}`**
-    *   The atomic ledger. Every time LCRS runs, it drops a JSON log here containing timestamps, formulas, and prompt traces. *Do not delete these; clients use them for auditing.*
+    *   Simulation outputs and scoring history used by dashboards and reports. *Do not delete these; clients use them for auditing.*
 *   **Subcollection: `/auditLogs/{logId}`**
     *   System immutability. If a user changes a setting, a read-only audit log is dropped here.
 

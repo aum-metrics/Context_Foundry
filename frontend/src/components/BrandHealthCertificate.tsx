@@ -81,29 +81,10 @@ const CANONICAL_MODEL_ORDER = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
 function normalizeModelName(model: string): string {
     const raw = (model || "").trim();
     const lowered = raw.toLowerCase();
-    const aliases: Record<string, string> = {
-        "gpt-4o": "GPT-4o",
-        "gpt-4o-mini": "GPT-4o",
-        "gpt-4o mini": "GPT-4o",
-        "gemini 1.5 flash": "Gemini 3 Flash",
-        "gemini 2.0 flash": "Gemini 3 Flash",
-        "gemini 2.5 flash": "Gemini 3 Flash",
-        "gemini 3 flash": "Gemini 3 Flash",
-        "gemini-1.5-flash": "Gemini 3 Flash",
-        "gemini-2.0-flash": "Gemini 3 Flash",
-        "gemini-2.5-flash": "Gemini 3 Flash",
-        "gemini-3-flash": "Gemini 3 Flash",
-        "claude 3.5 haiku": "Claude 4.5 Sonnet",
-        "claude 3.5 sonnet": "Claude 4.5 Sonnet",
-        "claude 4.5": "Claude 4.5 Sonnet",
-        "claude 4.5 sonnet": "Claude 4.5 Sonnet",
-        "claude-3-5-haiku": "Claude 4.5 Sonnet",
-        "claude-3-5-sonnet": "Claude 4.5 Sonnet",
-        "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet",
-        "claude-sonnet-4-20250514": "Claude 4.5 Sonnet",
-        "claude-sonnet-4-5": "Claude 4.5 Sonnet",
-    };
-    return aliases[lowered] || raw;
+    if (lowered.startsWith("gpt-4o")) return "GPT-4o";
+    if (lowered.includes("gemini") && lowered.includes("flash")) return "Gemini 3 Flash";
+    if (lowered.includes("claude") && (lowered.includes("sonnet") || lowered.includes("haiku"))) return "Claude 4.5 Sonnet";
+    return raw;
 }
 
 function parseClaimRecallPercent(claimScore?: string): number | null {
@@ -222,7 +203,7 @@ export default function BrandHealthCertificate({
     const results = (latestRecord?.results || [])
         .map((result) => ({ ...result, model: normalizeModelName(result.model) }))
         .sort((a, b) => CANONICAL_MODEL_ORDER.indexOf(a.model) - CANONICAL_MODEL_ORDER.indexOf(b.model));
-    const avgLcrs = results.length > 0 ? averageAccuracy(results) : asovScore;
+    const avgSom = results.length > 0 ? averageAccuracy(results) : asovScore;
     const hallucinationCount = results.filter((r: ModelResult) => r.hasDisplacement ?? r.hasHallucination).length;
     const fidelityPct = results.length > 0 ? Math.round((results.filter((r: ModelResult) => !(r.hasDisplacement ?? r.hasHallucination)).length / results.length) * 100) : (100 - driftRate);
     const remediationSnapshot = useMemo(() => {
@@ -239,7 +220,7 @@ export default function BrandHealthCertificate({
             currentPrompt: current.prompt,
             baselineAvg,
             currentAvg,
-            deltaLcrs: currentAvg - baselineAvg,
+            deltaSom: currentAvg - baselineAvg,
             baselineHallucinationRate,
             currentHallucinationRate,
             deltaHallucinationRate: currentHallucinationRate - baselineHallucinationRate,
@@ -248,7 +229,7 @@ export default function BrandHealthCertificate({
 
     const scoreColor = (s: number) => s >= 85 ? "#10b981" : s >= 65 ? "#f59e0b" : s >= 40 ? "#fb923c" : "#ef4444";
     const gradeLabel = (s: number) => s >= 85 ? "HIGH FIDELITY" : s >= 65 ? "MINOR DRIFT" : s >= 40 ? "SEVERE DRIFT" : "CRITICAL DRIFT";
-    const hasLowRecallCriticalDrift = avgLcrs < 55 && hallucinationCount === 0;
+    const hasLowRecallCriticalDrift = avgSom < 55 && hallucinationCount === 0;
 
     const radarMetrics = useMemo(() => {
         const byModel: Record<string, { consistency: number; factuality: number; sentiment: number; safety: number; authority: number }> = {
@@ -294,8 +275,7 @@ export default function BrandHealthCertificate({
         }
         return `WARNING: ${orgName} suffers from Critical Data Drift. Even without explicit hallucinations, models are failing to recall enough verified claims from your context, causing under-representation of your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
     };
-    const GradeBadgeIcon = avgLcrs >= 85 ? CheckCircle2 : avgLcrs >= 55 ? Shield : AlertTriangle;
-    const isDisplaced = (r: ModelResult) => r.hasDisplacement ?? r.hasHallucination;
+    const GradeBadgeIcon = avgSom >= 85 ? CheckCircle2 : avgSom >= 55 ? Shield : AlertTriangle;
 
     const handleDownload = async () => {
         setIsDownloading(true);
@@ -309,30 +289,52 @@ export default function BrandHealthCertificate({
 
             const pageWidth = 210;
             const pageHeight = 297;
-            const margin = 14;
+            const margin = 20; // Increased margin for premium feel
             const contentWidth = pageWidth - (margin * 2);
             let y = margin;
+
+            // DRAW PREMIUM HEADER BACKGROUND
+            pdf.setFillColor(248, 250, 252); // slate-50
+            pdf.rect(0, 0, pageWidth, 50, 'F');
+            pdf.setDrawColor(99, 102, 241); // indigo-500
+            pdf.setLineWidth(1);
+            pdf.line(0, 50, pageWidth, 50);
+
+            // WATERMARK / BADGE
+            pdf.setFontSize(35);
+            pdf.setTextColor(241, 245, 249); // slate-100
+            pdf.setFont("helvetica", "bold");
+            pdf.text("VERIFIED CONTEXT", pageWidth / 2, pageHeight / 2, { align: "center", angle: 45 });
 
             const ensureSpace = (needed = 8) => {
                 if (y + needed > pageHeight - margin) {
                     pdf.addPage();
-                    y = margin;
+                    // Repeating header for subsequent pages
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.rect(0, 0, pageWidth, 15, 'F');
+                    pdf.setDrawColor(226, 232, 240);
+                    pdf.line(0, 15, pageWidth, 15);
+                    y = 25;
                 }
             };
 
-            const writeHeading = (text: string) => {
-                ensureSpace(10);
+            const writeHeading = (text: string, color: [number, number, number] = [31, 41, 55]) => {
+                ensureSpace(12);
                 pdf.setFont("helvetica", "bold");
-                pdf.setFontSize(13);
-                pdf.setTextColor(31, 41, 55);
-                pdf.text(text, margin, y);
-                y += 6.5;
+                pdf.setFontSize(14);
+                pdf.setTextColor(color[0], color[1], color[2]);
+                pdf.text(text.toUpperCase(), margin, y);
+                y += 8;
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.2);
+                pdf.line(margin, y - 1, margin + 40, y - 1);
+                y += 5;
             };
 
-            const writeBody = (text: string, size = 10, color: [number, number, number] = [55, 65, 81]) => {
+            const writeBody = (text: string, size = 10, color: [number, number, number] = [71, 85, 105], bold = false) => {
                 const lines = pdf.splitTextToSize(text, contentWidth);
-                ensureSpace((lines.length * 5) + 2);
-                pdf.setFont("helvetica", "normal");
+                ensureSpace((lines.length * 5) + 3);
+                pdf.setFont("helvetica", bold ? "bold" : "normal");
                 pdf.setFontSize(size);
                 pdf.setTextColor(color[0], color[1], color[2]);
                 pdf.text(lines, margin, y);
@@ -340,130 +342,128 @@ export default function BrandHealthCertificate({
             };
 
             const writeDivider = () => {
-                ensureSpace(4);
+                ensureSpace(6);
                 pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.1);
                 pdf.line(margin, y, pageWidth - margin, y);
-                y += 4;
+                y += 6;
             };
 
-            const executiveSummary = getExecutiveSummary(avgLcrs, organizationName);
-            const currentPrompt = latestRecord?.prompt || propPrompt || "Not available";
-            const inferenceAudit = models
-                .map((m) => `${m.provider}: ${m.displayName}`)
-                .join(" | ");
-            const competitorSummary = competitors.length > 0
-                ? competitors
-                    .slice(0, 3)
-                    .map((c) => `${c.name} (${c.displacementRate}%)`)
-                    .join(", ")
-                : "No displacement detected in current context.";
-
+            // HEADER CONTENT
+            y = 15;
             pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(16);
-            pdf.setTextColor(79, 70, 229);
-            pdf.text("AUM Context Foundry - Brand Health Report", margin, y);
-            y += 7;
-
-            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(22);
+            pdf.setTextColor(30, 41, 59);
+            pdf.text("AUM CONTEXT FOUNDRY", margin, y);
+            y += 8;
             pdf.setFontSize(10);
-            pdf.setTextColor(71, 85, 105);
-            pdf.text(`Issued: ${issuedDate}`, margin, y);
-            y += 5;
-            pdf.text(`Organization: ${organizationName}`, margin, y);
-            y += 5;
-            pdf.text(`Analysis Context: ${activeContextName || activeManifestVersion || "latest"}`, margin, y);
-            y += 6;
+            pdf.setTextColor(99, 102, 241);
+            pdf.text("EXECUTIVE BRAND HEALTH CERTIFICATE", margin, y);
+            
+            pdf.setTextColor(148, 163, 184);
+            pdf.setFontSize(9);
+            pdf.text(`ID: ${Date.now().toString(36).toUpperCase()}`, pageWidth - margin - 30, 15);
+            pdf.text(`ISSUED: ${issuedDate}`, pageWidth - margin - 30, 20);
+
+            y = 65; // Start content below header block
+
+            // EXECUTIVE SUMMARY BLOCK
+            writeHeading("Executive Summary", [79, 70, 229]);
+            const executiveSummary = getExecutiveSummary(avgSom, organizationName);
+            pdf.setFont("helvetica", "italic");
+            writeBody(executiveSummary, 11, [30, 41, 59]);
             writeDivider();
 
-            writeHeading("Executive Summary");
-            writeBody(executiveSummary);
+            // METRICS GRID (2x2)
+            writeHeading("Standard KPIs");
+            const colWidth = contentWidth / 2;
+            
+            // Box 1: SoM
+            pdf.setFillColor(248, 250, 252);
+            pdf.rect(margin, y, colWidth - 2, 20, 'F');
+            pdf.setFontSize(9); pdf.setTextColor(100); pdf.text("SHARE OF MODEL (SoM)", margin + 5, y + 7);
+            pdf.setFontSize(16); pdf.setTextColor(30); pdf.text(`${avgSom}%`, margin + 5, y + 15);
+            
+            // Box 2: Fidelity
+            pdf.rect(margin + colWidth + 2, y, colWidth - 2, 20, 'F');
+            pdf.setFontSize(9); pdf.setTextColor(100); pdf.text("RECALL FIDELITY", margin + colWidth + 7, y + 7);
+            pdf.setFontSize(16); pdf.setTextColor(30); pdf.text(`${fidelityPct}%`, margin + colWidth + 7, y + 15);
+            
+            y += 25;
+            
+            // Box 3: Displacement
+            pdf.rect(margin, y, colWidth - 2, 20, 'F');
+            pdf.setFontSize(9); pdf.setTextColor(100); pdf.text("COMPETITIVE DISPLACEMENT", margin + 5, y + 7);
+            pdf.setFontSize(16); pdf.setTextColor(hallucinationCount > 0 ? 220 : 30); pdf.text(`${hallucinationCount}/${results.length}`, margin + 5, y + 15);
+            
+            // Box 4: Context
+            pdf.rect(margin + colWidth + 2, y, colWidth - 2, 20, 'F');
+            pdf.setFontSize(9); pdf.setTextColor(100); pdf.text("ANALYSIS CONTEXT", margin + colWidth + 7, y + 7);
+            pdf.setFontSize(11); pdf.setTextColor(30); pdf.text(activeContextName || "Latest", margin + colWidth + 7, y + 15);
+            
+            y += 30;
+            writeDivider();
 
-            writeHeading("Core Metrics");
-            writeBody(`SoM Average: ${avgLcrs}%`);
-            writeBody(`AI Visibility (Share of Model): ${asovScore}%`);
-            writeBody(`Fidelity Rate: ${fidelityPct}%`);
-            writeBody(`Competitive Displacement: ${hallucinationCount}/${results.length} models`);
+            // MULTI-MODEL TABLE
+            writeHeading("Multi-Model Adjudication");
+            pdf.setFillColor(241, 245, 249);
+            pdf.rect(margin, y, contentWidth, 8, 'F');
+            pdf.setFontSize(9); pdf.setTextColor(71, 85, 105);
+            pdf.text("MODEL", margin + 5, y + 5);
+            pdf.text("FIDELITY SCORE", margin + 40, y + 5);
+            pdf.text("CLAIM RECALL", margin + 80, y + 5);
+            pdf.text("VERDICT", margin + 130, y + 5);
+            y += 12;
 
-            writeHeading("Multi-Model SoM Breakdown");
-            if (results.length === 0) {
-                writeBody("No model outputs found for this context/version.");
-            } else {
-                results.forEach((result) => {
-                    writeBody(`${result.model}: ${result.accuracy}% | ${(result.hasDisplacement ?? result.hasHallucination) ? "Displaced" : "Visible"}${result.claimScore ? ` | ${result.claimScore}` : ""}`);
-                });
-            }
-
-            writeHeading("Query Tested");
-            writeBody(currentPrompt);
-
-            writeHeading("Winning and Losing Query Clusters");
-            if (clusterInsights.length === 0) {
-                writeBody("No buyer-intent cluster analysis available yet. Run the enterprise batch to populate this section.");
-            } else {
-                clusterInsights.slice(0, 5).forEach((cluster) => {
-                    writeBody(`${cluster.category}: ${cluster.avgAccuracy}% avg fidelity | Winner ${cluster.winnerModel} | Weakest ${cluster.weakestModel} | Winning competitor ${cluster.winningCompetitor}`);
-                    writeBody(`Observed outcome: ${cluster.observedOutcome}`);
-                    writeBody(`Missing claims: ${cluster.missingClaims.join(", ")}`);
-                });
-            }
-
-            writeHeading("Search Readiness Snapshot");
-            writeBody(`SEO Score: ${seoResult?.seoScore ?? 0}% | GEO Score: ${seoResult?.geoScore ?? 0}% | Overall: ${seoResult?.overallScore ?? 0}%`);
-            writeBody(`GEO Method: ${describeGeoMethod(seoResult?.geoMethod)}`);
-            writeBody(seoResult?.recommendation || "No SEO/GEO recommendation available for this run.");
-
-            writeHeading("Remediation Delta");
-            if (!remediationSnapshot) {
-                writeBody("Not enough historical runs yet to calculate baseline-vs-current remediation impact.");
-            } else {
-                writeBody(`LCRS movement: ${remediationSnapshot.baselineAvg}% -> ${remediationSnapshot.currentAvg}% (${remediationSnapshot.deltaLcrs >= 0 ? "+" : ""}${remediationSnapshot.deltaLcrs} points)`);
-                writeBody(`Hallucination rate movement: ${remediationSnapshot.baselineHallucinationRate}% -> ${remediationSnapshot.currentHallucinationRate}% (${remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}${remediationSnapshot.deltaHallucinationRate} points)`);
-                writeBody(`Baseline prompt: ${remediationSnapshot.baselinePrompt || "Not available"}`);
-                writeBody(`Current prompt: ${remediationSnapshot.currentPrompt || "Not available"}`);
-            }
-
-            writeHeading("Competitor Displacement");
-            writeBody(competitorSummary);
-            competitors.slice(0, 3).forEach((competitor) => {
-                writeBody(`${competitor.name}: wins on ${competitor.winningCategory || "a competitor-favored category"} | claims owned: ${(competitor.claimsOwned || competitor.strengths || []).join(", ")}`);
-                writeBody(`What you are not asserting clearly enough: ${(competitor.missingAssertions || competitor.weaknesses || []).join(", ") || "Not available"}`);
+            results.forEach((r) => {
+                ensureSpace(10);
+                pdf.setFontSize(10); pdf.setTextColor(30, 41, 59);
+                pdf.text(r.model, margin + 5, y);
+                pdf.text(`${r.accuracy}%`, margin + 40, y);
+                pdf.text(r.claimScore || "N/A", margin + 80, y);
+                pdf.setTextColor( (r.hasDisplacement || r.hasHallucination) ? 225 : 16, (r.hasDisplacement || r.hasHallucination) ? 29 : 185, (r.hasDisplacement || r.hasHallucination) ? 72 : 129 );
+                pdf.text( (r.hasDisplacement || r.hasHallucination) ? "Displaced" : "Grounded", margin + 130, y);
+                y += 8;
             });
+            y += 5;
+            writeDivider();
 
-            writeHeading("Prescriptive Remediation Plan");
+            // REMEDIATION PLAN (The "Sales" asset)
+            writeHeading("Prescriptive Remediation Plan", [99, 102, 241]);
             if (remediationRecommendations.length === 0) {
-                writeBody("No prescriptive remediation plan generated yet.");
+                writeBody("Simulation data implies baseline grounding. No immediate remediation actions generated.");
             } else {
                 remediationRecommendations.slice(0, 3).forEach((item) => {
-                    writeBody(`${item.title} (${item.category})`);
-                    writeBody(`Observed outcome: ${item.observedOutcome}`);
-                    writeBody(`Winning competitor: ${item.winningCompetitor}`);
-                    item.pageTargets.forEach((target) => {
-                        writeBody(`Page to update: ${target.label}${target.url ? ` — ${target.url}` : ""}`);
-                        writeBody(`Why this page: ${target.reason}`);
-                    });
-                    writeBody(`Suggested copy block: ${item.copyBlock}`);
-                    writeBody(`Structured additions: ${item.schemaSuggestion} | ${item.faqSuggestion} | ${item.llmsSuggestion}`);
+                    ensureSpace(20);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(11);
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.text(`PRIORITY: ${item.title}`, margin, y);
+                    y += 6;
+                    writeBody(`Observed Outcome: ${item.observedOutcome}`, 9);
+                    writeBody(`Win Condition: ${item.winningCompetitor} is currently winning on these claims.`, 9);
+                    
+                    pdf.setFillColor(249, 250, 251);
+                    const copyLines = pdf.splitTextToSize(`SUGGESTED UPDATE: ${item.copyBlock}`, contentWidth - 10);
+                    pdf.rect(margin, y, contentWidth, (copyLines.length * 5) + 6, 'F');
+                    pdf.setFont("helvetica", "italic");
+                    pdf.setFontSize(9);
+                    pdf.setTextColor(79, 70, 229);
+                    pdf.text(copyLines, margin + 5, y + 6);
+                    y += (copyLines.length * 5) + 12;
                 });
             }
 
-            writeHeading("How To Read This Report");
-            writeBody("SoM blends semantic grounding and claim recall. A higher value means AI-generated answers stayed close to your verified manifest context and ranked you ahead of competitors.");
-            writeBody("AI Visibility (Share of Model) measures how strongly your brand appears across retrieval answers relative to competitors.");
-            writeBody("Fidelity Rate shows the share of model outputs that remained grounded.");
-            writeBody("Competitive Displacement counts outputs where a competitor was recommended ahead of your company.");
-            writeBody("Critical Drift can appear even when Displacement is 0/3: this means responses were mostly non-fabricated but still missed too many required claims, reducing claim recall and therefore SoM.");
-            writeBody("GEO is not the same metric as drift. GEO measures page-level generative readiness and manifest alignment, while SoM measures how well a tested model answer stayed grounded on a specific prompt.");
+            // FOOTER BRANDING
+            const footerY = pageHeight - 15;
+            pdf.setDrawColor(226, 232, 240);
+            pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+            pdf.setFontSize(8);
+            pdf.setTextColor(148, 163, 184);
+            pdf.text("CONFIDENTIAL - FOR BOARD OF DIRECTORS ONLY", margin, footerY);
+            pdf.text("© 2026 AUM CONTEXT FOUNDRY - ALL RIGHTS RESERVED", pageWidth - margin - 80, footerY);
 
-            writeHeading("SoM Radar Context (5-D)");
-            writeBody("The SoM Radar is a contextual decomposition of the same run. It maps each model into Consistency, Factuality, Sentiment, Safety, and Authority using observed accuracy, claim recall, and competitive displacement flags.");
-            CANONICAL_MODEL_ORDER.forEach((model) => {
-                const metrics = radarMetrics[model];
-                writeBody(`${model}: Consistency ${metrics.consistency} | Factuality ${metrics.factuality} | Sentiment ${metrics.sentiment} | Safety ${metrics.safety} | Authority ${metrics.authority}`);
-            });
-            writeBody("How To Read LCRS movement: positive SoM delta means AI answers are getting more grounded and competitive. Negative means more ground lost to competitors.");
-            writeBody(`Generated At (UTC): ${isoTimestamp}`);
-
-            const fileName = `AUM-Brand-Health-${organizationName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
+            const fileName = `AUM-Executive-Report-${organizationName.replace(/\s+/g, "-")}.pdf`;
             pdf.save(fileName);
             setIsDownloading(false);
         } catch (err) {
@@ -541,23 +541,23 @@ export default function BrandHealthCertificate({
                                             <circle cx="56" cy="56" r="48" fill="none" className="stroke-slate-100 dark:stroke-slate-800" strokeWidth="7" />
                                             <motion.circle
                                                 cx="56" cy="56" r="48" fill="none"
-                                                stroke={scoreColor(avgLcrs)} strokeWidth="7"
+                                                stroke={scoreColor(avgSom)} strokeWidth="7"
                                                 strokeDasharray={2 * Math.PI * 48}
                                                 initial={{ strokeDashoffset: 2 * Math.PI * 48 }}
-                                                animate={{ strokeDashoffset: (2 * Math.PI * 48) * (1 - avgLcrs / 100) }}
+                                                animate={{ strokeDashoffset: (2 * Math.PI * 48) * (1 - avgSom / 100) }}
                                                 transition={{ duration: 1.8, ease: "easeOut" }}
                                                 strokeLinecap="round"
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-2xl font-bold text-slate-900 dark:text-white">{avgLcrs}%</span>
+                                            <span className="text-2xl font-bold text-slate-900 dark:text-white">{avgSom}%</span>
                                             <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg SoM</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* MODEL-BY-MODEL LCRS BREAKDOWN */}
+                            {/* MODEL-BY-MODEL SoM BREAKDOWN */}
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Cpu className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
@@ -573,7 +573,7 @@ export default function BrandHealthCertificate({
                                     </div>
                                 ) : results.length === 0 ? (
                                     <div className="text-center text-slate-500 text-xs py-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
-                                        Run a simulation first to populate LCRS data.
+                                        Run a simulation first to populate SoM data.
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -649,7 +649,7 @@ export default function BrandHealthCertificate({
                                     <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Executive Interpretation</p>
                                 </div>
                                 <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                    {getExecutiveSummary(avgLcrs, organizationName)}
+                                    {getExecutiveSummary(avgSom, organizationName)}
                                 </p>
                             </div>
 
@@ -776,8 +776,8 @@ export default function BrandHealthCertificate({
                                 {remediationSnapshot ? (
                                     <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                                         <p>
-                                            <span className="font-semibold text-slate-800 dark:text-slate-200">LCRS movement:</span>{" "}
-                                            {remediationSnapshot.baselineAvg}% to {remediationSnapshot.currentAvg}% ({remediationSnapshot.deltaLcrs >= 0 ? "+" : ""}{remediationSnapshot.deltaLcrs} points)
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200">SoM movement:</span>{" "}
+                                            {remediationSnapshot.baselineAvg}% to {remediationSnapshot.currentAvg}% ({remediationSnapshot.deltaSom >= 0 ? "+" : ""}{remediationSnapshot.deltaSom} points)
                                         </p>
                                         <p>
                                             <span className="font-semibold text-slate-800 dark:text-slate-200">Hallucination-rate movement:</span>{" "}
@@ -836,10 +836,10 @@ export default function BrandHealthCertificate({
 
                             {/* GRADE BADGE */}
                             <div className="flex items-center justify-center mb-8">
-                                <div className="flex items-center gap-3 px-6 py-3 rounded-full border bg-white dark:bg-transparent" style={{ borderColor: scoreColor(avgLcrs) + "40", backgroundColor: scoreColor(avgLcrs) + "0f" }}>
-                                    <GradeBadgeIcon className="w-4 h-4" style={{ color: scoreColor(avgLcrs) }} />
-                                    <span className="text-sm font-bold uppercase tracking-widest" style={{ color: scoreColor(avgLcrs) }}>
-                                        {gradeLabel(avgLcrs)}
+                                <div className="flex items-center gap-3 px-6 py-3 rounded-full border bg-white dark:bg-transparent" style={{ borderColor: scoreColor(avgSom) + "40", backgroundColor: scoreColor(avgSom) + "0f" }}>
+                                    <GradeBadgeIcon className="w-4 h-4" style={{ color: scoreColor(avgSom) }} />
+                                    <span className="text-sm font-bold uppercase tracking-widest" style={{ color: scoreColor(avgSom) }}>
+                                        {gradeLabel(avgSom)}
                                     </span>
                                 </div>
                             </div>
@@ -853,8 +853,8 @@ export default function BrandHealthCertificate({
                             <div className="p-5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 font-mono text-[9px] text-slate-500 dark:text-slate-400 leading-relaxed shadow-inner">
                                 <div className="grid grid-cols-2 gap-4 mb-3">
                                     <div>
-                                        <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">LCRS Formula</p>
-                                        <p className="text-indigo-600 dark:text-indigo-300 font-bold text-[10px]">LCRS = (0.4 × Semantic) + (0.6 × Claim Recall)</p>
+                                        <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">SoM Formula</p>
+                                        <p className="text-indigo-600 dark:text-indigo-300 font-bold text-[10px]">SoM = (0.4 × Semantic) + (0.6 × Claim Recall)</p>
                                         <p className="mt-1">Semantic = 1 − cosine_distance(manifest_vector, response_vector)</p>
                                         <p>Claim Recall = supported_claims / total_claims</p>
                                     </div>
@@ -918,13 +918,13 @@ export default function BrandHealthCertificate({
                                 className="w-full bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10 p-6 overflow-hidden mt-4"
                             >
                                 <h3 className="text-slate-900 dark:text-white font-bold mb-4 flex items-center gap-2">
-                                    <BookOpen className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> LCRS Methodology
+                                    <BookOpen className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> SoM Methodology
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                                     <div>
                                         <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Formula</p>
                                         <code className="text-emerald-600 dark:text-emerald-400 font-mono text-xs bg-slate-200 dark:bg-black/30 px-3 py-2 rounded-lg block mb-3 overflow-x-auto">
-                                            LCRS = (0.4 × Semantic) + (0.6 × Claim Recall)
+                                            SoM = (0.4 × Semantic) + (0.6 × Claim Recall)
                                         </code>
                                         <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
                                             <strong className="text-slate-800 dark:text-slate-300">Semantic (40%):</strong> Cosine similarity between your verified manifest vector and the AI&apos;s response vector. Measures directional alignment.
@@ -934,7 +934,7 @@ export default function BrandHealthCertificate({
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Score Bands (LCRS)</p>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Score Bands (SoM)</p>
                                         <div className="space-y-2 text-xs">
                                             <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-emerald-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">&gt;85%</span><span className="text-slate-500">High Fidelity</span></div>
                                             <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-amber-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">66–85%</span><span className="text-slate-500">Minor Drift</span></div>
@@ -943,7 +943,7 @@ export default function BrandHealthCertificate({
                                         </div>
                                         <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">Hallucination Flag Rule</p>
                                         <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                                            A model is flagged when verified contradictions are detected, or when claim recall is very low together with high semantic divergence. Low LCRS alone does not automatically mean hallucination.
+                                            A model is flagged when verified contradictions are detected, or when claim recall is very low together with high semantic divergence. Low SoM alone does not automatically mean hallucination.
                                         </p>
                                         <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">ASoV Radar (Contextual)</p>
                                         <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">

@@ -111,27 +111,27 @@ Sight Spectrum primarily delivers data analytics consulting to Manufacturing, He
             "prompt": "How much does HC Insight cost per month?",
             "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=2),
             "results": [
-                {"model": "GPT-4o Mini", "accuracy": 12, "hasHallucination": True, "claimScore": "0.12"},
-                {"model": "Claude 3.5 Haiku", "accuracy": 95, "hasHallucination": False, "claimScore": "0.95"},
-                {"model": "Gemini 2.0 Flash", "accuracy": 5, "hasHallucination": True, "claimScore": "0.05"}
+                {"model": "GPT-4o", "accuracy": 12, "hasHallucination": True, "claimScore": "0.12"},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 95, "hasHallucination": False, "claimScore": "0.95"},
+                {"model": "Gemini 3 Flash", "accuracy": 5, "hasHallucination": True, "claimScore": "0.05"}
             ]
         },
         {
             "prompt": "Does DataBlitz support Salesforce integration?",
             "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=5),
             "results": [
-                {"model": "GPT-4o Mini", "accuracy": 88, "hasHallucination": False, "claimScore": "0.88"},
-                {"model": "Claude 3.5 Haiku", "accuracy": 90, "hasHallucination": False, "claimScore": "0.90"},
-                {"model": "Gemini 2.0 Flash", "accuracy": 40, "hasHallucination": True, "claimScore": "0.40"}
+                {"model": "GPT-4o", "accuracy": 88, "hasHallucination": False, "claimScore": "0.88"},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 90, "hasHallucination": False, "claimScore": "0.90"},
+                {"model": "Gemini 3 Flash", "accuracy": 40, "hasHallucination": True, "claimScore": "0.40"}
             ]
         },
         {
             "prompt": "Is Sight Spectrum HIPAA compliant?",
             "timestamp": datetime.datetime.now(timezone.utc) - timedelta(hours=24),
             "results": [
-                {"model": "GPT-4o Mini", "accuracy": 30, "hasHallucination": True, "claimScore": "0.30"},
-                {"model": "Claude 3.5 Haiku", "accuracy": 98, "hasHallucination": False, "claimScore": "0.98"},
-                {"model": "Gemini 2.0 Flash", "accuracy": 45, "hasHallucination": True, "claimScore": "0.45"}
+                {"model": "GPT-4o", "accuracy": 30, "hasHallucination": True, "claimScore": "0.30"},
+                {"model": "Claude 4.5 Sonnet", "accuracy": 98, "hasHallucination": False, "claimScore": "0.98"},
+                {"model": "Gemini 3 Flash", "accuracy": 45, "hasHallucination": True, "claimScore": "0.45"}
             ]
         }
     ]

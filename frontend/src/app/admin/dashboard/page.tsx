@@ -211,7 +211,7 @@ export default function AdminDashboard() {
                 setHealthStatus([
                     { name: "FastAPI Backend", endpoint: "/api/health", status: data.status === "healthy" ? "operational" : "degraded" },
                     { name: "Firebase Firestore", endpoint: "firestore.googleapis.com", status: data.dependencies?.firestore === "connected" ? "operational" : "degraded" },
-                    { name: "LCRS Simulation Engine", endpoint: "/api/simulation", status: "operational" },
+                    { name: "SoM Simulation Engine", endpoint: "/api/simulation", status: "operational" },
                     { name: "Semantic Ingestion", endpoint: "/api/ingestion", status: "operational" },
                     { name: "Batch Scheduler", endpoint: "/api/batch/scheduled", status: "operational" },
                 ]);

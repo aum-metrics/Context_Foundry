@@ -86,7 +86,8 @@ When a new Enterprise signs up:
    {
        "planId": "growth", // explorer, growth, scale, enterprise
        "maxSimulations": 100,
-       "simsThisCycle": 0
+       "simsThisCycle": 0,
+       "lastUsageResetAt": "2026-03-01T00:00:00Z"
    }
    ```
    Current defaults used by the product:
@@ -129,10 +130,10 @@ The tenant IT admin must provide:
 
 ## 6. Billing & Subscription Enforcement
 
-The LCRS Engine utilizes strictly enforced transactional billing.
+The LCRS Engine enforces quotas via a per-run usage ledger to avoid Firestore contention.
 
 ### Understanding the Billing Cycle
-Every time an AI simulation runs, the `@firestore.transactional` lock increments `simsThisCycle`. If it exceeds `maxSimulations`, a `402 Payment Required` is thrown.
+Every time an AI simulation runs, a ledger entry is written to `organizations/{orgId}/usageLedger`. Quota enforcement counts ledger entries since `subscription.lastUsageResetAt` (or the cycle anchor). If usage exceeds `maxSimulations`, a `402 Payment Required` is thrown. `simsThisCycle` is a rollup field for dashboards, not the source of truth.
 
 Explorer is intentionally limited to a one-time free run. Do not treat it as a recurring monthly quota tier.
 
@@ -140,9 +141,11 @@ Explorer is intentionally limited to a one-time free run. Do not treat it as a r
 You must invoke the automated Cron endpoint on the 1st of the month:
 ```bash
 curl -X POST https://api.aumcontextfoundry.com/api/cron/reset-quotas \
-     -H "x-cron-secret: super-secure-cron-trigger-key"
+     -H "Authorization: Bearer super-secure-cron-trigger-key"
 ```
 *Note: This utilizes a background queue. It will asynchronously batch-reset 500 orgs per sweep to avoid Firestore timeout limits.*
+
+Optional: schedule `/api/cron/usage-rollup` daily or hourly to refresh `simsThisCycle` for admin dashboards.
 
 ---
 

@@ -19,7 +19,7 @@ Everything starts at `backend/app/main.py`. This file does four critical things:
 
 ### Directory Structure
 *   `app/api/`: Contains all the route handlers (15 modules):
-    *   `simulation.py` (810 lines) — LCRS engine + B2B API gateway (v1.2.6 includes Zero-Burn caching)
+    *   `simulation.py` (810 lines) — SoM engine + B2B API gateway (v1.2.6 includes Zero-Burn caching)
     *   `ingestion.py` — Zero-retention PDF → CIM pipeline
     *   `workspaces.py` — Org provisioning, members, invites, manifest, rate limiter
     *   `payments.py` — Razorpay orders, verify, webhooks, payment links
@@ -76,12 +76,12 @@ This performs a quick Firebase lookup to ensure the `uid` actually belongs to `o
 
 ---
 
-## 3. The LCRS Simulation Pipeline (`api/simulation.py`)
+## 3. The SoM Simulation Pipeline (`api/simulation.py`)
 
 This is the crown jewel of the platform. If you touch this file, test it locally first.
 
 ### The 60/40 Math
-The LCRS (Logical Contextual Representation Score) grades AI model accuracy using two blended metrics:
+The SoM (Share of Model) grades AI model accuracy using two blended metrics:
 *   **60% Weight - Claim Accuracy (Reproducible):** Did the AI output include all the strictly required facts from the source Context Document? We use an `LLM-as-a-judge` sub-routine to evaluate this at `temperature=0` for consistent results. Note: "reproducible" means same inputs yield same outputs, not "academically validated."
 *   **40% Weight - Semantic Alignment (Vector Math):** We convert the AI's answer into a vector embedding and compare its cosine distance to the original Context Document's embedding. This catches "vibe" drift or subtle hallucinations.
 *   **Zero-Burn Optimization (v1.2.6):** A SHA-256 hash of `org_id + prompt + manifest_version` is used to suppress redundant compute. Matching requests return cached results in <50ms.
@@ -102,35 +102,20 @@ This runs all three requests in parallel across different threads. The total tim
 
 ---
 
-## 4. Atomic Billing & FireStore Transactions
+## 4. Usage Ledger Billing & Quota Enforcement
 
-Every time a user runs a simulation, it costs us API credits. We must decrement their `simsThisCycle` quota perfectly. 
+Every simulation costs API credits. We enforce quotas using an **append-only usage ledger** rather than incrementing the org root document on every run.
 
-### The Race Condition Problem
-Imagine two users manually firing the "Run Simulation" button at the exact same millisecond. 
-*   Thread A reads: Quota is 99.
-*   Thread B reads: Quota is 99.
-*   Thread A writes: Quota is 100.
-*   Thread B writes: Quota is 100. 
-They ran 2 simulations, but the database only counted 1. This is a classic race condition.
+### Why a Ledger
+Firestore allows ~1 write/second per document. High-volume enterprise tenants can exceed that if we increment `subscription.simsThisCycle` on every simulation, causing contention and 503s. The ledger avoids this by writing to unique documents.
 
-### The Transactional Solution
-We wrap our billing logic in a `@firestore.transactional` decorator.
-```python
-@firestore.transactional
-def run_simulation_transaction(transaction, org_ref):
-    org_doc = org_ref.get(transaction=transaction)
-    current_sims = org_doc.get("subscription.simsThisCycle")
-    
-    if current_sims >= limit:
-        raise Exception("402 Over Quota")
-        
-    # Transaction logically locks the document until the update completes
-    transaction.update(org_ref, {
-        "subscription.simsThisCycle": current_sims + 1
-    })
-```
-If Thread B tries to write while Thread A holds the lock, Firestore throws an abort, Thread B waits 10ms, re-reads the new value (100), and updates it to 101.
+### How It Works
+1. Each simulation writes `organizations/{orgId}/usageLedger/{auto_id}` with `{ timestamp, prompt, manifestVersion, planId }`.
+2. We compute current-cycle usage by counting ledger docs since `subscription.lastUsageResetAt` (or the cycle anchor).
+3. If usage ≥ plan limit, we block with a `402` response.
+
+### Rollup
+`/api/cron/usage-rollup` aggregates ledger counts into `subscription.simsThisCycle` for dashboards and admin reporting. The ledger remains the source of truth.
 
 ---
 
@@ -174,7 +159,7 @@ All tests use `conftest.py` which automatically:
 
 | Test File | What It Tests |
 |-----------|---------------|
-| `test_simulation.py` | LCRS endpoint (happy + unhappy + 60/40 math) |
+| `test_simulation.py` | SoM endpoint (happy + unhappy + 60/40 math) |
 | `test_ingestion.py` | `recursive_split` algorithm + parse endpoint |
 | `test_competitor.py` | Displacement endpoint + auth rejection |
 | `test_audit.py` | Audit log write + retrieval |

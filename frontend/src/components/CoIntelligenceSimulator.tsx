@@ -236,7 +236,7 @@ export default function CoIntelligenceSimulator() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `lcrs_audit_${organization.name.replace(/\s+/g, '_')}.csv`;
+            a.download = `som_audit_${organization.name.replace(/\s+/g, '_')}.csv`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -518,7 +518,7 @@ export default function CoIntelligenceSimulator() {
                                         {!isExplorer && !result.error && (
                                             <button
                                                 onClick={() => {
-                                                    const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | LCRS v1.2.0*`;
+                                                    const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | SoM v1.2.0*`;
                                                     navigator.clipboard.writeText(md);
                                                 }}
                                                 className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"

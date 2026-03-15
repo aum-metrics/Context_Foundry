@@ -274,6 +274,74 @@ class ModelResult(BaseModel):
     error: Optional[str] = None
 
 
+def _coerce_datetime(value: object) -> Optional[datetime]:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            cleaned = value.replace("Z", "+00:00")
+            parsed = datetime.fromisoformat(cleaned)
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except Exception:
+            return None
+    return None
+
+
+def _resolve_manifest_version(org_id: str, version: str) -> str:
+    if version != "latest" or not db:
+        return version
+    try:
+        latest_doc = db.collection("organizations").document(org_id).collection("manifests").document("latest").get()
+        if latest_doc.exists:
+            latest_data = latest_doc.to_dict() or {}
+            candidate = latest_data.get("version")
+            if candidate and candidate != "latest":
+                return candidate
+    except Exception as e:
+        logger.warning(f"Manifest resolution failed for latest pointer: {e}")
+
+    try:
+        manifests = db.collection("organizations").document(org_id).collection("manifests") \
+            .order_by("createdAt", direction="DESCENDING").limit(1).stream()
+        newest = next(manifests, None)
+        if newest:
+            return newest.id
+    except Exception as e:
+        logger.warning(f"Manifest resolution fallback failed: {e}")
+
+    return "latest"
+
+
+def _resolve_cycle_start(subscription: dict) -> datetime:
+    now = datetime.now(timezone.utc)
+    current_start = _coerce_datetime(subscription.get("currentPeriodStart"))
+    activated_at = _coerce_datetime(subscription.get("activatedAt"))
+    reset_at = _coerce_datetime(subscription.get("lastUsageResetAt"))
+    base = current_start or activated_at or now
+    if reset_at and reset_at > base:
+        return reset_at
+    return base
+
+
+def _count_usage_since(org_id: str, cycle_start: datetime) -> int:
+    if not db:
+        return 0
+    usage_ref = db.collection("organizations").document(org_id).collection("usageLedger")
+    query = usage_ref.where("timestamp", ">=", cycle_start)
+    try:
+        count_snapshot = query.count().get()
+        if count_snapshot:
+            return int(count_snapshot[0].value)
+    except Exception:
+        pass
+    try:
+        return len(list(query.stream()))
+    except Exception:
+        return 0
+
+
 # ============================================================================
 # MULTI-MODEL EVALUATION ENDPOINT
 # ============================================================================
@@ -340,19 +408,15 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
     """Score a single model's response against the manifest."""
     
     # 🛡️ NORMALIZATION HARDENING: Ensure frontier display names are used in metadata
-    normalized_name = MODEL_DISPLAY_NAMES.get(model_name.lower().strip(), model_name.strip())
-    # Fallback mappings for common internal IDs to Frontier names
-    FALLBACK_MAP = {
-        "gpt-4o-mini": "GPT-4o",
-        "gemini-1.5-flash": "Gemini 3 Flash",
-        "gemini-2.0-flash": "Gemini 3 Flash",
-        "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet",
-        "claude-3-5-haiku": "Claude 4.5 Sonnet"
-    }
-    if normalized_name.lower() in FALLBACK_MAP:
-        normalized_name = FALLBACK_MAP[normalized_name.lower()]
-    elif model_name.lower() in FALLBACK_MAP:
-        normalized_name = FALLBACK_MAP[model_name.lower()]
+    raw_name = model_name.lower().strip()
+    normalized_name = MODEL_DISPLAY_NAMES.get(raw_name, model_name.strip())
+    # Legacy normalization (handles older IDs without pinning to deprecated names)
+    if raw_name.startswith("gpt-4o"):
+        normalized_name = "GPT-4o"
+    elif "gemini" in raw_name and "flash" in raw_name:
+        normalized_name = "Gemini 3 Flash"
+    elif "claude" in raw_name and ("sonnet" in raw_name or "haiku" in raw_name):
+        normalized_name = "Claude 4.5 Sonnet"
 
     try:
         from core.config import settings
@@ -548,7 +612,7 @@ Rules:
 
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="gpt-4o-mini",
+            model=OPENAI_SCHEMA_MODEL,
             response_format={"type": "json_object"},
             temperature=0.3
         )
@@ -621,10 +685,11 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
             "demo_mode": True
         }
 
-    # ----- 0. SHA-256 HASH CACHE CHECK (Zero-Burn Optimization) -----
-    cache_input = f"{request.orgId}_{request.prompt}_{request.manifestVersion}".encode('utf-8')
+    # ----- 0. MANIFEST RESOLUTION & CACHE KEYING -----
+    resolved_manifest_version = _resolve_manifest_version(request.orgId, request.manifestVersion)
+
+    cache_input = f"{request.orgId}_{request.prompt}_{resolved_manifest_version}".encode('utf-8')
     cache_key = hashlib.sha256(cache_input).hexdigest()
-    resolved_manifest_version = request.manifestVersion
     
     if db:
         try:
@@ -669,7 +734,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         except Exception as e:
             logger.error(f"Failed to fetch org plan: {e}")
 
-    # Enforce Dynamic Limits with Firestore Transaction (Race Condition Fix)
+    # Enforce Dynamic Limits with Usage Ledger (contention-safe)
     limits = {
         "explorer": 1,
         "growth": 100,
@@ -679,32 +744,12 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 1))
 
     if db and not is_dev and not skip_billing:
-        from google.cloud import firestore
         org_ref = db.collection("organizations").document(request.orgId)
-        transaction = db.transaction()
-        
-        @firestore.transactional
-        def check_and_increment(txn, ref):
-            snap = ref.get(transaction=txn)
-            if not snap.exists:
-                return True
-            data = snap.to_dict() or {}
-            sub = data.get("subscription", {})
-            current = sub.get("simsThisCycle", 0)
-            if current >= plan_limit:
-                return False
-            txn.update(ref, {"subscription.simsThisCycle": current + 1})
-            return True
-            
-        success = False
-        try:
-            success = check_and_increment(transaction, org_ref)
-        except Exception as e:
-            logger.error(f"Transaction failed: {e}")
-            # Fail open or closed on DB error? We'll fail closed.
-            raise HTTPException(status_code=500, detail="Billing verification failed.")
-            
-        if not success:
+        subscription = org_data.get("subscription", {})
+        cycle_start = _resolve_cycle_start(subscription)
+        usage_count = _count_usage_since(request.orgId, cycle_start)
+
+        if usage_count >= plan_limit:
             if org_plan == "explorer":
                 raise HTTPException(
                     status_code=402,
@@ -715,9 +760,20 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                     }
                 )
             raise HTTPException(
-                status_code=402, 
+                status_code=402,
                 detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
             )
+
+        try:
+            org_ref.collection("usageLedger").document().set({
+                "timestamp": datetime.now(timezone.utc),
+                "prompt": request.prompt[:100],
+                "manifestVersion": resolved_manifest_version,
+                "planId": org_plan,
+            })
+        except Exception as e:
+            logger.error(f"Usage ledger write failed: {e}")
+            raise HTTPException(status_code=500, detail="Billing verification failed.")
 
     # 2. FETCH CONTEXT & KEYS 
     manifest_content, manifest_embedding, api_keys = _fetch_manifest_and_keys(request)
@@ -783,11 +839,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
             client = OpenAI(api_key=openai_key)
             q_embed = client.embeddings.create(input=[request.prompt], model="text-embedding-3-small").data[0].embedding
             
-            manifest_version = request.manifestVersion
-            if manifest_version == "latest":
-                latest_doc = db.collection("organizations").document(request.orgId).collection("manifests").document("latest").get()
-                if latest_doc.exists:
-                    manifest_version = latest_doc.to_dict().get("version", "latest")
+            manifest_version = _resolve_manifest_version(request.orgId, request.manifestVersion)
             resolved_manifest_version = manifest_version
 
             # --- PHASE 8: NATIVE VECTOR SEARCH (O(log N)) ---
@@ -970,7 +1022,7 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
         "cached": False,
         "transparency_footprint": {
             "standards": ["ISO/IEC 42001", "NIST AI RMF"],
-            "verification_method": "ASoV 60/40 LCRS v1.2.0",
+            "verification_method": "ASoV 60/40 SoM v1.2.0",
             "models_audited": [r["model"] for r in results],
             "parameters": {
                 "temperature": 0.0,
@@ -1021,15 +1073,15 @@ async def run_simulation_api_v1(request: Request, bg_tasks: BackgroundTasks, sim
     if auth.get("type") != "api_key":
         raise HTTPException(status_code=403, detail="This endpoint is restricted to B2B API Key licensing only. Use /api/simulation/run for UI sessions.")
     
-    # Pass execution directly to the master hardened simulation pipeline
-    # The LCRS engine naturally inherits the atomic billing transactional locking from `run_simulation`
+    # Description: Multi-Model SoM Simulation Engine with Fine-Grained Fact-Checking
+    # The SoM engine naturally inherits the atomic billing transactional locking from `run_simulation`
     return await run_simulation(sim_request, bg_tasks, auth)
 
 
 @router.get("/export/{orgId}")
 async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_context)):
     """
-    Export the LCRS scoring history for an organization as a verifiable CSV.
+    Export the SoM scoring history for an organization as a verifiable CSV.
     Allows enterprises to audit the 60/40 blend mathematics independently.
     """
     if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], orgId):
@@ -1057,7 +1109,7 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
         # CSV Headers
         writer.writerow([
             "Timestamp", "Manifest Version", "Prompt", "Model", 
-            "LCRS Accuracy %", "Hallucination Detected", "Claim Verification Score"
+            "SoM Accuracy %", "Hallucination Detected", "Claim Verification Score"
         ])
         
         for doc in history_ref:
@@ -1085,7 +1137,7 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
         return StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=lcrs_audit_{orgId}.csv"}
+            headers={"Content-Disposition": f"attachment; filename=som_audit_{orgId}.csv"}
         )
         
     except Exception as e:

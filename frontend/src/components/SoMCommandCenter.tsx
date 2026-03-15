@@ -1,217 +1,31 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from "recharts";
-import { TrendingUp, Search, Globe, Activity, ShieldAlert, ArrowUpRight, Lock, FilePenLine, BriefcaseBusiness, ClipboardList, Sparkles } from "lucide-react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis } from "recharts";
+import { TrendingUp, Search, Globe, Activity, ShieldAlert, Lock, FilePenLine, BriefcaseBusiness, Sparkles, Zap, Award } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { auth } from "../lib/firebase";
 import { useOrganization } from "./OrganizationContext";
 import { UpgradeModal } from "./UpgradeModal";
-import { Hexagon, Award } from "lucide-react";
 import BrandHealthCertificate from "./BrandHealthCertificate";
+import AuthErrorCard from "./AuthErrorCard";
+import QueryClusterInsights from "./QueryClusterInsights";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useRemediation } from "@/hooks/useRemediation";
 import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
-import { describeGeoMethod } from "@/lib/geoMethod";
-import { resolveRemediationTargets, type RemediationPageTarget } from "@/lib/remediationTargets";
+import { normalizeModelName } from "@/lib/somUtils";
+import type { BatchResult, CompetitorInsight, ManifestSnapshot, PromptRun, ScoringHistoryEntry, SEOResult } from "@/types/som";
 
-interface BatchResult {
-    domainStability: number;
-    driftRate: number;
-    modelAverages?: Record<string, number>;
-    results?: Array<{
-        prompt?: string;
-        results?: { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean; claimScore?: string; answer?: string }[];
-        error?: string;
-    }>;
-}
-
-interface ScoringHistoryEntry {
-    prompt: string;
-    results: { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean; claimScore?: string; answer?: string }[];
-    timestamp: { seconds: number };
-}
-
-interface SEOResult {
-    url: string;
-    seoScore: number;
-    geoScore: number;
-    overallScore: number;
-    geoMethod?: string;
-    checks: { check: string; status: string; detail: string }[];
-    recommendation: string;
-}
-
-interface GapAssertion {
-    assertion: string;
-    gapConfidence: number;  // 0-100: how confident the model is this is a real positioning gap
-    somImpact: number;      // 1-20: estimated SoM % points recoverable by closing this gap
-}
-
-interface CompetitorInsight {
-    name: string;
-    displacementRate: number; // AI Recommendation Frequency
-    strengths: string[];
-    weaknesses: string[];
-    winningCategory?: string;
-    buyerQueries?: string[];  // example buyer questions this competitor is winning on
-    claimsOwned?: string[];
-    missingAssertions?: (GapAssertion | string)[];  // Legacy
-    remediationRecommendation?: string; // New Prescriptive Field
-}
-
-interface ManifestSnapshot {
-    sourceUrl?: string | null;
-    name?: string | null;
-    schemaData?: Record<string, unknown>;
-}
-
-interface PromptRun {
-    prompt: string;
-    results: { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean; claimScore?: string; answer?: string }[];
-}
-
-interface QueryClusterInsight {
-    prompt: string;
-    category: string;
-    avgAccuracy: number;
-    claimRecall: number;
-    hallucinationCount: number;
-    winnerModel: string;
-    weakestModel: string;
-    observedOutcome: string;
-    winningCompetitor: string;
-    claimsOwned: string[];
-    missingClaims: string[];
-}
-
-interface RemediationRecommendation {
-    title: string;
-    category: string;
-    observedOutcome: string;
-    winningCompetitor: string;
-    missingClaims: string[];
-    pageTargets: RemediationPageTarget[];
-    copyBlock: string;
-    schemaSuggestion: string;
-    faqSuggestion: string;
-    llmsSuggestion: string;
-}
-
-const FALLBACK_MODEL_ORDER: string[] = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
-
-function normalizeModelName(model: string): string {
-    const raw = (model || "").trim();
-    const lowered = raw.toLowerCase();
-    const aliases: Record<string, string> = {
-        "gpt-4o": "GPT-4o",
-        "gpt-4o-mini": "GPT-4o",
-        "gpt-4o mini": "GPT-4o",
-        "gemini 1.5 flash": "Gemini 3 Flash",
-        "gemini 2.0 flash": "Gemini 3 Flash",
-        "gemini 2.5 flash": "Gemini 3 Flash",
-        "gemini 3 flash": "Gemini 3 Flash",
-        "gemini-1.5-flash": "Gemini 3 Flash",
-        "gemini-2.0-flash": "Gemini 3 Flash",
-        "gemini-2.5-flash": "Gemini 3 Flash",
-        "gemini-3-flash": "Gemini 3 Flash",
-        "claude 3.5 sonnet": "Claude 4.5 Sonnet",
-        "claude 3.5 haiku": "Claude 4.5 Sonnet",
-        "claude 4 sonnet": "Claude 4.5 Sonnet",
-        "claude 4.5 sonnet": "Claude 4.5 Sonnet",
-        "claude 4.5": "Claude 4.5 Sonnet",
-        "claude-3-5-sonnet": "Claude 4.5 Sonnet",
-        "claude-3-5-sonnet-20241022": "Claude 4.5 Sonnet",
-        "claude-3-5-haiku": "Claude 4.5 Sonnet",
-        "claude-sonnet-4-20250514": "Claude 4.5 Sonnet",
-        "claude-sonnet-4-5": "Claude 4.5 Sonnet",
-    };
-
-    return aliases[lowered] || raw;
-}
-
-function parseClaimRecallPercent(claimScore?: string): number | null {
-    if (!claimScore) return null;
-    const ratioMatch = claimScore.match(/(\d+)\s*\/\s*(\d+)/);
-    if (!ratioMatch) return null;
-    const supported = Number(ratioMatch[1]);
-    const total = Number(ratioMatch[2]);
-    if (!Number.isFinite(supported) || !Number.isFinite(total) || total <= 0) return null;
-    return Math.max(0, Math.min(100, Math.round((supported / total) * 100)));
-}
-
-function clampPct(value: number): number {
-    return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function averageAccuracy(results: { accuracy: number }[]): number {
-    if (!results.length) return 0;
-    return Math.round(results.reduce((sum, result) => sum + (result.accuracy || 0), 0) / results.length);
-}
-
-function hallucinationRate(results: { hasHallucination: boolean }[]): number {
-    if (!results.length) return 0;
-    return Math.round((results.filter((result) => result.hasHallucination).length / results.length) * 100);
-}
-
-function getFirstSentence(value?: string): string {
-    if (!value) return "";
-    const cleaned = value.replace(/\s+/g, " ").trim();
-    if (!cleaned) return "";
-    const match = cleaned.match(/.*?[.!?](\s|$)/);
-    return (match ? match[0] : cleaned).trim();
-}
-
-function classifyPromptCluster(prompt: string): string {
-    const value = prompt.toLowerCase();
-    if (value.includes("databricks") || value.includes("snowflake") || value.includes("google cloud") || value.includes("modernization")) {
-        return "Cloud & data modernization";
-    }
-    if (value.includes("compare with") || value.includes("accenture") || value.includes("fractal") || value.includes("mu sigma") || value.includes("tiger analytics")) {
-        return "Competitive differentiation";
-    }
-    if (value.includes("fortune 500") || value.includes("partner is best") || value.includes("large-scale ai") || value.includes("transformation")) {
-        return "Enterprise transformation fit";
-    }
-    if (value.includes("domain expertise") || value.includes("cpg") || value.includes("bfsi") || value.includes("supply chain") || value.includes("retail")) {
-        return "Industry expertise";
-    }
-    return "Market ranking";
-}
-
-function getCategoryFallbackClaims(category: string): string[] {
-    switch (category) {
-        case "Cloud & data modernization":
-            return ["Databricks delivery proof", "Snowflake modernization proof", "Google Cloud transformation outcomes"];
-        case "Competitive differentiation":
-            return ["why buyers choose you over larger consultancies", "clear proof of delivery outcomes", "named competitive differentiators"];
-        case "Enterprise transformation fit":
-            return ["Fortune 500 transformation credibility", "executive governance model", "enterprise operating model depth"];
-        case "Industry expertise":
-            return ["vertical outcome proof in CPG, BFSI, retail, and supply chain", "industry-specific case studies", "domain-led consulting evidence"];
-        default:
-            return ["enterprise analytics consulting positioning", "buyer shortlist rationale", "clear transformation proof"];
-    }
-}
-
-function buildCopyBlock(subject: string, category: string, competitorName: string, missingClaims: string[]): string {
-    const proofPoint = missingClaims[0] || "enterprise delivery proof";
-    const proofPointTwo = missingClaims[1] || "buyer-facing differentiation";
-    return `${subject} is built for ${category.toLowerCase()} decisions with verified delivery depth, not generic transformation language. Buyers evaluating alternatives such as ${competitorName} should see explicit proof of ${proofPoint} and ${proofPointTwo} in the first screenful of your site content.`;
-}
-
-function buildSchemaSuggestion(category: string, subject: string, missingClaims: string[]): string {
-    const joinedClaims = missingClaims.slice(0, 2).join(" and ") || "core service proof";
-    return `Add Organization + Service schema that ties ${subject} directly to ${joinedClaims}.`;
-}
-
-function buildFaqSuggestion(subject: string, category: string, competitorName: string): string {
-    return `FAQ: How does ${subject} compare with ${competitorName} for ${category.toLowerCase()}?`;
-}
-
-function buildLlmsSuggestion(category: string, subject: string, missingClaims: string[]): string {
-    const claims = missingClaims.slice(0, 2).join("; ") || "explicit buyer-facing proof";
-    return `llms.txt: Add a ${category} section for ${subject} with direct claims on ${claims}.`;
+function detectVertical(name: string): string {
+    const n = (name || "").toLowerCase();
+    if (n.includes("croma") || n.includes("reliance") || n.includes("retail") || n.includes("store") || n.includes("fmcg") || n.includes("grocery")) return "Retail & Consumer Markets";
+    if (n.includes("cyber") || n.includes("resilience") || n.includes("security") || n.includes("threat") || n.includes("defense")) return "Cyber & Enterprise Security";
+    if (n.includes("crm") || n.includes("saas") || n.includes("enterprise") || n.includes("software") || n.includes("platform")) return "Enterprise SaaS";
+    if (n.includes("bank") || n.includes("fintech") || n.includes("payment") || n.includes("insurance") || n.includes("wealth")) return "FinTech & Banking";
+    if (n.includes("airline") || n.includes("hotel") || n.includes("travel") || n.includes("hospitality")) return "Travel & Hospitality";
+    return "General Enterprise";
 }
 
 export default function SoMCommandCenter({ 
@@ -219,7 +33,7 @@ export default function SoMCommandCenter({
     view = "all" 
 }: { 
     setActiveView?: (view: string) => void,
-    view?: "all" | "intelligence" | "action" 
+    view?: "all" | "analyze" | "intelligence" | "action" 
 }) {
     const { organization, refreshKey, activeManifestVersion, activeContextName } = useOrganization();
     const { models } = useModelCatalog();
@@ -238,22 +52,32 @@ export default function SoMCommandCenter({
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const analysisSubject = activeContextName || organization?.name || "the selected context";
 
-    const fetcher = async (url: string) => {
+    const getEffectiveToken = useCallback(async () => {
+        const token = await auth.currentUser?.getIdToken();
+        if (token) return token;
+        if (isLocalMockMode()) {
+            return getLocalMockSession().token;
+        }
+        return undefined;
+    }, []);
+
+    const fetcher = useCallback(async (url: string) => {
         const token = await getEffectiveToken();
-        if (!token) return null;
+        if (!token) throw new Error("auth");
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!res.ok) return null;
+        if (res.status === 401 || res.status === 403) throw new Error("auth");
+        if (!res.ok) throw new Error(`request_failed_${res.status}`);
         return res.json();
-    };
+    }, [getEffectiveToken]);
 
     // Consolidated SWR Data Fetching
-    const { data: competitorsData } = useSWR(
+    const { data: competitorsData, error: competitorsError } = useSWR(
         organization ? `/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}&cache=${refreshKey}` : null,
         fetcher
     );
-    const competitors = competitorsData?.competitors || [];
+    const competitors = useMemo<CompetitorInsight[]>(() => competitorsData?.competitors || [], [competitorsData]);
 
-    const { data: manifestData } = useSWR(
+    const { data: manifestData, error: manifestError } = useSWR(
         organization ? `/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}&cache=${refreshKey}` : null,
         fetcher
     );
@@ -261,17 +85,102 @@ export default function SoMCommandCenter({
         sourceUrl: manifestData.sourceUrl,
         name: manifestData.name,
         schemaData: manifestData.schemaData || {},
+        industryTaxonomy: manifestData.industryTaxonomy || null,
+        industryTags: manifestData.industryTags || [],
     } : null;
     const currentManifestVersion = manifestData?.version || null;
+    const vertical = useMemo(() => manifestSnapshot?.industryTaxonomy || detectVertical(analysisSubject), [manifestSnapshot?.industryTaxonomy, analysisSubject]);
 
-    const getEffectiveToken = async () => {
-        const token = await auth.currentUser?.getIdToken();
-        if (token) return token;
-        if (isLocalMockMode()) {
-            return getLocalMockSession().token;
+    const runAutoPilot = useCallback(async () => {
+        if (!organization || batchLoading) return;
+        setBatchLoading(true);
+        try {
+            const token = await getEffectiveToken();
+            if (!token) throw new Error("auth");
+
+            const fallbackPrompts = [
+                "Who are the top enterprise analytics consulting firms for retail CPG transformation?",
+                "Which firms are strongest in Databricks, Snowflake, and Google Cloud data modernization?",
+                `How does ${analysisSubject} compare with Accenture, Tiger Analytics, Fractal, and Mu Sigma?`,
+                "Which partner is best for large-scale AI/analytics transformation for Fortune 500 companies?",
+                "Which vendors have domain expertise in CPG, BFSI, retail, and supply chain analytics?",
+            ];
+
+            let prompts = fallbackPrompts;
+            try {
+                const promptRes = await fetch("/api/simulation/suggest-prompts", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ orgId: organization.id }),
+                });
+                if (promptRes.ok) {
+                    const promptData = await promptRes.json();
+                    if (Array.isArray(promptData.prompts) && promptData.prompts.length > 0) {
+                        prompts = promptData.prompts;
+                    }
+                }
+            } catch (_err) {
+                // fallback prompts already set
+            }
+
+            const batchRes = await fetch("/api/batch/batch", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    orgId: organization.id,
+                    prompts,
+                    manifestVersion: activeManifestVersion,
+                }),
+            });
+
+            if (!batchRes.ok) {
+                throw new Error(`batch_failed_${batchRes.status}`);
+            }
+
+            const batchData = await batchRes.json();
+            if (batchData.status === "processing" && batchData.jobId) {
+                batchIntervalRef.current = setInterval(async () => {
+                    const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${batchData.jobId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        if (statusData.status === "completed" && (statusData.summary || statusData.result)) {
+                            setBatchResult(statusData.summary || statusData.result);
+                            setBatchLoading(false);
+                            if (batchIntervalRef.current) clearInterval(batchIntervalRef.current);
+                        } else if (statusData.status === "failed") {
+                            setBatchLoading(false);
+                            if (batchIntervalRef.current) clearInterval(batchIntervalRef.current);
+                        }
+                    }
+                }, 3000);
+            } else {
+                setBatchResult(batchData.summary || batchData.result || batchData);
+                setBatchLoading(false);
+            }
+        } catch (_e) {
+            setBatchLoading(false);
         }
-        return undefined;
+    }, [organization, batchLoading, getEffectiveToken, activeManifestVersion, analysisSubject]);
+
+    const isAuthError = (err: unknown) => {
+        if (!err) return false;
+        if (typeof err === "string") return err === "auth" || err.includes("401") || err.includes("403");
+        if (err instanceof Error) {
+            const msg = err.message || "";
+            return msg === "auth" || msg.includes("401") || msg.includes("403");
+        }
+        const anyErr = err as { status?: number; message?: string };
+        return anyErr.status === 401 || anyErr.status === 403 || anyErr.message === "auth";
     };
+
 
     useEffect(() => {
         return () => {
@@ -281,31 +190,27 @@ export default function SoMCommandCenter({
 
 
     const fetchHistory = async (orgId: string) => {
-        try {
-            const effectiveToken = await getEffectiveToken();
-            if (!effectiveToken) return null;
+        const effectiveToken = await getEffectiveToken();
+        if (!effectiveToken) throw new Error("auth");
 
-            const res = await fetch(`/api/simulation/history/${orgId}`, {
-                headers: { 'Authorization': `Bearer ${effectiveToken}` }
-            });
-            if (!res.ok) return null;
+        const res = await fetch(`/api/simulation/history/${orgId}`, {
+            headers: { 'Authorization': `Bearer ${effectiveToken}` }
+        });
+        if (res.status === 401 || res.status === 403) throw new Error("auth");
+        if (!res.ok) throw new Error(`history_failed_${res.status}`);
 
-            const data = await res.json();
-            const entries = (data.history || []).map((entry: { timestamp: string | { seconds: number } }) => ({
-                ...entry,
-                timestamp: typeof entry.timestamp === 'string'
-                    ? { seconds: Math.floor(new Date(entry.timestamp).getTime() / 1000) }
-                    : entry.timestamp
-            }));
+        const data = await res.json();
+        const entries = (data.history || []).map((entry: { timestamp: string | { seconds: number } }) => ({
+            ...entry,
+            timestamp: typeof entry.timestamp === 'string'
+                ? { seconds: Math.floor(new Date(entry.timestamp).getTime() / 1000) }
+                : entry.timestamp
+        }));
 
-            return entries.slice().reverse(); // oldest first for chart
-        } catch (err) {
-            console.error("Failed to fetch history from API", err);
-            return null;
-        }
+        return entries.slice().reverse(); // oldest first for chart
     };
 
-    const { data: historyEntries, error: _error, isLoading: loading } = useSWR(
+    const { data: historyEntries, error: historyError, isLoading: loading } = useSWR(
         organization ? `history-${organization.id}-${activeManifestVersion}-${refreshKey}` : null,
         () => fetchHistory(organization!.id)
     );
@@ -315,111 +220,6 @@ export default function SoMCommandCenter({
         if (!currentManifestVersion) return historyEntries;
         return historyEntries.filter((entry: { version?: string }) => entry.version === currentManifestVersion);
     }, [historyEntries, currentManifestVersion]);
-
-    // Memoized Calculations to prevent infinite re-renders
-    const modelAverages = useMemo(() => {
-        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) {
-            return {
-                "GPT-4o": 0,
-                "Gemini 3 Flash": 0,
-                "Claude 4.5 Sonnet": 0,
-            };
-        }
-
-        const modelSums: Record<string, { total: number, count: number }> = {};
-        filteredHistoryEntries.forEach((entry: ScoringHistoryEntry) => {
-            entry.results?.forEach((res: { model: string; accuracy: number }) => {
-                const normalized = normalizeModelName(res.model || "Unknown");
-                if (!modelSums[normalized]) modelSums[normalized] = { total: 0, count: 0 };
-                modelSums[normalized].total += res.accuracy;
-                modelSums[normalized].count += 1;
-            });
-        });
-
-        const newAverages: Record<string, number> = {};
-        Object.keys(modelSums).forEach((model: string) => {
-            newAverages[model] = Math.round(modelSums[model].total / modelSums[model].count);
-        });
-
-        // Mix in Batch Results if present
-        if (batchResult && batchResult.modelAverages) {
-            const normalizedBatch: Record<string, number> = {};
-            Object.entries(batchResult.modelAverages).forEach(([model, avg]) => {
-                normalizedBatch[normalizeModelName(model)] = avg as number;
-            });
-            return { ...newAverages, ...normalizedBatch };
-        }
-
-        return newAverages;
-    }, [filteredHistoryEntries, batchResult]);
-
-    const modelTabs = useMemo(() => {
-        const discovered = new Set<string>(Object.keys(modelAverages).map(normalizeModelName));
-        const preferredOrder = models.length > 0 ? models.map(model => normalizeModelName(model.displayName)) : FALLBACK_MODEL_ORDER;
-        return preferredOrder.filter((model) => discovered.has(model));
-    }, [modelAverages, models]);
-
-    useEffect(() => {
-        if (modelTabs.length > 0 && !modelTabs.includes(activeTab)) {
-            setActiveTab(modelTabs[0]);
-        }
-    }, [activeTab, modelTabs]);
-
-    const radarData = useMemo(() => {
-        const empty = [
-            { subject: "Consistency", A: 0, B: 0, C: 0, fullMark: 100 },
-            { subject: "Factuality", A: 0, B: 0, C: 0, fullMark: 100 },
-            { subject: "Sentiment", A: 0, B: 0, C: 0, fullMark: 100 },
-            { subject: "Safety", A: 0, B: 0, C: 0, fullMark: 100 },
-            { subject: "Authority", A: 0, B: 0, C: 0, fullMark: 100 },
-        ];
-
-        if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) return empty;
-
-        const latestEntry = filteredHistoryEntries[0];
-        if (!latestEntry?.results?.length) return empty;
-
-        const byModel: Record<string, { consistency: number; factuality: number; sentiment: number; safety: number; authority: number }> = {
-            "GPT-4o": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
-            "Claude 4.5 Sonnet": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
-            "Gemini 3 Flash": { consistency: 0, factuality: 0, sentiment: 0, safety: 0, authority: 0 },
-        };
-
-        latestEntry.results.forEach((result: { model: string; accuracy: number; hasHallucination: boolean; claimScore?: string }) => {
-            const model = normalizeModelName(result.model);
-            if (!byModel[model]) return;
-            const accuracy = clampPct(result.accuracy || 0);
-            const claimRecall = parseClaimRecallPercent(result.claimScore) ?? accuracy;
-            const safety = result.hasHallucination ? clampPct(claimRecall - 25) : clampPct(claimRecall + 10);
-            const authority = clampPct((accuracy * 0.6) + (claimRecall * 0.4));
-            const sentiment = clampPct((accuracy * 0.5) + (safety * 0.5));
-            byModel[model] = {
-                consistency: accuracy,
-                factuality: claimRecall,
-                sentiment,
-                safety,
-                authority,
-            };
-        });
-
-        return [
-            { subject: "Consistency", A: byModel["GPT-4o"].consistency, B: byModel["Claude 4.5 Sonnet"].consistency, C: byModel["Gemini 3 Flash"].consistency, fullMark: 100 },
-            { subject: "Factuality", A: byModel["GPT-4o"].factuality, B: byModel["Claude 4.5 Sonnet"].factuality, C: byModel["Gemini 3 Flash"].factuality, fullMark: 100 },
-            { subject: "Sentiment", A: byModel["GPT-4o"].sentiment, B: byModel["Claude 4.5 Sonnet"].sentiment, C: byModel["Gemini 3 Flash"].sentiment, fullMark: 100 },
-            { subject: "Safety", A: byModel["GPT-4o"].safety, B: byModel["Claude 4.5 Sonnet"].safety, C: byModel["Gemini 3 Flash"].safety, fullMark: 100 },
-            { subject: "Authority", A: byModel["GPT-4o"].authority, B: byModel["Claude 4.5 Sonnet"].authority, C: byModel["Gemini 3 Flash"].authority, fullMark: 100 },
-        ];
-    }, [filteredHistoryEntries]);
-
-    const visibleModelAverages = useMemo(() => {
-        const preferredOrder = models.length > 0 ? models.map(model => normalizeModelName(model.displayName)) : FALLBACK_MODEL_ORDER;
-        return preferredOrder.reduce<Record<string, number>>((acc, modelName) => {
-            if (typeof modelAverages[modelName] === "number") {
-                acc[modelName] = modelAverages[modelName];
-            }
-            return acc;
-        }, {});
-    }, [modelAverages, models]);
 
     const promptRuns = useMemo<PromptRun[]>(() => {
         if (batchResult?.results && batchResult.results.length > 0) {
@@ -449,150 +249,52 @@ export default function SoMCommandCenter({
         return [...competitors].sort((a, b) => (b.displacementRate || 0) - (a.displacementRate || 0));
     }, [competitors]);
 
-    const queryClusterInsights = useMemo<QueryClusterInsight[]>(() => {
-        const getCompetitorForCategory = (category: string) => {
-            const normalizedCategory = category.toLowerCase();
-            return competitorRanking.find((competitor) => {
-                const winningCategory = (competitor.winningCategory || "").toLowerCase();
-                return winningCategory.includes(normalizedCategory) || normalizedCategory.includes(winningCategory);
-            }) || competitorRanking[0];
-        };
+    const {
+        queryClusterInsights,
+        winningClusters,
+        weakClusters,
+        remediationSnapshot,
+        remediationRecommendations,
+    } = useRemediation({
+        promptRuns,
+        competitorRanking,
+        manifestSnapshot,
+        analysisSubject,
+        seoResult,
+        filteredHistoryEntries,
+    });
 
-        return promptRuns.map((run) => {
-            const sortedResults = [...run.results].sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
-            const avgAccuracy = sortedResults.length > 0
-                ? clampPct(sortedResults.reduce((sum, result) => sum + (result.accuracy || 0), 0) / sortedResults.length)
-                : 0;
-            const claimRecallValues = sortedResults
-                .map((result) => parseClaimRecallPercent(result.claimScore))
-                .filter((value): value is number => value !== null);
-            const claimRecall = claimRecallValues.length > 0
-                ? clampPct(claimRecallValues.reduce((sum, value) => sum + value, 0) / claimRecallValues.length)
-                : avgAccuracy;
-            const category = classifyPromptCluster(run.prompt);
-            const matchedCompetitor = getCompetitorForCategory(category);
-            const observedOutcome = getFirstSentence(sortedResults[0]?.answer)
-                || `${category} prompts are currently scoring ${avgAccuracy}% average fidelity across the audited model set.`;
-            const fallbackClaims = getCategoryFallbackClaims(category);
-            const missingClaims: string[] = (matchedCompetitor?.missingAssertions && matchedCompetitor.missingAssertions.length > 0)
-                ? matchedCompetitor.missingAssertions.map((a: any) => typeof a === "string" ? a : a.assertion)
-                : fallbackClaims;
+    const {
+        modelTabs,
+        radarData,
+        chartData,
+        fidelityRisks,
+        dashboardKpis,
+    } = useDashboardMetrics({
+        filteredHistoryEntries,
+        batchResult,
+        models,
+        activeTab,
+        seoResult,
+        competitorRanking,
+        winningClusters,
+        weakClusters,
+    });
 
+    const authError = [competitorsError, manifestError, historyError].find(isAuthError);
 
-            return {
-                prompt: run.prompt,
-                category,
-                avgAccuracy,
-                claimRecall,
-                hallucinationCount: sortedResults.filter((result) => result.hasDisplacement ?? result.hasHallucination).length,
-                winnerModel: sortedResults[0]?.model || "No data",
-                weakestModel: sortedResults[sortedResults.length - 1]?.model || "No data",
-                observedOutcome,
-                winningCompetitor: matchedCompetitor?.name || "No competitor identified",
-                claimsOwned: matchedCompetitor?.claimsOwned || [],
-                missingClaims,
-            };
-        }).sort((a, b) => b.avgAccuracy - a.avgAccuracy);
-    }, [promptRuns, competitorRanking]);
-
-    const winningClusters = useMemo(() => queryClusterInsights.slice(0, 2), [queryClusterInsights]);
-
-    const weakClusters = useMemo(() => {
-        const meaningful = queryClusterInsights
-            .filter((cluster) => cluster.avgAccuracy < 80 || cluster.hallucinationCount > 0 || cluster.claimRecall < 80)
-            .sort((a, b) => a.avgAccuracy - b.avgAccuracy);
-        return meaningful.length > 0 ? meaningful.slice(0, 3) : queryClusterInsights.slice(-2).reverse();
-    }, [queryClusterInsights]);
-
-    const remediationSnapshot = useMemo(() => {
-        if (!filteredHistoryEntries || filteredHistoryEntries.length < 2) return null;
-        const chronological = [...filteredHistoryEntries];
-        const baseline = chronological[0];
-        const current = chronological[chronological.length - 1];
-        const baselineAvg = averageAccuracy(baseline.results || []);
-        const currentAvg = averageAccuracy(current.results || []);
-        const baselineHallucinationRate = hallucinationRate(baseline.results || []);
-        const currentHallucinationRate = hallucinationRate(current.results || []);
-        return {
-            baselinePrompt: baseline.prompt,
-            currentPrompt: current.prompt,
-            baselineAvg,
-            currentAvg,
-            deltaLcrs: currentAvg - baselineAvg,
-            baselineHallucinationRate,
-            currentHallucinationRate,
-            deltaHallucinationRate: currentHallucinationRate - baselineHallucinationRate,
-        };
-    }, [filteredHistoryEntries]);
-
-    const remediationRecommendations = useMemo<RemediationRecommendation[]>(() => {
-        const recommendations = weakClusters.map((cluster) => {
-            const missingClaims = cluster.missingClaims.length > 0 ? cluster.missingClaims : getCategoryFallbackClaims(cluster.category);
-            const pageTargets = resolveRemediationTargets({
-                category: cluster.category,
-                schemaData: manifestSnapshot?.schemaData || undefined,
-                sourceUrl: manifestSnapshot?.sourceUrl,
-                missingClaims,
-            });
-            return {
-                title: `Close the ${cluster.category.toLowerCase()} visibility gap`,
-                category: cluster.category,
-                observedOutcome: cluster.observedOutcome,
-                winningCompetitor: cluster.winningCompetitor,
-                missingClaims,
-                pageTargets,
-                copyBlock: buildCopyBlock(analysisSubject, cluster.category, cluster.winningCompetitor, missingClaims),
-                schemaSuggestion: buildSchemaSuggestion(cluster.category, analysisSubject, missingClaims),
-                faqSuggestion: buildFaqSuggestion(analysisSubject, cluster.category, cluster.winningCompetitor),
-                llmsSuggestion: buildLlmsSuggestion(cluster.category, analysisSubject, missingClaims),
-            };
-        });
-
-        if (seoResult) {
-            const weakChecks = seoResult.checks.filter((check) => check.status !== "pass").slice(0, 2);
-            if (weakChecks.length > 0) {
-                recommendations.push({
-                    title: "Close GEO evidence gaps on the public site",
-                    category: "Site-level GEO readiness",
-                    observedOutcome: `${seoResult.geoScore}% GEO score with ${weakChecks.map((check) => check.check).join(", ")} flagged.`,
-                    winningCompetitor: competitorRanking[0]?.name || "No competitor identified",
-                    missingClaims: weakChecks.map((check) => check.check),
-                    pageTargets: resolveRemediationTargets({
-                        category: "Site-level GEO readiness",
-                        schemaData: manifestSnapshot?.schemaData || undefined,
-                        sourceUrl: manifestSnapshot?.sourceUrl,
-                        missingClaims: weakChecks.map((check) => check.check),
-                    }),
-                    copyBlock: `${analysisSubject} should restate its core identity, category fit, and differentiators in the title block, opening H1, and above-the-fold descriptive copy so AI retrieval systems stop defaulting to generic vendor language.`,
-                    schemaSuggestion: "Add complete Organization / Service / FAQ schema and align the visible page copy with the same core claims.",
-                    faqSuggestion: `FAQ: What makes ${analysisSubject} credible for enterprise AI and analytics transformation?`,
-                    llmsSuggestion: "llms.txt: Add a short top section that names the company category, buyer fit, and primary service lines in plain language.",
-                });
-            }
+    useEffect(() => {
+        if (authError) return;
+        if (filteredHistoryEntries && filteredHistoryEntries.length === 0 && !batchLoading && !loading && organization) {
+            runAutoPilot();
         }
+    }, [filteredHistoryEntries, loading, organization, batchLoading, runAutoPilot, authError]);
 
-        return recommendations.slice(0, 4);
-    }, [weakClusters, manifestSnapshot?.schemaData, manifestSnapshot?.sourceUrl, analysisSubject, seoResult, competitorRanking]);
-
-
-    const dashboardKpis = useMemo(() => {
-        const visibleScores = Object.values(visibleModelAverages);
-        const lcrsAverage = batchResult?.domainStability
-            ?? (visibleScores.length > 0 ? clampPct(visibleScores.reduce((sum, score) => sum + score, 0) / visibleScores.length) : 0);
-        const bestModelEntry = Object.entries(visibleModelAverages)
-            .sort((a, b) => (b[1] || 0) - (a[1] || 0))[0];
-        const topCompetitor = competitorRanking[0];
-        return {
-            lcrsAverage,
-            bestModelName: bestModelEntry?.[0] || "No data",
-            bestModelScore: bestModelEntry?.[1] || 0,
-            topCompetitorName: topCompetitor?.name || "No competitor identified",
-            topCompetitorPressure: topCompetitor?.displacementRate || 0,
-            weakClusterCount: weakClusters.length,
-            geoScore: seoResult?.geoScore ?? 0,
-            winningCluster: winningClusters[0]?.category || "No winning cluster yet",
-        };
-    }, [batchResult, visibleModelAverages, competitorRanking, weakClusters, seoResult, winningClusters]);
+    useEffect(() => {
+        if (modelTabs.length > 0 && !modelTabs.includes(activeTab)) {
+            setActiveTab(modelTabs[0]);
+        }
+    }, [activeTab, modelTabs]);
 
     const executiveSummary = useMemo(() => {
         const topCompetitor = competitorRanking[0];
@@ -619,18 +321,6 @@ export default function SoMCommandCenter({
         return `${strongLine} ${weakLine}${topRemediation} ${competitorLine} ${geoLine}`;
     }, [analysisSubject, competitorRanking, winningClusters, weakClusters, seoResult]);
 
-    const remediationNarrative = useMemo(() => {
-        if (!remediationSnapshot) {
-            return "Before/after remediation proof will appear after at least two runs exist for the same analyzed context.";
-        }
-        const somDirection = remediationSnapshot.deltaLcrs > 0 ? "expanded" : remediationSnapshot.deltaLcrs < 0 ? "contracted" : "held flat";
-        const hallucinationDirection = remediationSnapshot.deltaHallucinationRate < 0
-            ? "decreased displacement risk"
-            : remediationSnapshot.deltaHallucinationRate > 0
-                ? "increased displacement risk"
-                : "kept displacement risk flat";
-        return `Compared with the baseline run, Share of Model (SoM) has ${somDirection} by ${Math.abs(remediationSnapshot.deltaLcrs)} points and competitive displacement has ${hallucinationDirection}. Build specific site evidence to improve this further.`;
-    }, [remediationSnapshot]);
 
     const normalizeAuditUrl = (value: string) => {
         const trimmed = value.trim();
@@ -718,6 +408,8 @@ export default function SoMCommandCenter({
         }
     };
 
+
+
     const runSEOAudit = async () => {
         if (!seoUrl || !organization) return;
         setSeoLoading(true);
@@ -784,677 +476,407 @@ export default function SoMCommandCenter({
             setSeoLoading(false);
         }
     };
-
-
-    const chartData = useMemo(() => {
-        if (loading) return [];
-        if (!filteredHistoryEntries && !_error) return [];
-        if (filteredHistoryEntries && filteredHistoryEntries.length === 0) return [];
-
-        const targetModel = activeTab;
-        const dataPoints: { name: string; score: number }[] = [];
-
-        for (const entry of (filteredHistoryEntries || [])) {
-            const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
-            const label = ts.toLocaleDateString("en-US", { weekday: "short" });
-            const modelResult = entry.results?.find((r: { model: string; accuracy: number }) => normalizeModelName(r.model) === targetModel);
-            if (modelResult) {
-                dataPoints.push({ name: label, score: modelResult.accuracy });
-            }
-        }
-
-        return dataPoints;
-    }, [filteredHistoryEntries, activeTab, loading, _error]);
-
-    const longitudinalHistoryData = useMemo(() => {
-        if (!filteredHistoryEntries) return [];
-        const entries = filteredHistoryEntries.map((entry: any) => {
-            const ts = entry.timestamp?.seconds ? new Date(entry.timestamp.seconds * 1000) : new Date();
-            const dateStr = ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            
-            // Average across models for this specific snapshot
-            const avg = entry.results?.length > 0 
-              ? entry.results.reduce((acc: number, r: { accuracy: number }) => acc + (r.accuracy || 0), 0) / entry.results.length
-              : 0;
-              
-            return {
-                date: dateStr,
-                score: Math.round(avg)
-            };
-        });
-        return [...entries].reverse(); // oldest first
-    }, [filteredHistoryEntries]);
-
-    const fidelityRisks = useMemo(() => {
-        if (!filteredHistoryEntries) return [];
-        const risks: { id: number; model: string; text: string; severity: string }[] = [];
-        let riskId = 1;
-        for (const entry of filteredHistoryEntries) {
-            for (const result of (entry.results || []) as { model: string; accuracy: number; hasDisplacement?: boolean; hasHallucination?: boolean }[]) {
-                // Show displacement alerts: competitor ranked above us OR low SoM score
-                const isDisplaced = (result.hasDisplacement ?? result.hasHallucination) || result.accuracy < 60;
-                if (isDisplaced) {
-                    risks.push({
-                        id: riskId++,
-                        model: result.model,
-                        text: `Competitive Displacement on: "${entry.prompt.slice(0, 50)}..."`,
-                        severity: result.accuracy < 40 ? "high" : "medium"
-                    });
-                }
-            }
-        }
-        return risks.slice(0, 5);
-    }, [filteredHistoryEntries]);
-
-    const radarExplainer = [
-        { label: "Consistency", detail: "How stable the narrative stays across prompts." },
-        { label: "Factuality", detail: "How closely answers stay anchored to verified claims." },
-        { label: "Sentiment", detail: "Whether tone about the brand remains context-appropriate." },
-        { label: "Safety", detail: "How reliably the model avoids harmful or fabricated assertions." },
-        { label: "Authority", detail: "How strongly the model preserves your real market positioning." },
-    ];
-
-    const avgScore = dashboardKpis.lcrsAverage;
+    const avgScore = dashboardKpis.somAverage;
 
     const isCriticalDrift = (batchResult?.driftRate || 0) > 40 || avgScore < 55;
 
+    if (authError) {
+        return <AuthErrorCard />;
+    }
+
     return (
         <div className={`w-full animate-fade-in font-sans transition-all duration-700 ${isCriticalDrift ? 'ring-2 ring-rose-500/20 ring-inset rounded-2xl p-1' : ''}`}>
-            {/* Phase 1: ANALYZE (Ingestion & Content Definition) */}
-            {view === "analyze" && (
-                <div className="space-y-6">
-                    {/* Placeholder for Analyze View components - assuming they exist or need to be grouped here */}
-                    <div className="rounded-2xl p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 text-center">
-                        <Activity className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-medium text-slate-900 dark:text-white mb-2">Analysis Engine Active</h3>
-                        <p className="text-slate-500 max-w-md mx-auto">Upload your website URL or documentation to begin the automated enterprise buyer-intent audit.</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Phase 2: INTELLIGENCE (Leaderboard & Clusters) */}
-            {(view === "all" || view === "intelligence") && (
-                <>
-                    {isCriticalDrift && (
-                        <div className="w-full rounded-xl mb-6 h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500 animate-shimmer" />
-                    )}
-            {/* KPI strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
-                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Avg SoM</p>
-                    <div className="flex items-end gap-2 group relative">
-                        <span className="text-3xl font-light text-slate-900 dark:text-white cursor-help border-b border-dotted border-slate-300 dark:border-slate-700">{dashboardKpis.lcrsAverage || "—"}</span>
-                        {dashboardKpis.lcrsAverage > 0 && <span className="text-slate-500 mb-1">%</span>}
-                                <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
-                                    <p className="font-semibold mb-1">AI Share of Model (SoM)</p>
-                                    <p className="text-slate-300">The metric of brand preference. A 42% SoM means that in 42 out of 100 competitive simulations, the AI explicitly prioritized your brand's unique claims over rivals.</p>
-                                </div>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">{batchResult ? "Batch-calculated enterprise score" : "Derived from current simulation history"}</p>
-                </div>
-                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Best Model</p>
-                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.bestModelName}</p>
-                    <p className="text-xs text-slate-500 mt-2">{Math.round(dashboardKpis.bestModelScore)}% on current context</p>
-                </div>
-                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Top Competitor Pressure</p>
-                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</p>
-                    <div className="group relative">
-                        <p className="text-xs text-rose-500 mt-2 cursor-help font-medium">
-                            {dashboardKpis.topCompetitorPressure}% AI Rec. Frequency
+            {/* STEP 1: AI OUTCOME (Global / Always Visible) */}
+            <div className="mb-12 space-y-8">
+                {/* PHASE 1: OUTCOME - EXECUTIVE SUMMARY */}
+                <div className="flex flex-col xl:flex-row items-start justify-between gap-8 mb-10">
+                    <div className="flex-1 space-y-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest">
+                            <Zap className="w-3 h-3" /> Step 1: AI Outcome
+                        </div>
+                        <h1 className="text-4xl xl:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1]">
+                            {analysisSubject} <br/>
+                            <span className="text-indigo-500">Market Intelligence Pulse</span>
+                        </h1>
+                        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+                            AI Share of Model (SoM) analysis across GPT-4o, Claude 4.5, and Gemini 3. <br/>
+                            Identifying where you lose buyer intent to <span className="font-bold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</span>.
                         </p>
-                                <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
-                                    <p className="font-semibold mb-1">AI Recommendation Frequency</p>
-                                    <p className="text-slate-300">The "Risk Level". An 85% frequency means this rival was recommended over you in 17 out of 20 tested buyer-intent queries.</p>
-                                </div>
                     </div>
-                </div>
-                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Weak Clusters</p>
-                    <p className="text-3xl font-light text-slate-900 dark:text-white">{dashboardKpis.weakClusterCount}</p>
-                    <p className="text-xs text-slate-500 mt-2">{weakClusters[0]?.category || "Run batch to detect weak buyer-intent areas"}</p>
-                </div>
-                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Winning Cluster</p>
-                    <p className="text-lg font-semibold text-slate-900 dark:text-white">{dashboardKpis.winningCluster}</p>
-                    <p className="text-xs text-slate-500 mt-2">{winningClusters[0] ? `${winningClusters[0].avgAccuracy}% average SoM` : "Awaiting enterprise query evidence"}</p>
-                </div>
-                <div className="rounded-2xl p-4 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">GEO Readiness</p>
-                    <p className="text-3xl font-light text-slate-900 dark:text-white">{seoResult ? `${dashboardKpis.geoScore}%` : "—"}</p>
-                    <p className="text-xs text-slate-500 mt-2">{seoResult ? describeGeoMethod(seoResult.geoMethod) : "Run audit to populate"}</p>
-                </div>
-            </div>
-            {/* Action buttons */}
-            <div className="flex flex-wrap gap-3 mb-8">
-                <button
-                    onClick={runBatchStabilityCheck}
-                    disabled={batchLoading || !["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "")}
-                    className={`text-xs px-4 py-2 rounded-lg transition-colors flex items-center ${["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50" : "bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700"}`}
-                >
-                    {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "") ? (
-                        <><Activity className={`w-3 h-3 mr-2 ${batchLoading ? "animate-spin" : ""}`} />{batchLoading ? "Analyzing..." : "Run Enterprise Batch"}</>
-                    ) : (
-                        <><Lock className="w-3 h-3 mr-2 text-slate-500" />Growth/Scale/Enterprise</>
-                    )}
-                </button>
-                <button
-                    onClick={() => {
-                        if (organization?.subscriptionTier === "explorer") { setUpgradeFeatureName("Brand Health PDF Report"); setIsUpgradeModalOpen(true); return; }
-                        setIsCertificateOpen(true);
-                    }}
-                    className="text-xs px-4 py-2 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/20 transition-colors flex items-center"
-                >
-                    {organization?.subscriptionTier === "explorer" ? <Lock className="w-3 h-3 mr-2" /> : <Award className="w-3 h-3 mr-2" />}
-                    {organization?.subscriptionTier === "explorer" ? "Unlock Executive Report" : "Open Executive Report"}
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Sparkles className="w-4 h-4 text-indigo-500" />
-                            <h2 className="text-lg font-medium text-slate-900 dark:text-white">Executive Summary</h2>
-                        </div>
-                        <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">{executiveSummary}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
-                            <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Observed Outcome</p>
-                                <p className="text-sm text-slate-700 dark:text-slate-300">{weakClusters[0]?.observedOutcome || "Batch analysis will surface the clearest losing outcome."}</p>
-                            </div>
-                            <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Winning Competitor</p>
-                                <p className="text-sm text-slate-700 dark:text-slate-300">{weakClusters[0]?.winningCompetitor || dashboardKpis.topCompetitorName}</p>
-                            </div>
-                            <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Priority Fix</p>
-                                <p className="text-sm text-slate-700 dark:text-slate-300">{weakClusters[0]?.missingClaims.slice(0, 2).join(" · ") || "Clarify missing buyer-facing claims"}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Award className="w-4 h-4 text-emerald-500" />
-                            <h2 className="text-lg font-medium text-slate-900 dark:text-white">Before / After Remediation Proof</h2>
-                        </div>
-                        <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">{remediationNarrative}</p>
-                        {remediationSnapshot ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
-                                <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Baseline SoM</p>
-                                    <p className="text-2xl font-light text-slate-900 dark:text-white">{remediationSnapshot.baselineAvg}%</p>
-                                </div>
-                                <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Current SoM</p>
-                                    <p className="text-2xl font-light text-slate-900 dark:text-white">{remediationSnapshot.currentAvg}%</p>
-                                </div>
-                                <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">SoM Delta</p>
-                                    <p className={`text-2xl font-light ${remediationSnapshot.deltaLcrs >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                                        {remediationSnapshot.deltaLcrs >= 0 ? "+" : ""}{remediationSnapshot.deltaLcrs}
-                                    </p>
-                                </div>
-                                <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 p-4">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Displacement Delta</p>
-                                    <p className={`text-2xl font-light ${remediationSnapshot.deltaHallucinationRate <= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                                        {remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}{remediationSnapshot.deltaHallucinationRate}
-                                    </p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6 mt-5 text-center">
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Run the same context at least twice to prove a remediation delta.</p>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <div className="flex items-center justify-between gap-4 mb-5">
+                    
+                    {batchLoading && (
+                        <div className="w-full xl:w-auto p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center gap-4 animate-pulse">
+                            <Activity className="w-8 h-8 text-indigo-500 animate-spin" />
                             <div>
-                                <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center">
-                                    <ClipboardList className="w-4 h-4 mr-2 text-indigo-500" />
-                                    Buyer-Intent Query Clusters
-                                </h2>
-                                <p className="text-xs text-slate-500 mt-1">Winning and losing enterprise query themes across the current batch or scored history.</p>
-                            </div>
-                            <div className="text-xs text-slate-500">Models compared: {Object.keys(visibleModelAverages).join(" · ") || FALLBACK_MODEL_ORDER.join(" · ")}</div>
-                        </div>
-                        {queryClusterInsights.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Run the enterprise batch to see which buyer-intent categories you win and lose.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                                {queryClusterInsights.map((insight) => {
-                                    const isWinningCluster = winningClusters.some((cluster) => cluster.prompt === insight.prompt);
-                                    const isWeakCluster = weakClusters.some((cluster) => cluster.prompt === insight.prompt);
-                                    return (
-                                        <div key={insight.prompt} className={`rounded-2xl border p-5 ${isWeakCluster ? "border-rose-200 dark:border-rose-500/20 bg-rose-50/60 dark:bg-rose-950/20" : isWinningCluster ? "border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/60 dark:bg-emerald-950/20" : "border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30"}`}>
-                                            <div className="flex items-start justify-between gap-3 mb-3">
-                                                <div>
-                                                    <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-1">{insight.category}</p>
-                                                    <p className="text-sm font-medium text-slate-900 dark:text-white leading-6">{insight.prompt}</p>
-                                                </div>
-                                                <div className="text-right shrink-0 group relative">
-                                                    <p className={`text-2xl font-light cursor-help ${insight.avgAccuracy >= 80 ? "text-emerald-500" : insight.avgAccuracy >= 60 ? "text-amber-500" : "text-rose-500"}`}>{insight.avgAccuracy}%</p>
-                                                    <p className="text-[10px] text-slate-500">avg SoM</p>
-                                                    <div className="absolute top-full right-0 mt-2 w-56 p-3 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl leading-relaxed">
-                                                        <p className="font-semibold mb-1">Cluster Fidelity</p>
-                                                        <p className="text-slate-300">How accurately AI models represent your brand across this specific query category.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2 mb-3 text-[11px]">
-                                                <span className="px-2 py-1 rounded-full bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">Winner: {insight.winnerModel}</span>
-                                                <span className="px-2 py-1 rounded-full bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">Weakest: {insight.weakestModel}</span>
-                                                <span className="px-2 py-1 rounded-full bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">Claim recall: {insight.claimRecall}%</span>
-                                                <span className="px-2 py-1 rounded-full bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">Hallucinations: {insight.hallucinationCount}</span>
-                                                {isWinningCluster && <span className="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-300">Winning cluster</span>}
-                                                {isWeakCluster && <span className="px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-300">Losing cluster</span>}
-                                            </div>
-                                            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{insight.observedOutcome}</p>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                                                <div className="rounded-xl bg-white/80 dark:bg-black/10 border border-slate-200 dark:border-white/5 p-3">
-                                                    <p className="uppercase tracking-widest text-slate-500 mb-2">Winning competitor</p>
-                                                    <p className="text-slate-700 dark:text-slate-300">{insight.winningCompetitor}</p>
-                                                </div>
-                                                <div className="rounded-xl bg-white/80 dark:bg-black/10 border border-slate-200 dark:border-white/5 p-3">
-                                                    <p className="uppercase tracking-widest text-slate-500 mb-2">Missing claims</p>
-                                                    <p className="text-slate-700 dark:text-slate-300">{insight.missingClaims.slice(0, 2).join(" · ")}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                        <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-none">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center">
-                                    <Search className="w-4 h-4 mr-2 text-indigo-500" />
-                                    Accuracy Over Time
-                                </h2>
-                                <div className="flex p-1 bg-slate-100 dark:bg-slate-950/50 rounded-lg border border-slate-200 dark:border-white/5">
-                                    {modelTabs.map((model) => (
-                                        <button
-                                            key={model}
-                                            onClick={() => setActiveTab(model)}
-                                            className={`px-4 py-1.5 text-sm rounded-md transition-all ${activeTab === model ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"}`}
-                                        >
-                                            {model}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            {loading ? (
-                                <div className="h-[260px] flex items-center justify-center animate-pulse">
-                                    <div className="w-full h-full bg-slate-800/50 rounded-xl"></div>
-                                </div>
-                            ) : chartData.length === 0 ? (
-                                <div className="h-[260px] flex flex-col items-center justify-center text-center">
-                                    <Activity className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-3" />
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Run simulations to unlock trend tracking.</p>
-                                </div>
-                            ) : (
-                                <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-[260px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={chartData}>
-                                            <defs>
-                                                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                            <XAxis dataKey="name" stroke="#64748b" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} />
-                                            <YAxis stroke="#64748b" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} domain={[0, 100]} />
-                                            <Tooltip contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1e293b", borderRadius: "8px" }} itemStyle={{ color: "#c7d2fe" }} />
-                                            <Area type="monotone" dataKey="score" stroke="#818cf8" strokeWidth={2} fillOpacity={1} fill="url(#colorScore)" />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </motion.div>
-                            )}
-                        </div>
-
-                        <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-none">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center">
-                                    <Hexagon className="w-4 h-4 mr-2 text-fuchsia-500" />
-                                    SoM Radar
-                                </h2>
-                                <div className="flex space-x-4 text-[10px] uppercase tracking-widest font-bold">
-                                    <span className="flex items-center text-indigo-400"><span className="w-2 h-2 bg-indigo-500 rounded-full mr-1"></span> GPT</span>
-                                    <span className="flex items-center text-fuchsia-400"><span className="w-2 h-2 bg-fuchsia-500 rounded-full mr-1"></span> Claude</span>
-                                    <span className="flex items-center text-cyan-400"><span className="w-2 h-2 bg-cyan-500 rounded-full mr-1"></span> Gemini</span>
-                                </div>
-                            </div>
-                            <div className="h-[260px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RadarChart cx="50%" cy="50%" outerRadius="78%" data={radarData}>
-                                        <PolarGrid stroke="#334155" />
-                                        <PolarAngleAxis dataKey="subject" tick={{ fill: "#64748b", fontSize: 10 }} />
-                                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                        <Radar name="GPT" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} />
-                                        <Radar name="Claude" dataKey="B" stroke="#d946ef" fill="#d946ef" fillOpacity={0.3} />
-                                        <Radar name="Gemini" dataKey="C" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
-                                        <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "none", borderRadius: "12px", fontSize: "12px" }} />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/80 dark:bg-slate-950/40 p-4">
-                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-3">How to read the SoM Radar</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {radarExplainer.map((item) => (
-                                        <div key={item.label} className="text-xs text-slate-500">
-                                            <span className="font-medium text-slate-700 dark:text-slate-300">{item.label}:</span> {item.detail}
-                                        </div>
-                                    ))}
-                                </div>
+                                <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Generating Market Pulse...</p>
+                                <p className="text-[10px] text-slate-500 font-bold">Scanning GPT-4o, Claude 4.5 & Gemini 3 for {vertical} insights</p>
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
-                            <TrendingUp className="w-4 h-4 mr-2 text-indigo-500" />
-                            Historical Competitor Ranking
-                        </h2>
-                        {longitudinalHistoryData.length === 0 ? (
-                            <div className="h-[250px] flex flex-col items-center justify-center text-center">
-                                <TrendingUp className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-3" />
-                                <p className="text-sm text-slate-500 dark:text-slate-400">No trend data yet.</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Run simulations to build longitudinal competitor ranking history.</p>
-                            </div>
-                        ) : (
-                            <div className="h-[250px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={longitudinalHistoryData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                        <XAxis dataKey="date" stroke="#64748b" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="#64748b" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} domain={[0, 100]} />
-                                        <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "none", borderRadius: "12px" }} />
-                                        <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: "#6366f1" }} activeDot={{ r: 6, fill: "#818cf8", stroke: "#fff", strokeWidth: 2 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
-                    </div>
+                    {!filteredHistoryEntries?.length && !batchLoading && !loading && (
+                        <div className="w-full xl:w-auto">
+                            <button 
+                                onClick={runAutoPilot}
+                                className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-5 rounded-2xl font-black text-lg shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 group"
+                            >
+                                <Sparkles className="w-6 h-6 text-indigo-400 group-hover:rotate-12 transition-transform" />
+                                Run Full Market Audit
+                            </button>
+                            <p className="text-center text-[10px] text-slate-500 mt-3 font-bold uppercase tracking-widest leading-relaxed">
+                                One-click competitive intelligence for {vertical}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
-                <div className="space-y-6">
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-5">
-                            <BriefcaseBusiness className="w-4 h-4 mr-2 text-indigo-500" />
-                            Competitor Intelligence
-                        </h2>
-                        {competitorRanking.length === 0 ? (
-                            <div className="flex flex-col items-center text-center py-6 space-y-2">
-                                <ArrowUpRight className="w-6 h-6 text-slate-300 dark:text-slate-700" />
-                                <p className="text-sm text-slate-500 dark:text-slate-400">No grounded competitor evidence yet.</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500">Upload a richer context manifest to enable competitor benchmarking by buyer-intent category.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-5">
-                                {competitorRanking.map((competitor) => {
-                                    const gaps: GapAssertion[] = (competitor.missingAssertions || []).map((a: any) =>
-                                        typeof a === "string"
-                                            ? { assertion: a, gapConfidence: 70, somImpact: 5 }
-                                            : a
-                                    ).sort((a: any, b: any) => b.gapConfidence - a.gapConfidence);
-                                    const totalSomImpact = gaps.reduce((s, g) => s + g.somImpact, 0);
-
-                                    return (
-                                        <div key={competitor.name} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 overflow-hidden">
-                                            {/* Header row */}
-                                            <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-semibold text-slate-900 dark:text-white text-sm">{competitor.name}</p>
-                                                        {competitor.displacementRate > 30 ? (
-                                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold uppercase tracking-wider">Primary Displacer</span>
-                                                        ) : competitor.displacementRate > 15 ? (
-                                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold uppercase tracking-wider">Niche Threat</span>
-                                                        ) : (
-                                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-bold uppercase tracking-wider">Monitoring</span>
-                                                        )}
-                                                    </div>
-                                                    {competitor.winningCategory && (
-                                                        <p className="text-xs text-slate-500 mt-0.5">Winning on: <span className="text-rose-500 dark:text-rose-400 font-medium">{competitor.winningCategory}</span></p>
-                                                    )}
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-2xl font-light text-rose-500">{competitor.displacementRate}%</p>
-                                                    <div className="group relative">
-                                                        <p className="text-[10px] text-slate-500 cursor-help border-b border-dotted border-slate-400">AI Rec. Frequency</p>
-                                                        <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                                                            Percentage of competitive simulations where this rival was ranked ahead of {analysisSubject} by independent models.
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Prescriptive Remediation */}
-                                            {competitor.remediationRecommendation && (
-                                                <div className="px-5 pb-4">
-                                                    <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-4">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <Sparkles className="w-3 h-3 text-indigo-400" />
-                                                            <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold">Actionable Remediation</p>
-                                                        </div>
-                                                        <p className="text-sm text-slate-700 dark:text-slate-100 leading-relaxed font-medium">
-                                                            {competitor.remediationRecommendation}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Buyer queries this competitor wins */}
-                                            {competitor.buyerQueries && competitor.buyerQueries.length > 0 && (
-                                                <div className="px-5 pb-3">
-                                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Buyer queries they're winning</p>
-                                                    <div className="space-y-1">
-                                                        {competitor.buyerQueries.map((q: string) => (
-                                                            <div key={q} className="flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
-                                                                <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
-                                                                <span>{q}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Gap assertions with confidence + SoM impact */}
-                                            {gaps.length > 0 && (
-                                                <div className="px-5 pb-5">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Your positioning gaps</p>
-                                                        {totalSomImpact > 0 && (
-                                                            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                                                                Recover up to +{totalSomImpact}% SoM
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="space-y-3">
-                                                        {gaps.map((gap) => (
-                                                            <div key={gap.assertion} className="rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 p-3">
-                                                                <div className="flex items-start justify-between gap-3 mb-2">
-                                                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-5">{gap.assertion}</p>
-                                                                    <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                                        gap.gapConfidence >= 80
-                                                                            ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                                                                            : gap.gapConfidence >= 65
-                                                                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                                                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
-                                                                    }`}>
-                                                                        {gap.gapConfidence}% confirmed
-                                                                    </span>
-                                                                </div>
-                                                                {/* Confidence progress bar */}
-                                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mb-2">
-                                                                    <div
-                                                                        className={`h-1.5 rounded-full transition-all ${
-                                                                            gap.gapConfidence >= 80 ? "bg-rose-500" : gap.gapConfidence >= 65 ? "bg-amber-400" : "bg-slate-400"
-                                                                        }`}
-                                                                        style={{ width: `${gap.gapConfidence}%` }}
-                                                                    />
-                                                                </div>
-                                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Closing this gap: estimated +{gap.somImpact}% SoM</p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Training claims they own */}
-                                            {competitor.claimsOwned && competitor.claimsOwned.length > 0 && (
-                                                <div className="border-t border-slate-100 dark:border-white/5 px-5 py-3">
-                                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">What AI says about them</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {competitor.claimsOwned.map((claim: string) => (
-                                                            <span key={claim} className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20">{claim}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-6 shadow-xl dark:shadow-none">
-                        <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-6">Model Comparison</h3>
-                        <div className="space-y-6">
-                            {Object.entries(visibleModelAverages).map(([modelName, score], i) => (
-                                <div key={modelName}>
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="font-medium text-slate-900 dark:text-white">{modelName}</span>
-                                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">{Math.round(score as number)}%</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 1, delay: i * 0.2, ease: "easeOut" }} className="h-full bg-indigo-500 rounded-full" style={{ opacity: 1 - (i * 0.2) }} />
+                {/* KPI STRIP */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {loading ? (
+                        Array(4).fill(0).map((_, i) => (
+                            <div key={i} className="animate-pulse h-32 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 backdrop-blur-xl"></div>
+                        ))
+                    ) : (
+                        <>
+                            <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">AI Market Visibility (SoM)</p>
+                                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
+                                        <Globe className="w-4 h-4" />
                                     </div>
                                 </div>
-                            ))}
+                                <div className="flex items-end gap-2 mb-1">
+                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{dashboardKpis.somAverage}%</h3>
+                                    <span className={`text-xs font-medium mb-1 ${remediationSnapshot && remediationSnapshot.deltaSom >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        {remediationSnapshot && (remediationSnapshot.deltaSom >= 0 ? `+${remediationSnapshot.deltaSom}` : remediationSnapshot.deltaSom)}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500">Narrative share across LLM families</p>
+                                
+                                {/* TOOLTIP */}
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                                    <div className="p-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-[10px] shadow-2xl w-48 border border-white/10 ring-4 ring-black/5">
+                                        <p className="font-bold mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3 text-indigo-400" /> Share of Model (SoM)</p>
+                                        <p className="leading-relaxed opacity-80 italic">"The percentage of brand attributes correctly recalled by AI during buyer queries." Higher = Better Brand Authority.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">AI Rec. Frequency (ARF)</p>
+                                    <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500">
+                                        <ShieldAlert className="w-4 h-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-end gap-2 mb-1">
+                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorPressure}%</h3>
+                                </div>
+                                <p className="text-xs text-slate-500">Preference toward <span className="font-bold">{dashboardKpis.topCompetitorName}</span></p>
+
+                                {/* TOOLTIP */}
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                                    <div className="p-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-[10px] shadow-2xl w-48 border border-white/10 ring-4 ring-black/5">
+                                        <p className="font-bold mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3 text-rose-400" /> Defining ARF</p>
+                                        <p className="leading-relaxed opacity-80 italic">"How often AI prefers this rival over you." {dashboardKpis.topCompetitorPressure}% means out of 100 simulations, the competitor won preference in {dashboardKpis.topCompetitorPressure}.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Visibility Gaps</p>
+                                    <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                                        <Search className="w-4 h-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-end gap-2 mb-1">
+                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{dashboardKpis.weakClusterCount}</h3>
+                                </div>
+                                <p className="text-xs text-slate-500">Buyer intent clusters requiring action</p>
+                            </div>
+
+                            <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all text-emerald-500">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Winning Narrative</p>
+                                    <div className="p-2 rounded-lg bg-emerald-500/10">
+                                        <TrendingUp className="w-4 h-4" />
+                                    </div>
+                                </div>
+                                <div className="mb-1">
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white truncate">{dashboardKpis.winningCluster}</h3>
+                                </div>
+                                <p className="text-xs text-slate-500">Highest brand authority identified</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+
+
+                {/* EXECUTIVE NARRATIVE */}
+                <div className="rounded-3xl p-10 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-bl-[120px] pointer-events-none" />
+                    <div className="flex items-center gap-2 mb-6 text-indigo-600 dark:text-indigo-400">
+                        <BriefcaseBusiness className="w-5 h-5" />
+                        <h2 className="text-xs font-extrabold uppercase tracking-[0.3em]">Strategy Insight</h2>
+                    </div>
+                    <p className="text-2xl md:text-3xl font-medium text-slate-800 dark:text-slate-100 leading-relaxed first-letter:text-6xl first-letter:font-bold first-letter:text-indigo-600 first-letter:mr-3 first-letter:float-left first-letter:leading-none">
+                        {executiveSummary}
+                    </p>
+                    
+                    <div className="mt-10 flex flex-wrap gap-4 pt-8 border-t border-slate-100 dark:border-white/5">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-8">
+                             <div className="space-y-1">
+                                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Observed Outcome</p>
+                                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{weakClusters[0]?.observedOutcome || "Narrative drift detected in core categories."}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Winning Competitor</p>
+                                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{weakClusters[0]?.winningCompetitor || dashboardKpis.topCompetitorName}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Priority Remediation</p>
+                                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{weakClusters[0]?.missingClaims[0] || "Inject missing capability assertions."}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setIsCertificateOpen(true)}
+                                    className="px-8 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center gap-3 shadow-xl shadow-indigo-500/30 transition-all active:scale-95"
+                                >
+                                    <FilePenLine className="w-5 h-5" />
+                                    Download Brand Health Certificate
+                                </button>
+                                <button
+                                    onClick={runBatchStabilityCheck}
+                                    disabled={batchLoading}
+                                    className="px-8 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold text-sm flex items-center gap-3 transition-all active:scale-95"
+                                >
+                                    <Activity className={`w-5 h-5 ${batchLoading ? 'animate-spin' : ''}`} />
+                                    {batchLoading ? 'Processing Audit...' : 'Re-Run Enterprise Audit'}
+                                </button>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Analysis Stability</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(i => <div key={i} className={`w-1 h-3 rounded-full ${i <= 4 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />)}
+                                    </div>
+                                    <span className="text-xs font-bold text-emerald-500">High Confidence</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* STEP 2: INTELLIGENCE (Risk/Opportunity) */}
+            {(view === "all" || view === "intelligence") && (
+                <div className="space-y-12 mb-12 animate-in slide-in-from-bottom duration-500">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
+                                <Award className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Step 2: Competitive Intelligence</h2>
+                                <p className="text-sm text-slate-500">Where you are winning vs losing in the Generative Search ecosystem.</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
-                        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-4">
-                            <Globe className="w-4 h-4 mr-2 text-emerald-500" />
-                            SEO + GEO Readiness
-                        </h2>
-                        {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "explorer") ? (
-                            <div className="flex space-x-3 mb-4">
-                                <input
-                                    type="url"
-                                    value={seoUrl}
-                                    onChange={(e) => setSeoUrl(e.target.value)}
-                                    placeholder="https://yourbusiness.com"
-                                    className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 outline-none"
-                                    onKeyDown={(e) => { if (e.key === "Enter") runSEOAudit(); }}
-                                />
-                                <button
-                                    onClick={runSEOAudit}
-                                    disabled={seoLoading || !seoUrl}
-                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm transition-colors"
-                                >
-                                    {seoLoading ? "Auditing..." : "Audit"}
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center mb-4">
-                                <Lock className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-                                <p className="text-sm text-slate-600 dark:text-slate-300">SEO &amp; GEO audits require a Growth, Scale, or Enterprise plan.</p>
-                                <button
-                                    onClick={() => {
-                                        setUpgradeFeatureName("SEO & GEO Readiness Audits");
-                                        setIsUpgradeModalOpen(true);
-                                    }}
-                                    className="text-xs text-indigo-500 mt-1 cursor-pointer hover:underline py-1 px-3 border border-indigo-200 dark:border-indigo-500/20 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
-                                >
-                                    Upgrade to Growth
-                                </button>
-                            </div>
-                        )}
-                        {seoResult && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 text-center">
-                                        <p className="text-xs text-slate-500 mb-1">SEO</p>
-                                        <p className={`text-2xl font-light ${seoResult.seoScore >= 60 ? "text-emerald-500" : "text-amber-500"}`}>{seoResult.seoScore}%</p>
-                                    </div>
-                                    <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 text-center">
-                                        <p className="text-xs text-slate-500 mb-1">GEO</p>
-                                        <p className={`text-2xl font-light ${seoResult.geoScore >= 50 ? "text-emerald-500" : "text-rose-500"}`}>{seoResult.geoScore}%</p>
-                                    </div>
-                                    <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 text-center">
-                                        <p className="text-xs text-slate-500 mb-1">Overall</p>
-                                        <p className={`text-2xl font-light ${seoResult.overallScore >= 50 ? "text-emerald-500" : "text-rose-500"}`}>{seoResult.overallScore}%</p>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-8">
+                            {/* Query Clusters */}
+                            <QueryClusterInsights loading={loading} insights={queryClusterInsights} />
+
+                            {/* Long-term Trends */}
+                            <div className="rounded-2xl p-8 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900">
+                                <div className="flex justify-between items-center mb-8">
+                                    <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400">Positioning Stability Trend</h3>
+                                    <div className="flex gap-2">
+                                        {modelTabs.map(m => (
+                                            <button key={m} onClick={() => setActiveTab(m)} className={`px-3 py-1 rounded-lg text-[10px] uppercase font-bold tracking-widest transition-all ${activeTab === m ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>{m}</button>
+                                        ))}
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    {seoResult.checks.map((check, i) => (
-                                        <div key={i} className="flex items-center justify-between text-sm bg-slate-50 dark:bg-slate-900 rounded-lg px-4 py-2 border border-slate-200 dark:border-white/5">
-                                            <span className="text-slate-700 dark:text-slate-300">{check.check}</span>
-                                            <span className={`text-xs px-2 py-0.5 rounded ${check.status === "pass" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : ["warning", "warn"].includes(check.status) ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" : "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
-                                                {check.status}
-                                            </span>
+                                <div className="h-[300px] w-full">
+                                    {loading ? (
+                                        <div className="w-full h-full flex items-center justify-center bg-slate-100/30 dark:bg-slate-800/20 rounded-xl animate-pulse">
+                                            <p className="text-xs text-slate-400">Loading historical signals...</p>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={chartData}>
+                                                <defs>
+                                                    <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} strokeOpacity={0.1} />
+                                                <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                                                <YAxis stroke="#94a3b8" tick={{ fontSize: 10, fontWeight: 700 }} domain={[0, 100]} axisLine={false} tickLine={false} />
+                                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }} />
+                                                <Area type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} fill="url(#trendGradient)" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    )}
                                 </div>
-                                <p className="text-xs text-slate-500 italic">{seoResult.recommendation}</p>
-                            </motion.div>
-                        )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-8">
+                            {/* Competitor Leaderboard */}
+                            <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl">
+                                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400 mb-6">Market Displacement</h3>
+                                <div className="space-y-6">
+                                    {competitorRanking.length === 0 ? (
+                                        <div className="py-4 text-center">
+                                            <p className="text-xs text-slate-500 uppercase font-bold">No competitors detected</p>
+                                        </div>
+                                    ) : (
+                                    <div className="space-y-3">
+                                    <p className="text-xs font-bold text-rose-500 dark:text-rose-400 uppercase tracking-widest mb-1">Top Competitive Risk</p>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{dashboardKpis.topCompetitorName}</h3>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-1 bg-slate-100 dark:bg-white/5 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${dashboardKpis.topCompetitorPressure}%` }}></div>
+                                        </div>
+                                        <span className="text-sm font-black text-rose-500">{dashboardKpis.topCompetitorPressure}% ARF</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-2 italic">
+                                        * AI Recommendation Frequency (ARF): Percentage of simulations where this rival was preferred over you.
+                                    </p>
+                                    </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* SoM Radar */}
+                            <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl">
+                                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400 mb-4">SoM Vector Analysis</h3>
+                                <div className="h-[240px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                            <PolarGrid stroke="#334155" />
+                                            <PolarAngleAxis dataKey="subject" tick={{ fill: "#64748b", fontSize: 9, fontWeight: 700 }} />
+                                            <Radar name="Brand Profile" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.6} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="rounded-2xl p-6 border border-rose-500/10 bg-white dark:bg-gradient-to-b dark:from-slate-900/50 dark:to-slate-950/50 shadow-xl dark:shadow-none">
-                        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center mb-6">
-                            <ShieldAlert className="w-4 h-4 mr-2 text-rose-500" />
-                            Active Displacement Alerts
-                        </h2>
-                        <div className="space-y-4">
-                            {loading ? (
-                                Array(3).fill(0).map((_, i) => (
-                                    <div key={i} className="animate-pulse bg-slate-800/40 h-16 rounded-lg w-full"></div>
-                                ))
-                            ) : fidelityRisks.length > 0 ? (
-                                fidelityRisks.map((risk: { id: number, model: string, text: string }) => (
-                                    <div key={risk.id} className="p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 hover:border-rose-500/30 transition-colors">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">{normalizeModelName(risk.model)}</span>
-                                            <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
-                                        </div>
-                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug">{risk.text}</p>
+                    {/* Lower Intelligence Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* SEO + GEO Readiness */}
+                        <div className="rounded-2xl p-8 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl">
+                            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center mb-6">
+                                <Globe className="w-5 h-5 mr-3 text-emerald-500" />
+                                SEO + GEO Readiness
+                            </h2>
+                            {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "explorer") ? (
+                                <div className="space-y-6">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="url"
+                                            value={seoUrl}
+                                            onChange={(e) => setSeoUrl(e.target.value)}
+                                            placeholder="https://yourbusiness.com"
+                                            className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        />
+                                        <button
+                                            onClick={runSEOAudit}
+                                            disabled={seoLoading || !seoUrl}
+                                            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
+                                        >
+                                            {seoLoading ? "Auditing..." : "Audit"}
+                                        </button>
                                     </div>
-                                ))
+                                    {seoResult && (
+                                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center">
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">SEO Score</p>
+                                                    <p className={`text-2xl font-black ${seoResult.seoScore >= 70 ? 'text-emerald-500' : 'text-amber-500'}`}>{seoResult.seoScore}%</p>
+                                                </div>
+                                                <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center">
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">GEO Score</p>
+                                                    <p className={`text-2xl font-black ${seoResult.geoScore >= 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{seoResult.geoScore}%</p>
+                                                </div>
+                                                <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center">
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Overall</p>
+                                                    <p className="text-2xl font-black text-indigo-500">{seoResult.overallScore}%</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                                                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                                                    <Sparkles className="w-3 h-3 inline mr-2 text-indigo-400" />
+                                                    {seoResult.recommendation}
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </div>
                             ) : (
-                                <div className="text-center py-6">
-                                    <p className="text-sm text-slate-500">No high-confidence drift alerts are active.</p>
-                                    <p className="text-xs text-slate-400 mt-1">This updates as new scored prompts are written into history.</p>
+                                <div className="py-8 text-center bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
+                                    <Lock className="w-8 h-8 mx-auto text-slate-400 mb-4" />
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">Upgrade to unlock deep SEO/GEO site audits.</p>
+                                    <button onClick={() => setIsUpgradeModalOpen(true)} className="mt-4 text-xs font-bold text-indigo-500 hover:underline">View Scaling Plans</button>
                                 </div>
                             )}
                         </div>
+
+                        {/* Displacement Alerts */}
+                        <div className="rounded-2xl p-8 border border-rose-500/10 bg-white dark:bg-slate-900 shadow-xl overflow-hidden relative">
+                            <div className="absolute top-0 right-0 p-4">
+                                <ShieldAlert className="w-12 h-12 text-rose-500/10" />
+                            </div>
+                            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center mb-6">
+                                <Activity className="w-5 h-5 mr-3 text-rose-500" />
+                                Active Displacement Alerts
+                            </h2>
+                            <div className="space-y-4">
+                                {loading ? (
+                                    Array(3).fill(0).map((_, i) => (
+                                        <div key={i} className="animate-pulse bg-slate-100 dark:bg-slate-800/40 h-16 rounded-xl w-full"></div>
+                                    ))
+                                ) : fidelityRisks.length > 0 ? (
+                                    fidelityRisks.map((risk) => (
+                                        <div key={risk.id} className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-center justify-between group hover:border-rose-500/30 transition-all">
+                                            <div>
+                                                <p className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-1">{normalizeModelName(risk.model)}</p>
+                                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{risk.text}</p>
+                                            </div>
+                                            <div className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${risk.severity === 'high' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'}`}>
+                                                {risk.severity}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-12 text-center text-slate-400">
+                                        <p className="text-sm font-medium">Monitoring complete.</p>
+                                        <p className="text-[10px] mt-1 font-bold">No high-risk competitive displacement detected.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
-                </>
+                </div>
             )}
 
-            {/* Phase 3: ACTION (Prescriptive Remediation) */}
+
+            {/* STEP 3: ACTION (Prescriptive Remediation) */}
             {(view === "all" || view === "action") && (
                 <div className="space-y-6">
                      <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl dark:shadow-none">
                         <div className="flex items-center gap-2 mb-5">
                             <FilePenLine className="w-4 h-4 text-fuchsia-500" />
-                            <h2 className="text-lg font-medium text-slate-900 dark:text-white">Prescriptive Remediation Recommendations</h2>
+                            <h2 className="text-lg font-medium text-slate-900 dark:text-white font-bold">Step 3: Action Center</h2>
                         </div>
                         {remediationRecommendations.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
@@ -1542,9 +964,11 @@ export default function SoMCommandCenter({
                         modelResults={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.results : undefined}
                         lastPrompt={filteredHistoryEntries && filteredHistoryEntries.length > 0 ? [...filteredHistoryEntries].reverse()[0]?.prompt : undefined}
                         seoResult={seoResult || undefined}
-                         competitors={competitors.map((c: any) => ({
+                         competitors={competitors.map((c: CompetitorInsight) => ({
                                 ...c,
-                                missingAssertions: (c.missingAssertions || []).map((a: any) => typeof a === "string" ? a : a.assertion)
+                                missingAssertions: (c.missingAssertions || [])
+                                    .map((a) => typeof a === "string" ? a : (a as { assertion?: string }).assertion || "")
+                                    .filter((a) => a),
                             }))}
                         activeContextName={analysisSubject}
                         clusterInsights={queryClusterInsights}
@@ -1563,6 +987,6 @@ export default function SoMCommandCenter({
                 onClose={() => setIsUpgradeModalOpen(false)}
                 featureHighlight={upgradeFeatureName}
             />
-        </div >
+        </div>
     );
 }

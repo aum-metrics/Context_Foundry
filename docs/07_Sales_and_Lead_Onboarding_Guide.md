@@ -61,7 +61,7 @@ Use questions like:
 **Answer:** SEO and AI answer visibility overlap, but they are not the same thing. AUM measures model representation against verified context and shows where competitor narratives are winning.
 
 **Objection:** *"Is the score scientifically proven?"*  
-**Answer:** No. Do not oversell it. LCRS is an auditable engineering heuristic designed for operational consistency, not a peer-reviewed academic metric.
+**Answer:** No. Do not oversell it. SoM is an auditable engineering heuristic designed for operational consistency, not a peer-reviewed academic metric.
 
 ## 5. Demo flow
 

@@ -73,6 +73,66 @@ def recursive_split(text, max_size, overlap_size):
         if start >= len(text): break
     return chunks
 
+
+TAXONOMY_LABELS = [
+    "Retail & CPG",
+    "Financial Services",
+    "Healthcare & Life Sciences",
+    "Technology & SaaS",
+    "Manufacturing & Supply Chain",
+    "Energy & Utilities",
+    "Professional Services",
+    "Public Sector",
+    "General Enterprise",
+]
+
+VERTICAL_TO_TAXONOMY = {
+    "retail_india": "Retail & CPG",
+    "cyber_resilience": "Technology & SaaS",
+    "fintech_global": "Financial Services",
+    "healthcare_tech": "Healthcare & Life Sciences",
+    "fmcg_cpg": "Retail & CPG",
+    "saas_enterprise": "Technology & SaaS",
+    "general_enterprise": "General Enterprise",
+}
+
+
+def classify_industry_taxonomy(client: OpenAI, doc_sample: str, schema_data: dict, hint_org_name: str) -> tuple[str, list]:
+    org_name = schema_data.get("name") if isinstance(schema_data, dict) else None
+    org_label = org_name or hint_org_name or "the organization"
+    prompt = f"""You are a taxonomy classifier. Based ONLY on the document content, choose the single best-fit industry taxonomy label and up to 5 short tags.
+
+Allowed taxonomy labels: {", ".join(TAXONOMY_LABELS)}.
+If the document does not provide enough evidence, return "General Enterprise".
+
+Return strictly JSON:
+{{"taxonomy": "label", "tags": ["tag1", "tag2"]}}
+
+Organization hint: {org_label}
+
+<Doc>
+{doc_sample}
+</Doc>
+"""
+    try:
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model=OPENAI_SCHEMA_MODEL,
+            response_format={"type": "json_object"},
+            temperature=0
+        )
+        payload = json.loads(response.choices[0].message.content)
+        taxonomy = (payload.get("taxonomy") or "General Enterprise").strip()
+        if taxonomy not in TAXONOMY_LABELS:
+            taxonomy = "General Enterprise"
+        tags = payload.get("tags") if isinstance(payload.get("tags"), list) else []
+        tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+        return taxonomy, tags[:5]
+    except Exception as e:
+        logger.warning(f"Industry taxonomy classification failed: {e}")
+        fallback_vertical = detect_vertical_from_name(org_label)
+        return VERTICAL_TO_TAXONOMY.get(fallback_vertical, "General Enterprise"), []
+
 @router.post("/parse")
 async def parse_document(
     file: UploadFile = File(...), 
@@ -176,6 +236,12 @@ async def parse_document(
         doc_sample = raw_text[:20000]
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
+
+        hint_org_name = ""
+        if db:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                hint_org_name = org_doc.to_dict().get("name", "")
             
         # Fetch current organization name for better semantic pinning
         hint_org_name = ""
@@ -200,6 +266,7 @@ async def parse_document(
         )
         schema_data = json.loads(completion.choices[0].message.content)
         schema_vector = client.embeddings.create(input=[json.dumps(schema_data)], model="text-embedding-3-small").data[0].embedding
+        industry_taxonomy, industry_tags = classify_industry_taxonomy(client, doc_sample, schema_data, hint_org_name)
         
         # Markdown Manifest Generation (llms.txt)
         manifest_prompt = (
@@ -237,9 +304,13 @@ async def parse_document(
                     "expiresAt": expiry,
                     "version": id_val,
                     "totalChunks": total_chunks,
+                    "industryTaxonomy": industry_taxonomy,
+                    "industryTags": industry_tags,
                     "metadata": {
                         "source_url": source_url if 'source_url' in locals() else None,
-                        "inferred_name": data.get("name")
+                        "inferred_name": data.get("name"),
+                        "industry_taxonomy": industry_taxonomy,
+                        "industry_tags": industry_tags,
                     }
                 }
                 txn.set(m_ref, doc_payload)
@@ -291,6 +362,8 @@ async def parse_document(
             "markdownManifest": llms_txt_content,
             "version": manifest_id,
             "sourceUrl": None,
+            "industryTaxonomy": industry_taxonomy,
+            "industryTags": industry_tags,
         }
 
         
@@ -421,6 +494,7 @@ async def parse_url(
         )
         schema_data = json.loads(schema_completion.choices[0].message.content)
         schema_vector = oai.embeddings.create(input=[json.dumps(schema_data)], model=OPENAI_EMBEDDING_MODEL).data[0].embedding
+        industry_taxonomy, industry_tags = classify_industry_taxonomy(oai, doc_sample, schema_data, hint_org_name)
 
         manifest_prompt = (
             f"Generate a concise 'llms.txt' AI Protocol Manifest from this web page.\n"
@@ -454,6 +528,8 @@ async def parse_url(
                     "content": manifest_md, "schemaData": data, "embedding": vector,
                     "createdAt": datetime.datetime.now(timezone.utc), "expiresAt": expiry,
                     "version": id_val, "totalChunks": total_chunks, "sourceUrl": request.url,
+                    "industryTaxonomy": industry_taxonomy,
+                    "industryTags": industry_tags,
                 }
                 txn.set(m_ref, payload)
                 txn.set(l_ref, payload)
@@ -492,6 +568,8 @@ async def parse_url(
             "markdownManifest": llms_txt_content,
             "version": manifest_id,
             "sourceUrl": request.url,
+            "industryTaxonomy": industry_taxonomy,
+            "industryTags": industry_tags,
         }
 
     except Exception as e:

@@ -26,7 +26,7 @@ export default function AboutPage() {
                         Defending Narrative<br />in the Agentic Era
                     </h1>
                     <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                        AUM Context Foundry is the enterprise standard for tracking, scoring, and improving your Share of Model (SoM) — how often AI engines shortlist your firm over competitors in enterprise buyer queries.
+                        AUM Context Foundry is the category-defining platform for <strong>Share of Model (SoM)</strong> intelligence. We provide the governance and optimization layer for enterprise brand representation across the global AI search ecosystem.
                     </p>
                 </div>
             </section>
@@ -41,13 +41,13 @@ export default function AboutPage() {
 
                     <div className="space-y-8 text-slate-600 dark:text-slate-300 text-lg leading-relaxed">
                         <p>
-                            For two decades, enterprises optimized for PageRank. You controlled the keywords, you controlled the landing pages, and you controlled the narrative. But the transition to Generative Engine Optimization (GEO) and Agentic web-browsing has shattered the traditional funnel.
+                            Historically, market leaders controlled their narrative through PageRank and controlled media. The shift to <strong>Agentic Search</strong> has disrupted this model. Today, the "front door" to your brand is aLLM crawler — and if that crawler misses your core differentiators, your brand effectively disappears from the AI-driven buyer journey.
                         </p>
                         <p>
-                            Today, your customers aren&apos;t clicking links—they are asking an AI. If your firm isn&apos;t clearly positioned in machine-readable context, <strong className="text-slate-900 dark:text-white">a competitor becomes the AI&apos;s default recommendation for your category.</strong>
+                            At AUM Context Foundry, we replace guesswork with <strong>Deterministic Reality</strong>. We empower global CMOs to measure exactly how often they are being displaced by rivals in LLM outputs, identifying the precise semantic gaps that cause brand erosion.
                         </p>
                         <p>
-                            We built AUM Context Foundry to give enterprise marketing and strategy teams a unified dashboard for their Share of Model (SoM). We run parallel buyer-intent queries across OpenAI, Anthropic Claude, and Google Gemini, rank which competitors AI shortlists instead of you, and prescribe the exact positioning changes to close each gap.
+                            Our platform is the executive dashboard for the next era of marketing, providing the metrics, the manifests, and the prescriptive roadmap to ensure your brand is cited correctly, every time, by every model.
                         </p>
                     </div>
                 </div>

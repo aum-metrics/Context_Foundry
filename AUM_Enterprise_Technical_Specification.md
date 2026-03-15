@@ -11,7 +11,7 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | Edge Client | Next.js 15 (App Router, React 19) | Dashboard, Simulator UI, Dynamic `/llms.txt` |
-| Gateway | Python FastAPI 0.115+ | LCRS evaluation, ingestion, billing, SSO |
+| Gateway | Python FastAPI 0.115+ | SoM evaluation, ingestion, billing, SSO |
 | State | Google Firestore (NoSQL) | Semantic namespaces, org metadata, audit logs |
 | Identity | Firebase Auth + firebase-admin | Multi-tenant session management |
 | Payments | Razorpay | Subscription lifecycle (INR billing) |
@@ -62,11 +62,11 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 
 ---
 
-## 3. LCRS Engine (Simulation)
+## 3. SoM Engine (Simulation)
 
 ### Mathematical Formula
 ```
-LCRS Score = (0.60 × claim_accuracy) + (0.40 × semantic_fidelity)
+SoM Score = (0.60 × claim_accuracy) + (0.40 × semantic_fidelity)
 ```
 
 Where:
@@ -88,30 +88,30 @@ if openai_key == "internal_platform_managed":
 ```
 Sensitive keys are **always redacted** from the final API response to prevent client-side exposure.
 
-### LCRS Formula (Scoring Heuristic)
+### SoM Formula (Scoring Heuristic)
 
 The Logical Contextual Representation Score is a blended metric:
 
 ```
-LCRS = (0.6 × Cs/Ct) + (0.4 × (1 − Dc))
+SoM = (0.6 × Cs/Ct) + (0.4 × (1 − Dc))
 ```
 
 > **Methodology candor**: The 60/40 weighting is an engineering design choice optimizing for factual accuracy over semantic similarity. It is not derived from ablation studies, published research, or peer review. A diligence buyer should understand this is a practical heuristic, not a scientifically validated metric.
 
 ### Simulation Quota Enforcement
-Enforced via **Firestore atomic transaction** on `organizations/{orgId}.subscription.simsThisCycle`:
+Enforced via a **per-run usage ledger** at `organizations/{orgId}/usageLedger` with cycle-aware counting. `subscription.simsThisCycle` is a derived rollup (updated by cron) for dashboards, not the source of truth:
 ```
 Explorer:   1 simulation run / one free report
 Growth:   100 simulations/cycle
 Scale:    500 simulations/cycle
 Enterprise: 2000 simulations/cycle by default (admin-managed override supported)
 ```
-Transaction is skipped in `ENV=development` for local testing.
+Ledger writes and quota checks are skipped in `ENV=development` for local testing.
 
 > **Note:** `settings.ENV` in `config.py` is the single source of truth for environment mode. Production startup gate hard-crashes on missing API keys.
 
 ### Cache
-SHA-256 hash of `(orgId + prompt + manifestVersion)` is used as a cache key stored in `organizations/{orgId}/simulationCache`. Cache TTL: 24 hours. Bypassed for Explorer plan users on new prompts.
+SHA-256 hash of `(orgId + prompt + resolvedManifestVersion)` is used as a cache key stored in `organizations/{orgId}/simulationCache`. When the request uses `manifestVersion=latest`, the system resolves it to the actual manifest document ID before hashing to avoid stale cache hits. Cache TTL: 24 hours. Bypassed for Explorer plan users on new prompts.
 
 ---
 
@@ -134,7 +134,7 @@ PDF Upload (multipart/form-data)
         ↓
 [Embedding] text-embedding-3-small via OpenAI (batched, 16/req)
         ↓
-[Schema] GPT-4o-mini JSON-LD CIM extraction
+[Schema] GPT-4o JSON-LD CIM extraction
         ↓
 [Persistence] Firestore transaction → manifests/{id} + latest (with TTL)
         ↓
@@ -200,7 +200,7 @@ Content-Type: application/json
 
 ### Rate Limiting (Production)
 - `slowapi` IP-level rate limiter applied at the `/v1/run` route.
-- Per-org quota enforced via Firestore atomic transaction.
+- Per-org quota enforced via usage ledger counting for the current billing cycle.
 - IP-level: 5 requests/second (configurable via `RATE_LIMIT_PER_SECOND` env).
 
 ### Key Lifecycle
@@ -218,13 +218,15 @@ users/
 
 organizations/
   {orgId}/
-    doc: { id, name, activeSeats, subscription{planId, simsThisCycle, maxSimulations}, apiKeys }
+    doc: { id, name, activeSeats, subscription{planId, simsThisCycle, maxSimulations, lastUsageResetAt}, apiKeys }
     manifests/
       latest: { content (JSON-LD), embedding, createdAt, version, totalChunks }
       {manifestId}/
         chunks/{i}: { text, embedding, index }
     simulationCache/
       {sha256_hash}: { results, prompt, timestamp }
+    usageLedger/
+      {auto_id}: { timestamp, prompt, manifestVersion, planId }
     auditLogs/
       {auto_id}: { timestamp, actorId, eventType, resourceId, metadata, status }
     activity/
@@ -250,7 +252,7 @@ Async job pattern:
 
 - Endpoint: `GET /api/competitor/displacement/{orgId}`.
 - Returns: `{ competitors: [{ name, displacementRate, strengths, weaknesses }] }`.
-- Powered by GPT-4o-mini with org context from the latest CIM manifest.
+- Powered by GPT-4o with org context from the latest CIM manifest.
 - **Fail-Closed**: Requires active authentication and valid CIM; no development fallbacks.
 
 ---
@@ -305,7 +307,7 @@ POST /api/payments/webhook
 ```
 backend/tests/
   conftest.py          — autouse Firestore mock + dependency override cleanup per test
-  test_simulation.py   — LCRS math + simulation endpoint (happy + unhappy path)
+  test_simulation.py   — SoM math + simulation endpoint (happy + unhappy path)
   test_ingestion.py    — recursive_split + parse endpoint
   test_competitor.py   — displacement endpoint + dev fallback
   test_audit.py        — audit log write + retrieval endpoint

@@ -35,7 +35,7 @@ You must ask yourself two questions immediately:
 
 ---
 
-## 3. LCRS & API Simulation Errors
+## 3. SoM & API Simulation Errors
 
 ### 3.1 "Simulation Engine Unavailable" Notification
 *   **Diagnosis:** The FastAPI backend caught an exception while trying to talk to OpenAI or Gemini.
@@ -43,7 +43,7 @@ You must ask yourself two questions immediately:
 *   **Cause 2:** OpenAI's servers are globally down.
 *   **Intern Action:** Check the backend Python terminal. Look for `openai.AuthenticationError` or `openai.RateLimitError`.
 
-### 3.2 "My LCRS Accuracy is always 0%"
+### 3.2 "My SoM Accuracy is always 0%"
 *   **Diagnosis:** The semantic embedding engine failed to match the context document.
 *   **Cause:** The Context Document (Manifest) the user uploaded is empty, or they uploaded a binary file (like an encrypted PDF) that the ingestor couldn't read.
 *   **Fix:** Tell the customer to navigate to `/ingestion`, delete their current `latest` manifest, and re-upload a clean, plain-text `.txt` or `.md` file.
@@ -63,7 +63,7 @@ You must ask yourself two questions immediately:
 *   **Fix:**
     1. Identify the rogue `useEffect` inside `SoMCommandCenter.tsx`.
     2. Add the proper dependency array at the bottom `[dependencyA, dependencyB]`.
-    3. If deriving complex math (like LCRS averages), wrap it in a `useMemo(() => calculate(), [data])` so it only calculates once.
+    3. If deriving complex math (like SoM averages), wrap it in a `useMemo(() => calculate(), [data])` so it only calculates once.
 
 ---
 

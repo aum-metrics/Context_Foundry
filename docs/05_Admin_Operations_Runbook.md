@@ -25,6 +25,7 @@ If a customer emails support: *"I cannot access the Scale features!"*
 5. Check the `subscription` map:
    * Is `planId` set to `scale`?
    * Is `simsThisCycle` greater than `maxSimulations`? (If so, they are locked out because they hit their quota).
+   * If a lockout looks wrong, compare with `usageLedger` entries since `lastUsageResetAt`.
 
 ### 2.2 Manually Upgrading a Customer
 If a customer pays via wire transfer instead of Razorpay, you must manually upgrade them.
@@ -35,6 +36,7 @@ If a customer pays via wire transfer instead of Razorpay, you must manually upgr
        "planId": "enterprise",
        "maxSimulations": 10000,
        "simsThisCycle": 0,
+       "lastUsageResetAt": "2026-03-01T00:00:00Z",
        "status": "active"
    }
    ```
@@ -96,17 +98,17 @@ We run massive background jobs (like reading 1,000 pages of a competitor's websi
 
 ## 6. The Monthly Billing Reset Pipeline
 
-At 12:00 AM on the 1st of every month, all organizations must have their `simsThisCycle` reset to `0`. If this fails, customers will wake up locked out of the system.
+At 12:00 AM on the 1st of every month, all organizations must have their `lastUsageResetAt` updated and `simsThisCycle` reset to `0`. If this fails, customers will wake up locked out of the system.
 
 ### The Automated Flow
-A Google Cloud Scheduler trigger fires a webhook to `/api/cron/reset-quotas` with the `CRON_SECRET` header.
+A Google Cloud Scheduler trigger fires a webhook to `/api/cron/reset-quotas` with the `CRON_SECRET` in the `Authorization: Bearer` header. Optionally, schedule `/api/cron/usage-rollup` daily to refresh `simsThisCycle` from the ledger.
 
 ### The Manual Override (In Case of Emergency)
 If Google Cloud is down, or the webhook fails, you must trigger it manually using the terminal on your laptop:
 
 ```bash
 curl -X POST https://api.aumcontextfoundry.com/api/cron/reset-quotas \
-     -H "x-cron-secret: YOUR-SUPER-SECRET-CRON-KEY"
+     -H "Authorization: Bearer YOUR-SUPER-SECRET-CRON-KEY"
 ```
 
 *Proceed to Guide 06: Troubleshooting & Incident Response.*

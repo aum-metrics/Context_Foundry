@@ -44,7 +44,7 @@ async function seedMockSession(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("mock_auth_user", "demo@demo.com");
     // Also set any other expected mock flags if necessary
-    (window as any).AUM_MOCK_ENV = true;
+    (window as unknown as { AUM_MOCK_ENV: boolean }).AUM_MOCK_ENV = true;
   });
   // Navigate to login first to ensure the script runs on a valid origin if needed
   await page.goto("/login");

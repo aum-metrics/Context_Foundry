@@ -69,7 +69,7 @@
         "ISO/IEC 42001",
         "NIST AI RMF"
       ],
-      "verification_method": "ASoV 60/40 LCRS v1.2.0",
+      "verification_method": "ASoV 60/40 SoM v1.2.0",
       "models_audited": [
         "GPT-4o",
         "Gemini 3 Flash",

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Logo } from "@/components/Logo";
-import { Settings, LogOut, Sun, Moon, Shield, Database, RadioReceiver, Activity, Award, ChevronDown, ChevronUp, Check, X, Pencil } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Shield, Database, Activity, Award, ChevronDown, ChevronUp, Check, X, Pencil } from "lucide-react";
 import SoMCommandCenter from "@/components/SoMCommandCenter";
 import CoIntelligenceSimulator from "@/components/CoIntelligenceSimulator";
 import { useTheme } from "@/components/ThemeProvider";
@@ -106,6 +106,10 @@ export default function AUMContextFoundry() {
       isManualScrollingRef.current = false;
     }, 1000);
   }, []);
+  
+  const handleStepAnalyze = useCallback(() => setActiveStep("analyze"), []);
+  const handleStepIntelligence = useCallback(() => setActiveStep("intelligence"), []);
+  const handleStepAction = useCallback(() => setActiveStep("action"), []);
 
   const toggleSection = (id: string) =>
     setCollapsedSections(prev => ({ ...prev, [id]: !prev[id] }));
@@ -312,7 +316,7 @@ export default function AUMContextFoundry() {
               accentColor="cyan"
               isCollapsed={!!collapsedSections["analyze"]}
               onToggle={() => toggleSection("analyze")}
-              onStepVisible={useCallback(() => setActiveStep("analyze"), [])}
+              onStepVisible={handleStepAnalyze}
               sectionRef={setSectionRef("analyze")}
               isManualScrollingRef={isManualScrollingRef}
             >
@@ -339,7 +343,7 @@ export default function AUMContextFoundry() {
               accentColor="indigo"
               isCollapsed={!!collapsedSections["intelligence"]}
               onToggle={() => toggleSection("intelligence")}
-              onStepVisible={useCallback(() => setActiveStep("intelligence"), [])}
+              onStepVisible={handleStepIntelligence}
               sectionRef={setSectionRef("intelligence")}
               isManualScrollingRef={isManualScrollingRef}
               locked={isExplorer}
@@ -368,7 +372,7 @@ export default function AUMContextFoundry() {
               accentColor="emerald"
               isCollapsed={!!collapsedSections["action"]}
               onToggle={() => toggleSection("action")}
-              onStepVisible={useCallback(() => setActiveStep("action"), [])}
+              onStepVisible={handleStepAction}
               sectionRef={setSectionRef("action")}
               isManualScrollingRef={isManualScrollingRef}
             >

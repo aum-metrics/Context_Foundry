@@ -79,25 +79,31 @@ async def _execute_batch_calculation(request: BatchSimulationRequest):
 async def _process_batch_background(request: BatchSimulationRequest, job_id: str):
     """Background worker to process the batch and write results to Firestore."""
     async def worker():
-        # ATOMIC BILLING: Increment the entire batch total ONCE to prevent Firestore contention
+        # USAGE LEDGER: Record each simulation without touching the org root doc
         if db:
             try:
-                from google.cloud import firestore
                 org_ref = db.collection("organizations").document(request.orgId)
-                
-                @firestore.transactional
-                def atomic_batch_billing(txn, ref, count):
-                    snap = ref.get(transaction=txn)
-                    if not snap.exists: return
-                    data = snap.to_dict() or {}
-                    current = data.get("subscription", {}).get("simsThisCycle", 0)
-                    txn.update(ref, {"subscription.simsThisCycle": current + count})
-                
-                transaction = db.transaction()
-                atomic_batch_billing(transaction, org_ref, len(request.prompts))
-                logger.info(f"Atomic Billing: Incremented {len(request.prompts)} sims for {request.orgId}")
+
+                usage_ref = org_ref.collection("usageLedger")
+                batch = db.batch()
+                now = datetime.now(timezone.utc)
+
+                for idx, prompt in enumerate(request.prompts):
+                    doc_ref = usage_ref.document()
+                    batch.set(doc_ref, {
+                        "timestamp": now,
+                        "prompt": (prompt or "")[:100],
+                        "manifestVersion": request.manifestVersion or "latest",
+                        "source": "batch",
+                    })
+                    if (idx + 1) % 400 == 0:
+                        batch.commit()
+                        batch = db.batch()
+                batch.commit()
+
+                logger.info(f"Usage Ledger: Recorded {len(request.prompts)} sims for {request.orgId}")
             except Exception as e:
-                logger.error(f"Atomic Billing Failure: {e}")
+                logger.error(f"Usage Ledger write failed: {e}")
                 # We proceed even if billing fails to prioritize UX, but log it.
 
         return await _execute_batch_calculation(request)

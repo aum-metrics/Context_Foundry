@@ -59,8 +59,8 @@ The current default prompts are B2B enterprise-oriented. They focus on:
 
 ## 6. Understanding the scores
 
-### LCRS
-LCRS is the core answer-quality score. It combines:
+### SoM
+SoM is the core answer-quality score. It combines:
 - claim recall against the verified manifest
 - semantic alignment with the active context
 
@@ -90,7 +90,7 @@ The main operating flow is:
 ## 8. Reports
 
 The executive report is the buyer-facing artifact. It includes:
-- average LCRS
+- average SoM
 - model breakdown
 - executive interpretation
 - GEO snapshot
