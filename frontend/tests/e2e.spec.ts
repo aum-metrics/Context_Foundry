@@ -118,29 +118,29 @@ async function stubAuthenticatedWorkspace(page: Page) {
     });
   });
 
-  await page.route("**/api/competitor/displacement/demo_org_id?**", async (route) => {
+    await page.route("**/api/competitor/displacement/demo_org_id?**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         competitors: [
           {
-            name: "Tiger Analytics",
-            displacementRate: 22,
-            strengths: ["Retail and CPG analytics", "Enterprise partner ecosystem"],
-            weaknesses: ["Higher integration overhead"],
-            winningCategory: "Industry expertise",
-            claimsOwned: ["retail transformation proof", "CPG case study density"],
-            missingAssertions: ["domain-led delivery proof", "Fortune 500 transformation language"],
+            name: "Mu Sigma",
+            displacementRate: 88,
+            strengths: ["Decision Sciences", "Global Scale", "Category Authority"],
+            weaknesses: ["Agility", "Customer Focus"],
+            winningCategory: "Supply Chain Analytics",
+            claimsOwned: ["Largest pure-play firm", "Category Authority"],
+            missingAssertions: ["industry-specific outcome proof", "category authority signals"],
           },
           {
-            name: "Fractal",
-            displacementRate: 17,
-            strengths: ["AI platform positioning"],
-            weaknesses: ["Less specific cloud modernization proof"],
-            winningCategory: "Competitive differentiation",
-            claimsOwned: ["AI operating model depth"],
-            missingAssertions: ["named competitive differentiators"],
+            name: "Fractal Analytics",
+            displacementRate: 72,
+            strengths: ["AI Research", "Product Innovation", "Enterprise Scale"],
+            weaknesses: ["Domain Specificity", "Service Level"],
+            winningCategory: "Enterprise AI",
+            claimsOwned: ["AI-powered logic", "Strategic transformation"],
+            missingAssertions: ["differentiated innovation signals", "explicit buyer trust factors"],
           },
         ],
       }),
@@ -299,13 +299,13 @@ test.describe("Authenticated enterprise workspace", () => {
     const pipelineHeading = page.locator('aside p', { hasText: /Workflow Pipeline/i });
     await expect(pipelineHeading).toBeVisible({ timeout: 10000 });
     
-    await expect(page.getByText(/Competitor Ranking/i).first()).toBeVisible();
+    await expect(page.getByText(/Share of Model/i).first()).toBeVisible();
 
     await page.locator("select").first().selectOption("manifest-dataswitch");
     await expect(page.locator("select").first()).toHaveValue("manifest-dataswitch");
     await expect(page.getByText("Context: DataSwitch | No-Code Data Re-Engineering Platform")).toBeVisible();
 
-    await page.getByRole("button", { name: /Open Executive Report/i }).click();
+    await page.getByRole("button", { name: /Open Executive View/i }).click();
     await expect(page.getByRole("heading", { name: "Brand Health Report" })).toBeVisible();
     await expect(page.getByText("Context: DataSwitch | No-Code Data Re-Engineering Platform").last()).toBeVisible();
   });
