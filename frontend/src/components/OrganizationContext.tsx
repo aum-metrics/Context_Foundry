@@ -179,9 +179,17 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     };
                 } else {
                     const userDocRef = doc(db, "users", user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
+                    let userDocSnap = null as Awaited<ReturnType<typeof getDoc>> | null;
+                    let shouldProvision = false;
+                    try {
+                        userDocSnap = await getDoc(userDocRef);
+                    } catch (e) {
+                        // If client-side Firestore read is blocked or unavailable, fall back to server-side provisioning.
+                        console.warn("User doc read failed, falling back to provision:", e);
+                        shouldProvision = true;
+                    }
 
-                    if (userDocSnap.exists()) {
+                    if (userDocSnap?.exists() && (userDocSnap.data() as OrgUser)?.orgId && !shouldProvision) {
                         currentOrgUser = userDocSnap.data() as OrgUser;
                     } else {
                         const token = await user.getIdToken();
