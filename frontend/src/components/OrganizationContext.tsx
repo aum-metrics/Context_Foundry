@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { User } from "firebase/auth";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
@@ -87,7 +87,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
     const activeManifestVersionRef = useRef<string>("latest");
     const lastFetchKeyRef = useRef<string>("");
 
-    const setActiveManifestVersion = (version: string) => {
+    const setActiveManifestVersion = useCallback((version: string) => {
         activeManifestVersionRef.current = version;
         setActiveManifestVersionState(version);
         if (typeof window !== "undefined") {
@@ -97,9 +97,9 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 localStorage.setItem(key, version);
             }
         }
-    };
+    }, [activeOrgId, orgUser?.orgId]);
 
-    const setActiveOrgId = (orgId: string | null) => {
+    const setActiveOrgId = useCallback((orgId: string | null) => {
         if (typeof window !== "undefined") {
             const url = new URL(window.location.href);
             if (orgId) {
@@ -112,7 +112,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
             window.history.replaceState({}, "", url.toString());
         }
         setActiveOrgIdState(orgId);
-    };
+    }, [activeOrgId]);
 
     const renameOrganization = async (newName: string): Promise<boolean> => {
         const targetOrgId = activeOrgId || orgUser?.orgId;
@@ -274,9 +274,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
         };
 
         fetchOrProvisionOrg();
-        // FIX 1: activeManifestVersion deliberately excluded — we use the ref inside
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, activeOrgId, refreshKey]);
+    }, [user, activeOrgId, refreshKey, activeManifestVersion]);
 
     const isPlatformAdmin = orgUser?.role === "admin" && orgUser?.orgId === "system_admin_org";
     const activeContextName =

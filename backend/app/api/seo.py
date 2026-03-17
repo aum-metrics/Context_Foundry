@@ -23,6 +23,7 @@ except ImportError:
 from core.firebase_config import db
 from core.model_config import OPENAI_SIMULATION_MODEL
 from core.security import get_current_user, verify_user_org_access
+from core.config import settings
 
 router = APIRouter()
 
@@ -46,7 +47,6 @@ from utils.task_queue import FirestoreTaskQueue
 async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
     """Background worker: scrape page with httpx + BS4, score AI Search Readiness."""
     async def worker():
-        from core.config import settings
         is_dev = settings.ENV == "development"
 
         results: List[dict] = []

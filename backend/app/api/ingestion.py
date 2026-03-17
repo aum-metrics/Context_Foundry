@@ -47,7 +47,7 @@ def recursive_split(text, max_size, overlap_size):
     """
     chunks = []
     start = 0
-    min_chunk_size = 200
+    min_chunk_size = min(200, max_size // 2)
     
     while start < len(text):
         end = min(start + max_size, len(text))
@@ -147,6 +147,7 @@ async def parse_document(
     4. ATOMIC: Uses Firestore Transactions for multi-chunk persistence.
     """
     uid = auth.get("uid")
+    source_url = None # Fix Bug 5: Define to prevent UnboundLocalError in fallback logic
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are currently supported.")
     if not orgId:
@@ -382,6 +383,7 @@ async def parse_url(
     semantic pipeline as PDF ingestion. Raw HTML is never stored.
     """
     uid = auth.get("uid")
+    source_url = request.url # Standardize for metadata logic
     orgId = request.orgId
 
     if auth.get("type") == "session":

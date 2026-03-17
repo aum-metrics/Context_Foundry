@@ -95,7 +95,8 @@ def check_api_tier_subscription(user_id: str) -> bool:
         expiry = subscription.get("currentPeriodEnd")
         if expiry:
             # Firestore timestamps are returned as datetime objects
-            if datetime.now(timezone.utc) > expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') else expiry:
+            expiry_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') else expiry
+            if datetime.now(timezone.utc) > expiry_dt:
                 return False
         
         return True

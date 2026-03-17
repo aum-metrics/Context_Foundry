@@ -420,7 +420,10 @@ export default function BrandHealthCertificate({
             pdf.text(`ID: ${Date.now().toString(36).toUpperCase()}`, pageWidth - margin - 30, 15);
             pdf.text(`ISSUED: ${issuedDate}`, pageWidth - margin - 30, 20);
 
-            y = 65; // Start content below header block
+            y = 65; 
+
+            // Allow UI to breathe
+            await new Promise(r => setTimeout(r, 0));
 
             // EXECUTIVE SUMMARY BLOCK
             writeHeading("Executive Summary", [pr, pg, pb]);
@@ -428,12 +431,15 @@ export default function BrandHealthCertificate({
             pdf.setFont("helvetica", "italic");
             writeBody(executiveSummary, 11, [30, 41, 59]);
 
+            // Allow UI to breathe
+            await new Promise(r => setTimeout(r, 0));
+
             // 🚨 CRITICAL MARKET INSIGHT (The "Killer Query")
             if (isDemoOrg) {
                 y += 5;
-                pdf.setFillColor(254, 242, 242); // rose-50
+                pdf.setFillColor(254, 242, 242); 
                 pdf.rect(margin, y, contentWidth, 28, 'F');
-                pdf.setDrawColor(225, 29, 72); // rose-600
+                pdf.setDrawColor(225, 29, 72); 
                 pdf.setLineWidth(0.5);
                 pdf.line(margin, y, margin, y + 28);
                 
@@ -481,6 +487,8 @@ export default function BrandHealthCertificate({
             
             y += 30;
             writeDivider();
+
+            await new Promise(r => setTimeout(r, 0));
 
             // MULTI-MODEL TABLE
             writeHeading("Multi-Model Adjudication");

@@ -225,6 +225,14 @@ async def run_scheduled_crawl(request: ScheduledCrawlRequest):
             if org_doc.exists:
                 org_data = org_doc.to_dict() or {}
                 org_name = org_data.get("name", org_id)
+                
+                # 🛡️ SECURITY FIX (P1): Enforce plan entitlement for scheduled crawls
+                plan = org_data.get("subscription", {}).get("planId", "explorer")
+                if plan not in ["growth", "scale", "enterprise"]:
+                    logger.info(f"Skipping scheduled crawl for {org_id}: Plan '{plan}' not entitled for batch analysis.")
+                    continue
+            else:
+                continue # Skip non-existent orgs
 
             prompts = [p.format(org_name=org_name) for p in DEFAULT_AUDIT_PROMPTS]
 

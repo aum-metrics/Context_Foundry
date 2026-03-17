@@ -519,6 +519,22 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
 
 
 
+async def _record_usage(org_id: str, prompt: str, manifest_version: str, org_plan: str):
+    """Atomic billing record write after successful simulation completion."""
+    if not db:
+        return
+    try:
+        org_ref = db.collection("organizations").document(org_id)
+        org_ref.collection("usageLedger").document().set({
+            "timestamp": datetime.now(timezone.utc),
+            "prompt": prompt[:100],
+            "manifestVersion": manifest_version,
+            "planId": org_plan,
+        })
+        logger.info(f"Billing: Usage recorded for org {org_id}")
+    except Exception as e:
+        logger.error(f"Billing: Usage recording failed for {org_id}: {e}")
+
 async def _store_simulation_results(org_id: str, prompt: str, manifest_version: str, results: list, cache_key: str):
     """Background task to store simulation results in cache and persistent scoring history for billing."""
     if not db:
@@ -706,7 +722,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 cached_data = cached_doc.to_dict() or {}
                 # Return if not expired (e.g. 24h)
                 timestamp = cached_data.get("timestamp")
-                if timestamp and (datetime.now(timezone.utc) - timestamp.replace(tzinfo=None)) < timedelta(hours=24):
+                if timestamp and (datetime.now(timezone.utc) - timestamp.astimezone(timezone.utc)) < timedelta(hours=24):
                     # Check subscription cache validity
                     org_doc_cache = db.collection("organizations").document(request.orgId).get()
                     org_plan_cache = org_doc_cache.to_dict().get("subscription", {}).get("planId", "explorer") if org_doc_cache.exists else "explorer"
@@ -772,16 +788,8 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
             )
 
-        try:
-            org_ref.collection("usageLedger").document().set({
-                "timestamp": datetime.now(timezone.utc),
-                "prompt": request.prompt[:100],
-                "manifestVersion": resolved_manifest_version,
-                "planId": org_plan,
-            })
-        except Exception as e:
-            logger.error(f"Usage ledger write failed: {e}")
-            raise HTTPException(status_code=500, detail="Billing verification failed.")
+        # Usage recording moved to background_tasks inside run_simulation logic
+        pass
 
     # 2. FETCH CONTEXT & KEYS 
     manifest_content, manifest_embedding, api_keys, resolved_version_from_fetch = _fetch_manifest_and_keys(request)
@@ -1008,8 +1016,12 @@ ANSWER GUIDELINES:
         try:
             accuracies = [r["accuracy"] for r in results if r.get("accuracy") is not None]
             if accuracies and (max(accuracies) - min(accuracies) > 20):
-                logger.info("⚖️ Competitive divergence detected. Initializing Buyer-Intent Adjudication...")
-                adjudication_prompt = f"""You are a senior enterprise procurement consultant reviewing how three AI engines responded to an enterprise buyer query.
+                # 🛡️ COST OPTIMIZATION (P1): Only adjudicate for Growth+ plans
+                if org_plan not in ["growth", "scale", "enterprise"]:
+                    logger.info("Skipping adjudication: Org not on Growth+ plan.")
+                else:
+                    logger.info("⚖️ Competitive divergence detected. Initializing Buyer-Intent Adjudication...")
+                    adjudication_prompt = f"""You are a senior enterprise procurement consultant reviewing how three AI engines responded to an enterprise buyer query.
 
 BUYER QUERY: "{request.prompt}"
 
@@ -1017,7 +1029,7 @@ GROUND TRUTH CONTEXT (the company being evaluated):
 {manifest_content[:2000]}
 
 AI ENGINE RESPONSES:
-{json.dumps([{{r['model']: r['answer']}} for r in results])}
+{json.dumps([{r['model']: r['answer']} for r in results])}
 
 YOUR TASK:
 1. Identify which AI engine's response most credibly positions the company-in-context as a shortlistable vendor for an enterprise buyer asking this question.
@@ -1026,14 +1038,14 @@ YOUR TASK:
 
 Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model name", "audit_notes": "which competitors were ranked above or instead, and why"}}"""
 
-                client = OpenAI(api_key=openai_key)
-                adj_resp = client.chat.completions.create(
-                    model=OPENAI_SCHEMA_MODEL,
-                    messages=[{"role": "system", "content": adjudication_prompt}],
-                    response_format={"type": "json_object"},
-                    temperature=0
-                )
-                adjudication_note = json.loads(adj_resp.choices[0].message.content)
+                    client = OpenAI(api_key=openai_key)
+                    adj_resp = client.chat.completions.create(
+                        model="gpt-4o-mini", # 🛡️ COST OPTIMIZATION: Use cheaper model for meta-analysis
+                        messages=[{"role": "system", "content": adjudication_prompt}],
+                        response_format={"type": "json_object"},
+                        temperature=0
+                    )
+                    adjudication_note = json.loads(adj_resp.choices[0].message.content)
         except Exception as e:
             logger.error(f"Adjudication failed: {e}")
 
@@ -1044,6 +1056,10 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
         import random
         if random.random() < 0.1:
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
+
+    # 5. ATOMIC BILLING: Record usage after successful model run
+    if db:
+        background_tasks.add_task(_record_usage, request.orgId, request.prompt, resolved_manifest_version, org_plan)
 
     locked_models = []
     if org_plan == "explorer":

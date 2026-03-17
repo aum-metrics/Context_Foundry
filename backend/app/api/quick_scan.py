@@ -51,23 +51,35 @@ _RATE_LIMIT = 3          # calls per IP
 _RATE_WINDOW_H = 1       # per hour
 
 
-def _check_rate(ip: str) -> bool:
-    """Return True if the request is allowed, False if rate-limited."""
-    now = datetime.now(timezone.utc)
-    window_start = now - timedelta(hours=_RATE_WINDOW_H)
-    calls = _rate.get(ip, [])
-    # Prune old entries
-    calls = [t for t in calls if t > window_start]
-    if len(calls) >= _RATE_LIMIT:
-        _rate[ip] = calls
-        return False
-    calls.append(now)
-    _rate[ip] = calls
-    # Evict oldest IP if dict grows too large
-    if len(_rate) > 10_000:
-        oldest = min(_rate, key=lambda k: _rate[k][0] if _rate[k] else datetime.max.replace(tzinfo=timezone.utc))
-        _rate.pop(oldest, None)
-    return True
+async def _check_rate(ip: str) -> bool:
+    """Return True if the request is allowed, False if rate-limited. Cloud-safe via Firestore."""
+    if not db:
+        return True # Fail open if DB is down for public tool
+        
+    try:
+        # Generic rate limiting collection
+        doc_ref = db.collection("rateLimits").document(f"quickscan_{hashlib.md5(ip.encode()).hexdigest()}")
+        doc = doc_ref.get()
+        now = datetime.now(timezone.utc)
+        
+        if doc.exists:
+            data = doc.to_dict() or {}
+            calls = data.get("calls", [])
+            # Prune old entries
+            window_start = now - timedelta(hours=_RATE_WINDOW_H)
+            calls = [t for t in calls if (t if isinstance(t, datetime) else datetime.fromisoformat(t).replace(tzinfo=timezone.utc)) > window_start]
+            
+            if len(calls) >= _RATE_LIMIT:
+                return False
+            
+            calls.append(now)
+            doc_ref.set({"calls": calls, "updatedAt": now})
+        else:
+            doc_ref.set({"calls": [now], "updatedAt": now})
+        return True
+    except Exception as e:
+        logger.error(f"Rate limit check failed: {e}")
+        return True # Fail open to prevent blocking legitimate users on DB transient issues
 
 
 def _cache_get(key: str) -> Optional[dict]:
@@ -137,7 +149,7 @@ async def quick_scan(request: Request, body: QuickScanRequest):
         or getattr(request.client, "host", "unknown")
     )
 
-    if not _check_rate(ip):
+    if not await _check_rate(ip):
         raise HTTPException(
             status_code=429,
             detail={

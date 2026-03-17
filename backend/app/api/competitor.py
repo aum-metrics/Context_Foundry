@@ -155,13 +155,16 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         return {"competitors": []}
         
     try:
+        # 🛡️ SECURITY HARDENING (P1): Sanitize manifest_content to prevent XML injection
+        clean_content = manifest_content[:6000].replace("</Context>", "[CONTEXT_END]").replace("<Context>", "[CONTEXT_START]")
+        
         client = OpenAI(api_key=api_key)
         prompt = f"""You are a B2B enterprise AI Analyst. A company called '{org_name}' wants to understand why AI recommendation engines shortlist competitors instead of them.
  
 Here is '{org_name}'s actual business context:
  
 <Context>
-{manifest_content[:6000]}
+{clean_content}
 </Context>
  
 Identify exactly 3 real-world competitor companies that AI models are most likely to recommend INSTEAD of '{org_name}' for the same buyer intent.

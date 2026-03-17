@@ -139,8 +139,8 @@ def _count_usage_since(org_id: str, cycle_start: datetime.datetime) -> int:
     query = usage_ref.where("timestamp", ">=", cycle_start)
     try:
         count_snapshot = query.count().get()
-        if count_snapshot:
-            return int(count_snapshot[0].value)
+        if count_snapshot and count_snapshot[0]:
+            return int(count_snapshot[0][0].value)
     except Exception:
         pass
     try:
@@ -233,7 +233,7 @@ async def verify_admin(
 
     try:
         # Use verify_session_cookie to ensure token was minted by server
-        decoded_token = firebase_auth.verify_session_cookie(token, check_revoked=True, app=firebase_app)
+        decoded_token = firebase_auth.verify_session_cookie(token, check_revoked=True)
         admin_profile = _load_admin_profile(decoded_token)
         role = admin_profile.get("role")
         if admin_profile.get("isPlatformAdmin") or role in {"tenant_admin", "admin"}:

@@ -68,6 +68,15 @@ export default function SoMCommandCenter({
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const seoIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const autoPilotKeyRef = useRef<string | null>(null);
+    const mounted = useRef(true);
+    
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+        };
+    }, []);
+
     const analysisSubject = activeContextName || organization?.name || "the selected context";
 
     const clearIntervalRef = useCallback((ref: { current: NodeJS.Timeout | null }) => {
@@ -178,22 +187,29 @@ export default function SoMCommandCenter({
             const batchData = await batchRes.json();
             if (batchData.status === "processing" && batchData.jobId) {
                 clearIntervalRef(batchIntervalRef);
-                batchIntervalRef.current = setInterval(async () => {
+                const interval = setInterval(async () => {
+                    if (!mounted.current) {
+                        clearInterval(interval);
+                        return;
+                    }
                     const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${batchData.jobId}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (statusRes.ok) {
                         const statusData = await statusRes.json();
                         if (statusData.status === "completed" && (statusData.summary || statusData.result)) {
-                            setBatchResult(statusData.summary || statusData.result);
-                            setBatchLoading(false);
+                            if (mounted.current) {
+                                setBatchResult(statusData.summary || statusData.result);
+                                setBatchLoading(false);
+                            }
                             clearIntervalRef(batchIntervalRef);
                         } else if (statusData.status === "failed") {
-                            setBatchLoading(false);
+                            if (mounted.current) setBatchLoading(false);
                             clearIntervalRef(batchIntervalRef);
                         }
                     }
                 }, 3000);
+                batchIntervalRef.current = interval;
             } else {
                 setBatchResult(batchData.summary || batchData.result || batchData);
                 setBatchLoading(false);

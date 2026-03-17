@@ -49,7 +49,7 @@ class TenantEmailConfig:
         self.reply_to     = reply_to
 
 
-def _get_tenant_email_config(org_id: str) -> Optional[TenantEmailConfig]:
+async def _get_tenant_email_config(org_id: str) -> Optional[TenantEmailConfig]:
     """
     Reads tenant email config from Firestore org doc.
     Returns None if org is not white-labeled or config is incomplete.
@@ -60,6 +60,8 @@ def _get_tenant_email_config(org_id: str) -> Optional[TenantEmailConfig]:
         from core.firebase_config import db
         if not db:
             return None
+        # Use simple get() for now as firebase-admin is sync, 
+        # but the wrapper function is async to allow later async client migration
         org_doc = db.collection("organizations").document(org_id).get()
         if not org_doc.exists:
             return None
@@ -98,7 +100,7 @@ def _aum_config() -> TenantEmailConfig:
 
 # ─── Core send function ───────────────────────────────────────────────────────
 
-def send_invite_email(
+async def send_invite_email(
     org_id: str,
     to_email: str,
     invite_link: str,
@@ -111,18 +113,17 @@ def send_invite_email(
     For white-label tenants: sends from their domain via their SendGrid sub-key.
     For AUM orgs:            sends from aum-metrics.com via AUM's SendGrid key.
     
-    Returns True on success, False on failure (caller should log and continue —
-    invite is stored in Firestore even if email fails).
+    Returns True on success, False on failure.
     """
     # Pick tenant config or fall back to AUM
-    tenant = _get_tenant_email_config(org_id)
+    tenant = await _get_tenant_email_config(org_id)
     cfg = tenant if tenant else _aum_config()
 
     if not cfg.sendgrid_key:
         logger.error("No SendGrid API key configured — cannot send invite email")
         return False
 
-    brand  = tenant.from_name if tenant else "AUM Context Foundry"
+    brand  = cfg.from_name
     subject = f"You've been invited to {brand}"
 
     html_body = _invite_html(
@@ -131,51 +132,48 @@ def send_invite_email(
         org_name=org_name or brand,
         invite_link=invite_link,
         from_email=cfg.from_email,
-        primary_color="#4f46e5",   # TODO: pull from tenantConfig.colorPrimary once stored
+        primary_color="#4f46e5",
     )
 
     try:
         import httpx
-
-        resp = httpx.post(
-            "https://api.sendgrid.com/v3/mail/send",
-            headers={
-                "Authorization": f"Bearer {cfg.sendgrid_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "personalizations": [{"to": [{"email": to_email}]}],
-                "from": {"name": cfg.from_name, "email": cfg.from_email},
-                "reply_to": {"email": cfg.reply_to},
-                "subject": subject,
-                "content": [{"type": "text/html", "value": html_body}],
-            },
-            timeout=10.0,
-        )
-        if resp.status_code in (200, 202):
-            logger.info(f"Invite email sent: to={to_email}, from={cfg.from_email}, org={org_id}")
-            return True
-        else:
-            logger.error(f"SendGrid error {resp.status_code}: {resp.text[:200]}")
-            return False
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {cfg.sendgrid_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "personalizations": [{"to": [{"email": to_email}]}],
+                    "from": {"name": cfg.from_name, "email": cfg.from_email},
+                    "reply_to": {"email": cfg.reply_to},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": html_body}],
+                },
+            )
+            if resp.status_code in (200, 202):
+                logger.info(f"Invite email sent: to={to_email}, from={cfg.from_email}, org={org_id}")
+                return True
+            else:
+                logger.error(f"SendGrid error {resp.status_code}: {resp.text[:200]}")
+                return False
 
     except Exception as e:
         logger.error(f"Failed to send invite email to {to_email}: {e}")
         return False
 
 
-def send_generic_email(
+async def send_generic_email(
     org_id: str,
     to_email: str,
     subject: str,
     html_body: str,
 ) -> bool:
     """
-    Generic tenant-aware email send. Used for password resets, plan change
-    confirmations, and any other transactional email.
-    Same tenant-routing logic as send_invite_email.
+    Generic tenant-aware email send. 
     """
-    tenant = _get_tenant_email_config(org_id)
+    tenant = await _get_tenant_email_config(org_id)
     cfg = tenant if tenant else _aum_config()
 
     if not cfg.sendgrid_key:
@@ -184,22 +182,22 @@ def send_generic_email(
 
     try:
         import httpx
-        resp = httpx.post(
-            "https://api.sendgrid.com/v3/mail/send",
-            headers={
-                "Authorization": f"Bearer {cfg.sendgrid_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "personalizations": [{"to": [{"email": to_email}]}],
-                "from": {"name": cfg.from_name, "email": cfg.from_email},
-                "reply_to": {"email": cfg.reply_to},
-                "subject": subject,
-                "content": [{"type": "text/html", "value": html_body}],
-            },
-            timeout=10.0,
-        )
-        return resp.status_code in (200, 202)
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {cfg.sendgrid_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "personalizations": [{"to": [{"email": to_email}]}],
+                    "from": {"name": cfg.from_name, "email": cfg.from_email},
+                    "reply_to": {"email": cfg.reply_to},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": html_body}],
+                },
+            )
+            return resp.status_code in (200, 202)
     except Exception as e:
         logger.error(f"send_generic_email failed: {e}")
         return False
