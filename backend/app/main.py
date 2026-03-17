@@ -112,7 +112,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     description="Contextual Rigor & AI Search Readiness Infrastructure",
-    version="2.2.0-hardened",
+    version="2.7.0-definitive",
     docs_url="/api/docs" if settings.ENV != "production" else None,
     redoc_url="/api/redoc" if settings.ENV != "production" else None,
     lifespan=lifespan,
