@@ -271,7 +271,7 @@ async def root():
     """Root endpoint"""
     return {
         "message": "AUM Analytics API",
-        "version": "2.2.0-hardened",
+        "version": "2.7.0-definitive",
         "status": "operational",
         "docs": "/api/docs",
         "health": "/api/health"
@@ -306,7 +306,7 @@ async def health_check():
     return {
         "status": status,
         "service": "aum-api",
-        "version": "2.2.0-hardened",
+        "version": "2.7.0-definitive",
         "dependencies": {
             "firestore": firestore_status
         }
