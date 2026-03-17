@@ -87,10 +87,10 @@ export default function SemanticIngestion() {
             }
         }
         if (!response.ok) {
-            const message = data?.detail || data?.message || defaultError;
+            const message = (data as any)?.detail || (data as any)?.message || defaultError;
             throw new Error(message);
         }
-        return data || {};
+        return (data as any) || {};
     };
 
     const waitForManifestReady = async (token: string, orgId: string, version?: string) => {
