@@ -61,7 +61,7 @@ const VectorCloud = () => {
 };
 
 export default function SemanticIngestion() {
-    const { organization, refreshKey, activeManifestVersion, setActiveManifestVersion } = useOrganization();
+    const { organization, refreshKey, activeManifestVersion, setActiveManifestVersion, loadingOrg } = useOrganization();
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
     const [isDragging, setIsDragging] = useState(false);
     const [schemaData, setSchemaData] = useState<string | null>(null);
@@ -243,7 +243,7 @@ export default function SemanticIngestion() {
             const response = await fetch("/api/ingestion/parse-url", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ url, orgId: organization.id }),
+                body: JSON.stringify({ url: normalizedUrl, orgId: organization.id }),
             });
 
             setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
@@ -338,10 +338,11 @@ export default function SemanticIngestion() {
                                     <button
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); if (urlInput && !isIngesting) handleUrlIngest(urlInput); }}
-                                        disabled={!urlInput || isIngesting}
-                                        className="absolute right-2 top-2 bg-indigo-600 hover:bg_indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
+                                        disabled={!urlInput || isIngesting || !organization?.id || loadingOrg}
+                                        className={`absolute right-2 top-2 ${(!organization?.id || loadingOrg) ? "bg-slate-400" : "bg-indigo-600 hover:bg-indigo-700"} disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors`}
+                                        title={loadingOrg ? "Booting Semantic Engine..." : !organization?.id ? "Workspace unavailable" : "Ingest URL"}
                                     >
-                                        {isIngesting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+                                        {(isIngesting || loadingOrg) ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>
