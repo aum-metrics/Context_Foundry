@@ -6,7 +6,7 @@ Product: "AUM Context Foundry"
 Description: Multi-Model Visibility Simulation Engine with Fine-Grained Fact-Checking
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, Dict, List
 import os
 import json
@@ -26,8 +26,15 @@ from core.firebase_config import db
 from core.utils import count_usage_since, sanitize_for_prompt
 from google.cloud import firestore
 
+RESERVATION_SHARDS = 50  # supports ~50 writes/sec/org without hot-doc contention
+
+def _reservation_shard_id(org_id: str, prompt: str) -> str:
+    digest = hashlib.sha256(f"{org_id}:{prompt}".encode("utf-8")).hexdigest()
+    shard = int(digest, 16) % RESERVATION_SHARDS
+    return f"shard_{shard}"
+
 @firestore.transactional
-def _reserve_quota_txn(txn, org_ref, org_id, cycle_start, plan_limit):
+def _reserve_quota_txn(txn, org_ref, org_id, cycle_start, plan_limit, reservation_shard_id: str):
     """
     🛡️ SECURITY HARDENING (P0): Atomic check-and-reserve.
     Prevents race conditions where concurrent requests bypass quota.
@@ -43,11 +50,12 @@ def _reserve_quota_txn(txn, org_ref, org_id, cycle_start, plan_limit):
     if usage >= plan_limit:
         raise HTTPException(status_code=402, detail=f"Quota exceeded: {usage}/{plan_limit} sims used.")
     
-    # 3. Increment reservation counter
-    txn.update(org_ref, {
-        "subscription.reservedSimulation": firestore.Increment(1),
-        "subscription.lastReservationAt": datetime.now(timezone.utc)
-    })
+    # 3. Increment reservation counter (sharded to avoid hot org doc writes)
+    reservation_ref = org_ref.collection("usageReservations").document(reservation_shard_id)
+    txn.set(reservation_ref, {
+        "count": firestore.Increment(1),
+        "updatedAt": datetime.now(timezone.utc)
+    }, merge=True)
     return True
 from fastapi.responses import StreamingResponse
 import io
@@ -810,7 +818,16 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         
         # 🛡️ SECURITY HARDENING (P0): Atomic quota reservation
         try:
-            await asyncio.to_thread(_reserve_quota_txn, db.transaction(), org_ref, request.orgId, cycle_start, plan_limit)
+            reservation_shard = _reservation_shard_id(request.orgId, request.prompt)
+            await asyncio.to_thread(
+                _reserve_quota_txn,
+                db.transaction(),
+                org_ref,
+                request.orgId,
+                cycle_start,
+                plan_limit,
+                reservation_shard
+            )
         except HTTPException:
             raise
         except Exception as e:

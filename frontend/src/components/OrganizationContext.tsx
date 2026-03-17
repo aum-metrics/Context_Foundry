@@ -114,7 +114,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
             window.history.replaceState({}, "", url.toString());
         }
         setActiveOrgIdState(orgId);
-    }, [activeOrgId]);
+    }, []);
 
     const renameOrganization = async (newName: string): Promise<boolean> => {
         const targetOrgId = activeOrgId || orgUser?.orgId;
@@ -276,7 +276,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
         };
 
         fetchOrProvisionOrg();
-    }, [user, activeOrgId, refreshKey]);
+    }, [user, activeOrgId, refreshKey, setActiveManifestVersion]);
 
     const isPlatformAdmin = orgUser?.role === "admin" && orgUser?.orgId === "system_admin_org";
     const activeContextName =

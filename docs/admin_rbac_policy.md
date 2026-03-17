@@ -50,3 +50,16 @@ All critical administrative actions are immutably logged to the `audit_logs` col
 ## 4. Key Rotation & Offboarding
 - **Admin Offboarding:** Revoking admin access is performed by removing the `admin` custom claim in Firebase IAM. Existing tokens will be invalidated immediately.
 - **API Key Rotation:** Admin UI provides self-service rotation of infrastructure API keys. Previous keys are instantly overwritten in Firestore without requiring environment redeploys.
+
+
+## Update: 2026-03-17
+- Release checklist added at docs/RELEASE_CHECKLIST.md.
+- Workspace health endpoint (GET /api/workspaces/health) added for uptime checks.
+- Prompt sanitization now strips <script> tags and ignores non-string input safely.
+- Quick Scan landing page validates scan responses and handles non-200 errors to avoid invalid date/blank score rendering.
+- Quick Scan public endpoint (`/api/quick-scan`) uses a platform OpenAI key with per-IP rate limiting.
+- Competitor displacement API is gated to Growth/Scale/Enterprise plans.
+- Simulation quota reservation uses sharded counters (`usageReservations`) to reduce org doc contention.
+- Pricing defaults: Growth ₹6,499/mo, Scale ₹20,999/mo (Razorpay plan amounts).
+- Default support email: hello@aumcontextfoundry.com (white-label config).
+

@@ -13,6 +13,7 @@ import os
 import logging
 import hmac
 import hashlib
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,16 @@ from core.firebase_config import db
 # ============================================================================
 # RAZORPAY CLIENT
 # ============================================================================
+
+def verify_razorpay_signature(payload: str, signature: str, secret: str) -> bool:
+    """
+    Stateless HMAC verification helper used by tests and webhook validation.
+    Returns True if signature matches, False otherwise.
+    """
+    if not payload or not signature or not secret:
+        return False
+    expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 def get_razorpay_client():
     key_id = os.getenv("RAZORPAY_KEY_ID", "")

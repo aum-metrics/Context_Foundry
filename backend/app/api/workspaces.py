@@ -26,6 +26,16 @@ from core.email_sender import send_invite_email
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@router.get("/health")
+async def workspaces_health():
+    """
+    Public health probe for workspace subsystem.
+    Does not require auth; safe to expose for uptime checks.
+    """
+    if db:
+        return {"status": "healthy"}
+    return {"status": "degraded"}
+
 
 def _demo_mode_enabled() -> bool:
     return settings.ENV == "development" and getattr(settings, "ALLOW_MOCK_AUTH", False)

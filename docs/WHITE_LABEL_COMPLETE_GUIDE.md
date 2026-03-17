@@ -113,6 +113,73 @@ enterprise clients with strict data residency requirements):
 
 ---
 
+## Partner operations: managing end customers (tenants → orgs → users)
+
+This section explains how a white‑label partner manages their customers using
+the existing Admin API surface (no extra services required).
+
+### Roles and scoping (RBAC)
+- `super_admin` / platform admin: can provision tenants and see all orgs.
+- `tenant_admin`: scoped to a `tenantSlug` and can only see/modify orgs for that tenant.
+- `admin`: scoped to a single org only.
+
+These are enforced in `backend/app/api/admin.py` via `_admin_scope()` and `_require_org_access()`.
+
+### 1) Provision a new tenant (platform admin only)
+Use the existing endpoint in `admin.py`:
+```
+POST /api/admin/provision-tenant
+```
+This creates a tenant org, sets `tenantSlug`, and assigns the provided `admin_uid`
+as `tenant_admin`. See the example command in Step 6 above.
+
+### 2) List and manage customer orgs (tenant admin)
+The Admin API already enforces tenant scoping:
+```
+GET /api/admin/orgs
+GET /api/admin/orgs/{org_id}/details
+PATCH /api/admin/orgs/{org_id}/subscription
+PUT /api/admin/orgs/{org_id}/keys
+```
+Use these endpoints to:
+- List all customer orgs for that tenant
+- Inspect usage, plan, and metadata
+- Update plans, seat limits, and trial status
+- Set per‑org API keys (OpenAI / Gemini / Anthropic)
+
+### 3) Billing and payment links (tenant admin)
+```
+POST /api/admin/payment-link
+```
+This creates a Razorpay payment link for the org’s selected plan.  
+If you use tenant‑specific Razorpay display keys, set:
+```
+organizations/{org_id}.tenantConfig.razorpayKeyId
+```
+Orders still use the platform secret key server‑side; only the display key changes.
+
+### 4) Branding and support identity (tenant admin)
+Store tenant brand settings in:
+```
+organizations/{org_id}.tenantConfig = {
+  brandName, colorPrimary, colorAccent, logoUrl, faviconUrl, supportEmail,
+  email: { fromName, fromEmail, replyTo, sendgridKey }
+}
+```
+This powers:
+- Logos/colors in UI (via `frontend/src/lib/whitelabel.ts`)
+- Support email in UI and reports
+- Invite emails via `backend/app/core/email_sender.py`
+
+### 5) Multi‑tenant hostname routing (optional)
+For hosted multi‑tenant (one frontend for many partners), map hostnames to config:
+```
+platform_config/tenant_configs/hosts/{hostname} -> TenantConfig
+```
+This is served by `GET /api/tenant-config?hostname=...`.
+
+---
+
 ## Revenue model for white-label
 
 **Recommended: AUM Platform fee**
@@ -176,3 +243,15 @@ NEXT_PUBLIC_TENANT_CONFIG={"brandName":"..."}   # Per-tenant Vercel project
 NEXT_PUBLIC_API_BASE_URL=https://...            # Shared backend URL
 NEXT_PUBLIC_FIREBASE_*                          # Per-tenant Firebase project values
 ```
+
+
+## Update: 2026-03-17
+- Release checklist added at docs/RELEASE_CHECKLIST.md.
+- Workspace health endpoint (GET /api/workspaces/health) added for uptime checks.
+- Prompt sanitization now strips <script> tags and ignores non-string input safely.
+- Quick Scan landing page validates scan responses and handles non-200 errors to avoid invalid date/blank score rendering.
+- Quick Scan public endpoint (`/api/quick-scan`) uses a platform OpenAI key with per-IP rate limiting.
+- Competitor displacement API is gated to Growth/Scale/Enterprise plans.
+- Simulation quota reservation uses sharded counters (`usageReservations`) to reduce org doc contention.
+- Pricing defaults: Growth ₹6,499/mo, Scale ₹20,999/mo (Razorpay plan amounts).
+- Default support email: hello@aumcontextfoundry.com (white-label config).

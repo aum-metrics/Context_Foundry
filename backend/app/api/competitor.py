@@ -83,6 +83,22 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
             ]
         }
 
+    # Entitlement Check: Competitor Analysis requires Growth, Scale, or Enterprise
+    if db and settings.ENV not in ["development", "testing"]:
+        try:
+            org_doc = db.collection("organizations").document(org_id).get()
+            if org_doc.exists:
+                plan = (org_doc.to_dict() or {}).get("subscription", {}).get("planId", "explorer")
+                if plan not in ["growth", "scale", "enterprise"]:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Competitor analysis is available on Growth, Scale, or Enterprise plans."
+                    )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Competitor plan check failed: {e}")
+
     org_name = "the company"
     api_key = None
     is_dev = os.getenv("ENV") == "development"

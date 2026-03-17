@@ -30,6 +30,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, field_validator
+from core.firebase_config import db
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -268,7 +270,7 @@ def _label(score: int) -> str:
 
 def _fallback(company: str, reason: str = "unknown") -> dict:
     """Safe fallback when the LLM call fails. Never returns a 500 on the landing page."""
-    return {
+    result = {
         "company_name": company,
         "score": 32,
         "score_label": "Weak AI Presence",
@@ -282,7 +284,6 @@ def _fallback(company: str, reason: str = "unknown") -> dict:
         "demo": True,
         "_reason": reason,   # internal, helps debugging
     }
-    from core.config import settings
     if settings.ENV != "development":
         result.pop("_reason", None)
     return result

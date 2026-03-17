@@ -131,8 +131,38 @@ export default function QuickScan() {
                 return;
             }
 
-            const data: ScanResult = await resp.json();
-            setResult(data);
+            if (!resp.ok) {
+                const body = await resp.json().catch(() => ({}));
+                setErrorMsg(
+                    body?.detail?.message
+                        ?? body?.detail
+                        ?? body?.message
+                        ?? "Scan failed — please try again."
+                );
+                return;
+            }
+
+            const data: Partial<ScanResult> = await resp.json();
+            if (typeof data.score !== "number" || !data.company_name) {
+                setErrorMsg("Scan failed — please try again.");
+                return;
+            }
+
+            // Normalize fields defensively
+            const normalized: ScanResult = {
+                company_name: data.company_name ?? trimmed,
+                score: Number.isFinite(data.score) ? data.score : 0,
+                score_label: data.score_label ?? "AI Visibility",
+                low_visibility: Boolean(data.low_visibility),
+                top_competitor: data.top_competitor ?? "Not identified",
+                key_gap: data.key_gap ?? "Insufficient public proof points",
+                winning_category: data.winning_category ?? "General enterprise",
+                summary: data.summary ?? "",
+                scanned_at: data.scanned_at ?? new Date().toISOString(),
+                cached: data.cached,
+                demo: data.demo,
+            };
+            setResult(normalized);
 
             // Scroll result into view on mobile
             setTimeout(() => {
@@ -349,7 +379,9 @@ export default function QuickScan() {
                                 </p>
                                 <p className="text-[10px] text-slate-400">
                                     {result.cached ? "Cached · " : ""}
-                                    {new Date(result.scanned_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    {Number.isFinite(Date.parse(result.scanned_at))
+                                        ? new Date(result.scanned_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                        : "Just now"}
                                 </p>
                             </div>
                         </div>

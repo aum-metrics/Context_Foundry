@@ -85,7 +85,6 @@ export default function AdminDashboard() {
     const [orgs, setOrgs] = useState<OrgData[]>([]);
     const [loadingOrgs, setLoadingOrgs] = useState(true);
     const [newKeyValue, setNewKeyValue] = useState<Record<string, string>>({});
-    const [nextCursor, setNextCursor] = useState<string | null>(null);
     const nextCursorRef = useRef<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -122,7 +121,6 @@ export default function AdminDashboard() {
             setLoadingMore(true);
         } else {
             setLoadingOrgs(true);
-            setNextCursor(null);
             setHasMore(true);
         }
 
@@ -153,7 +151,6 @@ export default function AdminDashboard() {
             }));
 
             setHasMore(data.hasMore ?? false);
-            setNextCursor(data.nextCursor ?? null);
             nextCursorRef.current = data.nextCursor ?? null;
 
             if (isLoadMore) {

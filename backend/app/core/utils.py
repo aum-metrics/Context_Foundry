@@ -14,13 +14,29 @@ def sanitize_for_prompt(text: str) -> str:
     """
     if not text:
         return ""
+    if not isinstance(text, str):
+        return ""
     # Strip common injection patterns
-    # 1. Ignore/Disregard patterns
-    text = re.sub(r'(?i)(ignore|disregard|forget|bypass).{0,50}(above|previous|instructions|rules|system)', '[FILTERED]', text)
+    # 1. Explicit instruction overrides (keep surrounding text intact)
+    patterns = [
+        r'(?i)ignore all previous instructions',
+        r'(?i)ignore previous instructions',
+        r'(?i)ignore the above instructions',
+        r'(?i)disregard previous instructions',
+        r'(?i)forget previous instructions',
+        r'(?i)bypass system instructions',
+        r'(?i)override system instructions',
+    ]
+    for pattern in patterns:
+        text = re.sub(pattern, '[FILTERED]', text)
+    # 1b. Strip script tags (basic XSS hardening for prompts)
+    text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
     # 2. Markdown/Tag escape patterns
     text = text.replace("<|", "").replace("|>", "")
     # 3. Delimiter escape
     text = text.replace("</Context>", "").replace("<Context>", "")
+    # 4. Common system tag wrappers
+    text = re.sub(r'(?i)\[\[system\]\]', '', text)
     
     return text[:4000]
 

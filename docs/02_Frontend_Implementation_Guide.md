@@ -171,3 +171,16 @@ Do not just hide the button. Show the button, but add a visual lock icon and tri
 The `<UpgradeModal />` handles the Razorpay checkout session automatically via the `useRazorpay()` hook.
 
 *Proceed to Guide 03: Backend API & Logic Reference.*
+
+
+## Update: 2026-03-17
+- Release checklist added at docs/RELEASE_CHECKLIST.md.
+- Workspace health endpoint (GET /api/workspaces/health) added for uptime checks.
+- Prompt sanitization now strips <script> tags and ignores non-string input safely.
+- Quick Scan landing page validates scan responses and handles non-200 errors to avoid invalid date/blank score rendering.
+- Quick Scan public endpoint (`/api/quick-scan`) uses a platform OpenAI key with per-IP rate limiting.
+- Competitor displacement API is gated to Growth/Scale/Enterprise plans.
+- Simulation quota reservation uses sharded counters (`usageReservations`) to reduce org doc contention.
+- Pricing defaults: Growth ₹6,499/mo, Scale ₹20,999/mo (Razorpay plan amounts).
+- Default support email: hello@aumcontextfoundry.com (white-label config).
+
