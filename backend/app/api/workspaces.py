@@ -169,7 +169,7 @@ async def provision_organization(
                 org_ref = db.collection("organizations").document(org_id)
                 org_snap = await asyncio.to_thread(org_ref.get)
                 if org_snap.exists:
-                    return {"status": "existing", "orgId": org_id, "message": "User already provisioned."}
+                    return {"status": "existing", "orgId": org_id, "role": user_data.get("role", "member"), "message": "User already provisioned."}
                 # Repair path: org missing but user points to it
                 logger.warning(f"Provisioning repair: org {org_id} missing for user {uid}. Recreating org.")
                 org_payload = {
@@ -185,7 +185,7 @@ async def provision_organization(
                     "createdAt": datetime.now(timezone.utc)
                 }
                 await asyncio.to_thread(org_ref.set, org_payload)
-                return {"status": "repaired", "orgId": org_id, "message": "Organization recreated for existing user."}
+                return {"status": "repaired", "orgId": org_id, "role": user_data.get("role", "member"), "message": "Organization recreated for existing user."}
             
         # Check for invites (blocking stream converted to list)
         invited_users = list(await asyncio.to_thread(db.collection("users").where("email", "==", email).where("status", "==", "invited_pending_auth").limit(1).stream))
@@ -205,7 +205,7 @@ async def provision_organization(
             
             await asyncio.to_thread(batch.commit)
             log_audit_event(org_id=org_id, actor_id=uid, event_type="member_joined", resource_id=email, metadata={"auto_accepted": True})
-            return {"status": "joined_existing", "orgId": org_id, "message": "Joined organization from invitation."}
+            return {"status": "joined_existing", "orgId": org_id, "role": role, "message": "Joined organization from invitation."}
             
         # New Provisioning
         new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{secrets.token_urlsafe(6)}"
@@ -226,12 +226,12 @@ async def provision_organization(
             # 1. Check for user existence again inside transaction to prevent race conditions
             u_snap = u_ref.get(transaction=transaction)
             if u_snap.exists:
-                return {"status": "existing", "orgId": u_snap.to_dict().get("orgId")}
+                return {"status": "existing", "orgId": u_snap.to_dict().get("orgId"), "role": u_snap.to_dict().get("role", "member")}
             
             # 2. Atomic Provisioning
             transaction.set(o_ref, org_payload)
             transaction.set(u_ref, user_payload)
-            return {"status": "provisioned", "orgId": new_org_id, "message": "Onboarding complete."}
+            return {"status": "provisioned", "orgId": new_org_id, "role": "admin", "message": "Onboarding complete."}
 
         org_ref = db.collection("organizations").document(new_org_id)
         # 🛡️ FIX: run_transaction callback must only take 'transaction'
@@ -239,7 +239,30 @@ async def provision_organization(
         async def _run_txn_safely():
             return db.run_transaction(lambda t: _txn(t, user_ref, org_ref))
             
-        result = await asyncio.to_thread(db.run_transaction, lambda t: _txn(t, user_ref, org_ref))
+        try:
+            result = await asyncio.to_thread(db.run_transaction, lambda t: _txn(t, user_ref, org_ref))
+        except Exception as e:
+            logger.error(f"Provisioning transaction failed for {uid}: {type(e).__name__} {e}")
+            # Retry path: if user doc now exists, return it
+            try:
+                user_doc_retry = await asyncio.to_thread(user_ref.get)
+                if user_doc_retry.exists:
+                    existing_org = (user_doc_retry.to_dict() or {}).get("orgId")
+                    if existing_org:
+                        return {"status": "existing", "orgId": existing_org, "message": "User already provisioned."}
+            except Exception:
+                pass
+
+            # Best-effort create if transaction failed (handles transient errors)
+            try:
+                batch = db.batch()
+                batch.create(org_ref, org_payload)
+                batch.create(user_ref, user_payload)
+                await asyncio.to_thread(batch.commit)
+                return {"status": "provisioned", "orgId": new_org_id, "message": "Onboarding complete."}
+            except Exception as create_error:
+                logger.error(f"Provisioning fallback failed for {uid}: {type(create_error).__name__} {create_error}")
+                raise
 
         if result["status"] == "provisioned":
              log_audit_event(org_id=new_org_id, actor_id=uid, event_type="organization_provisioned", resource_id=new_org_id)

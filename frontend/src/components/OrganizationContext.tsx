@@ -203,7 +203,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
                             uid: user.uid,
                             email: user.email || "",
                             orgId: provisionData.orgId,
-                            role: "admin",
+                            role: provisionData.role || "admin",
                         };
                     }
                 }
