@@ -134,7 +134,7 @@ export default function AUMContextFoundry() {
         <div>
           <div className="p-5 pb-2">
             <div className="flex items-center space-x-3 mb-6">
-              <Logo size={32} showText={true} theme="auto" />
+              <Logo size={32} showText={true} />
             </div>
             {isPlatformAdmin && (
               <div className="mb-4">

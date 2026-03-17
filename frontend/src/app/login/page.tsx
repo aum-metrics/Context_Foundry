@@ -72,7 +72,7 @@ export default function LoginPage() {
                 className="relative w-full max-w-md z-10 p-8 rounded-3xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-xl dark:shadow-2xl"
             >
                 <div className="flex justify-center mb-6">
-                    <Logo size={48} showText={false} theme="auto" />
+                    <Logo size={48} showText={false} />
                 </div>
 
                 <h1 className="text-2xl font-light text-slate-900 dark:text-white text-center mb-2 tracking-tight">

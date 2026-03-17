@@ -28,7 +28,7 @@ export default function Navbar() {
         <nav className="fixed top-0 left-0 right-0 z-[100] border-b border-slate-200/10 dark:border-white/5 bg-white/80 dark:bg-slate-950/50 backdrop-blur-xl transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 <Link href="/" className="flex items-center group">
-                    <Logo size={32} showText={true} theme="auto" />
+                    <Logo size={32} showText={true} />
                 </Link>
 
                 <div className="hidden md:flex items-center space-x-8">
