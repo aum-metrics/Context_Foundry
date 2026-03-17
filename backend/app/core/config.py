@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000" # fallback
     
     # CORS & Hosts
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "https://aumcontextfoundry.com"]
-    TRUSTED_HOSTS: List[str] = ["localhost", "127.0.0.1", "aumcontextfoundry.com"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "https://aumcontextfoundry.com", "https://api.aumcontextfoundry.com"]
+    TRUSTED_HOSTS: List[str] = ["localhost", "127.0.0.1", "aumcontextfoundry.com", "api.aumcontextfoundry.com", "*.aumcontextfoundry.com", "*.run.app"]
     
     # Security
     JWT_SECRET: str = "your-secret-key-change-in-production" # Default for Dev
