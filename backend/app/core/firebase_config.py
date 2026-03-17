@@ -40,5 +40,6 @@ def initialize_firebase():
 # Eager initialization on module load
 initialize_firebase()
 
-# Export 'db' for compatibility with 'from core.firebase_config import db'
+# Export 'db' and 'app' for compatibility with other modules
 db = _db
+app = _app
