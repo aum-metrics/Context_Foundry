@@ -3,9 +3,12 @@ export const FALLBACK_MODEL_ORDER: string[] = ["GPT-4o", "Gemini 3 Flash", "Clau
 export function normalizeModelName(model: string): string {
     const raw = (model || "").trim();
     const lowered = raw.toLowerCase();
-    if (lowered.startsWith("gpt-4o")) return "GPT-4o";
-    if (lowered.includes("gemini") && lowered.includes("flash")) return "Gemini 3 Flash";
-    if (lowered.includes("claude") && (lowered.includes("sonnet") || lowered.includes("haiku"))) return "Claude 4.5 Sonnet";
+    
+    // Version-agnostic categorization
+    if (/gpt-?4/i.test(lowered)) return "GPT-4o";
+    if (/gemini/i.test(lowered)) return "Gemini 3 Flash";
+    if (/claude/i.test(lowered)) return "Claude 4.5 Sonnet";
+    
     return raw;
 }
 

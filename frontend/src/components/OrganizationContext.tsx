@@ -274,7 +274,7 @@ export function OrganizationProvider({ children, user }: { children: React.React
         };
 
         fetchOrProvisionOrg();
-    }, [user, activeOrgId, refreshKey, activeManifestVersion]);
+    }, [user, activeOrgId, refreshKey]);
 
     const isPlatformAdmin = orgUser?.role === "admin" && orgUser?.orgId === "system_admin_org";
     const activeContextName =

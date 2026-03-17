@@ -1053,13 +1053,12 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
     # ----- 5. ATOMIC BILLING & CACHE UPDATE (Background) -----
     if db:
         background_tasks.add_task(_store_simulation_results, request.orgId, request.prompt, resolved_manifest_version, results, cache_key)
+        # 🛡️ BILLING INTEGRITY (P0): Only record usage if models actually returned results
+        background_tasks.add_task(_record_usage, request.orgId, request.prompt, resolved_manifest_version, org_plan)
+        
         import random
         if random.random() < 0.1:
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
-
-    # 5. ATOMIC BILLING: Record usage after successful model run
-    if db:
-        background_tasks.add_task(_record_usage, request.orgId, request.prompt, resolved_manifest_version, org_plan)
 
     locked_models = []
     if org_plan == "explorer":

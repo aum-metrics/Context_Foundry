@@ -164,7 +164,7 @@ export default function AdminDashboard() {
         }
         setLoadingOrgs(false);
         setLoadingMore(false);
-    }, [nextCursor]);
+    }, []); // Removed nextCursor dependency to prevent infinite loop
 
     useEffect(() => { fetchOrgs(false); }, [fetchOrgs]);
 

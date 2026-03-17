@@ -214,7 +214,7 @@ async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get
         key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
         message = f"{request.razorpay_order_id}|{request.razorpay_payment_id}"
         expected_signature = hmac.new(
-            key_secret.encode(), message.encode(), digestmod=hashlib.sha256
+            key_secret.encode(), message.encode(), hashlib.sha256
         ).hexdigest()
 
         if not hmac.compare_digest(expected_signature, request.razorpay_signature):
@@ -347,7 +347,7 @@ async def razorpay_webhook(request: Request):
 
         # 1. Verify Webhook Signature - Strict comparison
         expected_signature = hmac.new(
-            secret.encode(), raw_body, digestmod=hashlib.sha256
+            secret.encode(), raw_body, hashlib.sha256
         ).hexdigest()
         if not hmac.compare_digest(expected_signature, signature):
             logger.error(f"🛑 CRITICAL: Invalid Webhook Signature. Body: {raw_body[:100]}... Signature: {signature}")
