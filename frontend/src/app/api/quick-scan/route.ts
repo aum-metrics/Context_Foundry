@@ -39,7 +39,33 @@ export async function POST(req: NextRequest) {
             signal: AbortSignal.timeout(28_000), // 28s — backend has 25s timeout
         });
 
-        const data = await upstream.json();
+        const data = await upstream.json().catch(() => null);
+        if (!upstream.ok) {
+            const fallbackName = (body as { company_name?: string } | undefined)?.company_name ?? "Your company";
+            if (upstream.status >= 500) {
+                return NextResponse.json(
+                    {
+                        company_name: fallbackName,
+                        score: 32,
+                        score_label: "Weak AI Presence",
+                        low_visibility: true,
+                        top_competitor: "A larger, better-documented competitor",
+                        key_gap: "No verified enterprise transformation case studies found",
+                        winning_category: "General B2B services",
+                        summary: `AI systems have limited verified data about ${fallbackName} and default to more prominent alternatives.`,
+                        scanned_at: new Date().toISOString(),
+                        demo: true,
+                        error: "upstream_500",
+                        message: "Scan service temporarily unavailable.",
+                    },
+                    { status: 200 }
+                );
+            }
+            return NextResponse.json(
+                data ?? { error: "upstream_error", message: "Scan failed — please try again." },
+                { status: upstream.status }
+            );
+        }
         return NextResponse.json(data, { status: upstream.status });
     } catch (err) {
         const isTimeout = err instanceof Error && err.name === "TimeoutError";

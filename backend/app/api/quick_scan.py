@@ -30,7 +30,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, field_validator
-from core.firebase_config import db
+from core import firebase_config
 from core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,7 @@ _RATE_WINDOW_H = 1       # per hour
 
 async def _check_rate(ip: str) -> bool:
     """Return True if the request is allowed, False if rate-limited. Cloud-safe via Firestore."""
+    db = firebase_config.db
     if not db:
         return True # Fail open if DB is down for public tool
         
