@@ -43,6 +43,9 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events (Startup and Shutdown)"""
+    from core.firebase_config import initialize_firebase
+    initialize_firebase()
+    
     logger.info("\n" + "="*60)
     logger.info("🚀 AUM ANALYTICS API STARTUP - v2.2.0-hardened")
     logger.info("="*60)
@@ -283,10 +286,17 @@ async def health_check():
         from core.firebase_config import db
         if db:
             # Performs a lightweight read to verify connectivity (wrapped in thread to prevent blocking event loop)
-            await asyncio.to_thread(db.collection("health_check").document("ping").get)
+            # We use a timeout to ensure the health check doesn't hang indefinitely
+            await asyncio.wait_for(
+                asyncio.to_thread(db.collection("health_check").document("ping").get),
+                timeout=3.0
+            )
             firestore_status = "connected"
         else:
             firestore_status = "unavailable"
+    except asyncio.TimeoutError:
+        logger.error("Health check: Firestore ping timed out")
+        firestore_status = "timeout"
     except Exception as e:
         logger.error(f"Health check: Firestore unreachable: {e}")
         firestore_status = "disconnected"
