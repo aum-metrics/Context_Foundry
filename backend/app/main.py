@@ -13,7 +13,7 @@ app_path = str(Path(__file__).parent)
 if app_path not in sys.path:
     sys.path.insert(0, app_path)
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from core.config import settings
@@ -169,6 +169,17 @@ async def global_exception_handler(request: Request, exc: Exception):
             "detail": str(exc),
             "type": type(exc).__name__
         }
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Ensure HTTP errors always return JSON."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "type": "HTTPException",
+        },
     )
 
 # ============================================================================

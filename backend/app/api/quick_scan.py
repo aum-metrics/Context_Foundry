@@ -203,14 +203,17 @@ buyer asking who to use for its core category? 0 = never mentioned, 100 = first 
 3. **top_competitor**: ONE company that AI systems are MORE likely to recommend instead of \
 "{company}" for the same buyer query. Use "Not identified" if none.
 4. **key_gap**: ONE specific proof point or claim that is absent from "{company}"'s public \
-narrative and would improve AI recall. Max 12 words. Be concrete (e.g. "No published \
-enterprise ROI case studies").
+or under-emphasized in AI recall. Phrase as a recommendation (e.g. "Highlight enterprise \
+ROI case studies") unless you are confident the proof is truly missing.
 5. **winning_category**: The buyer-intent category where "{company}" is strongest. \
 Max 5 words.
 6. **summary**: One sentence (max 20 words) describing what AI buyers currently hear \
 about "{company}".
 
-IMPORTANT: If "{company}" is unknown to you, set score ≤ 35 and low_visibility: true.
+IMPORTANT:
+- If "{company}" is unknown to you, set score ≤ 35 and low_visibility: true.
+- If score ≥ 70, the top_competitor should be a close peer often mentioned alongside \
+  "{company}" (not necessarily preferred), and key_gap should be a refinement suggestion.
 
 Return ONLY valid JSON, nothing else:
 {{

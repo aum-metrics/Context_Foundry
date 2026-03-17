@@ -53,6 +53,7 @@ All critical administrative actions are immutably logged to the `audit_logs` col
 
 
 ## Update: 2026-03-17
+- Quick Scan prompt tuned to reduce negative claims for strong brands; competitor tile label now adapts to score.
 - Quick Scan edge proxy returns a demo fallback on upstream 5xx to avoid blank/failed landing scans.
 - Release checklist added at docs/RELEASE_CHECKLIST.md.
 - Workspace health endpoint (GET /api/workspaces/health) added for uptime checks.

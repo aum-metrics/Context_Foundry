@@ -73,6 +73,26 @@ export default function SemanticIngestion() {
     // Processing simulation logs
     const [logs, setLogs] = useState<string[]>([]);
 
+    const parseJsonResponse = async (response: Response, defaultError: string) => {
+        const raw = await response.text();
+        let data: any = null;
+        if (raw) {
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                if (!response.ok) {
+                    throw new Error(raw || defaultError);
+                }
+                throw new Error("Unexpected non-JSON response from ingestion service.");
+            }
+        }
+        if (!response.ok) {
+            const message = data?.detail || data?.message || defaultError;
+            throw new Error(message);
+        }
+        return data || {};
+    };
+
     const waitForManifestReady = async (token: string, orgId: string, version?: string) => {
         if (!version) return;
         for (let attempt = 0; attempt < 5; attempt++) {
@@ -148,15 +168,10 @@ export default function SemanticIngestion() {
             body: formData,
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Backend processing failed');
-        }
-
         setLogs(prev => [...prev, "PDF Binary Streamed to Volatile Memory. (Zero-Retention Active)"]);
         setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
 
-        const result = await response.json();
+        const result = await parseJsonResponse(response, "Backend processing failed");
 
         if (result.name === "Key Missing") {
             setLogs(prev => [...prev, "WARNING: Tenant Key Missing in Vault."]);
@@ -227,15 +242,10 @@ export default function SemanticIngestion() {
                 body: JSON.stringify({ url, orgId: organization.id }),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || "URL processing failed");
-            }
-
             setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
             setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
 
-            const result = await response.json();
+            const result = await parseJsonResponse(response, "URL processing failed");
             setLogs(prev => [...prev, "JSON-LD Schema verified."]);
             setLogs(prev => [...prev, "Manifest generated."]);
 

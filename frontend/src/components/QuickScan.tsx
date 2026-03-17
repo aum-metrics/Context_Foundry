@@ -323,9 +323,15 @@ export default function QuickScan() {
 
                             {/* Three insight tiles */}
                             <div className="grid grid-cols-3 gap-2.5 mb-5">
+                                {(() => {
+                                    const competitorLabel =
+                                        result.score >= 70 ? "Closest competitor" :
+                                        result.score >= 45 ? "AI also suggests" :
+                                        "AI prefers instead";
+                                    return (
                                 <div className="rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-1">
-                                        AI prefers instead
+                                        {competitorLabel}
                                     </p>
                                     <p className="text-[12px] font-semibold text-rose-700 dark:text-rose-300 leading-snug">
                                         {result.top_competitor === "Not identified"
@@ -333,6 +339,8 @@ export default function QuickScan() {
                                             : result.top_competitor}
                                     </p>
                                 </div>
+                                    );
+                                })()}
                                 <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 p-3">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-1">
                                         Key gap to fix
