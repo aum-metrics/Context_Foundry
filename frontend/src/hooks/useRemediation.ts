@@ -5,22 +5,38 @@ import { averageAccuracy, clampPct, getFirstSentence, hallucinationRate, parseCl
 
 function classifyPromptCluster(prompt: string): string {
     const value = prompt.toLowerCase();
-    if (value.includes("fortune 500") || value.includes("retail transformation") || value.includes("analytics partner")) {
+    
+    // Strategic / Executive
+    if (value.includes("fortune 500") || value.includes("retail transformation") || value.includes("analytics partner") || value.includes("modernization")) {
         return "Executive Market Positioning";
     }
-    if (value.includes("iphone") || value.includes("electronics") || value.includes("appliances") || value.includes("store near me") || value.includes("delivery")) {
+    
+    // Supply Chain / Retail
+    if (value.includes("iphone") || value.includes("electronics") || value.includes("appliances") || value.includes("store near me") || value.includes("delivery") || value.includes("inventory")) {
         return "Retail Availability & Logistics";
     }
-    if (value.includes("crisis") || value.includes("simulation") || value.includes("resilience") || value.includes("training") || value.includes("threat")) {
+    
+    // Cyber / Risk
+    if (value.includes("crisis") || value.includes("simulation") || value.includes("resilience") || value.includes("training") || value.includes("threat") || value.includes("incumbent")) {
         return "Cyber Readiness & Training";
     }
-    if (value.includes("crm") || value.includes("billing") || value.includes("compliance") || value.includes("scalability")) {
+    
+    // Tech / Infrastructure
+    if (value.includes("crm") || value.includes("billing") || value.includes("compliance") || value.includes("scalability") || value.includes("cloud") || value.includes("architecture")) {
         return "Enterprise Scale & Reliability";
     }
-    if (value.includes("compare with") || value.includes("vs") || value.includes("competitor") || value.includes("alternative")) {
+    
+    // Competitive
+    if (value.includes("compare with") || value.includes("vs") || value.includes("competitor") || value.includes("alternative") || value.includes("better than")) {
         return "Competitive Differentiation";
     }
-    return "Market Authority";
+
+    // AI Specific
+    if (value.includes("ai driver") || value.includes("llm") || value.includes("rag") || value.includes("generative")) {
+        return "AI Innovation Authority";
+    }
+
+    return "Geographic & Market Authority";
 }
 
 function getCategoryFallbackClaims(category: string): string[] {
@@ -35,8 +51,10 @@ function getCategoryFallbackClaims(category: string): string[] {
             return ["99.99% uptime SLA evidence", "enterprise-grade security SOC2", "multi-region deployment proof"];
         case "Competitive Differentiation":
             return ["proprietary innovation signals", "named buyer-intent differentiators", "clear proof of outcome"];
+        case "AI Innovation Authority":
+            return ["proprietary model fine-tuning evidence", "high-fidelity RAG architecture proof", "AI safety and governance signals"];
         default:
-            return ["industry-specific outcome proof", "category authority signals", "explicit buyer trust factors"];
+            return ["industry-specific outcome proof", "localized market authority signals", "explicit sector trust factors"];
     }
 }
 

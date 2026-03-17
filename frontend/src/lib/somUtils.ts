@@ -1,15 +1,14 @@
 export const FALLBACK_MODEL_ORDER: string[] = ["GPT-4o", "Gemini 3 Flash", "Claude 4.5 Sonnet"];
 
-export function normalizeModelName(model: string): string {
-    const raw = (model || "").trim();
-    const lowered = raw.toLowerCase();
+export function normalizeModelName(name: string): string {
+    const n = (name || "").toLowerCase();
     
-    // Version-agnostic categorization
-    if (/gpt-?4/i.test(lowered)) return "GPT-4o";
-    if (/gemini/i.test(lowered)) return "Gemini 3 Flash";
-    if (/claude/i.test(lowered)) return "Claude 4.5 Sonnet";
+    // Use regex to look for version-agnostic patterns
+    if (/gpt-?4o/i.test(n)) return "GPT-4o";
+    if (/gemini.*flash/i.test(n)) return "Gemini 3 Flash";
+    if (/claude.*(sonnet|haiku)/i.test(n)) return "Claude 4.5 Sonnet";
     
-    return raw;
+    return name || "Generic LLM";
 }
 
 export function parseClaimRecallPercent(claimScore?: string): number | null {

@@ -56,10 +56,9 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
             org_ref = db.collection("organizations").document(request.orgId).get()
             if org_ref.exists:
                 org_data = org_ref.to_dict() or {}
-                # Extract BYOK key BEFORE redacting (Bug #1 fix: pop-then-read was always None)
-                openai_key = org_data.get("apiKeys", {}).get("openai")
-                # 🛡️ SECURITY HARDENING (P0): Redact apiKeys from org_data
-                org_data.pop("apiKeys", None)
+                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
+                api_keys = org_data.pop("apiKeys", {})
+                openai_key = api_keys.get("openai")
         except Exception as e:
             logger.error(f"Firestore org lookup failed: {e}")
 

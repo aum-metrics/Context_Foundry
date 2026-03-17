@@ -59,8 +59,10 @@ class Settings(BaseSettings):
                 invalid.append("SSO_ENCRYPTION_KEY")
             if self.SSO_JWT_SECRET == "aum-sso-jwt-intent-dev-fallback1":
                 invalid.append("SSO_JWT_SECRET")
+            if self.ALLOW_MOCK_AUTH:
+                invalid.append("ALLOW_MOCK_AUTH must be False in production")
             if invalid:
-                print(f"🚨 CRITICAL SECURITY ALERT: Default secrets detected in production: {', '.join(invalid)}")
+                print(f"🚨 CRITICAL SECURITY ALERT: Security violations detected in production: {', '.join(invalid)}")
                 sys.exit(1)
             self.DEBUG = False
         else:

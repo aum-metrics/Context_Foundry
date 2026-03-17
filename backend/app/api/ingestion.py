@@ -7,6 +7,7 @@ Description: Zero-Retention Semantic PDF Ingestion & JSON-LD Schema Transformati
 """
 import os
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
+import resource
 import json
 import datetime
 from datetime import timedelta, timezone
@@ -206,7 +207,10 @@ async def parse_document(
         try:
             org_doc = db.collection("organizations").document(orgId).get()
             if org_doc.exists:
-                org_openai_key = org_doc.to_dict().get("apiKeys", {}).get("openai", api_key)
+                org_data = org_doc.to_dict() or {}
+                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
+                api_keys = org_data.pop("apiKeys", {})
+                org_openai_key = api_keys.get("openai", api_key)
                 # Handle sentinel: platform-managed orgs use master platform keys
                 if org_openai_key and org_openai_key != "internal_platform_managed":
                     api_key = org_openai_key
@@ -309,8 +313,8 @@ async def parse_document(
                     }
                 }
                 txn.set(m_ref, doc_payload)
-                # 2. Write Latest with same TTL
-                txn.set(l_ref, doc_payload)
+                # 🛡️ PERSISTENCE HARDENING (P1): Don't update 'latest' yet to prevent broken states
+                # txn.set(l_ref, doc_payload)
                 return True
 
             success = update_manifest(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
@@ -330,6 +334,17 @@ async def parse_document(
                         batch.commit()
                         batch = db.batch()
                 batch.commit()
+
+                # 🛡️ FINAL LINK: Only now point 'latest' to the new manifest
+                success_payload = {
+                    "content": llms_txt_content, "schemaData": schema_data, "embedding": schema_vector,
+                    "createdAt": datetime.datetime.now(timezone.utc),
+                    "expiresAt": datetime.datetime.now(timezone.utc) + timedelta(hours=24),
+                    "version": manifest_id, "totalChunks": len(chunks),
+                    "industryTaxonomy": industry_taxonomy, "industryTags": industry_tags,
+                }
+                db.collection("organizations").document(orgId).collection("manifests").document("latest").set(success_payload)
+
 
             extracted_name = schema_data.get("name")
             if isinstance(extracted_name, str) and extracted_name.strip():
@@ -410,6 +425,13 @@ async def parse_url(
             logger.warning(f"Limit check failure: {e}")
 
     # --- FETCH URL (volatile memory only) ---
+    # 🛡️ RESOURCE HARDENING (P2): Limit RAM usage for PDF extraction
+    try:
+        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+        resource.setrlimit(resource.RLIMIT_AS, (1024 * 1024 * 1024, hard)) # 1GB limit
+    except Exception as e:
+        logger.warning(f"Failed to set resource limit: {e}")
+
     raw_text = ""
     html = None
     try:
@@ -451,7 +473,10 @@ async def parse_url(
         try:
             org_doc = db.collection("organizations").document(orgId).get()
             if org_doc.exists:
-                stored_key = (org_doc.to_dict() or {}).get("apiKeys", {}).get("openai", "")
+                org_data = org_doc.to_dict() or {}
+                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
+                api_keys = org_data.pop("apiKeys", {})
+                stored_key = api_keys.get("openai", "")
                 if stored_key and stored_key != "internal_platform_managed":
                     api_key = stored_key
         except Exception:
@@ -524,7 +549,7 @@ async def parse_url(
             transaction = db.transaction()
 
             @firestore.transactional
-            def update_manifest_url(txn, m_ref, l_ref, data, vector, id_val, total_chunks, manifest_md):
+            def write_manifest_only_url(txn, m_ref, data, vector, id_val, total_chunks, manifest_md):
                 expiry = datetime.datetime.now(timezone.utc) + timedelta(hours=24)
                 payload = {
                     "content": manifest_md, "schemaData": data, "embedding": vector,
@@ -534,12 +559,11 @@ async def parse_url(
                     "industryTags": industry_tags,
                 }
                 txn.set(m_ref, payload)
-                txn.set(l_ref, payload)
-                return True
+                return payload
 
-            success = update_manifest_url(transaction, manifest_ref, latest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
+            success_payload = write_manifest_only_url(transaction, manifest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
 
-            if success:
+            if success_payload:
                 batch_w = db.batch()
                 for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
                     c_ref = manifest_ref.collection("chunks").document(str(i))
@@ -549,6 +573,9 @@ async def parse_url(
                         batch_w.commit()
                         batch_w = db.batch()
                 batch_w.commit()
+                # 🛡️ FINAL LINK: Only now point 'latest' to the new manifest
+                db.collection("organizations").document(orgId).collection("manifests").document("latest").set(success_payload)
+
 
             extracted_name = schema_data.get("name")
             if isinstance(extracted_name, str) and extracted_name.strip():

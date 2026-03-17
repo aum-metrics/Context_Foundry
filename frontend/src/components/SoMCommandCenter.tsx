@@ -232,6 +232,14 @@ export default function SoMCommandCenter({
 
 
     useEffect(() => {
+        clearIntervalRef(batchIntervalRef);
+        clearIntervalRef(seoIntervalRef);
+        setBatchResult(null);
+        setBatchLoading(false);
+        setSeoLoading(false);
+    }, [organization?.id, activeManifestVersion, clearIntervalRef]);
+
+    useEffect(() => {
         return () => {
             clearIntervalRef(batchIntervalRef);
             clearIntervalRef(seoIntervalRef);

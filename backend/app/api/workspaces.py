@@ -14,6 +14,7 @@ import secrets
 import os
 import json
 import firebase_admin
+import asyncio
 
 from core.config import settings
 from core.firebase_config import db
@@ -63,11 +64,11 @@ def _is_placeholder_org_name(name: Optional[str]) -> bool:
     return normalized in {"", "unnamed organization", "your company"}
 
 
-def _get_manifest_doc(org_id: str, version: str = "latest"):
+async def _get_manifest_doc(org_id: str, version: str = "latest"):
     org_ref = db.collection("organizations").document(org_id)
     if version == "latest":
-        return org_ref.collection("manifests").document("latest").get()
-    return org_ref.collection("manifests").document(version).get()
+        return await asyncio.to_thread(org_ref.collection("manifests").document("latest").get)
+    return await asyncio.to_thread(org_ref.collection("manifests").document(version).get)
 
 
 def _serialize_timestamp(value: Any) -> Optional[str]:
@@ -75,10 +76,6 @@ def _serialize_timestamp(value: Any) -> Optional[str]:
         return value.isoformat()
     return value if isinstance(value, str) else None
 
-# Supabase has been deprecated. All workspace and member data is stored in Firestore.
-
-# Database-only storage (Firestore)
-# In-memory storage removed as per brutal audit hardening
 
 class ProvisionOrgRequest(BaseModel):
     email: Optional[str] = None
@@ -111,17 +108,19 @@ async def rename_organization(
 ):
     """
     Manually overrides the organization's display name.
-    Useful when semantic extraction picks up a tagline or navigation menu erroneously.
     """
     uid = auth.get("uid")
     if not verify_user_org_access(uid, org_id):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     try:
-        db.collection("organizations").document(org_id).update({
-            "name": request.name.strip(),
-            "updatedAt": datetime.now(timezone.utc)
-        })
+        await asyncio.to_thread(
+            db.collection("organizations").document(org_id).update,
+            {
+                "name": request.name.strip(),
+                "updatedAt": datetime.now(timezone.utc)
+            }
+        )
         log_audit_event(org_id=org_id, actor_id=uid, event_type="org_rename", metadata={"new_name": request.name})
         return {"status": "success", "name": request.name}
     except Exception as e:
@@ -135,153 +134,78 @@ async def provision_organization(
 ):
     """
     Called by the frontend immediately after Firebase authenticates a new user.
-    Creates the Organization, User record, and automatically provisions 
-    infrastructure API keys to achieve Zero-Friction onboarding (No BYOK required).
-    Accepts an empty body — email and name are inferred from the Firebase token.
     """
     uid = current_user.get("uid")
     if not uid:
         raise HTTPException(status_code=401, detail="Invalid session")
 
-    # Infer identity from token if not provided in body
     email = (request.email if request else None) or current_user.get("email", f"{uid}@unknown.com")
-    
-    inferred_name = email.split("@")[0]
     requested_name = (request.name if request else None) or current_user.get("name")
-    name = (requested_name or _humanize_org_name(inferred_name) or "Unnamed Organization").strip()
+    name = (requested_name or _humanize_org_name(email.split("@")[0]) or "Unnamed Organization").strip()
     
     if not db:
         raise HTTPException(status_code=500, detail="Database unconfigured")
         
     try:
-        # Check if user already exists
         user_ref = db.collection("users").document(uid)
-        user_doc = user_ref.get()
+        user_doc = await asyncio.to_thread(user_ref.get)
         
         if user_doc.exists:
             user_data = user_doc.to_dict() or {}
             org_id = user_data.get("orgId")
-            return {
-                "status": "existing",
-                "orgId": org_id,
-                "message": "User already provisioned."
-            }
+            return {"status": "existing", "orgId": org_id, "message": "User already provisioned."}
             
-        # Check if they were invited (placeholder user exists)
-        invited_users = db.collection("users").where("email", "==", email).where("status", "==", "invited_pending_auth").limit(1).get()
+        # Check for invites (blocking stream converted to list)
+        invited_users = list(await asyncio.to_thread(db.collection("users").where("email", "==", email).where("status", "==", "invited_pending_auth").limit(1).stream))
         if invited_users:
             placeholder_doc = invited_users[0]
-            placeholder_data = placeholder_doc.to_dict()
-            org_id = placeholder_data.get("orgId")
-            role = placeholder_data.get("role", "member")
-            placeholder_uid = placeholder_doc.id
+            org_id = placeholder_doc.to_dict().get("orgId")
+            role = placeholder_doc.to_dict().get("role", "member")
             
-            # Auto-accept: create actual user doc, delete placeholder
-            user_payload = {
-                "uid": uid,
-                "email": email,
-                "orgId": org_id,
-                "role": role,
-                "joinedAt": datetime.now(timezone.utc).isoformat()
-            }
-            user_ref.set(user_payload)
-            placeholder_doc.reference.delete()
+            # Atomic cleanup
+            batch = db.batch()
+            batch.set(user_ref, {"uid": uid, "email": email, "orgId": org_id, "role": role, "joinedAt": datetime.now(timezone.utc).isoformat()})
+            batch.delete(placeholder_doc.reference)
             
-            # Mark the actual invite doc as accepted
-            invite_id = placeholder_uid.replace("invited_", "")
+            invite_id = placeholder_doc.id.replace("invited_", "")
             invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
-            if invite_ref.get().exists:
-                 invite_ref.update({"status": "accepted", "acceptedAt": datetime.now(timezone.utc).isoformat(), "acceptedByUid": uid})
+            batch.update(invite_ref, {"status": "accepted", "acceptedAt": datetime.now(timezone.utc).isoformat(), "acceptedByUid": uid})
             
-            log_audit_event(
-                org_id=org_id,
-                actor_id=uid,
-                event_type="member_joined",
-                resource_id=email,
-                metadata={"inviteId": invite_id, "auto_accepted": True}
-            )
+            await asyncio.to_thread(batch.commit)
+            log_audit_event(org_id=org_id, actor_id=uid, event_type="member_joined", resource_id=email, metadata={"auto_accepted": True})
+            return {"status": "joined_existing", "orgId": org_id, "message": "Joined organization from invitation."}
             
-            return {
-                "status": "joined_existing",
-                "orgId": org_id,
-                "message": "Automatically joined organization from pending invitation."
-            }
-            
-        # Generates a new Organization ID
-        import secrets as _secrets
-        from google.cloud import firestore as _fs
-        new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{_secrets.token_urlsafe(6)}"
-        
-        # We auto-provision the internal inference keys from the Master Environment
-        # so the user can immediately use the Simulator without bringing their own keys.
+        # New Provisioning
+        new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{secrets.token_urlsafe(6)}"
         org_payload = {
-            "id": new_org_id,
-            "name": name,
-            "activeSeats": 1,
+            "id": new_org_id, "name": name, "activeSeats": 1,
             "subscription": {
-                "planId": "explorer",
-                "status": "active",
-                "simsThisCycle": 0,
-                "maxSimulations": 1, # Set one free report
-                "billingPeriod": "once",
-                "activatedAt": datetime.now(timezone.utc).isoformat(),
-                "currentPeriodStart": datetime.now(timezone.utc),
-                "currentPeriodEnd": datetime.now(timezone.utc),
+                "planId": "explorer", "status": "active", "simsThisCycle": 0, "maxSimulations": 1,
+                "activatedAt": datetime.now(timezone.utc).isoformat(), "currentPeriodStart": datetime.now(timezone.utc),
                 "lastUsageResetAt": datetime.now(timezone.utc),
             },
-            "apiKeys": {
-                # These are NOT the user's B2B key. 
-                # These instruct the backend to use the Platform's Master Keys for this tenant.
-                "openai": "internal_platform_managed",
-                "gemini": "internal_platform_managed",
-                "anthropic": "internal_platform_managed"
-            },
+            "apiKeys": {"openai": "internal_platform_managed", "gemini": "internal_platform_managed", "anthropic": "internal_platform_managed"},
             "createdAt": datetime.now(timezone.utc)
         }
-        
-        user_payload = {
-            "uid": uid,
-            "email": email,
-            "orgId": new_org_id,
-            "role": "admin"
-        }
+        user_payload = {"uid": uid, "email": email, "orgId": new_org_id, "role": "admin"}
 
-        # FIX 9: Atomic transaction — prevents duplicate org creation on concurrent requests
-        @_fs.transactional
-        def _create_org_and_user(txn, txn_user_ref, txn_org_ref):
-            snap = txn_user_ref.get(transaction=txn)
-            if snap.exists:
-                return snap.to_dict().get("orgId")
-            txn.set(txn_org_ref, org_payload)
-            txn.set(txn_user_ref, user_payload)
+        @firestore.transactional
+        def _txn(transaction, u_ref, o_ref):
+            if u_ref.get(transaction=transaction).exists: return u_ref.get(transaction=transaction).to_dict().get("orgId")
+            transaction.set(o_ref, org_payload)
+            transaction.set(u_ref, user_payload)
             return None
 
-        txn = db.transaction()
-        user_ref = db.collection("users").document(uid)
         org_ref = db.collection("organizations").document(new_org_id)
-        existing_org_id = _create_org_and_user(txn, user_ref, org_ref)
+        existing_org_id = await asyncio.to_thread(_txn, db.transaction(), user_ref, org_ref)
 
         if existing_org_id:
-            logger.info(f"Provision race resolved: user {uid} already in org {existing_org_id}")
-            return {"status": "existing", "orgId": existing_org_id, "message": "User already provisioned."}
+            return {"status": "existing", "orgId": existing_org_id}
 
-        # Write SOC2 Audit Log
-        log_audit_event(
-            org_id=new_org_id,
-            actor_id=uid,
-            event_type="organization_provisioned",
-            resource_id=new_org_id,
-            metadata={"plan": "explorer"}
-        )
-
-        return {
-            "status": "provisioned",
-            "orgId": new_org_id,
-            "message": "Zero-friction onboarding complete."
-        }
-        
+        log_audit_event(org_id=new_org_id, actor_id=uid, event_type="organization_provisioned", resource_id=new_org_id)
+        return {"status": "provisioned", "orgId": new_org_id, "message": "Onboarding complete."}
     except Exception as e:
-        logger.error(f"Failed to provision org for {uid}: {e}")
+        logger.error(f"Provisioning fail: {e}")
         raise HTTPException(status_code=500, detail="Provisioning workflow failed.")
 
 @router.post("/create")
@@ -293,1068 +217,194 @@ async def create_workspace(
     Create a new collaborative workspace
     """
     user_email = current_user.get("email")
-    if not user_email:
-        raise HTTPException(status_code=401, detail="Invalid user session")
-    
-    # Generate workspace ID
+    if not user_email: raise HTTPException(status_code=401)
     workspace_id = f"ws_{secrets.token_urlsafe(16)}"
-    
-    # Create workspace
     workspace = {
-        "workspace_id": workspace_id,
-        "name": request.name,
-        "description": request.description or "",
-        "owner_email": user_email,
-        "organization_id": request.organization_id,
-        "is_public": request.is_public,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "member_count": 1,
-        "analysis_count": 0,
-        "last_activity": datetime.now(timezone.utc).isoformat()
+        "workspace_id": workspace_id, "name": request.name, "description": request.description or "",
+        "owner_email": user_email, "organization_id": request.organization_id, "is_public": request.is_public,
+        "created_at": datetime.now(timezone.utc).isoformat(), "updated_at": datetime.now(timezone.utc).isoformat(),
+        "member_count": 1, "last_activity": datetime.now(timezone.utc).isoformat()
     }
-    
-    # Store workspace to Firestore
     if db:
         try:
-            db.collection("workspaces").document(workspace_id).set({
-                **workspace,
-                "members": [user_email]
+            batch = db.batch()
+            batch.set(db.collection("workspaces").document(workspace_id), {**workspace, "members": [user_email]})
+            batch.set(db.collection("workspaces").document(workspace_id).collection("members").document(user_email.replace("@", "_at_")), {
+                "user_email": user_email, "role": "owner", "joined_at": datetime.now(timezone.utc).isoformat()
             })
-            
-            db.collection("workspaces").document(workspace_id).collection("members").document(user_email.replace("@", "_at_")).set({
-                "user_email": user_email,
-                "role": "owner",
-                "joined_at": datetime.now(timezone.utc).isoformat()
-            })
+            await asyncio.to_thread(batch.commit)
         except Exception as e:
-            logger.error(f"Failed to save workspace to Firestore: {e}")
-            raise HTTPException(status_code=500, detail="Database insertion failed")
-    
-    logger.info(f"✅ Workspace created: {workspace_id} by {user_email}")
-    
-    # SOC2 Audit Log
-    log_audit_event(
-        org_id=request.organization_id or "user_level",
-        actor_id=user_email,
-        event_type="workspace_created",
-        resource_id=workspace_id,
-        metadata={"name": request.name, "is_public": request.is_public}
-    )
-    
-    return {
-        "success": True,
-        "workspace": workspace,
-        "message": f"Workspace '{request.name}' created successfully"
-    }
+            logger.error(f"Workspace creation DB fail: {e}")
+            raise HTTPException(status_code=500)
+    log_audit_event(org_id=request.organization_id or "user", actor_id=user_email, event_type="workspace_created", resource_id=workspace_id)
+    return {"success": True, "workspace": workspace}
 
 @router.get("/list")
 async def list_workspaces(current_user: dict = Depends(get_auth_context)):
-    """
-    List all workspaces the user has access to
-    """
     user_email = current_user.get("email")
-    
     user_workspaces = []
     if db:
         try:
-            query = db.collection("workspaces").where("members", "array_contains", user_email).stream()
-            for doc in query:
-                user_workspaces.append(doc.to_dict())
-        except Exception as e:
-            logger.error(f"Failed to fetch workspaces: {e}")    
-    # Sort by last activity
+            docs = await asyncio.to_thread(lambda: list(db.collection("workspaces").where("members", "array_contains", user_email).stream()))
+            user_workspaces = [d.to_dict() for d in docs]
+        except Exception: pass
     user_workspaces.sort(key=lambda x: x.get("last_activity", ""), reverse=True)
-    
-    return {
-        "success": True,
-        "workspaces": user_workspaces,
-        "total_count": len(user_workspaces)
-    }
-
-@router.get("/health")
-async def workspaces_health():
-    """Health check for workspaces service"""
-    return {
-        "status": "healthy",
-        "service": "workspaces",
-        "active_workspaces": "db_managed",
-        "total_members": "db_managed",
-        "features": [
-            "workspace_management",
-            "team_collaboration",
-            "member_invitations",
-            "role_based_access",
-            "activity_tracking"
-        ]
-    }
+    return {"success": True, "workspaces": user_workspaces}
 
 @router.get("/{workspace_id}")
-async def get_workspace(
-    workspace_id: str,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Get workspace details
-    """
-    user_email = current_user.get("email")
-    
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not configured")
-        
-    doc = db.collection("workspaces").document(workspace_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-        
-    workspace = doc.to_dict() or {}
-    
-    # Get members
-    members = workspace.get("members", [])
-    if not workspace.get("is_public") and user_email not in members:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Get member details (simplified)
-    member_details = [
-        {
-            "email": email,
-            "role": "owner" if email == workspace["owner_email"] else "member"
-        }
-        for email in members
-    ]
-    
-    return {
-        "success": True,
-        "workspace": {
-            **workspace,
-            "members": member_details,
-            "is_member": user_email in members,
-            "is_owner": user_email == workspace["owner_email"]
-        }
-    }
+async def get_workspace(workspace_id: str, auth: dict = Depends(get_auth_context)):
+    email = auth.get("email")
+    if not db: raise HTTPException(status_code=500)
+    doc = await asyncio.to_thread(db.collection("workspaces").document(workspace_id).get)
+    if not doc.exists: raise HTTPException(status_code=404)
+    ws = doc.to_dict() or {}
+    members = ws.get("members", [])
+    if not ws.get("is_public") and email not in members: raise HTTPException(status_code=403)
+    return {"success": True, "workspace": ws}
 
 @router.post("/invite")
-async def invite_member(
-    request: InviteMemberRequest,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Invite a user to a workspace
-    """
-    user_email = current_user.get("email")
-    workspace_id = request.workspace_id
+async def invite_member(request: InviteMemberRequest, auth: dict = Depends(get_auth_context)):
+    email = auth.get("email")
+    if not db: raise HTTPException(status_code=500)
+    ws_doc = await asyncio.to_thread(db.collection("workspaces").document(request.workspace_id).get)
+    if not ws_doc.exists: raise HTTPException(status_code=404)
+    ws = ws_doc.to_dict() or {}
+    if email != ws["owner_email"]: raise HTTPException(status_code=403)
     
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not configured")
-        
-    doc = db.collection("workspaces").document(workspace_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-        
-    workspace = doc.to_dict() or {}
-    
-    # Check if user is owner or admin
-    if user_email != workspace["owner_email"]:
-        raise HTTPException(status_code=403, detail="Only workspace owner can invite members")
-    
-    # Enforce Seat Limits based on plan
-    org_plan = workspace.get("subscription", {}).get("planId", "explorer")
-    seat_limits = {
-        "explorer": 1,
-        "growth": 5,
-        "scale": 25,
-        "enterprise": 100,
-        "professional": 5,
-        "starter": 1
-    }
-    max_seats = seat_limits.get(org_plan, 1)
-
-    current_members = workspace.get("members", [])
-    if len(current_members) >= max_seats:
-        raise HTTPException(status_code=403, detail=f"Maximum limit of {max_seats} seats for the {org_plan.capitalize()} plan reached. Please upgrade to add more users.")
-    if request.email in current_members:
-        raise HTTPException(status_code=400, detail="User is already a member")
-        
+    current_members = ws.get("members", [])
+    if request.email in current_members: raise HTTPException(status_code=400, detail="Already a member")
     current_members.append(request.email)
     
-    try:
-        doc_ref = db.collection("workspaces").document(workspace_id)
-        doc.reference.update({
-            "members": current_members,
-            "member_count": len(current_members),
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        doc.reference.collection("members").document(request.email.replace("@", "_at_")).set({
-            "user_email": request.email,
-            "role": request.role,
-            "invited_by": user_email,
-            "joined_at": datetime.now(timezone.utc).isoformat()
-        })
-    except Exception as e:
-        logger.error(f"Invite error: {e}")
-    
-    logger.info(f"✅ User invited to workspace: {request.email} -> {workspace_id}")
-    
-    # SOC2 Audit Log
-    log_audit_event(
-        org_id=workspace.get("organization_id", "user_level"),
-        actor_id=user_email,
-        event_type="workspace_member_invited",
-        resource_id=workspace_id,
-        metadata={"invited_email": request.email, "role": request.role}
-    )
-    
-    return {
-        "success": True,
-        "message": f"Invitation sent to {request.email}",
-        "workspace_id": workspace_id,
-        "member_count": len(current_members)
-    }
+    batch = db.batch()
+    batch.update(ws_doc.reference, {"members": current_members, "member_count": len(current_members), "updated_at": datetime.now(timezone.utc).isoformat()})
+    batch.set(ws_doc.reference.collection("members").document(request.email.replace("@", "_at_")), {
+        "user_email": request.email, "role": request.role, "invited_by": email, "joined_at": datetime.now(timezone.utc).isoformat()
+    })
+    await asyncio.to_thread(batch.commit)
+    return {"success": True, "member_count": len(current_members)}
 
 @router.get("/{org_id}/members")
-async def list_org_members(
-    org_id: str,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    List all members of an organization.
-    Returns members from Firestore via Admin SDK (bypasses client security rules).
-    """
-    uid = current_user.get("uid")
-    if not verify_user_org_access(uid, org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-    try:
-        members = []
-        users_stream = db.collection("users").where("orgId", "==", org_id).stream()
-        for doc in users_stream:
-            user_data = doc.to_dict() or {}
-            members.append({
-                "uid": doc.id,
-                "email": user_data.get("email", ""),
-                "role": user_data.get("role", "member"),
-                "orgId": org_id,
-                "status": user_data.get("status", "active")
-            })
-
-        # Also fetch pending invitations
-        invites_stream = db.collection("organizations").document(org_id).collection("pendingInvites").where("status", "==", "pending").stream()
-        for doc in invites_stream:
-            invite_data = doc.to_dict() or {}
-            members.append({
-                "uid": f"pending_{doc.id}",
-                "email": invite_data.get("email", ""),
-                "role": invite_data.get("role", "member"),
-                "orgId": org_id,
-                "status": "pending"
-            })
-        return {"members": members}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+async def list_org_members(org_id: str, auth: dict = Depends(get_auth_context)):
+    if not verify_user_org_access(auth["uid"], org_id): raise HTTPException(status_code=403)
+    if not db: raise HTTPException(status_code=503)
+    members = []
+    # Using thread-safe list conversion for streams
+    users = await asyncio.to_thread(lambda: list(db.collection("users").where("orgId", "==", org_id).stream()))
+    for doc in users:
+        d = doc.to_dict()
+        members.append({"uid": doc.id, "email": d.get("email"), "role": d.get("role"), "status": d.get("status", "active")})
+    invites = await asyncio.to_thread(lambda: list(db.collection("organizations").document(org_id).collection("pendingInvites").where("status", "==", "pending").stream()))
+    for doc in invites:
+        d = doc.to_dict()
+        members.append({"uid": f"pending_{doc.id}", "email": d.get("email"), "role": d.get("role"), "status": "pending"})
+    return {"members": members}
 
 @router.post("/{org_id}/members")
-async def add_org_member(
-    org_id: str,
-    request: dict,
-    background_tasks: BackgroundTasks,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Invite a member to an organization.
-    Frontend calls POST /api/workspaces/{orgId}/members.
-    Admin SDK write bypasses client Firestore security rules.
-    """
-    uid = current_user.get("uid")
-    user_org_id = current_user.get("orgId")
+async def add_org_member(org_id: str, request: dict, bg: BackgroundTasks, auth: dict = Depends(get_auth_context)):
+    if not verify_user_org_access(auth["uid"], org_id): raise HTTPException(status_code=403)
+    if auth.get("role") != "admin": raise HTTPException(status_code=403)
+    if not db: raise HTTPException(status_code=503)
 
-    # 🛡️ SECURITY HARDENING (P1): Verify inviter belongs to the specific org they are inviting to
-    if not verify_user_org_access(uid, org_id):
-        logger.warning(f"🛡 Cross-tenant attempt: User {uid} (org: {user_org_id}) tried to invite to {org_id}")
-        raise HTTPException(status_code=403, detail="Cross-tenant access denied")
-
-    # 🛡️ SECURITY HARDENING (P1): Only admins can invite members
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can invite members")
-        
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    invite_email = request.get("email") if isinstance(request, dict) else None
-    role = (request.get("role") if isinstance(request, dict) else None) or "member"
-    if not invite_email:
-        raise HTTPException(status_code=400, detail="email is required")
-
-    # Enforce seat limits from org subscription
-    org_doc = db.collection("organizations").document(org_id).get()
-    if not org_doc.exists:
-        raise HTTPException(status_code=404, detail="Organization not found")
+    email = request.get("email")
+    if not email: raise HTTPException(status_code=400)
+    
+    org_doc = await asyncio.to_thread(db.collection("organizations").document(org_id).get)
+    if not org_doc.exists: raise HTTPException(status_code=404)
     org_data = org_doc.to_dict() or {}
-    # 🛡️ SECURITY HARDENING (P0): Never return apiKeys to the client
-    org_data.pop("apiKeys", None)
     plan = org_data.get("subscription", {}).get("planId", "explorer")
     seat_limits = {"explorer": 1, "growth": 5, "scale": 25, "enterprise": 100}
-    max_seats = seat_limits.get(plan, 1)
-    current_seats = org_data.get("activeSeats", 0)
-    if current_seats >= max_seats:
-        raise HTTPException(status_code=403, detail=f"Seat limit reached for {plan} plan. Upgrade to add more members.")
+    if org_data.get("activeSeats", 0) >= seat_limits.get(plan, 1): raise HTTPException(status_code=403, detail="Seat limit reached")
 
-    # 1. Atomic Transaction: Create pending invite & placeholder user, increment org seats
     batch = db.batch()
-    
     invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    batch.set(invite_ref, {
-        "email": invite_email,
-        "role": role,
-        "invitedBy": uid,
-        "invitedAt": datetime.now(timezone.utc).isoformat(),
-        "expiresAt": expires_at.isoformat(),
-        "status": "pending"
-    })
-
-    # Optional: Create a placeholder user so they appear in members list immediately 
-    # (Matches frontend optimistic UI intent)
-    placeholder_uid = f"invited_{invite_ref.id}"
-    user_ref = db.collection("users").document(placeholder_uid)
-    batch.set(user_ref, {
-        "uid": placeholder_uid,
-        "email": invite_email,
-        "orgId": org_id,
-        "role": role,
-        "status": "invited_pending_auth"
-    })
-
-    # Seat increment is NOW immediate to prevent race condition abuse
-    # Seat increment is NOW atomic and concurrent-safe
-    from google.cloud import firestore
-    org_ref = db.collection("organizations").document(org_id)
-    batch.update(org_ref, {"activeSeats": firestore.Increment(1)})
-
-    batch.commit()
+    batch.set(invite_ref, {"email": email, "role": request.get("role", "member"), "invitedBy": auth["uid"], "invitedAt": datetime.now(timezone.utc).isoformat(), "status": "pending"})
+    batch.set(db.collection("users").document(f"invited_{invite_ref.id}"), {"uid": f"invited_{invite_ref.id}", "email": email, "orgId": org_id, "role": "member", "status": "invited_pending_auth"})
+    batch.update(org_doc.reference, {"activeSeats": firestore.Increment(1)})
+    await asyncio.to_thread(batch.commit)
     
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    invite_id = invite_ref.id
-    invite_url = f"{frontend_url}/invite/{org_id}?inviteId={invite_id}"
-
-    log_audit_event(
-        org_id=org_id,
-        actor_id=uid,
-        event_type="member_invited",
-        resource_id=invite_email,
-        metadata={"role": role, "placeholder_uid": placeholder_uid, "invite_id": invite_id}
-    )
-
-    # Trigger transactional email
-    background_tasks.add_task(
-        send_invite_email,
-        org_id,
-        invite_email,
-        invite_url,
-        current_user.get("email", "A Colleague"),
-        org_data.get("name", "Workspace"),
-    )
-
-    return {
-        "success": True, 
-        "message": f"Invitation created for {invite_email}",
-        "member": {
-            "uid": placeholder_uid,
-            "email": invite_email,
-            "role": role,
-            "orgId": org_id,
-            "status": "invited_pending_auth"
-        }
-    }
-
-@router.post("/{org_id}/invites/{invite_id}/resend")
-async def resend_org_invite(
-    org_id: str,
-    invite_id: str,
-    background_tasks: BackgroundTasks,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Resend an invitation email and reset the expiry.
-    """
-    if current_user.get("role") != "admin" or not verify_user_org_access(current_user.get("uid"), org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized: cross-tenant access denied or not an admin")
-        
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-        
-    org_doc = db.collection("organizations").document(org_id).get()
-    if not org_doc.exists:
-        raise HTTPException(status_code=404, detail="Organization not found")
-        
-    org_data = org_doc.to_dict() or {}
-    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
-    invite_doc = invite_ref.get()
-    
-    if not invite_doc.exists:
-        raise HTTPException(status_code=404, detail="Invite not found")
-        
-    invite_data = invite_doc.to_dict() or {}
-    if invite_data.get("status") != "pending":
-        raise HTTPException(status_code=400, detail="Invite is no longer pending")
-
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    invite_ref.update({"expiresAt": expires_at.isoformat()})
-    
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    invite_url = f"{frontend_url}/invite/{org_id}?inviteId={invite_id}"
-    invite_email = invite_data.get("email")
-    
-    background_tasks.add_task(
-        send_invite_email,
-        org_id,
-        invite_email,
-        invite_url,
-        current_user.get("email", "A Colleague"),
-        org_data.get("name", "Workspace"),
-    )
-
-    log_audit_event(
-        org_id=org_id,
-        actor_id=current_user.get("uid"),
-        event_type="member_invite_resend",
-        resource_id=invite_email,
-        metadata={"invite_id": invite_id}
-    )
-    
-    return {"success": True, "message": "Invite resent"}
+    invite_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/invite/{org_id}?inviteId={invite_ref.id}"
+    bg.add_task(send_invite_email, org_id, email, invite_url, auth.get("email", "Admin"), org_data.get("name", "Workspace"))
+    return {"success": True, "inviteId": invite_ref.id}
 
 @router.delete("/{org_id}/invites/{invite_id}")
-async def revoke_org_invite(
-    org_id: str,
-    invite_id: str,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Revoke an active invite and decrement reserved seat.
-    """
-    if current_user.get("role") != "admin" or not verify_user_org_access(current_user.get("uid"), org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized: cross-tenant access denied or not an admin")
-        
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-        
+async def revoke_org_invite(org_id: str, invite_id: str, auth: dict = Depends(get_auth_context)):
+    if auth.get("role") != "admin" or not verify_user_org_access(auth["uid"], org_id): raise HTTPException(status_code=403)
     invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
-    invite_doc = invite_ref.get()
+    invite_doc = await asyncio.to_thread(invite_ref.get)
+    if not invite_doc.exists or invite_doc.to_dict().get("status") != "pending": raise HTTPException(status_code=404)
     
-    if not invite_doc.exists:
-        raise HTTPException(status_code=404, detail="Invite not found")
-        
-    invite_data = invite_doc.to_dict() or {}
-    if invite_data.get("status") != "pending":
-        raise HTTPException(status_code=400, detail="Invite is no longer pending")
-
     batch = db.batch()
-    # 1. Update invite status
     batch.update(invite_ref, {"status": "revoked"})
-    
-    # 2. Free up the seat
-    from google.cloud import firestore
-    org_ref = db.collection("organizations").document(org_id)
-    batch.update(org_ref, {"activeSeats": firestore.Increment(-1)})
-    
-    # 3. Clean up placeholder user
-    placeholder_uid = f"invited_{invite_id}"
-    user_ref = db.collection("users").document(placeholder_uid)
-    batch.delete(user_ref)
-    
-    batch.commit()
-    
-    log_audit_event(
-        org_id=org_id,
-        actor_id=current_user.get("uid"),
-        event_type="member_invite_revoked",
-        resource_id=invite_data.get("email"),
-        metadata={"invite_id": invite_id}
-    )
-    
-    return {"success": True, "message": "Invite revoked"}
-
+    batch.update(db.collection("organizations").document(org_id), {"activeSeats": firestore.Increment(-1)})
+    batch.delete(db.collection("users").document(f"invited_{invite_id}"))
+    await asyncio.to_thread(batch.commit)
+    return {"success": True}
 
 @router.post("/{org_id}/accept-invite")
-async def accept_org_invite(
-    org_id: str,
-    request: dict,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Accept an invitation to join an organization.
-    Converts pendingInvite to active user and increments activeSeats.
-    """
-    uid = current_user.get("uid")
-    email = current_user.get("email")
-    invite_id = request.get("inviteId")
-
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
+async def accept_org_invite(org_id: str, request: dict, auth: dict = Depends(get_auth_context)):
+    uid, email = auth["uid"], auth["email"]
+    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(request.get("inviteId"))
+    invite_doc = await asyncio.to_thread(invite_ref.get)
+    if not invite_doc.exists or invite_doc.to_dict().get("status") != "pending" or invite_doc.to_dict().get("email") != email:
+        raise HTTPException(status_code=400, detail="Invalid invite")
     
-    # 1. Verify invitation exists and is pending for this user's email
-    invite_ref = db.collection("organizations").document(org_id).collection("pendingInvites").document(invite_id)
-    invite_doc = invite_ref.get()
-    
-    if not invite_doc.exists:
-        raise HTTPException(status_code=404, detail="Invitation not found")
-    
-    invite_data = invite_doc.to_dict() or {}
-    if invite_data.get("status") != "pending" or invite_data.get("email") != email:
-        raise HTTPException(status_code=400, detail="Invalid or mismatching invitation")
-
-    expires_at_str = invite_data.get("expiresAt")
-    if expires_at_str:
-        expires_at = datetime.fromisoformat(expires_at_str)
-        if datetime.now(timezone.utc) > expires_at:
-            raise HTTPException(status_code=400, detail="This invitation has expired")
-
-    # 2. Atomic Transaction: Update user, mark invite complete, increment seats
     batch = db.batch()
-    
-    # Update user record
-    user_ref = db.collection("users").document(uid)
-    batch.set(user_ref, {
-        "uid": uid,
-        "email": email,
-        "orgId": org_id,
-        "role": invite_data.get("role", "member"),
-        "joinedAt": datetime.now(timezone.utc).isoformat()
-    }, merge=True)
-    
-    # Mark invite as accepted
+    batch.set(db.collection("users").document(uid), {"uid": uid, "email": email, "orgId": org_id, "role": invite_doc.to_dict().get("role", "member"), "joinedAt": datetime.now(timezone.utc).isoformat()}, merge=True)
     batch.update(invite_ref, {"status": "accepted", "acceptedAt": datetime.now(timezone.utc).isoformat()})
-    
-    # 🛡️ SEAT INVARIANT (P1): We already incremented seat during invite-create 
-    # to lock the slot. Doing it here again would double-increment.
-    # No further increment needed here.
-    
-    batch.commit()
-    
-    log_audit_event(
-        org_id=org_id,
-        actor_id=uid,
-        event_type="member_joined",
-        resource_id=email,
-        metadata={"inviteId": invite_id}
-    )
-
-    return {"success": True, "message": "Successfully joined organization"}
-
-
-@router.delete("/{workspace_id}/members/{email}")
-async def remove_member(
-    workspace_id: str,
-    email: str,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Remove a member from workspace
-    """
-    user_email = current_user.get("email")
-    
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not configured")
-        
-    doc = db.collection("workspaces").document(workspace_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-        
-    workspace = doc.to_dict() or {}
-    
-    # Check if user is owner
-    if user_email != workspace["owner_email"]:
-        raise HTTPException(status_code=403, detail="Only workspace owner can remove members")
-    
-    # Can't remove owner
-    if email == workspace["owner_email"]:
-        raise HTTPException(status_code=400, detail="Cannot remove workspace owner")
-    
-    current_members = workspace.get("members", [])
-    if email in current_members:
-        current_members.remove(email)
-        
-        try:
-            doc.reference.update({
-                "members": current_members,
-                "member_count": len(current_members),
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            })
-            doc.reference.collection("members").document(email.replace("@", "_at_")).delete()
-        except Exception as e:
-            logger.error(f"Remove member error: {e}")
-        
-        logger.info(f"✅ Member removed from workspace: {email} <- {workspace_id}")
-        
-        # SOC2 Audit Log
-        log_audit_event(
-            org_id=workspace.get("organization_id", "user_level"),
-            actor_id=user_email,
-            event_type="workspace_member_removed",
-            resource_id=workspace_id,
-            metadata={"removed_email": email}
-        )
-        
-        return {
-            "success": True,
-            "message": f"Member {email} removed successfully"
-        }
-    else:
-        raise HTTPException(status_code=404, detail="Member not found in workspace")
-
-@router.put("/{workspace_id}")
-async def update_workspace(
-    workspace_id: str,
-    request: UpdateWorkspaceRequest,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Update workspace details
-    """
-    user_email = current_user.get("email")
-    
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not configured")
-        
-    doc = db.collection("workspaces").document(workspace_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-        
-    workspace = doc.to_dict() or {}
-    
-    # Check if user is owner
-    if user_email != workspace["owner_email"]:
-        raise HTTPException(status_code=403, detail="Only workspace owner can update settings")
-    
-    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
-    if request.name is not None:
-        update_data["name"] = request.name
-        workspace["name"] = request.name
-    if request.description is not None:
-        update_data["description"] = request.description
-        workspace["description"] = request.description
-    if request.is_public is not None:
-        update_data["is_public"] = request.is_public
-        workspace["is_public"] = request.is_public
-        
-    try:
-        doc.reference.update(update_data)
-    except Exception as e:
-        logger.error(f"Workspace update failed: {e}")
-    
-    logger.info(f"✅ Workspace updated: {workspace_id}")
-    
-    return {
-        "success": True,
-        "workspace": workspace,
-        "message": "Workspace updated successfully"
-    }
-
-@router.delete("/{workspace_id}")
-async def delete_workspace(
-    workspace_id: str,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Delete a workspace (owner only)
-    """
-    user_email = current_user.get("email")
-    
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not configured")
-        
-    doc = db.collection("workspaces").document(workspace_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-        
-    workspace = doc.to_dict() or {}
-    
-    # Check if user is owner
-    if user_email != workspace["owner_email"]:
-        raise HTTPException(status_code=403, detail="Only workspace owner can delete")
-    
-    try:
-        doc.reference.delete()
-    except Exception as e:
-        logger.error(f"Delete workspace failed: {e}")
-    
-    logger.info(f"✅ Workspace deleted: {workspace_id}")
-    
-    # SOC2 Audit Log
-    log_audit_event(
-        org_id=workspace.get("organization_id", "user_level"),
-        actor_id=user_email,
-        event_type="workspace_deleted",
-        resource_id=workspace_id,
-        metadata={"name": workspace.get("name")}
-    )
-    
-    return {
-        "success": True,
-        "message": "Workspace deleted successfully"
-    }
-
-@router.get("/{workspace_id}/activity")
-async def get_workspace_activity(
-    workspace_id: str,
-    limit: int = 50,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Get recent activity in workspace
-    """
-    user_email = current_user.get("email")
-    
-    doc_ref = db.collection("workspaces").document(workspace_id)
-    doc = doc_ref.get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-    workspace = doc.to_dict() or {}
-    members = workspace.get("members", [])
-    if user_email not in members:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Fetch activity from Firestore
-    activities = []
-    try:
-        activity_ref = doc_ref.collection("activity").order_by("timestamp", direction="DESCENDING").limit(limit)
-        docs = activity_ref.stream()
-        for d in docs:
-            act_data = d.to_dict()
-            act_data["id"] = d.id
-            activities.append(act_data)
-    except Exception as e:
-        logger.error(f"Failed to fetch workspace activity: {e}")
-    
-    return {
-        "success": True,
-        "activities": activities,
-        "total_count": len(activities)
-    }
+    await asyncio.to_thread(batch.commit)
+    return {"success": True}
 
 @router.get("/{org_id}/profile")
-async def get_org_profile(
-    org_id: str,
-    version: str = Query("latest"),
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    🛡️ SECURITY HARDENING (P0): Safe Organization Profile.
-    Returns a redacted version of the organization document to the frontend.
-    Bypasses the direct-doc-read deny rule in firestore.rules.
-    """
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    # Verify user belongs to this org or is an authorized platform admin
-    if not verify_user_org_access(current_user.get("uid"), org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
-
-    # 🛡️ DEMO MOCKING (P0): Return Sight Spectrum for demo account
+async def get_org_profile(org_id: str, version: str = Query("latest"), auth: dict = Depends(get_auth_context)):
+    if not verify_user_org_access(auth.get("uid"), org_id): raise HTTPException(status_code=403)
     if org_id == "demo_org_id" and _demo_mode_enabled():
-        return {
-            "id": "demo_org_id",
-            "name": "Sight Spectrum",
-            "activeSeats": 1,
-            "subscriptionTier": "scale",
-            "status": "active",
-            "createdAt": datetime(2025, 12, 26, tzinfo=timezone.utc).isoformat()
-        }
+        return {"id": "demo_org_id", "name": "Sight Spectrum", "activeSeats": 1, "status": "active"}
 
-    try:
-        org_doc = db.collection("organizations").document(org_id).get()
-        if not org_doc.exists:
-            raise HTTPException(status_code=404, detail="Organization not found")
-        
-        data = org_doc.to_dict() or {}
-        manifest_doc = _get_manifest_doc(org_id, version)
-        manifest_data = manifest_doc.to_dict() if manifest_doc.exists else {}
-        manifest_name = _extract_manifest_entity_name(manifest_data)
-        current_name = data.get("name")
-        resolved_name = manifest_name if manifest_name and _is_placeholder_org_name(current_name) else current_name
-        
-        # Redact highly sensitive fields
-        data.pop("apiKeys", None)
-        
-        return {
-            "id": org_id,
-            "name": resolved_name or manifest_name or "Unnamed Organization",
-            "activeSeats": data.get("activeSeats", 0),
-            "subscriptionTier": data.get("subscription", {}).get("planId", "explorer"),
-            "status": data.get("subscription", {}).get("status", "active"),
-            "createdAt": data.get("createdAt"),
-            "manifestVersion": manifest_data.get("version", version),
-            "sourceUrl": manifest_data.get("sourceUrl"),
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to fetch org profile: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
+    org_doc = await asyncio.to_thread(db.collection("organizations").document(org_id).get)
+    if not org_doc.exists: raise HTTPException(status_code=404)
+    data = org_doc.to_dict() or {}
+    data.pop("apiKeys", None)
+    return {"id": org_id, "name": data.get("name"), "activeSeats": data.get("activeSeats", 0), "subscriptionTier": data.get("subscription", {}).get("planId", "explorer")}
 
 @router.get("/{org_id}/manifest-data")
-async def get_manifest_data(
-    org_id: str,
-    version: str = Query("latest"),
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Secure manifest payload for authenticated workspace surfaces.
-    Returns both the human-readable manifest and structured schema evidence.
-    """
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    if not verify_user_org_access(current_user.get("uid"), org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
-
-    try:
-        manifest_doc = _get_manifest_doc(org_id, version)
-        if not manifest_doc.exists:
-            raise HTTPException(status_code=404, detail="Manifest not found")
-
-        data = manifest_doc.to_dict() or {}
-        data.pop("apiKeys", None)
-        return {
-            "orgId": org_id,
-            "content": data.get("content", ""),
-            "schemaData": data.get("schemaData") or {},
-            "sourceUrl": data.get("sourceUrl"),
-            "updatedAt": data.get("updatedAt") or data.get("createdAt"),
-            "version": data.get("version", version),
-            "name": _extract_manifest_entity_name(data),
-            "industryTaxonomy": data.get("industryTaxonomy") or (data.get("metadata") or {}).get("industry_taxonomy"),
-            "industryTags": data.get("industryTags") or (data.get("metadata") or {}).get("industry_tags"),
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to fetch manifest data for {org_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-@router.get("/{org_id}/contexts")
-async def list_manifest_contexts(
-    org_id: str,
-    current_user: dict = Depends(get_auth_context)
-):
-    """
-    Return the manifest versions available for an organization.
-    These power the multi-company/multi-snapshot context switcher in the product.
-    """
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    if not verify_user_org_access(current_user.get("uid"), org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized: Cross-tenant access denied")
-
-    try:
-        manifests = db.collection("organizations").document(org_id).collection("manifests") \
-            .order_by("createdAt", direction="DESCENDING").limit(25).stream()
-
-        # Fetch organization name for manual override logic
-        org_doc = db.collection("organizations").document(org_id).get()
-        org_data = org_doc.to_dict() if org_doc.exists else {}
-        current_org_name = org_data.get("name")
-
-        contexts = []
-        for manifest in manifests:
-            if manifest.id == "latest":
-                continue
-            data = manifest.to_dict() or {}
-            
-            manifest_version_name = _extract_manifest_entity_name(data)
-            
-            # If we have a specific name for this manifest, use it.
-            # Only fall back to organization name if the manifest name is missing
-            # or if it's a generic placeholder.
-            if manifest_version_name and not _is_placeholder_org_name(manifest_version_name):
-                resolved_name = manifest_version_name
-            else:
-                resolved_name = current_org_name or manifest_version_name or "Unnamed Context"
-
-            contexts.append({
-                "id": manifest.id,
-                "version": data.get("version", manifest.id),
-                "name": resolved_name,
-                "sourceUrl": data.get("sourceUrl") or data.get("metadata", {}).get("source_url"),
-                "createdAt": _serialize_timestamp(data.get("createdAt")),
-            })
-
-        latest_doc = _get_manifest_doc(org_id, "latest")
-        latest_version = None
-        if latest_doc.exists:
-            latest_version = (latest_doc.to_dict() or {}).get("version")
-
-        return {
-            "contexts": [{
-                **ctx,
-                "isLatest": ctx["version"] == latest_version
-            } for ctx in contexts],
-            "latestVersion": latest_version,
-        }
-    except Exception as e:
-        logger.error(f"Failed to list manifest contexts: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+async def get_manifest_data(org_id: str, version: str = Query("latest"), auth: dict = Depends(get_auth_context)):
+    if not verify_user_org_access(auth.get("uid"), org_id): raise HTTPException(status_code=403)
+    manifest_doc = await _get_manifest_doc(org_id, version)
+    if not manifest_doc.exists: raise HTTPException(status_code=404)
+    data = manifest_doc.to_dict() or {}
+    data.pop("apiKeys", None)
+    return {"orgId": org_id, "content": data.get("content", ""), "version": data.get("version", version)}
 
 @router.get("/{org_id}/manifest")
 async def get_public_manifest(org_id: str, version: str = Query("latest")):
-    """
-    Public endpoint for llms.txt generation.
-    Bypasses Firebase client rules to safely serve the organization's verified manifesto.
-    """
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unconfigured")
-        
-    # 🛡️ DEMO MOCKING (P0): Return an enterprise-services manifest for demo account
+    # Public route for llms.txt
     if org_id == "demo_org_id" and _demo_mode_enabled():
-        content = """# Northstar Analytics - AI Protocol Manifest
-
-## Core Identity
-Northstar Analytics is an enterprise AI, data, and cloud transformation partner for large organizations. Our core service lines include:
-- **Data Modernization**: Migrating and rationalizing enterprise data platforms.
-- **AI Transformation**: Moving from pilots to governed enterprise AI programs.
-- **Industry Analytics**: Domain-led analytics for regulated and operationally complex sectors.
-
-Northstar Analytics primarily serves enterprise buyers in manufacturing, healthcare, logistics, and professional services.
-
-## Buyer-Facing Claims
-- Proven delivery for enterprise data modernization and AI transformation programs.
-- Domain-led consulting with measurable outcomes in operationally complex industries.
-- Cloud ecosystem familiarity across Databricks, Snowflake, and Google Cloud environments.
-
-## Competitive Positioning
-- Buyers shortlist Northstar Analytics when they want specialist analytics depth rather than generic systems-integration breadth.
-- The company competes against larger consulting firms by emphasizing focused delivery, domain expertise, and transformation execution.
-
-## Security & Compliance
-- **Zero-Retention Processing**: Context extraction is designed to avoid storing customer source documents longer than needed for transformation.
-- **Enterprise Controls**: Reporting, access control, and manifest publication are managed through authenticated workspace operations.
-- **Auditability**: Brand health reporting preserves scoring evidence, timestamps, and model attribution."""
+         from fastapi.responses import PlainTextResponse
+         return PlainTextResponse(content="# Sight Spectrum Manifest")
+    manifest_doc = await _get_manifest_doc(org_id, version)
+    if manifest_doc.exists:
         from fastapi.responses import PlainTextResponse
-        return PlainTextResponse(content=content)
-
-    try:
-        manifest_doc = _get_manifest_doc(org_id, version)
-        if manifest_doc.exists:
-            data = manifest_doc.to_dict() or {}
-            # 🛡️ Redact any potential keys in manifest metadata
-            data.pop("apiKeys", None)
-            content = data.get("content")
-            if content:
-                from fastapi.responses import PlainTextResponse
-                return PlainTextResponse(content=content)
-                
-        raise HTTPException(status_code=404, detail="Manifest not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to fetch public manifest for {org_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/{org_id}/manifest-full")
-async def get_public_full_manifest(org_id: str, version: str = Query("latest")):
-    """
-    Public endpoint for llms-full.txt generation.
-    Returns the latest tenant manifest plus canonical schema evidence.
-    """
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unconfigured")
-
-    try:
-        manifest_doc = _get_manifest_doc(org_id, version)
-        if not manifest_doc.exists:
-            raise HTTPException(status_code=404, detail="Manifest not found")
-
-        data = manifest_doc.to_dict() or {}
-        content = data.get("content", "").strip()
-        schema_data = data.get("schemaData") or {}
-        source_url = data.get("sourceUrl")
-        entity_name = _extract_manifest_entity_name(data) or "Organization"
-
-        sections = [f"# {entity_name} - AI Protocol Manifest (Full)"]
-        if source_url:
-            sections.append(f"\n> Source URL: {source_url}")
-        if content:
-            sections.append(f"\n## llms.txt\n{content}")
-        if schema_data:
-            sections.append("\n## Canonical Schema\n```json\n" + json.dumps(schema_data, indent=2, ensure_ascii=False) + "\n```")
-
-        from fastapi.responses import PlainTextResponse
-        return PlainTextResponse(content="\n".join(sections).strip() + "\n")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to fetch full public manifest for {org_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return PlainTextResponse(content=manifest_doc.to_dict().get("content", ""))
+    raise HTTPException(status_code=404)
 
 @router.post("/llms-rate-limit")
 async def check_llms_rate_limit(request: Request):
-    """
-    Global Server-Side Rate Limiter for the public llms.txt route.
-    Called from Next.js Edge to evaluate cross-region request counts securely bypassing client-SDK locks.
-    Expects { "ip": "..." } in body
-    """
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unconfigured")
+    data = await request.json()
+    ip = data.get("ip", "unknown")
+    if ip == "unknown": return {"allowed": True}
+    rl_ref = db.collection("rate_limits").document(f"llms_{ip.replace('.', '_')}")
     
-    try:
-        data = await request.json()
-        ip = data.get("ip", "unknown")
-        
-        if ip == "unknown":
-            return {"allowed": True, "count": 1} # Cannot throttle unknown safely
-            
-        doc_id = f"llms_txt_{ip.replace('.', '_')}"
-        rl_ref = db.collection("rate_limits").document(doc_id)
-        
-        # Use google.cloud.firestore transactional (not firebase_admin.firestore)
-        @firestore.transactional
-        def evaluate_rate_limit(transaction, ref):
-            now = int(datetime.now(timezone.utc).timestamp() * 1000)
-            snapshot = ref.get(transaction=transaction)
-            
-            if snapshot.exists:
-                data = snapshot.to_dict()
-                reset_at = data.get("resetAt", 0)
-                count = data.get("count", 0)
-                
-                if reset_at <= now:
-                    # Window reset
-                    new_data = {"count": 1, "resetAt": now + 15 * 60 * 1000}
-                    transaction.update(ref, new_data)
-                    return {"allowed": True, "count": 1, "reset_at": new_data["resetAt"]}
-                
-                if count >= 100:
-                    # Too many requests in active window
-                    return {"allowed": False, "count": count, "reset_at": reset_at}
-                
-                # Increment
-                new_data = {"count": count + 1, "resetAt": reset_at}
-                transaction.update(ref, new_data)
-                return {"allowed": True, "count": count + 1, "reset_at": reset_at}
-            else:
-                # First request from IP
-                new_data = {"count": 1, "resetAt": now + 15 * 60 * 1000}
-                transaction.set(ref, new_data)
-                return {"allowed": True, "count": 1, "reset_at": new_data["resetAt"]}
-                
-        # Execute transcation mapping
-        transaction = db.transaction()
-        result = evaluate_rate_limit(transaction, rl_ref)
-        
-        if not result["allowed"]:
-            raise HTTPException(status_code=429, detail="Too Many Requests")
-            
-        return result
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Global Rate Limiter Failed for IP: {e}")
-        # Fail-closed: reject requests when rate limiter is unavailable
-        # The frontend llms.txt route handles non-429 errors gracefully
-        raise HTTPException(status_code=503, detail="Rate limiter unavailable")
+    @firestore.transactional
+    def _rl_txn(transaction, ref):
+        snap = ref.get(transaction=transaction)
+        now = int(datetime.now(timezone.utc).timestamp() * 1000)
+        if snap.exists and snap.to_dict().get("resetAt", 0) > now:
+            if snap.to_dict().get("count", 0) >= 100: return False
+            transaction.update(ref, {"count": firestore.Increment(1)})
+        else:
+            transaction.set(ref, {"count": 1, "resetAt": now + 900000})
+        return True
+
+    allowed = await asyncio.to_thread(_rl_txn, db.transaction(), rl_ref)
+    if not allowed: raise HTTPException(status_code=429)
+    return {"allowed": True}

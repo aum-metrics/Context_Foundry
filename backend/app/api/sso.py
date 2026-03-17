@@ -203,6 +203,10 @@ async def configure_sso(request: SSOConfigRequest, auth: dict = Depends(get_auth
     try:
         config_data = request.model_dump()
         if config_data.get("client_secret"):
+            # 🛡️ SECURITY HARDENING (P0): Guard against default dev key in production
+            if settings.ENV != "development" and settings.SSO_ENCRYPTION_KEY == "aum-sso-encryption-dev-fallback1":
+                raise HTTPException(status_code=500, detail="SSO encryption key is not configured for this environment")
+                
             from cryptography.fernet import Fernet
             import base64
             import hashlib
@@ -337,6 +341,10 @@ async def sso_callback(code: str, state: str, request: Request):
         # 3. Decrypt Client Secret
         client_secret = config.get("client_secret")
         if client_secret:
+            # 🛡️ SECURITY HARDENING (P0): Guard against default dev key in production
+            if settings.ENV != "development" and settings.SSO_ENCRYPTION_KEY == "aum-sso-encryption-dev-fallback1":
+                raise HTTPException(status_code=500, detail="SSO service error: encryption key mismatch")
+
             from cryptography.fernet import Fernet
             import base64
             import hashlib

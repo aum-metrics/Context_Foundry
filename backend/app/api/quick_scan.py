@@ -282,3 +282,7 @@ def _fallback(company: str, reason: str = "unknown") -> dict:
         "demo": True,
         "_reason": reason,   # internal, helps debugging
     }
+    from core.config import settings
+    if settings.ENV != "development":
+        result.pop("_reason", None)
+    return result

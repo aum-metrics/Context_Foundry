@@ -50,13 +50,21 @@ export default function SupportChatbot() {
         setIsInitialized(true);
     }, []);
 
-    useEffect(() => {
         if (isInitialized) {
             // Keep last 50 messages to prevent QuotaExceededError
             const messagesToStore = messages.length > 50 ? messages.slice(messages.length - 50) : messages;
-            sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore));
+            try {
+                sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore));
+            } catch (e) {
+                console.warn("sessionStorage quota exceeded, clearing old messages:", e);
+                try {
+                    // Try saving just the last 10
+                    sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore.slice(-10)));
+                } catch {
+                    // Fallback: don't crash
+                }
+            }
         }
-    }, [messages, isInitialized]);
     const [input, setInput] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
 

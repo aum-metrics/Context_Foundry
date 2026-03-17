@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     LogOut, Building2, Key, Users, CreditCard,
@@ -86,6 +86,7 @@ export default function AdminDashboard() {
     const [loadingOrgs, setLoadingOrgs] = useState(true);
     const [newKeyValue, setNewKeyValue] = useState<Record<string, string>>({});
     const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const nextCursorRef = useRef<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [healthStatus, setHealthStatus] = useState<{ name: string; endpoint: string; status: string }[]>([]);
@@ -126,7 +127,8 @@ export default function AdminDashboard() {
         }
 
         try {
-            const cursorParam = isLoadMore && nextCursor ? `&cursor=${nextCursor}` : '';
+            const cursorVal = isLoadMore ? nextCursorRef.current : null;
+            const cursorParam = cursorVal ? `&cursor=${cursorVal}` : '';
             const resp = await fetch(`/api/admin/orgs?page_size=15${cursorParam}`, {
                 credentials: 'include',
             });
@@ -152,6 +154,7 @@ export default function AdminDashboard() {
 
             setHasMore(data.hasMore ?? false);
             setNextCursor(data.nextCursor ?? null);
+            nextCursorRef.current = data.nextCursor ?? null;
 
             if (isLoadMore) {
                 setOrgs(prev => [...prev, ...orgList]);
@@ -164,7 +167,7 @@ export default function AdminDashboard() {
         }
         setLoadingOrgs(false);
         setLoadingMore(false);
-    }, []); // Removed nextCursor dependency to prevent infinite loop
+    }, []); // Stable fetcher
 
     useEffect(() => { fetchOrgs(false); }, [fetchOrgs]);
 

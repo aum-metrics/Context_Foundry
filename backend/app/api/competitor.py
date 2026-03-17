@@ -95,9 +95,10 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
             org_doc = db.collection("organizations").document(org_id).get()
             if org_doc.exists:
                 org_data = org_doc.to_dict() or {}
+                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
+                api_keys = org_data.pop("apiKeys", {})
                 org_name = org_data.get("name", "Unknown Company")
-                api_key = org_data.get("apiKeys", {}).get("openai", api_key)
-                # 🛡️ SECURITY HARDENING: Redact apiKeys from org_data (consistent with simulation.py)
+                api_key = api_keys.get("openai", api_key)
                 org_data.pop("apiKeys", None)
         except Exception as e:
             logger.error(f"Failed to fetch org data: {e}")
@@ -159,8 +160,13 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         clean_content = manifest_content[:6000].replace("</Context>", "[CONTEXT_END]").replace("<Context>", "[CONTEXT_START]")
         
         client = OpenAI(api_key=api_key)
-        prompt = f"""You are a B2B enterprise AI Analyst. A company called '{org_name}' wants to understand why AI recommendation engines shortlist competitors instead of them.
- 
+        prompt = f"""You are a market analyst simulating AI search behavior.
+IMPORTANT: The 'displacementRate' must be a grounded estimate (0-100) of how often an AI would recommend the competitor over {org_name}. 
+DO NOT hallucinate 100% or 0% unless absolute certainty exists. 
+Add a 'remediationRecommendation' that explains exactly WHAT content is missing from {org_name}'s context that allowed this competitor to win.
+
+Return strictly JSON format:
+{{"competitors": [{{ "name": "...", "displacementRate": 0.0, ... }}]}}
 Here is '{org_name}'s actual business context:
  
 <Context>

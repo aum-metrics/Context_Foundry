@@ -356,6 +356,8 @@ export default function BrandHealthCertificate({
             pdf.setFont("helvetica", "bold");
             pdf.text("VERIFIED CONTEXT", pageWidth / 2, pageHeight / 2, { align: "center", angle: 45 });
 
+            const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 1));
+
             const ensureSpace = (needed = 8) => {
                 if (y + needed > pageHeight - margin) {
                     pdf.addPage();
@@ -580,37 +582,40 @@ export default function BrandHealthCertificate({
                 writeDivider();
             }
 
-            // 7. COMPETITOR DISPLACEMENT
-            if (competitors.length > 0) {
-                writeHeading("Competitor Displacement Summary");
-                competitors.slice(0, 3).forEach((comp) => {
+            if (competitors && competitors.length > 0) {
+                writeHeading("Competitor Search Displacement Audit");
+                for (const comp of competitors.slice(0, 5)) {
                     ensureSpace(40);
+                    // Base panel
                     pdf.setFillColor(254, 242, 242); // rose-50
                     pdf.rect(margin, y, contentWidth, 35, 'F');
                     
                     pdf.setFont("helvetica", "bold");
                     pdf.setFontSize(11);
                     pdf.setTextColor(30, 41, 59);
-                    pdf.text(comp.name, margin + 5, y + 8);
+                    pdf.text(comp.name || "Unknown Rival", margin + 5, y + 8);
                     
                     pdf.setTextColor(225, 29, 72); // rose-600
-                    pdf.text(`${comp.displacementRate}%`, margin + contentWidth - 5, y + 8, { align: "right" });
+                    pdf.text(`${comp.displacementRate || 0}%`, margin + contentWidth - 5, y + 8, { align: "right" });
                     pdf.setFontSize(7);
                     pdf.setTextColor(153, 27, 27);
                     pdf.text("AI REC. FREQUENCY", margin + contentWidth - 5, y + 12, { align: "right" });
 
                     pdf.setFontSize(9);
                     pdf.setTextColor(71, 85, 105);
-                    pdf.text(`Strengths: ${comp.strengths.join(", ")}`, margin + 5, y + 16);
-                    pdf.text(`Weaknesses: ${comp.weaknesses.join(", ")}`, margin + 5, y + 21);
+                    const strengths = Array.isArray(comp.strengths) ? comp.strengths : [];
+                    const weaknesses = Array.isArray(comp.weaknesses) ? comp.weaknesses : [];
+                    pdf.text(`Strengths: ${strengths.join(", ")}`, margin + 5, y + 16);
+                    pdf.text(`Weaknesses: ${weaknesses.join(", ")}`, margin + 5, y + 21);
                     
                     if (comp.remediationRecommendation) {
                         pdf.setFont("helvetica", "italic");
                         pdf.setTextColor(pr, pg, pb);
                         pdf.text(pdf.splitTextToSize(`" ${comp.remediationRecommendation} "`, contentWidth - 10), margin + 5, y + 28);
                     }
+                    await yieldToBrowser();
                     y += 42;
-                });
+                }
                 writeDivider();
             }
 
@@ -628,17 +633,17 @@ export default function BrandHealthCertificate({
             if (recs.length === 0) {
                 writeBody("Simulation data implies baseline grounding. No immediate remediation actions generated.");
             } else {
-                recs.slice(0, 3).forEach((item) => {
+                for (const item of recs.slice(0, 3)) {
                     ensureSpace(50);
                     pdf.setFont("helvetica", "bold");
                     pdf.setFontSize(12);
                     pdf.setTextColor(30, 41, 59);
-                    pdf.text(item.title, margin, y);
+                    pdf.text(item.title || "Remediation Action", margin, y);
                     y += 6;
                     
                     pdf.setFontSize(9);
                     pdf.setTextColor(148, 163, 184);
-                    pdf.text(`Winning competitor: ${item.winningCompetitor}`, margin, y);
+                    pdf.text(`Winning competitor: ${item.winningCompetitor || "N/A"}`, margin, y);
                     y += 5;
 
                     writeBody(`Observed Outcome: ${item.observedOutcome}`, 9);
@@ -649,11 +654,14 @@ export default function BrandHealthCertificate({
                         pdf.setFontSize(9);
                         pdf.text("Page(s) to update:", margin, y);
                         y += 5;
-                        item.pageTargets.forEach(target => {
-                            writeBody(`• ${target.label}: ${target.url}`, 8, [pr, pg, pb]);
-                            writeBody(`  Reason: ${target.reason}`, 8);
+                        pdf.setFont("helvetica", "normal");
+                        item.pageTargets.forEach((target) => {
+                            writeBody(`• ${target.label}: ${target.url}`, 8, [79, 70, 229]);
                         });
                     }
+
+                    y += 6;
+                    await yieldToBrowser();
 
                     // Copy Block
                     pdf.setFillColor(249, 250, 251);
@@ -670,11 +678,11 @@ export default function BrandHealthCertificate({
                     pdf.setFont("helvetica", "normal");
                     pdf.setFontSize(8);
                     pdf.setTextColor(100);
-                    if (item.schemaSuggestion) writeBody(`• ${item.schemaSuggestion}`, 8);
-                    if (item.faqSuggestion) writeBody(`• ${item.faqSuggestion}`, 8);
-                    if (item.llmsSuggestion) writeBody(`• ${item.llmsSuggestion}`, 8);
+                    if (item.schemaSuggestion) writeBody(`• Schema: ${item.schemaSuggestion}`, 8);
+                    if (item.faqSuggestion) writeBody(`• FAQ: ${item.faqSuggestion}`, 8);
+                    if (item.llmsSuggestion) writeBody(`• llms.txt: ${item.llmsSuggestion}`, 8);
                     y += 5;
-                });
+                }
             }
 
             // 10. METHODOLOGY FOOTER

@@ -39,13 +39,25 @@ def _load_admin_profile(decoded_token: dict) -> dict:
     if db and uid:
         try:
             user_doc = db.collection("users").document(uid).get()
-            if user_doc.exists:
-                user_data = user_doc.to_dict() or {}
-                role = user_data.get("role", role)
-                org_id = user_data.get("orgId", org_id)
-                tenant_slug = user_data.get("tenantSlug", tenant_slug)
+            if not user_doc.exists:
+                # 🛡️ SECURITY HARDENING (P0): Role revoked if user doc missing
+                raise HTTPException(status_code=403, detail="Admin role revoked or user missing")
+            
+            user_data = user_doc.to_dict() or {}
+            role = user_data.get("role")
+            
+            # 🛡️ SECURITY HARDENING (P0): Strict role re-check
+            if role not in ("admin", "tenant_admin", "super_admin"):
+                raise HTTPException(status_code=403, detail="Active admin role required")
+                
+            org_id = user_data.get("orgId", org_id)
+            tenant_slug = user_data.get("tenantSlug", tenant_slug)
+        except HTTPException:
+            raise
         except Exception as e:
             logger.warning(f"Admin profile lookup failed for {uid}: {e}")
+            # If DB is up but read fails, fail-closed for security
+            raise HTTPException(status_code=403, detail="Security validation failed")
 
     is_platform_admin = bool(decoded_token.get("admin")) or role == "super_admin" or org_id == "system_admin_org"
     return {
@@ -133,20 +145,8 @@ def _resolve_usage_cycle_start(subscription: Dict[str, Any]) -> datetime.datetim
 
 
 def _count_usage_since(org_id: str, cycle_start: datetime.datetime) -> int:
-    if not db:
-        return 0
-    usage_ref = db.collection("organizations").document(org_id).collection("usageLedger")
-    query = usage_ref.where("timestamp", ">=", cycle_start)
-    try:
-        count_snapshot = query.count().get()
-        if count_snapshot and count_snapshot[0]:
-            return int(count_snapshot[0][0].value)
-    except Exception:
-        pass
-    try:
-        return len(list(query.stream()))
-    except Exception:
-        return 0
+    from core.utils import count_usage_since as unified_count
+    return unified_count(db, org_id, cycle_start)
 
 
 def _default_model_catalog() -> List[Dict[str, Any]]:
@@ -237,9 +237,10 @@ async def verify_admin(
         admin_profile = _load_admin_profile(decoded_token)
         role = admin_profile.get("role")
         if admin_profile.get("isPlatformAdmin") or role in {"tenant_admin", "admin"}:
+            actor_id = admin_profile.get("email") or f"uid:{admin_profile.get('uid', 'unknown_uid')}"
             log_audit_event(
                 org_id="system_admin",
-                actor_id=admin_profile.get("email", "unknown_admin"),
+                actor_id=actor_id,
                 event_type="admin_session_verified",
                 resource_id=admin_profile.get("uid", "unknown_uid"),
                 metadata={"action": request.url.path, "role": role}
@@ -493,9 +494,10 @@ async def update_org_api_key(
         db.collection("organizations").document(org_id).update({
             f"apiKeys.{request_body.provider}": request_body.value
         })
+        actor_id = admin_user.get("email") or f"uid:{admin_user.get('uid', 'admin')}"
         log_audit_event(
             org_id=org_id,
-            actor_id=admin_user.get("email", "admin"),
+            actor_id=actor_id,
             event_type="admin_apikey_updated",
             resource_id=request_body.provider,
             metadata={"action": "update_key"}
@@ -534,9 +536,10 @@ async def update_model_config(
 
     try:
         db.collection("platform_config").document("model_catalog").set(payload)
+        actor_id = admin_user.get("email") or f"uid:{admin_user.get('uid', 'admin')}"
         log_audit_event(
             org_id="system_admin",
-            actor_id=admin_user.get("email", "admin"),
+            actor_id=actor_id,
             event_type="admin_model_config_updated",
             resource_id="model_catalog",
             metadata={"modelCount": len(normalized_models)}
@@ -692,9 +695,10 @@ async def update_org_subscription(
             updates["adminNotes.subscription"] = request_body.notes
 
         org_ref.update(updates)
+        actor_id = admin_user.get("email") or f"uid:{admin_user.get('uid', 'admin')}"
         log_audit_event(
             org_id=org_id,
-            actor_id=admin_user.get("email", "admin"),
+            actor_id=actor_id,
             event_type="admin_subscription_updated",
             resource_id=org_id,
             metadata=request_body.model_dump()

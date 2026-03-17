@@ -23,6 +23,32 @@ logger = logging.getLogger(__name__)
 from core.security import get_auth_context, verify_user_org_access
 from openai import OpenAI
 from core.firebase_config import db
+from core.utils import count_usage_since, sanitize_for_prompt
+from google.cloud import firestore
+
+@firestore.transactional
+def _reserve_quota_txn(txn, org_ref, org_id, cycle_start, plan_limit):
+    """
+    🛡️ SECURITY HARDENING (P0): Atomic check-and-reserve.
+    Prevents race conditions where concurrent requests bypass quota.
+    """
+    # 1. Get org doc within transaction
+    org_snap = org_ref.get(transaction=txn)
+    if not org_snap.exists:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # 2. Count current usage (canonical)
+    usage = count_usage_since(db, org_id, cycle_start)
+    
+    if usage >= plan_limit:
+        raise HTTPException(status_code=402, detail=f"Quota exceeded: {usage}/{plan_limit} sims used.")
+    
+    # 3. Increment reservation counter
+    txn.update(org_ref, {
+        "subscription.reservedSimulation": firestore.Increment(1),
+        "subscription.lastReservationAt": datetime.now(timezone.utc)
+    })
+    return True
 from fastapi.responses import StreamingResponse
 import io
 import csv
@@ -95,6 +121,9 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_
     These are the claims a shortlisting AI engine SHOULD make about this company
     when answering the buyer's question — not atomic facts, but competitive proof points.
     """
+    from core.utils import sanitize_for_prompt
+    manifest_content = sanitize_for_prompt(manifest_content)
+    
     openai_key = api_keys.get("openai")
     gemini_key = api_keys.get("gemini")
     
@@ -261,6 +290,22 @@ class SimulationRequest(BaseModel):
     prompt: str
     orgId: str
     manifestVersion: Optional[str] = "latest"
+    # Optional flags for multi-model toggle
+    openaiChecked: bool = True
+    geminiChecked: bool = True
+    claudeChecked: bool = True
+    # Explicit snippet override (dev/test only)
+    manifestSnippet: Optional[str] = None
+
+    @field_validator("prompt")
+    @classmethod
+    def validate_prompt(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Prompt cannot be empty")
+        if len(v) > 2000:
+            raise ValueError("Prompt too long (max 2000 chars)")
+        return v
 
 class ClaimResult(BaseModel):
     claim: str
@@ -329,20 +374,10 @@ def _resolve_cycle_start(subscription: dict) -> datetime:
 
 
 def _count_usage_since(org_id: str, cycle_start: datetime) -> int:
-    if not db:
-        return 0
-    usage_ref = db.collection("organizations").document(org_id).collection("usageLedger")
-    query = usage_ref.where("timestamp", ">=", cycle_start)
-    try:
-        count_snapshot = query.count().get()
-        if count_snapshot:
-            return int(count_snapshot[0].value)
-    except Exception:
-        pass
-    try:
-        return len(list(query.stream()))
-    except Exception:
-        return 0
+    """
+    🛡️ REFACTORED (P1): Delegating to unified core utility.
+    """
+    return count_usage_since(db, org_id, cycle_start)
 
 
 # ============================================================================
@@ -370,9 +405,8 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
                     logger.info(f"🧪 Dev-mode: Org {request.orgId} not found, using mock keys.")
             else:
                 org_data = org_doc.to_dict() or {}
-                api_keys = org_data.get("apiKeys", {})
-                # 🛡️ SECURITY HARDENING (P0): Redact apiKeys from org_data before potential downstream use
-                org_data.pop("apiKeys", None)
+                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
+                api_keys = org_data.pop("apiKeys", {})
 
             # FETCH MANIFEST (Latest or Versioned)
             doc_data = None
@@ -592,8 +626,10 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
             org_doc = db.collection("organizations").document(request.orgId).get()
             if org_doc.exists:
                 org_data = org_doc.to_dict() or {}
+                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
+                api_keys = org_data.pop("apiKeys", {})
                 org_name = org_data.get("name", org_name)
-                key = org_data.get("apiKeys", {}).get("openai", None)
+                key = api_keys.get("openai", None)
                 if key and key != "internal_platform_managed":
                     api_key = key
                 elif key == "internal_platform_managed":
@@ -771,22 +807,15 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         org_ref = db.collection("organizations").document(request.orgId)
         subscription = org_data.get("subscription", {})
         cycle_start = _resolve_cycle_start(subscription)
-        usage_count = _count_usage_since(request.orgId, cycle_start)
-
-        if usage_count >= plan_limit:
-            if org_plan == "explorer":
-                raise HTTPException(
-                    status_code=402,
-                    detail={
-                        "code": "EXPLORER_LIMIT_REACHED",
-                        "message": "Your free report has been used. Upgrade to Growth to continue monitoring your brand.",
-                        "upgrade_url": "/dashboard?upgrade=true"
-                    }
-                )
-            raise HTTPException(
-                status_code=402,
-                detail=f"{org_plan.capitalize()} plan limit of {plan_limit} simulations reached. Please upgrade."
-            )
+        
+        # 🛡️ SECURITY HARDENING (P0): Atomic quota reservation
+        try:
+            await asyncio.to_thread(_reserve_quota_txn, db.transaction(), org_ref, request.orgId, cycle_start, plan_limit)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Quota reservation failed: {e}")
+            raise HTTPException(status_code=500, detail="Billing system unavailable")
 
         # Usage recording moved to background_tasks inside run_simulation logic
         pass
@@ -951,13 +980,14 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     # The AI model represents an enterprise procurement advisor answering vendor evaluation questions.
     # It answers naturally from its training data — we then score how well the company surfaces
     # as a shortlisted, recommended vendor in the AI's response.
+    manifest_content_sanitized = sanitize_for_prompt(manifest_content)
     system_prompt = f"""You are an expert enterprise technology and analytics advisor helping a procurement committee evaluate vendors for a large-scale transformation initiative.
 
 PRIMARY ROLE: Answer the buyer's question based on your knowledge. Do not simply repeat the document below — use it as supplemental grounding to ensure you mention the company accurately when relevant.
 
 SUPPLEMENTAL GROUNDING (confidential — do not quote directly):
 ---
-{manifest_content[:4000]}
+{manifest_content_sanitized}
 ---
 
 ANSWER GUIDELINES:
@@ -1054,7 +1084,8 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
     if db:
         background_tasks.add_task(_store_simulation_results, request.orgId, request.prompt, resolved_manifest_version, results, cache_key)
         # 🛡️ BILLING INTEGRITY (P0): Only record usage if models actually returned results
-        background_tasks.add_task(_record_usage, request.orgId, request.prompt, resolved_manifest_version, org_plan)
+        if results and len(results) > 0:
+            background_tasks.add_task(_record_usage, request.orgId, request.prompt, resolved_manifest_version, org_plan)
         
         import random
         if random.random() < 0.1:

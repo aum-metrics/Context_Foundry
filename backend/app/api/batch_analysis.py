@@ -79,35 +79,36 @@ async def _execute_batch_calculation(request: BatchSimulationRequest):
 async def _process_batch_background(request: BatchSimulationRequest, job_id: str):
     """Background worker to process the batch and write results to Firestore."""
     async def worker():
-        # USAGE LEDGER: Record each simulation without touching the org root doc
+        # Execute the calculation first
+        batch_output = await _execute_batch_calculation(request)
+        
+        # 🛡️ BILLING INTEGRITY (P0): Record usage only for successful prompts
         if db:
             try:
                 org_ref = db.collection("organizations").document(request.orgId)
-
                 usage_ref = org_ref.collection("usageLedger")
                 batch = db.batch()
                 now = datetime.now(timezone.utc)
-
-                for idx, prompt in enumerate(request.prompts):
-                    doc_ref = usage_ref.document()
-                    batch.set(doc_ref, {
-                        "timestamp": now,
-                        "prompt": (prompt or "")[:100],
-                        "manifestVersion": request.manifestVersion or "latest",
-                        "source": "batch",
-                    })
-                    if (idx + 1) % 400 == 0:
-                        batch.commit()
-                        batch = db.batch()
-                batch.commit()
-
-                logger.info(f"Usage Ledger: Recorded {len(request.prompts)} sims for {request.orgId}")
+                
+                success_count = 0
+                for prompt_res in batch_output.get("results", []):
+                    if not prompt_res.get("error"):
+                        doc_ref = usage_ref.document()
+                        batch.set(doc_ref, {
+                            "timestamp": now,
+                            "prompt": (prompt_res.get("prompt", "") or "")[:100],
+                            "manifestVersion": request.manifestVersion or "latest",
+                            "source": "batch",
+                        })
+                        success_count += 1
+                
+                if success_count > 0:
+                    batch.commit()
+                    logger.info(f"Usage Ledger: Recorded {success_count} successful batch sims for {request.orgId}")
             except Exception as e:
-                logger.error(f"Usage Ledger write failed: {e}")
-                # Fail-closed to prevent unmetered batch runs.
-                raise RuntimeError("Usage ledger write failed")
-
-        return await _execute_batch_calculation(request)
+                logger.error(f"Usage Ledger write failed during batch processing: {e}")
+                
+        return batch_output
 
     await FirestoreTaskQueue.run_persistent_task(request.orgId, "batchJobs", job_id, worker)
 

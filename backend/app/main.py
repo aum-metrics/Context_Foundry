@@ -238,7 +238,7 @@ load_router("api.audit", "/api/audit", "SOC2 Audit Logs")
 load_router("api.competitor", "/api/competitor", "Competitor Monitoring")
 load_router("api.methods", "/api/methods", "Scoring Methodology")
 load_router("api.cron", "/api/cron", "Internal Cron Jobs")
-load_router("api.data_management", "/api/data", "Data Management")
+load_router("api.data_management", "/api/cron", "Data Management")
 
 # ============================================================================
 # ADMIN DASHBOARD API (Admin SDK — bypasses Firestore client rules)

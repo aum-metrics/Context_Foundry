@@ -86,18 +86,20 @@ export function OrganizationProvider({ children, user }: { children: React.React
     const [activeManifestVersion, setActiveManifestVersionState] = useState<string>("latest");
     const activeManifestVersionRef = useRef<string>("latest");
     const lastFetchKeyRef = useRef<string>("");
+    const activeOrgIdRef = useRef<string | null>(null);
+    useEffect(() => { activeOrgIdRef.current = activeOrgId; }, [activeOrgId]);
 
     const setActiveManifestVersion = useCallback((version: string) => {
         activeManifestVersionRef.current = version;
         setActiveManifestVersionState(version);
         if (typeof window !== "undefined") {
-            const orgId = activeOrgId || orgUser?.orgId;
+            const orgId = activeOrgIdRef.current;
             if (orgId) {
                 const key = `${ACTIVE_MANIFEST_VERSION_KEY}:${orgId}`;
                 localStorage.setItem(key, version);
             }
         }
-    }, [activeOrgId, orgUser?.orgId]);
+    }, []); // Stable forever
 
     const setActiveOrgId = useCallback((orgId: string | null) => {
         if (typeof window !== "undefined") {

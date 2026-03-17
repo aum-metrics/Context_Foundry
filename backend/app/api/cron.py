@@ -44,27 +44,8 @@ def _resolve_cycle_start(subscription: dict) -> datetime:
 
 
 def _count_usage_since(org_id: str, cycle_start: datetime) -> int:
-    if not db:
-        return 0
-    usage_ref = db.collection("organizations").document(org_id).collection("usageLedger")
-    query = usage_ref.where("timestamp", ">=", cycle_start)
-    # Try Firestore count aggregation first (server-side, O(1))
-    try:
-        agg = query.count()
-        result = agg.get()
-        if result:
-            for row in result:
-                if hasattr(row, "value"):
-                    return int(row.value)
-    except Exception as count_err:
-        logger.debug(f"count() aggregation failed ({count_err}), falling back to stream")
-    # Fallback: stream all docs and count client-side
-    try:
-        docs = list(query.limit(10000).stream())
-        return len(docs)
-    except Exception as e:
-        logger.error(f"Usage count fallback also failed for {org_id}: {e}")
-        return 0
+    from core.utils import count_usage_since as unified_count
+    return unified_count(db, org_id, cycle_start)
 
 def verify_cron_secret(request: Request):
     """Ensure only authorized internal schedulers can trigger cron jobs."""
@@ -152,6 +133,9 @@ async def rollup_usage_ledger(_: bool = Depends(verify_cron_secret)):
     """
     Roll up usageLedger into subscription.simsThisCycle for reporting.
     Safe to run daily or hourly; writes are batched to avoid contention.
+    
+    NOTE: subscription.simsThisCycle is a rolled-up CACHE for dashboard performance.
+    The canonical source of truth for enforcement is the usageLedger count query.
     """
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")

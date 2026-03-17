@@ -65,7 +65,7 @@ export default function CoIntelligenceSimulator() {
 
     useEffect(() => {
         if (!organization) return;
-        const key = `${organization.id}|${activeManifestVersion}|${refreshKey}`;
+        const key = `${organization.id}|${activeManifestVersion}|${analysisSubject}|${refreshKey}`;
         if (promptFetchKeyRef.current === key) return;
         promptFetchKeyRef.current = key;
         let cancelled = false;

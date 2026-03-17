@@ -214,7 +214,9 @@ async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get
         key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
         message = f"{request.razorpay_order_id}|{request.razorpay_payment_id}"
         expected_signature = hmac.new(
-            key_secret.encode(), message.encode(), hashlib.sha256
+            key_secret.encode("utf-8"), 
+            message.encode("utf-8"), 
+            hashlib.sha256
         ).hexdigest()
 
         if not hmac.compare_digest(expected_signature, request.razorpay_signature):
@@ -234,18 +236,21 @@ async def verify_payment(request: VerifyPaymentRequest, auth: dict = Depends(get
 
             now = datetime.now(timezone.utc)
             selected_plan = PLANS.get(plan_id, PLANS["growth"])
-            db.collection("organizations").document(request.orgId).update({
-                "subscription.planId": plan_id,
-                "subscription.status": "active",
-                "subscription.maxSimulations": selected_plan["maxSimulations"],
-                "subscription.simsThisCycle": 0,
-                "subscription.lastUsageResetAt": now,
-                "subscription.paymentId": request.razorpay_payment_id,
-                "subscription.orderId": request.razorpay_order_id,
-                "subscription.activatedAt": now,
-                "subscription.currentPeriodStart": now,
-                "subscription.currentPeriodEnd": now + timedelta(days=30),
-            })
+            await asyncio.to_thread(
+                db.collection("organizations").document(request.orgId).update,
+                {
+                    "subscription.planId": plan_id,
+                    "subscription.status": "active",
+                    "subscription.maxSimulations": selected_plan["maxSimulations"],
+                    "subscription.simsThisCycle": 0,
+                    "subscription.lastUsageResetAt": now,
+                    "subscription.paymentId": request.razorpay_payment_id,
+                    "subscription.orderId": request.razorpay_order_id,
+                    "subscription.activatedAt": now,
+                    "subscription.currentPeriodStart": now,
+                    "subscription.currentPeriodEnd": now + timedelta(days=30),
+                }
+            )
 
             # Update the payment record status
             try:
@@ -347,7 +352,7 @@ async def razorpay_webhook(request: Request):
 
         # 1. Verify Webhook Signature - Strict comparison
         expected_signature = hmac.new(
-            secret.encode(), raw_body, hashlib.sha256
+            secret.encode("utf-8"), raw_body, hashlib.sha256
         ).hexdigest()
         if not hmac.compare_digest(expected_signature, signature):
             logger.error(f"🛑 CRITICAL: Invalid Webhook Signature. Body: {raw_body[:100]}... Signature: {signature}")

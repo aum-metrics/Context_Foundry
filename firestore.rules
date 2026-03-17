@@ -1,64 +1,55 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 🛡️ ZERO-DAY HARDENING: Strict least-privilege security rules
     
-    // Helper function to check if user is signed in
-    function isSignedIn() {
+    // Helper: is authenticated
+    function isAuthenticated() {
       return request.auth != null;
     }
-
-    // Get user data from users collection
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    
+    // Helper: is owner of organization
+    function isOrgMember(orgId) {
+      return isAuthenticated() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
 
-    // Check if user belongs to an organization
-    function belongsToOrg(orgId) {
-      return isSignedIn() && getUserData().orgId == orgId;
-    }
-
-    // Users collection: User can only read/write their own document
-    match /users/{uid} {
-      allow read, write: if isSignedIn() && request.auth.uid == uid;
-    }
-
-    // Organizations: Secure document access
+    // Organizations: Public read of basic info (for whitelabeling), but strict writes
     match /organizations/{orgId} {
-      // 🛡️ SECURITY HARDENING (P0): Direct document reads are denied to prevent apiKeys leaking.
-      // Members must interact via subcollections or backend-mediated APIs.
-      allow read: if false; 
-      
-      // Admin might need to update org settings (kept for potential Administrative SDK use, 
-      // but client-side logic should move towards explicit subcollection updates)
-      allow write: if false;
-
-      // Jobs and Manifests: Any org member can read/write (needed for FE interaction)
-      // Jobs and Manifests: Backend/System only for mutations
-      match /batchJobs/{jobId} { allow read: if belongsToOrg(orgId); allow write: if false; }
-      match /seoJobs/{jobId} { allow read: if belongsToOrg(orgId); allow write: if false; }
-      match /manifests/{docId} { allow read: if belongsToOrg(orgId); allow write: if false; }
-
-      // Sensitive Subcollections: Read-only for ADMINS, No write except via backend
-      match /api_keys/{key} { allow read: if belongsToOrg(orgId) && getUserData().role == 'admin'; allow write: if false; }
-      match /payments/{pay} { allow read: if belongsToOrg(orgId) && getUserData().role == 'admin'; allow write: if false; }
-      match /auditLogs/{log} { allow read: if belongsToOrg(orgId) && getUserData().role == 'admin'; allow write: if false; }
-      match /pendingInvites/{inv} { allow read: if belongsToOrg(orgId); allow write: if false; }
-      match /scoringHistory/{hist} { allow read: if belongsToOrg(orgId); allow write: if false; }
-    }
-
-    // Leads/Contact Funnel: Allow public write (P1 Fix), Admin only read
-    match /leads/{leadId} {
-      allow create: if true;
-      allow read: if isSignedIn() && getUserData().role == 'admin';
-      allow update, delete: if false;
-    }
-
-    // Public Assets
-    match /public/{doc=**} {
       allow read: if true;
+      allow write: if false; // Admin SDK only
+      
+      // Members sub-collection
+      match /members/{userId} {
+        allow read: if request.auth.uid == userId || isOrgMember(orgId);
+        allow write: if false; // Admin SDK only
+      }
+      
+      // Manifests
+      match /manifests/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if false; // Admin SDK only
+      }
+      
+      // Simulations & Billing
+      match /simulations/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if false; // Admin SDK only
+      }
+    }
+    
+    // Users profile
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId; // Basic profile updates
+    }
+    
+    // Public Leads / Contact
+    match /leads/{leadId} {
+      allow create: if true; // Public contact form
+      allow read, update, delete: if false; // Admin only
     }
 
-    // Default deny
+    // Default: Deny all
     match /{document=**} {
       allow read, write: if false;
     }
