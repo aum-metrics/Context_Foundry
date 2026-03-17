@@ -17,7 +17,7 @@ interface ServiceStatus {
 
 export default function StatusPage() {
     const [services, setServices] = useState<ServiceStatus[]>([
-        { name: "SoM Math Engine", status: "Checking...", latency: "--" },
+        { name: "Visibility Scoring Engine", status: "Checking...", latency: "--" },
         { name: "Semantic Ingestion Engine", status: "Checking...", latency: "--" },
         { name: "Multi-Tenant Auth", status: "Checking...", latency: "--" },
         { name: "Edge Manifest Delivery", status: "Checking...", latency: "--" },
@@ -39,7 +39,7 @@ export default function StatusPage() {
                     if (res?.ok) {
                         setGlobalStatus("Operational");
                         setServices([
-                            { name: "SoM Math Engine", status: "Operational", latency: `${pingLatency + 30}ms` },
+                            { name: "Visibility Scoring Engine", status: "Operational", latency: `${pingLatency + 30}ms` },
                             { name: "Semantic Ingestion Engine", status: "Operational", latency: `${pingLatency + 800}ms` },
                             { name: "Multi-Tenant Auth", status: "Operational", latency: `${pingLatency + 10}ms` },
                             { name: "Edge Manifest Delivery", status: "Operational", latency: `${pingLatency + 5}ms` },
@@ -49,7 +49,7 @@ export default function StatusPage() {
                         // Backend might be missing a /api/health route, but frontend is up
                         setGlobalStatus("Degraded");
                         setServices([
-                            { name: "SoM Math Engine", status: "Degraded", latency: "Timeout" },
+                            { name: "Visibility Scoring Engine", status: "Degraded", latency: "Timeout" },
                             { name: "Semantic Ingestion Engine", status: "Degraded", latency: "Timeout" },
                             { name: "Multi-Tenant Auth", status: "Operational", latency: "25ms" },
                             { name: "Edge Manifest Delivery", status: "Operational", latency: "10ms" },

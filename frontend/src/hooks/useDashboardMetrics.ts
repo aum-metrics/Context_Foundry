@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { BatchResult, CompetitorInsight, QueryClusterInsight, ScoringHistoryEntry, SEOResult } from "@/types/som";
 import { FALLBACK_MODEL_ORDER, clampPct, normalizeModelName, parseClaimRecallPercent } from "@/lib/somUtils";
 
@@ -23,6 +23,22 @@ export function useDashboardMetrics({
     winningClusters,
     weakClusters,
 }: UseDashboardMetricsArgs) {
+    const modelKeyRef = useRef<string>("");
+    const modelOrderRef = useRef<string[]>(FALLBACK_MODEL_ORDER);
+
+    const stableModelOrder = useMemo(() => {
+        const nextOrder = models.length > 0
+            ? models.map((model) => normalizeModelName(model.displayName))
+            : FALLBACK_MODEL_ORDER;
+        const key = nextOrder.join("|");
+        if (key === modelKeyRef.current) {
+            return modelOrderRef.current;
+        }
+        modelKeyRef.current = key;
+        modelOrderRef.current = nextOrder;
+        return nextOrder;
+    }, [models]);
+
     const modelAverages = useMemo(() => {
         if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) {
             return {
@@ -60,9 +76,8 @@ export function useDashboardMetrics({
 
     const modelTabs = useMemo(() => {
         const discovered = new Set<string>(Object.keys(modelAverages).map(normalizeModelName));
-        const preferredOrder = models.length > 0 ? models.map((model) => normalizeModelName(model.displayName)) : FALLBACK_MODEL_ORDER;
-        return preferredOrder.filter((model) => discovered.has(model));
-    }, [modelAverages, models]);
+        return stableModelOrder.filter((model) => discovered.has(model));
+    }, [modelAverages, stableModelOrder]);
 
     const radarData = useMemo(() => {
         const empty = [
@@ -75,7 +90,7 @@ export function useDashboardMetrics({
 
         if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) return empty;
 
-        const latestEntry = filteredHistoryEntries[0];
+        const latestEntry = filteredHistoryEntries[filteredHistoryEntries.length - 1];
         if (!latestEntry?.results?.length) return empty;
 
         const byModel: Record<string, { consistency: number; factuality: number; sentiment: number; safety: number; authority: number }> = {
@@ -111,14 +126,13 @@ export function useDashboardMetrics({
     }, [filteredHistoryEntries]);
 
     const visibleModelAverages = useMemo(() => {
-        const preferredOrder = models.length > 0 ? models.map((model) => normalizeModelName(model.displayName)) : FALLBACK_MODEL_ORDER;
-        return preferredOrder.reduce<Record<string, number>>((acc, modelName) => {
+        return stableModelOrder.reduce<Record<string, number>>((acc, modelName) => {
             if (typeof modelAverages[modelName] === "number") {
                 acc[modelName] = modelAverages[modelName];
             }
             return acc;
         }, {});
-    }, [modelAverages, models]);
+    }, [modelAverages, stableModelOrder]);
 
     const chartData = useMemo(() => {
         if (!filteredHistoryEntries || filteredHistoryEntries.length === 0) return [];

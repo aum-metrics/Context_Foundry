@@ -6,13 +6,15 @@ import AuthWrapper from "@/components/AuthWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import SupportChatbot from "@/components/SupportChatbot";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import BrandCssVars from "@/components/BrandCssVars";
+import { tenantConfig } from "@/lib/whitelabel";
 
 export const metadata: Metadata = {
-  title: "AUM Context Foundry",
-  description: "AUM Context Foundry — Generative Engine Optimization (GEO) for the Agentic Web",
+  title: tenantConfig.brandName,
+  description: `${tenantConfig.brandName} — AI Search Presence for enterprise teams`,
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" }
+      { url: tenantConfig.faviconUrl || "/favicon.svg", type: "image/svg+xml" }
     ]
   },
 };
@@ -28,6 +30,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <AuthWrapper>
+              <BrandCssVars />
               {children}
               <SupportChatbot />
               <Analytics />

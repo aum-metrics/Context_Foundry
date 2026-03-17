@@ -29,6 +29,75 @@ PLAN_LIMITS = {
 }
 
 
+def _load_admin_profile(decoded_token: dict) -> dict:
+    """Hydrate admin context with Firestore role/org/tenant info when available."""
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    role = decoded_token.get("role")
+    org_id = decoded_token.get("orgId")
+    tenant_slug = decoded_token.get("tenantSlug")
+
+    if db and uid:
+        try:
+            user_doc = db.collection("users").document(uid).get()
+            if user_doc.exists:
+                user_data = user_doc.to_dict() or {}
+                role = user_data.get("role", role)
+                org_id = user_data.get("orgId", org_id)
+                tenant_slug = user_data.get("tenantSlug", tenant_slug)
+        except Exception as e:
+            logger.warning(f"Admin profile lookup failed for {uid}: {e}")
+
+    is_platform_admin = bool(decoded_token.get("admin")) or role == "super_admin" or org_id == "system_admin_org"
+    return {
+        **decoded_token,
+        "role": role,
+        "orgId": org_id,
+        "tenantSlug": tenant_slug,
+        "isPlatformAdmin": is_platform_admin,
+    }
+
+
+def _admin_scope(admin_user: dict) -> tuple[str, Optional[str]]:
+    """
+    Returns ("platform"|"tenant"|"org", scope_id) or raises if unauthorized.
+    """
+    if admin_user.get("isPlatformAdmin"):
+        return ("platform", None)
+    role = admin_user.get("role")
+    if role == "tenant_admin":
+        slug = admin_user.get("tenantSlug")
+        if not slug:
+            raise HTTPException(status_code=403, detail="tenant_admin missing tenantSlug")
+        return ("tenant", slug)
+    if role == "admin":
+        org_id = admin_user.get("orgId")
+        if not org_id:
+            raise HTTPException(status_code=403, detail="admin missing orgId")
+        return ("org", org_id)
+    raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+
+
+def _require_org_access(admin_user: dict, org_id: str, org_data: Optional[dict] = None) -> None:
+    """
+    Enforce org-level access for admin/tenant_admin. Platform admin always passes.
+    """
+    if admin_user.get("isPlatformAdmin"):
+        return
+    role = admin_user.get("role")
+    if role == "tenant_admin":
+        if org_data is None and db:
+            doc = db.collection("organizations").document(org_id).get()
+            org_data = doc.to_dict() if doc.exists else {}
+        if admin_user.get("tenantSlug") != (org_data or {}).get("tenantSlug"):
+            raise HTTPException(status_code=403, detail="This org belongs to a different tenant")
+        return
+    if role == "admin":
+        if admin_user.get("orgId") != org_id:
+            raise HTTPException(status_code=403, detail="This org belongs to a different admin")
+        return
+    raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+
+
 def _serialize_datetime(value: Any) -> Optional[str]:
     if value is None:
         return None
@@ -165,17 +234,19 @@ async def verify_admin(
     try:
         # Use verify_session_cookie to ensure token was minted by server
         decoded_token = firebase_auth.verify_session_cookie(token, check_revoked=True, app=firebase_app)
-        if decoded_token.get("role") == "admin" or decoded_token.get("admin") is True:
+        admin_profile = _load_admin_profile(decoded_token)
+        role = admin_profile.get("role")
+        if admin_profile.get("isPlatformAdmin") or role in {"tenant_admin", "admin"}:
             log_audit_event(
                 org_id="system_admin",
-                actor_id=decoded_token.get("email", "unknown_admin"),
+                actor_id=admin_profile.get("email", "unknown_admin"),
                 event_type="admin_session_verified",
-                resource_id=decoded_token.get("uid", "unknown_uid"),
-                metadata={"action": request.url.path}
+                resource_id=admin_profile.get("uid", "unknown_uid"),
+                metadata={"action": request.url.path, "role": role}
             )
-            return decoded_token
-        
-        logger.warning(f"🚫 Unauthorized Admin Access Attempt: {decoded_token.get('email', 'unknown')}")
+            return admin_profile
+
+        logger.warning(f"🚫 Unauthorized Admin Access Attempt: {admin_profile.get('email', 'unknown')}")
         raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -200,13 +271,17 @@ async def mint_admin_session(
     try:
         # Verify the ID token first to ensure it's valid and has admin claims
         decoded_claims = firebase_auth.verify_id_token(id_token, app=firebase_app)
-        if decoded_claims.get("role") != "admin" and not decoded_claims.get("admin"):
+        admin_profile = _load_admin_profile(decoded_claims)
+        role = admin_profile.get("role")
+        is_platform_admin = admin_profile.get("isPlatformAdmin")
+
+        if not (is_platform_admin or role == "tenant_admin"):
             raise HTTPException(status_code=403, detail="Forbidden: Admin access required to mint session")
-            
+
         # Create the session cookie (expires in 24 hours)
         expires_in = datetime.timedelta(days=1)
         session_cookie = firebase_auth.create_session_cookie(id_token, expires_in=expires_in, app=firebase_app)
-        
+
         return {"success": True, "session_cookie": session_cookie}
     except firebase_auth.InvalidIdTokenError:
         raise HTTPException(status_code=401, detail="Invalid ID token provided")
@@ -221,7 +296,15 @@ async def verify_admin_session_route(admin_user: dict = Depends(verify_admin)):
     """
     Explicitly check if the current Admin Session Cookie is valid, unrevoked, and has the admin claim.
     """
-    return {"success": True, "verified": True, "uid": admin_user.get("uid")}
+    return {
+        "success": True,
+        "verified": True,
+        "uid": admin_user.get("uid"),
+        "role": admin_user.get("role"),
+        "orgId": admin_user.get("orgId"),
+        "tenantSlug": admin_user.get("tenantSlug"),
+        "isPlatformAdmin": admin_user.get("isPlatformAdmin", False),
+    }
 
 
 @router.get("/model-config")
@@ -247,18 +330,29 @@ async def list_organizations(
     try:
         from google.cloud.firestore_v1 import FieldFilter
 
-        orgs_query = db.collection("organizations").order_by("__name__")
+        scope, scope_id = _admin_scope(admin_user)
+        orgs_query = db.collection("organizations")
 
-        # Cursor-based pagination: start_after the last doc ID from previous page
-        if cursor:
-            cursor_doc = db.collection("organizations").document(cursor).get()
-            if cursor_doc.exists:
-                orgs_query = orgs_query.start_after(cursor_doc)
-
-        # Fetch page_size + 1 to determine if there are more pages
-        docs = list(orgs_query.limit(page_size + 1).stream())
-        has_more = len(docs) > page_size
-        page_docs = docs[:page_size]
+        if scope == "platform":
+            orgs_query = orgs_query.order_by("__name__")
+            # Cursor-based pagination: start_after the last doc ID from previous page
+            if cursor:
+                cursor_doc = db.collection("organizations").document(cursor).get()
+                if cursor_doc.exists:
+                    orgs_query = orgs_query.start_after(cursor_doc)
+            # Fetch page_size + 1 to determine if there are more pages
+            docs = list(orgs_query.limit(page_size + 1).stream())
+            has_more = len(docs) > page_size
+            page_docs = docs[:page_size]
+        elif scope == "tenant":
+            orgs_query = orgs_query.where("tenantSlug", "==", scope_id)
+            docs = list(orgs_query.stream())
+            has_more = False
+            page_docs = docs
+        else:  # scope == "org"
+            org_doc = db.collection("organizations").document(scope_id).get()
+            page_docs = [org_doc] if org_doc.exists else []
+            has_more = False
 
         org_list = []
         for org_doc in page_docs:
@@ -340,6 +434,7 @@ async def list_organizations(
             "orgs": org_list,
             "hasMore": has_more,
             "nextCursor": next_cursor,
+            "scope": scope,
         }
     except Exception as e:
         logger.error(f"Admin org list failed: {e}")
@@ -394,6 +489,7 @@ async def update_org_api_key(
         raise HTTPException(status_code=400, detail="Invalid provider")
 
     try:
+        _require_org_access(admin_user, org_id)
         db.collection("organizations").document(org_id).update({
             f"apiKeys.{request_body.provider}": request_body.value
         })
@@ -417,6 +513,8 @@ async def update_model_config(
 ):
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
+    if not admin_user.get("isPlatformAdmin"):
+        raise HTTPException(status_code=403, detail="Only platform admins can update model config")
 
     if len(request_body.models) == 0:
         raise HTTPException(status_code=400, detail="At least one model config entry is required")
@@ -460,6 +558,7 @@ async def get_org_details(org_id: str, admin_user: dict = Depends(verify_admin))
             raise HTTPException(status_code=404, detail="Organization not found")
 
         data = org_doc.to_dict() or {}
+        _require_org_access(admin_user, org_id, data)
         subscription = data.get("subscription", {})
         plan_id = subscription.get("planId", "explorer")
         usage_cycle_start = _resolve_usage_cycle_start(subscription)
@@ -565,6 +664,7 @@ async def update_org_subscription(
             raise HTTPException(status_code=404, detail="Organization not found")
 
         current = org_doc.to_dict() or {}
+        _require_org_access(admin_user, org_id, current)
         current_sub = current.get("subscription", {})
         next_plan = request_body.planId or current_sub.get("planId", "explorer")
         plan_limits = PLAN_LIMITS.get(next_plan, PLAN_LIMITS["explorer"])
@@ -614,6 +714,13 @@ class AdminPaymentLinkRequest(BaseModel):
     amount: Optional[int] = None
 
 
+class ProvisionTenantRequest(BaseModel):
+    tenant_slug: str
+    org_name: str
+    admin_uid: str
+    tenant_config: dict
+
+
 @router.post("/payment-link")
 async def admin_create_payment_link(
     body: AdminPaymentLinkRequest,
@@ -627,6 +734,7 @@ async def admin_create_payment_link(
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
+        _require_org_access(admin_user, body.orgId)
         import razorpay
         key_id = os.getenv("RAZORPAY_KEY_ID")
         key_secret = os.getenv("RAZORPAY_KEY_SECRET")
@@ -685,3 +793,60 @@ async def admin_create_payment_link(
     except Exception as e:
         logger.error(f"Admin payment link creation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/provision-tenant")
+async def provision_white_label_tenant(
+    body: ProvisionTenantRequest,
+    admin_user: dict = Depends(verify_admin)
+):
+    """
+    Platform-only: provisions a new white-label tenant org and assigns a tenant_admin.
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    if not admin_user.get("isPlatformAdmin"):
+        raise HTTPException(status_code=403, detail="Only platform admins can provision tenants")
+
+    slug = body.tenant_slug.strip().lower().replace(" ", "_")
+    if not slug or len(slug) > 40:
+        raise HTTPException(status_code=400, detail="tenant_slug must be 1-40 lowercase chars")
+
+    existing = (
+        db.collection("organizations")
+        .where("tenantSlug", "==", slug)
+        .limit(1)
+        .stream()
+    )
+    if list(existing):
+        raise HTTPException(status_code=409, detail=f"Tenant slug '{slug}' already in use")
+
+    import uuid
+    now = datetime.datetime.now(datetime.timezone.utc)
+    org_id = f"tenant_{slug}_{uuid.uuid4().hex[:8]}"
+
+    plan_limits = PLAN_LIMITS.get("scale", PLAN_LIMITS["scale"])
+
+    db.collection("organizations").document(org_id).set({
+        "name": body.org_name,
+        "tenantSlug": slug,
+        "status": "active",
+        "subscription": {
+            "planId": "scale",
+            "status": "active",
+            "maxSimulations": plan_limits["maxSimulations"],
+            "currentPeriodStart": now,
+        },
+        "tenantConfig": body.tenant_config,
+        "createdAt": now,
+        "createdBy": admin_user.get("uid"),
+    })
+
+    db.collection("users").document(body.admin_uid).set({
+        "role": "tenant_admin",
+        "tenantSlug": slug,
+        "orgId": org_id,
+    }, merge=True)
+
+    logger.info(f"Provisioned tenant: slug={slug}, org={org_id}, admin={body.admin_uid}")
+    return {"status": "ok", "org_id": org_id, "tenant_slug": slug, "admin_uid": body.admin_uid}

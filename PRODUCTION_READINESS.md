@@ -65,9 +65,9 @@ if self.ENV == "production":
 | `JWT_SECRET` | Yes (unique) | No | Dev default | 64-char cryptographic string. Dev default crashes in prod. |
 | `SSO_ENCRYPTION_KEY` | Yes (unique) | No | Dev default | Fernet key for SSO client secret encryption. Dev default crashes in prod. |
 | `ALLOW_MOCK_AUTH` | No | Optional | `False` | Enables mock auth bypass in local development only. Ignored in production. |
-| `OPENAI_API_KEY` | Yes | No | None | OpenAI platform key for SoM simulation + claim extraction. |
-| `GEMINI_API_KEY` | Yes | No | None | Google Gemini key for multi-model SoM. |
-| `ANTHROPIC_API_KEY` | Yes | No | None | Anthropic Claude key for multi-model SoM. |
+| `OPENAI_API_KEY` | Yes | No | None | OpenAI platform key for Visibility Score simulation + claim extraction. |
+| `GEMINI_API_KEY` | Yes | No | None | Google Gemini key for multi-model Visibility Score. |
+| `ANTHROPIC_API_KEY` | Yes | No | None | Anthropic Claude key for multi-model Visibility Score. |
 | `RAZORPAY_KEY_ID` | Yes | No | None | Razorpay API key ID for order creation. |
 | `RAZORPAY_KEY_SECRET` | Yes | No | None | Razorpay secret for payment verification + webhooks. |
 | `RAZORPAY_WEBHOOK_SECRET` | Recommended | No | None | HMAC signature verification for Razorpay webhooks. |
@@ -118,7 +118,7 @@ Additional gate: `next.config.ts` sets `ignoreDuringBuilds: false` — lint erro
 
 | Test File | Tests | What It Covers |
 |-----------|-------|---------------|
-| `test_simulation.py` | 3 | SoM endpoint (happy + unhappy path), 60/40 math, Frontier Label contract verification |
+| `test_simulation.py` | 3 | Visibility scoring endpoint (happy + unhappy path), 60/40 math, Frontier Label contract verification |
 | `test_ingestion.py` | 2 | Recursive split algorithm + parse endpoint |
 | `test_competitor.py` | 2 | Displacement endpoint + auth rejection |
 | `test_audit.py` | 2 | Audit log write + retrieval |

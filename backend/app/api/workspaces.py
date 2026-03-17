@@ -20,7 +20,7 @@ from core.firebase_config import db
 from core.security import get_auth_context, get_current_user, verify_user_org_access
 from api.audit import log_audit_event
 from google.cloud import firestore
-from utils.email_service import send_invite_email
+from core.email_sender import send_invite_email
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -208,7 +208,9 @@ async def provision_organization(
             }
             
         # Generates a new Organization ID
-        new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{secrets.token_urlsafe(6)}"
+        import secrets as _secrets
+        from google.cloud import firestore as _fs
+        new_org_id = f"org_{int(datetime.now(timezone.utc).timestamp())}_{_secrets.token_urlsafe(6)}"
         
         # We auto-provision the internal inference keys from the Master Environment
         # so the user can immediately use the Simulator without bringing their own keys.
@@ -237,22 +239,32 @@ async def provision_organization(
             "createdAt": datetime.now(timezone.utc)
         }
         
-        batch = db.batch()
-        
-        # 1. Create Organization
-        batch.set(db.collection("organizations").document(new_org_id), org_payload)
-        
-        # 2. Register User
         user_payload = {
             "uid": uid,
             "email": email,
             "orgId": new_org_id,
             "role": "admin"
         }
-        batch.set(user_ref, user_payload)
-        
-        batch.commit()
-        
+
+        # FIX 9: Atomic transaction — prevents duplicate org creation on concurrent requests
+        @_fs.transactional
+        def _create_org_and_user(txn, txn_user_ref, txn_org_ref):
+            snap = txn_user_ref.get(transaction=txn)
+            if snap.exists:
+                return snap.to_dict().get("orgId")
+            txn.set(txn_org_ref, org_payload)
+            txn.set(txn_user_ref, user_payload)
+            return None
+
+        txn = db.transaction()
+        user_ref = db.collection("users").document(uid)
+        org_ref = db.collection("organizations").document(new_org_id)
+        existing_org_id = _create_org_and_user(txn, user_ref, org_ref)
+
+        if existing_org_id:
+            logger.info(f"Provision race resolved: user {uid} already in org {existing_org_id}")
+            return {"status": "existing", "orgId": existing_org_id, "message": "User already provisioned."}
+
         # Write SOC2 Audit Log
         log_audit_event(
             org_id=new_org_id,
@@ -261,7 +273,7 @@ async def provision_organization(
             resource_id=new_org_id,
             metadata={"plan": "explorer"}
         )
-        
+
         return {
             "status": "provisioned",
             "orgId": new_org_id,
@@ -637,10 +649,11 @@ async def add_org_member(
     # Trigger transactional email
     background_tasks.add_task(
         send_invite_email,
-        to_email=invite_email,
-        invite_url=invite_url,
-        org_name=org_data.get("name", "Workspace"),
-        inviter_name=current_user.get("email", "A Colleague")
+        org_id,
+        invite_email,
+        invite_url,
+        current_user.get("email", "A Colleague"),
+        org_data.get("name", "Workspace"),
     )
 
     return {
@@ -695,10 +708,11 @@ async def resend_org_invite(
     
     background_tasks.add_task(
         send_invite_email,
-        to_email=invite_email,
-        invite_url=invite_url,
-        org_name=org_data.get("name", "Workspace"),
-        inviter_name=current_user.get("email", "A Colleague")
+        org_id,
+        invite_email,
+        invite_url,
+        current_user.get("email", "A Colleague"),
+        org_data.get("name", "Workspace"),
     )
 
     log_audit_event(

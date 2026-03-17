@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { auth } from "@/lib/firebase";
+import { tenantConfig } from "@/lib/whitelabel";
 
 interface RazorpaySuccessResponse {
     razorpay_order_id: string;
@@ -119,11 +120,30 @@ export function useRazorpay() {
                 const orderData = await orderResponse.json();
 
                 // 2. Open Razorpay Widget
+                let settled = false;
+                const finalizeFailure = (err: unknown) => {
+                    if (settled) return;
+                    settled = true;
+                    if (onFailure) onFailure(err);
+                };
+                const finalizeSuccess = () => {
+                    if (settled) return;
+                    settled = true;
+                    if (onSuccess) onSuccess();
+                };
+                const timeoutId = typeof window !== "undefined"
+                    ? window.setTimeout(() => finalizeFailure(new Error("Payment timed out.")), 180000)
+                    : null;
+
+                const clearTimeoutSafe = () => {
+                    if (timeoutId) window.clearTimeout(timeoutId);
+                };
+
                 const options: RazorpayOptions = {
                     key: orderData.keyId,
                     amount: orderData.amount.toString(),
                     currency: orderData.currency,
-                    name: "AUM Context Foundry",
+                    name: tenantConfig.brandName,
                     description: orderData.description,
                     order_id: orderData.orderId,
                     handler: async function (response: RazorpaySuccessResponse) {
@@ -147,30 +167,32 @@ export function useRazorpay() {
                                 throw new Error("Payment verification failed");
                             }
 
-                            if (onSuccess) onSuccess();
+                            clearTimeoutSafe();
+                            finalizeSuccess();
                         } catch (err) {
                             console.error(err);
-                            if (onFailure) onFailure(err);
+                            clearTimeoutSafe();
+                            finalizeFailure(err);
                         }
                     },
                     prefill: {
                         email: email,
                     },
                     theme: {
-                        color: "#4f46e5", // Indigo 600
+                        color: tenantConfig.colorPrimary || "#4f46e5",
                     },
                     modal: {
                         ondismiss: () => {
-                            if (onFailure) {
-                                onFailure(new Error("Payment cancelled by user."));
-                            }
+                            clearTimeoutSafe();
+                            finalizeFailure(new Error("Payment cancelled by user."));
                         },
                     },
                 };
 
                 const rzp = new window.Razorpay(options);
                 rzp.on("payment.failed", function (response: RazorpayFailureResponse) {
-                    if (onFailure) onFailure(response.error);
+                    clearTimeoutSafe();
+                    finalizeFailure(response.error);
                 });
                 rzp.open();
             } catch (error) {

@@ -52,7 +52,7 @@ export default function MethodsPage() {
                         className={`text-xl md:text-2xl leading-relaxed max-w-4xl font-light ${textMuted}`}
                     >
                         AUM Context Foundry replaces "proprietary magic" with <strong>Deterministic Decision Intelligence</strong>.
-                        We provide the scientific framework for measuring and optimizing your Share of Model (SoM) across the frontier LLM ecosystem.
+                        We provide the scientific framework for measuring and optimizing your AI Recommendation Share across the frontier LLM ecosystem.
                     </motion.p>
                 </div>
 
@@ -65,15 +65,15 @@ export default function MethodsPage() {
                     >
                         <h2 className="text-2xl font-bold mb-8 flex items-center text-slate-900 dark:text-white">
                             <span className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mr-4 text-sm font-mono">01</span>
-                            The SoM Formula
+                            The Visibility Score Formula
                         </h2>
 
                         <div className="bg-slate-900/90 dark:bg-black/40 p-10 rounded-[2rem] border border-slate-200 dark:border-white/5 font-mono text-2xl mb-8 text-center text-indigo-400 dark:text-indigo-300 shadow-inner">
-                            SoM = visible<sub>assertions</sub> ÷ total<sub>assertions</sub>
+                            Visibility = visible<sub>assertions</sub> ÷ total<sub>assertions</sub>
                         </div>
 
                         <p className={`text-sm italic text-center mb-10 ${textMuted}`}>
-                            Share of Model Score (v{methodology?.version || '1.2.0'})
+                            Visibility Score (v{methodology?.version || '1.2.0'})
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -188,7 +188,7 @@ export default function MethodsPage() {
                                         <span className="font-mono text-sm text-rose-500">0.00</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-6">
-                                        <span className="font-black text-xl uppercase tracking-tighter">Final SoM Score</span>
+                                        <span className="font-black text-xl uppercase tracking-tighter">Final Visibility Score</span>
                                         <div className="flex items-baseline space-x-1">
                                             <span className="text-5xl font-black text-rose-500 tracking-tighter">18%</span>
                                             <span className="text-xs font-bold text-rose-500/50 uppercase">Displaced</span>
@@ -216,7 +216,7 @@ export default function MethodsPage() {
                     <div>
                         <h4 className="font-black text-lg mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Audit-Ready Logging</h4>
                         <p className={`text-sm leading-relaxed font-light ${textMuted}`}>
-                            Every SoM run generates a cryptographic audit trail, recording model versions, temperature parameters, and ground-truth assertions for complete reproducibility and investor due diligence.
+                            Every visibility run generates a cryptographic audit trail, recording model versions, temperature parameters, and ground-truth assertions for complete reproducibility and investor due diligence.
                         </p>
                     </div>
                     <div>

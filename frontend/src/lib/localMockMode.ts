@@ -6,14 +6,15 @@ export function isLocalHostRuntime(): boolean {
 }
 
 export function isLocalMockMode(): boolean {
-  // Allow demo account mock mode even in production
-  if (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com") {
-    return true;
-  }
   if (!isLocalHostRuntime()) return false;
+  const allowMock = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
   const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
   const hasMockFirebaseConfig = !firebaseApiKey || firebaseApiKey === "mock-key-to-prevent-crash";
-  return process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true" || hasMockFirebaseConfig;
+  // Allow demo account mock mode only on localhost (explicitly gated)
+  if (typeof window !== "undefined" && localStorage.getItem("mock_auth_user") === "demo@demo.com") {
+    return allowMock || hasMockFirebaseConfig;
+  }
+  return allowMock || hasMockFirebaseConfig;
 }
 
 export function getLocalMockSession() {

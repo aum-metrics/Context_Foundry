@@ -103,10 +103,14 @@ export default function AUMContextFoundry() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    // Release the manual scroll lock after the smooth scroll finishes (~800ms)
+    const prefersReducedMotion = typeof window !== "undefined"
+      && window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lockMs = prefersReducedMotion ? 0 : 1200;
+    // Release the manual scroll lock after the smooth scroll finishes
     scrollTimeoutRef.current = setTimeout(() => {
       isManualScrollingRef.current = false;
-    }, 1000);
+    }, lockMs);
   }, []);
   
   const handleStepAnalyze = useCallback(() => setActiveStep("analyze"), []);
@@ -341,13 +345,13 @@ export default function AUMContextFoundry() {
               </div>
             </WorkflowSection>
 
-            <PipelineConnector label="Context grounded → Assessing AI Share of Voice" />
+            <PipelineConnector label="Context grounded → Assessing AI Search Presence" />
 
             {/* STEP 2: Intelligence */}
             <WorkflowSection
               id="intelligence"
               stepNumber={2}
-              title="Share of Model & Buyer-Intent Ranking"
+              title="AI Recommendation Share & Buyer-Intent Ranking"
               description="See how AI engines rank your brand against rivals like Mu Sigma and Fractal Analytics. Discover which query clusters you win and where buyer intent is being lost."
               accentColor="indigo"
               isCollapsed={!!collapsedSections["intelligence"]}
@@ -357,7 +361,7 @@ export default function AUMContextFoundry() {
               isManualScrollingRef={isManualScrollingRef}
               locked={isExplorer}
               onUnlock={() => { setUpgradeFeatureName("Competitor Rankings & Prescriptive Remediation"); setIsUpgradeModalOpen(true); }}
-              lockedMessage="Upgrade to Growth to unlock continuous Share of Model tracking, competitor displacement rates, and prescriptive remediation copy."
+              lockedMessage="Upgrade to Growth to unlock continuous AI Recommendation Share tracking, competitor displacement rates, and prescriptive remediation copy."
             >
               <SoMCommandCenter 
                 setActiveView={() => {}} 
@@ -395,7 +399,7 @@ export default function AUMContextFoundry() {
                     <Award className="w-10 h-10 text-emerald-500 mb-2 md:inline-block md:mr-4 md:align-middle" />
                     <div className="md:inline-block md:align-middle">
                       <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-1">Executive Visibility Report</h3>
-                      <p className="text-sm text-slate-500 max-w-md">Generate a boardroom-ready PDF summarizing AI Share of Voice and prioritized actions.</p>
+                      <p className="text-sm text-slate-500 max-w-md">Generate a boardroom-ready PDF summarizing AI search presence and prioritized actions.</p>
                     </div>
                   </div>
                   <button 
@@ -478,6 +482,7 @@ const accentMap = {
 function WorkflowSection({ id, stepNumber, title, description, accentColor, isCollapsed, onToggle, onStepVisible, sectionRef, children, locked, onUnlock, lockedMessage, isManualScrollingRef }: WorkflowSectionProps) {
   const accent = accentMap[accentColor];
   const observerRef = useRef<HTMLElement | null>(null);
+  const observerInstanceRef = useRef<IntersectionObserver | null>(null);
 
   const setRef = (el: HTMLElement | null) => {
     observerRef.current = el;
@@ -486,6 +491,7 @@ function WorkflowSection({ id, stepNumber, title, description, accentColor, isCo
 
   useEffect(() => {
     if (!observerRef.current) return;
+    observerInstanceRef.current?.disconnect();
     const observer = new IntersectionObserver(
       ([entry]) => { 
         if (entry.isIntersecting && !isManualScrollingRef.current) {
@@ -495,6 +501,7 @@ function WorkflowSection({ id, stepNumber, title, description, accentColor, isCo
       { threshold: 0.2, rootMargin: "-10% 0px -80% 0px" }
     );
     observer.observe(observerRef.current);
+    observerInstanceRef.current = observer;
     return () => observer.disconnect();
   }, [onStepVisible, isManualScrollingRef]);
 

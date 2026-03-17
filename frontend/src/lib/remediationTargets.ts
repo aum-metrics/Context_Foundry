@@ -55,7 +55,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   "Competitive differentiation": ["compare", "competitive", "differentiation", "why", "choose", "positioning", "advantage"],
   "Enterprise transformation fit": ["enterprise", "transformation", "fortune", "governance", "operating", "delivery", "partner"],
   "Industry expertise": ["cpg", "bfsi", "retail", "supply", "chain", "industry", "domain", "vertical"],
-  "Site-level GEO readiness": ["home", "about", "services", "solutions", "faq", "case", "partner", "proof"],
+  "Site-level AI Search Readiness": ["home", "about", "services", "solutions", "faq", "case", "partner", "proof"],
   "Market ranking": ["home", "about", "services", "solutions", "overview", "case", "proof"],
 };
 

@@ -32,8 +32,8 @@ export default function PrivacyPage() {
                     <h2 className="text-2xl font-medium mb-4">2. Data We Collect</h2>
                     <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-400">
                         <li><strong>Account Information</strong>: Your email and organization profile for session management.</li>
-                        <li><strong>Semantic Manifests</strong>: The generated <code>/llms.txt</code> results optimized for agentic discovery.</li>
-                        <li><strong>LCRS Logs</strong>: Metadata regarding Context Drift divergence scores to improve your GEO performance.</li>
+                        <li><strong>Semantic Manifests</strong>: The generated <code>/llms.txt</code> results optimized for AI discovery.</li>
+                        <li><strong>Visibility Logs</strong>: Metadata regarding AI answer drift and claim recall to improve your search presence.</li>
                     </ul>
                 </section>
 
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <footer className="pt-12 border-t border-slate-200 dark:border-white/5">
-                    <p className="text-sm text-slate-500">Contact legal@aumcontextfoundry.com for inquiries.</p>
+                    <p className="text-sm text-slate-500">Contact hello@aumcontextfoundry.com for inquiries.</p>
                 </footer>
             </main>
         </div>

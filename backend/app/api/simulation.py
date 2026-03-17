@@ -3,7 +3,7 @@ Author: "Sambath Kumar Natarajan"
 Date: "26-Dec-2025"
 Org: " Start-up/AUM Context Foundry"
 Product: "AUM Context Foundry"
-Description: Multi-Model LCRS Simulation Engine with Fine-Grained Fact-Checking
+Description: Multi-Model Visibility Simulation Engine with Fine-Grained Fact-Checking
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ import logging
 import numpy as np
 import hashlib
 import asyncio
+from functools import partial
 from fastapi import Depends, BackgroundTasks
 from datetime import datetime, timedelta, timezone
 
@@ -30,8 +31,10 @@ from core.model_config import (
     OPENAI_SIMULATION_MODEL,
     GEMINI_SIMULATION_MODEL,
     CLAUDE_SIMULATION_MODEL,
-    GEMINI_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL,
-    MODEL_DISPLAY_NAMES, OPENAI_SCHEMA_MODEL, API_MODEL_MAPPING
+    MODEL_DISPLAY_NAMES,
+    OPENAI_SCHEMA_MODEL,
+    API_MODEL_MAPPING,
+    get_simulation_model_catalog,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,7 +89,7 @@ def cosine_sim(v1, v2):
     return float(dot_product / (norm_v1 * norm_v2))
 
 
-def extract_claims(manifest_content: str, question: str, api_keys: dict) -> list:
+def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_api_model: Optional[str] = None) -> list:
     """
     Extract enterprise buyer positioning assertions from the Context Document.
     These are the claims a shortlisting AI engine SHOULD make about this company
@@ -118,7 +121,7 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict) -> list
             )
             result = json.loads(resp.choices[0].message.content or "{}")
         elif gemini_key and GEMINI_AVAILABLE:
-            api_model = API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
+            api_model = gemini_api_model or API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
                 model=api_model,
@@ -136,7 +139,7 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict) -> list
         return []
 
 
-def verify_claims(claims: list, ai_response: str, api_keys: dict) -> list:
+def verify_claims(claims: list, ai_response: str, api_keys: dict, gemini_api_model: Optional[str] = None) -> list:
     """
     Score each enterprise positioning assertion against the AI model's response.
     Measures competitive visibility: did the AI surface this company's proof points
@@ -167,7 +170,7 @@ Return JSON: {"results": [{"claim": "...", "verdict": "visible|displaced|absent"
             )
             result = json.loads(resp.choices[0].message.content or "{}")
         elif gemini_key and GEMINI_AVAILABLE:
-            api_model = API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
+            api_model = gemini_api_model or API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
             client = genai.Client(api_key=gemini_key)
             resp = client.models.generate_content(
                 model=api_model,
@@ -207,8 +210,8 @@ def compute_divergence(api_key: str, manifest_embedding: list, answer: str) -> f
 # ============================================================================
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def run_openai(api_key: str, system_prompt: str, user_prompt: str) -> str:
-    api_model = API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL)
+def run_openai(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
+    api_model = api_model or API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL)
     client = OpenAI(api_key=api_key)
     completion = client.chat.completions.create(
         messages=[
@@ -221,10 +224,10 @@ def run_openai(api_key: str, system_prompt: str, user_prompt: str) -> str:
     return completion.choices[0].message.content or ""
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def run_gemini(api_key: str, system_prompt: str, user_prompt: str) -> str:
+def run_gemini(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
     if not GEMINI_AVAILABLE:
         raise Exception("google-genai not installed")
-    api_model = API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
+    api_model = api_model or API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model=api_model,
@@ -233,10 +236,10 @@ def run_gemini(api_key: str, system_prompt: str, user_prompt: str) -> str:
     return response.text or ""
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def run_claude(api_key: str, system_prompt: str, user_prompt: str) -> str:
+def run_claude(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
     if not CLAUDE_AVAILABLE:
         raise Exception("anthropic not installed")
-    api_model = API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL)
+    api_model = api_model or API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL)
     client = anthropic.Anthropic(api_key=api_key)
     response = client.messages.create(
         model=api_model,
@@ -351,6 +354,7 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
     manifest_content = ""
     manifest_embedding = None
     api_keys: Dict[str, str] = {}
+    resolved_version = request.manifestVersion
 
     from core.config import settings
     is_dev = settings.ENV in ["development", "testing"]
@@ -377,10 +381,12 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
                 latest = next(manifests, None)
                 if latest:
                     doc_data = latest.to_dict()
+                    resolved_version = latest.id
             else:
                 version_doc = org_ref.collection("manifests").document(request.manifestVersion).get()
                 if version_doc.exists:
                     doc_data = version_doc.to_dict()
+                    resolved_version = version_doc.id
 
             if doc_data:
                 manifest_content = doc_data.get("content", "")
@@ -399,24 +405,26 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
         else:
             manifest_content = "Default context placeholder. Please upload a Context Document."
 
-    return manifest_content, manifest_embedding, api_keys
+    return manifest_content, manifest_embedding, api_keys, resolved_version
 
 
 def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                  system_prompt: str, user_prompt: str, manifest_embedding: list,
-                 claims: list, eps_div: float) -> dict:
+                 claims: list, eps_div: float, gemini_api_model: Optional[str] = None) -> dict:
     """Score a single model's response against the manifest."""
     
     # 🛡️ NORMALIZATION HARDENING: Ensure frontier display names are used in metadata
-    raw_name = model_name.lower().strip()
-    normalized_name = MODEL_DISPLAY_NAMES.get(raw_name, model_name.strip())
-    # Legacy normalization (handles older IDs without pinning to deprecated names)
-    if raw_name.startswith("gpt-4o"):
-        normalized_name = "GPT-4o"
-    elif "gemini" in raw_name and "flash" in raw_name:
-        normalized_name = "Gemini 3 Flash"
-    elif "claude" in raw_name and ("sonnet" in raw_name or "haiku" in raw_name):
-        normalized_name = "Claude 4.5 Sonnet"
+    normalized_name = model_name.strip()
+    raw_name = normalized_name.lower()
+    if normalized_name == raw_name:
+        normalized_name = MODEL_DISPLAY_NAMES.get(raw_name, normalized_name)
+        # Legacy normalization (handles older IDs without pinning to deprecated names)
+        if raw_name.startswith("gpt-4o"):
+            normalized_name = "GPT-4o"
+        elif "gemini" in raw_name and "flash" in raw_name:
+            normalized_name = "Gemini 3 Flash"
+        elif "claude" in raw_name and ("sonnet" in raw_name or "haiku" in raw_name):
+            normalized_name = "Claude 4.5 Sonnet"
 
     try:
         from core.config import settings
@@ -452,7 +460,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
         total = 0
         
         if claims:
-            claim_results = verify_claims(claims, answer, api_keys)
+            claim_results = verify_claims(claims, answer, api_keys, gemini_api_model=gemini_api_model)
             visible = sum(1 for c in claim_results if c.get("verdict") == "visible")
             displaced = sum(1 for c in claim_results if c.get("verdict") == "displaced")
             absent = sum(1 for c in claim_results if c.get("verdict") == "absent")
@@ -461,14 +469,14 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
             weighted_visible = visible + (absent * 0.3)
             claim_score = f"{visible}/{total} assertions visible to enterprise buyers"
 
-        # Share of Model (SoM) Blend: 40% semantic proximity, 60% positioning visibility
+        # Visibility Score blend: 40% semantic proximity, 60% positioning visibility
         if total > 0:
             positioning_rate = weighted_visible / total
             semantic_accuracy = max(0.0, 1.0 - divergence)
             blended = (0.4 * semantic_accuracy) + (0.6 * positioning_rate)
             accuracy = round(blended * 100, 1)
             
-            # SoM Status Mapping (enterprise framing)
+            # Visibility Score status mapping (enterprise framing)
             if accuracy > 85: status = "strong_presence"
             elif accuracy > 65: status = "partial_presence"
             else: status = "displaced"
@@ -627,7 +635,7 @@ Rules:
 @router.post("/run")
 async def run_simulation(request: SimulationRequest, background_tasks: BackgroundTasks, auth: dict = Depends(get_auth_context), skip_billing: bool = False):
     """
-    Main LCRS Simulation Entry Point.
+    Main Visibility Simulation Entry Point.
     Orchestrates Claim Extraction, Multi-Model Verification, and Divergence Scoring.
     """
     from core.config import settings
@@ -776,7 +784,9 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
             raise HTTPException(status_code=500, detail="Billing verification failed.")
 
     # 2. FETCH CONTEXT & KEYS 
-    manifest_content, manifest_embedding, api_keys = _fetch_manifest_and_keys(request)
+    manifest_content, manifest_embedding, api_keys, resolved_version_from_fetch = _fetch_manifest_and_keys(request)
+    if resolved_version_from_fetch and resolved_version_from_fetch != "latest":
+        resolved_manifest_version = resolved_version_from_fetch
 
     openai_key = api_keys.get("openai")
     gemini_key = api_keys.get("gemini")
@@ -833,14 +843,30 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         "anthropic": claude_key,
     }
 
+    model_catalog = get_simulation_model_catalog()
+    openai_meta = model_catalog.get("openai", {})
+    gemini_meta = model_catalog.get("gemini", {})
+    claude_meta = model_catalog.get("anthropic", {})
+
+    openai_display = openai_meta.get("displayName", MODEL_DISPLAY_NAMES.get(OPENAI_SIMULATION_MODEL, "GPT-4o"))
+    gemini_display = gemini_meta.get("displayName", MODEL_DISPLAY_NAMES.get(GEMINI_SIMULATION_MODEL, "Gemini 3 Flash"))
+    claude_display = claude_meta.get("displayName", MODEL_DISPLAY_NAMES.get(CLAUDE_SIMULATION_MODEL, "Claude 4.5 Sonnet"))
+
+    openai_api_model = openai_meta.get("apiModelId", API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL))
+    gemini_api_model = gemini_meta.get("apiModelId", API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL))
+    claude_api_model = claude_meta.get("apiModelId", API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL))
+
+    openai_enabled = openai_meta.get("enabled", True)
+    gemini_enabled = gemini_meta.get("enabled", True)
+    claude_enabled = claude_meta.get("enabled", True)
+
     # --- PHASE 7: DEEP CONTEXT RETRIEVAL ---
     if openai_key and db:
         try:
             client = OpenAI(api_key=openai_key)
             q_embed = client.embeddings.create(input=[request.prompt], model="text-embedding-3-small").data[0].embedding
             
-            manifest_version = _resolve_manifest_version(request.orgId, request.manifestVersion)
-            resolved_manifest_version = manifest_version
+            manifest_version = resolved_manifest_version
 
             # --- PHASE 8: NATIVE VECTOR SEARCH (O(log N)) ---
             # REQUIRES: Firestore Vector Index on 'embedding' field
@@ -904,9 +930,14 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
 
     # Enforce Model Gating
     if org_plan == "explorer":
-        # Explorer users only get one model (GPT-4o)
+        # Explorer users only get one model (OpenAI)
         gemini_key = None
         claude_key = None
+        if not openai_enabled:
+            raise HTTPException(
+                status_code=503,
+                detail="Simulation Engine Unavailable. No enabled OpenAI model for Explorer plan."
+            )
 
     # === ENTERPRISE BUYER SIMULATION SYSTEM PROMPT ===
     # The AI model represents an enterprise procurement advisor answering vendor evaluation questions.
@@ -930,14 +961,14 @@ ANSWER GUIDELINES:
     eps_div = 0.45
     claims = []
     # Hardened Claim Extraction with multi-provider fallback
-    claims = extract_claims(manifest_content, request.prompt, effective_api_keys)
+    claims = extract_claims(manifest_content, request.prompt, effective_api_keys, gemini_api_model=gemini_api_model)
 
     # --- PARALLEL INFERENCE & SCORING ---
     async def _run_and_score(model_name: str, runner_fn, key: str):
         return await asyncio.to_thread(
             _score_model,
             model_name, runner_fn, key, effective_api_keys,
-            system_prompt, request.prompt, manifest_embedding, claims, eps_div
+            system_prompt, request.prompt, manifest_embedding, claims, eps_div, gemini_api_model
         )
 
     tasks = []
@@ -949,12 +980,22 @@ ANSWER GUIDELINES:
                 detail="Multi-model simulation requires google-genai and anthropic packages. They are missing in this production environment."
             )
 
-    if openai_key or is_dev:
-        tasks.append(_run_and_score(OPENAI_SIMULATION_MODEL, run_openai, openai_key))
-    if gemini_key or is_dev:
-        tasks.append(_run_and_score(GEMINI_SIMULATION_MODEL, run_gemini, gemini_key))
-    if claude_key or is_dev:
-        tasks.append(_run_and_score(CLAUDE_SIMULATION_MODEL, run_claude, claude_key))
+    openai_runner = partial(run_openai, api_model=openai_api_model)
+    gemini_runner = partial(run_gemini, api_model=gemini_api_model)
+    claude_runner = partial(run_claude, api_model=claude_api_model)
+
+    if (openai_key or is_dev) and openai_enabled:
+        tasks.append(_run_and_score(openai_display, openai_runner, openai_key))
+    if (gemini_key or is_dev) and gemini_enabled:
+        tasks.append(_run_and_score(gemini_display, gemini_runner, gemini_key))
+    if (claude_key or is_dev) and claude_enabled:
+        tasks.append(_run_and_score(claude_display, claude_runner, claude_key))
+
+    if not tasks:
+        raise HTTPException(
+            status_code=503,
+            detail="Simulation Engine Unavailable. No enabled models are configured."
+        )
 
     # --- PHASE 10: MULTI-MODEL ADJUDICATION ---
     adjudication_note = None
@@ -1005,12 +1046,11 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
             background_tasks.add_task(_cleanup_expired_cache, request.orgId)
 
     locked_models = []
-    locked_models = []
     if org_plan == "explorer":
-        locked_models = [
-            MODEL_DISPLAY_NAMES.get(CLAUDE_SIMULATION_MODEL, "Claude"),
-            MODEL_DISPLAY_NAMES.get(GEMINI_SIMULATION_MODEL, "Gemini")
-        ]
+        if gemini_enabled:
+            locked_models.append(gemini_display)
+        if claude_enabled:
+            locked_models.append(claude_display)
 
     return {
         "results": results,
@@ -1021,8 +1061,12 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
         "claimsExtracted": len(claims),
         "cached": False,
         "transparency_footprint": {
-            "standards": ["ISO/IEC 42001", "NIST AI RMF"],
-            "verification_method": "ASoV 60/40 SoM v1.2.0",
+            "standards": [
+                "Deterministic scoring for auditability",
+                "Zero-retention ingestion pipeline",
+                "Prompt + model traceability"
+            ],
+            "verification_method": "AI Visibility 60/40 Visibility Score v1.2.0",
             "models_audited": [r["model"] for r in results],
             "parameters": {
                 "temperature": 0.0,
@@ -1073,15 +1117,15 @@ async def run_simulation_api_v1(request: Request, bg_tasks: BackgroundTasks, sim
     if auth.get("type") != "api_key":
         raise HTTPException(status_code=403, detail="This endpoint is restricted to B2B API Key licensing only. Use /api/simulation/run for UI sessions.")
     
-    # Description: Multi-Model SoM Simulation Engine with Fine-Grained Fact-Checking
-    # The SoM engine naturally inherits the atomic billing transactional locking from `run_simulation`
+    # Description: Multi-Model Visibility Simulation Engine with Fine-Grained Fact-Checking
+    # The Visibility Score engine naturally inherits the atomic billing transactional locking from `run_simulation`
     return await run_simulation(sim_request, bg_tasks, auth)
 
 
 @router.get("/export/{orgId}")
 async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_context)):
     """
-    Export the SoM scoring history for an organization as a verifiable CSV.
+    Export the Visibility Score history for an organization as a verifiable CSV.
     Allows enterprises to audit the 60/40 blend mathematics independently.
     """
     if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], orgId):
@@ -1109,7 +1153,7 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
         # CSV Headers
         writer.writerow([
             "Timestamp", "Manifest Version", "Prompt", "Model", 
-            "SoM Accuracy %", "Hallucination Detected", "Claim Verification Score"
+            "Visibility Score %", "Displacement Detected", "Claim Verification Score"
         ])
         
         for doc in history_ref:
@@ -1129,7 +1173,7 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
                     prompt,
                     result.get("model", ""),
                     result.get("accuracy", 0.0),
-                    "Yes" if result.get("hasHallucination") else "No",
+                    "Yes" if (result.get("hasDisplacement") or result.get("hasHallucination")) else "No",
                     result.get("claimScore", "N/A")
                 ])
                 
@@ -1137,7 +1181,7 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
         return StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=som_audit_{orgId}.csv"}
+            headers={"Content-Disposition": f"attachment; filename=visibility_audit_{orgId}.csv"}
         )
         
     except Exception as e:

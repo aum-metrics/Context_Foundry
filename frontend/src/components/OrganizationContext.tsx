@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User } from "firebase/auth";
 import { db } from "@/lib/firestorePaths";
 import { doc, getDoc } from "firebase/firestore";
@@ -59,8 +59,7 @@ const OrganizationContext = createContext<OrganizationContextType>({
     organization: null,
     orgUser: null,
     loadingOrg: true,
-    error: null
-    ,
+    error: null,
     activeOrgId: null,
     baseOrgId: null,
     isPlatformAdmin: false,
@@ -81,7 +80,24 @@ export function OrganizationProvider({ children, user }: { children: React.React
     const [activeOrgId, setActiveOrgIdState] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [analysisContexts, setAnalysisContexts] = useState<AnalysisContext[]>([]);
+    // FIX 1: Keep manifest version in a ref to avoid triggering the fetch loop.
+    // The state version is the source of truth for rendering; the ref is used
+    // inside the fetch effect without it becoming a dependency.
     const [activeManifestVersion, setActiveManifestVersionState] = useState<string>("latest");
+    const activeManifestVersionRef = useRef<string>("latest");
+    const lastFetchKeyRef = useRef<string>("");
+
+    const setActiveManifestVersion = (version: string) => {
+        activeManifestVersionRef.current = version;
+        setActiveManifestVersionState(version);
+        if (typeof window !== "undefined") {
+            const orgId = activeOrgId || orgUser?.orgId;
+            if (orgId) {
+                const key = `${ACTIVE_MANIFEST_VERSION_KEY}:${orgId}`;
+                localStorage.setItem(key, version);
+            }
+        }
+    };
 
     const setActiveOrgId = (orgId: string | null) => {
         if (typeof window !== "undefined") {
@@ -98,47 +114,30 @@ export function OrganizationProvider({ children, user }: { children: React.React
         setActiveOrgIdState(orgId);
     };
 
-    const setActiveManifestVersion = (version: string) => {
-        if (typeof window !== "undefined") {
-            const storageKey = `${ACTIVE_MANIFEST_VERSION_KEY}:${activeOrgId || orgUser?.orgId || "default"}`;
-            localStorage.setItem(storageKey, version);
-        }
-        setActiveManifestVersionState(version);
-    };
-
     const renameOrganization = async (newName: string): Promise<boolean> => {
         const targetOrgId = activeOrgId || orgUser?.orgId;
-        if (!targetOrgId || !user) {
-            console.error("Rename failed: missing orgId or user", { targetOrgId, user: !!user });
-            return false;
-        }
+        if (!targetOrgId || !user) return false;
         try {
             const token = await user.getIdToken();
-            const response = await fetch(`/api/workspaces/${activeOrgId}/rename`, {
+            const response = await fetch(`/api/workspaces/${targetOrgId}/rename`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ name: newName })
             });
-
             if (response.ok) {
                 setOrganization(prev => prev ? { ...prev, name: newName } : null);
-                // Also trigger context refresh to update context names
                 setRefreshKey(prev => prev + 1);
                 return true;
             }
             return false;
-        } catch (error) {
-            console.error("Rename failed:", error);
+        } catch {
             return false;
         }
     };
 
+    // Listen for manifest updates dispatched by SemanticIngestion
     useEffect(() => {
         if (typeof window === "undefined") return;
-
         const handleManifestUpdated = (event: Event) => {
             const customEvent = event as CustomEvent<{ orgId?: string }>;
             const updatedOrgId = customEvent.detail?.orgId;
@@ -147,24 +146,27 @@ export function OrganizationProvider({ children, user }: { children: React.React
                 setRefreshKey((prev) => prev + 1);
             }
         };
-
         window.addEventListener("aum_manifest_updated", handleManifestUpdated);
         return () => window.removeEventListener("aum_manifest_updated", handleManifestUpdated);
     }, [activeOrgId, orgUser?.orgId]);
 
+    // FIX 1 continued: This effect does NOT include activeManifestVersion in deps.
+    // It uses the ref instead. This breaks the loop while still reading the correct value.
     useEffect(() => {
         const fetchOrProvisionOrg = async () => {
             if (!user) {
                 setOrganization(null);
                 setOrgUser(null);
                 setLoadingOrg(false);
+                lastFetchKeyRef.current = "";
                 return;
             }
 
             try {
+                setLoadingOrg(true);
                 let currentOrgUser: OrgUser;
-
                 const isMockMode = isLocalMockMode();
+
                 if (isMockMode) {
                     const mockSession = getLocalMockSession();
                     currentOrgUser = {
@@ -180,30 +182,19 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     if (userDocSnap.exists()) {
                         currentOrgUser = userDocSnap.data() as OrgUser;
                     } else {
-                        // Auto-provision via backend
-                        if (user && typeof window !== 'undefined') {
-                            const token = await user.getIdToken();
-                            const response = await fetch("/api/workspaces/provision", {
-                                method: "POST",
-                                headers: {
-                                    "Authorization": `Bearer ${token}`
-                                }
-                            });
-
-                            if (!response.ok) {
-                                throw new Error("Failed to provision organization");
-                            }
-                            const provisionData = await response.json();
-
-                            currentOrgUser = {
-                                uid: user.uid,
-                                email: user.email || "",
-                                orgId: provisionData.orgId,
-                                role: "admin",
-                            };
-                        } else {
-                            throw new Error("Cannot provision without user session");
-                        }
+                        const token = await user.getIdToken();
+                        const response = await fetch("/api/workspaces/provision", {
+                            method: "POST",
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
+                        if (!response.ok) throw new Error("Failed to provision organization");
+                        const provisionData = await response.json();
+                        currentOrgUser = {
+                            uid: user.uid,
+                            email: user.email || "",
+                            orgId: provisionData.orgId,
+                            role: "admin",
+                        };
                     }
                 }
 
@@ -215,136 +206,91 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     const params = new URLSearchParams(window.location.search);
                     const queryOrgId = params.get("orgId");
                     const storedOverride = localStorage.getItem(ACTIVE_ORG_OVERRIDE_KEY);
-                    const requestedOrgId = queryOrgId || activeOrgId || storedOverride;
-
+                    const requestedOrgId = queryOrgId || storedOverride;
                     if (requestedOrgId && requestedOrgId !== currentOrgUser.orgId) {
                         targetOrgId = requestedOrgId;
-                        if (storedOverride !== requestedOrgId) {
-                            localStorage.setItem(ACTIVE_ORG_OVERRIDE_KEY, requestedOrgId);
-                        }
-                        if (queryOrgId !== requestedOrgId) {
-                            params.set("orgId", requestedOrgId);
-                            const nextUrl = `${window.location.pathname}?${params.toString()}`;
-                            window.history.replaceState({}, "", nextUrl);
-                        }
-                    } else {
-                        localStorage.removeItem(ACTIVE_ORG_OVERRIDE_KEY);
-                        params.delete("orgId");
-                        const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
-                        window.history.replaceState({}, "", nextUrl);
+                        localStorage.setItem(ACTIVE_ORG_OVERRIDE_KEY, requestedOrgId);
                     }
                 }
 
                 setActiveOrgIdState(targetOrgId);
 
-                // Fetch the Organization details via safe backend endpoint (P0 Hardening)
+                // Restore persisted manifest version for this org WITHOUT triggering a loop
+                if (typeof window !== "undefined") {
+                    const key = `${ACTIVE_MANIFEST_VERSION_KEY}:${targetOrgId}`;
+                    const persisted = localStorage.getItem(key);
+                    if (persisted && persisted !== activeManifestVersionRef.current) {
+                        activeManifestVersionRef.current = persisted;
+                        setActiveManifestVersionState(persisted);
+                    }
+                }
+
                 if (targetOrgId) {
                     const localMock = isLocalMockMode() ? getLocalMockSession() : null;
                     const token = localMock?.token || await user.getIdToken();
-                    let orgResponse = await fetch(`/api/workspaces/${targetOrgId}/profile?version=${encodeURIComponent(activeManifestVersion)}`, {
-                        headers: {
-                            "Authorization": `Bearer ${token}`
-                        }
-                    });
 
-                    if (!orgResponse.ok && localMock && targetOrgId !== "demo_org_id") {
-                        targetOrgId = "demo_org_id";
-                        setActiveOrgIdState(targetOrgId);
-                        orgResponse = await fetch(`/api/workspaces/${targetOrgId}/profile?version=${encodeURIComponent(activeManifestVersion)}`, {
-                            headers: {
-                                "Authorization": `Bearer mock-demo-token`
-                            }
-                        });
+                    // Use ref here — avoids stale closure + avoids dep loop
+                    const manifestVersion = activeManifestVersionRef.current;
+                    const fetchKey = `${user.uid}|${targetOrgId}|${refreshKey}|${manifestVersion}`;
+                    if (fetchKey === lastFetchKeyRef.current) {
+                        setLoadingOrg(false);
+                        return;
                     }
+                    lastFetchKeyRef.current = fetchKey;
+                    const orgResponse = await fetch(
+                        `/api/workspaces/${targetOrgId}/profile?version=${encodeURIComponent(manifestVersion)}`,
+                        { headers: { "Authorization": `Bearer ${token}` } }
+                    );
 
                     if (orgResponse.ok) {
-                        const orgData = await orgResponse.json();
-                        setOrganization(orgData);
+                        setOrganization(await orgResponse.json());
                     } else {
-                        console.error("Safe org fetch failed:", orgResponse.status);
-                        if (targetOrgId !== currentOrgUser.orgId) {
-                            const fallbackResponse = await fetch(`/api/workspaces/${currentOrgUser.orgId}/profile`, {
-                                headers: {
-                                    "Authorization": `Bearer ${token}`
-                                }
-                            });
-                            if (fallbackResponse.ok) {
-                                localStorage.removeItem(ACTIVE_ORG_OVERRIDE_KEY);
-                                setActiveOrgIdState(currentOrgUser.orgId);
-                                const fallbackOrgData = await fallbackResponse.json();
-                                setOrganization(fallbackOrgData);
-                                return;
-                            }
-                        }
-                        throw new Error("Failed to load organization profile safely.");
+                        throw new Error("Failed to load organization profile.");
                     }
 
                     const contextsResponse = await fetch(`/api/workspaces/${targetOrgId}/contexts`, {
-                        headers: {
-                            "Authorization": `Bearer ${token}`
-                        }
+                        headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (contextsResponse.ok) {
-                        const contextsData = await contextsResponse.json();
-                        const contexts: AnalysisContext[] = contextsData.contexts || [];
+                        const { contexts = [] } = await contextsResponse.json();
                         setAnalysisContexts(contexts);
+
+                        // If no version is pinned yet, auto-select the latest
+                        if (activeManifestVersionRef.current === "latest" && contexts.length > 0) {
+                            const latestCtx = contexts.find((c: AnalysisContext) => c.isLatest) || contexts[0];
+                            if (latestCtx?.version) {
+                                setActiveManifestVersion(latestCtx.version);
+                            }
+                        }
                     } else {
                         setAnalysisContexts([]);
                     }
                 }
-            } catch (error) {
-                console.error("Error fetching/provisioning org:", error);
+            } catch (err) {
+                console.error("Error fetching/provisioning org:", err);
                 setError("Failed to initialize workspace. Please contact support.");
             }
-
             setLoadingOrg(false);
         };
 
         fetchOrProvisionOrg();
-    }, [user, activeOrgId, refreshKey, activeManifestVersion]);
-
-    // Reconcile version separately to break the dependency loop
-    useEffect(() => {
-        if (!activeOrgId || typeof window === "undefined") return;
-
-        const manifestStorageKey = `${ACTIVE_MANIFEST_VERSION_KEY}:${activeOrgId}`;
-        const persistedVersion = localStorage.getItem(manifestStorageKey);
-        const knownVersions = new Set(["latest", ...analysisContexts.map((ctx) => ctx.version)]);
-
-        // Find the best version to activate
-        const nextVersion = persistedVersion && knownVersions.has(persistedVersion)
-            ? persistedVersion
-            : (analysisContexts.find(ctx => ctx.isLatest)?.version || analysisContexts[0]?.version || "latest");
-
-        if (nextVersion !== activeManifestVersion) {
-            setActiveManifestVersionState(nextVersion);
-            localStorage.setItem(manifestStorageKey, nextVersion);
-        }
-    }, [analysisContexts, activeOrgId, activeManifestVersion]);
+        // FIX 1: activeManifestVersion deliberately excluded — we use the ref inside
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, activeOrgId, refreshKey]);
 
     const isPlatformAdmin = orgUser?.role === "admin" && orgUser?.orgId === "system_admin_org";
-    const activeContextName = analysisContexts.find((ctx) => ctx.version === activeManifestVersion)?.name
-        || (activeManifestVersion === "latest" ? organization?.name || null : null);
+    const activeContextName =
+        analysisContexts.find((ctx) => ctx.version === activeManifestVersion)?.name ||
+        (activeManifestVersion === "latest" ? organization?.name || null : null);
 
     return (
-        <OrganizationContext.Provider
-            value={{
-                organization,
-                orgUser,
-                loadingOrg,
-                error,
-                activeOrgId,
-                baseOrgId: orgUser?.orgId || null,
-                isPlatformAdmin,
-                refreshKey,
-                analysisContexts,
-                activeManifestVersion,
-                activeContextName,
-                setActiveOrgId,
-                setActiveManifestVersion,
-                renameOrganization,
-            }}
-        >
+        <OrganizationContext.Provider value={{
+            organization, orgUser, loadingOrg, error,
+            activeOrgId, baseOrgId: orgUser?.orgId || null,
+            isPlatformAdmin, refreshKey,
+            analysisContexts, activeManifestVersion, activeContextName,
+            setActiveOrgId, setActiveManifestVersion, renameOrganization,
+        }}>
             {children}
         </OrganizationContext.Provider>
     );

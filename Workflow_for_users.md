@@ -80,8 +80,8 @@ For weak clusters, the product surfaces:
 2. Re-run the same query cluster
 3. Open the report
 4. Review the remediation delta section:
-   - baseline LCRS
-   - current LCRS
+   - baseline Visibility Score
+   - current Visibility Score
    - hallucination-rate delta
    - historical prompt comparison
 

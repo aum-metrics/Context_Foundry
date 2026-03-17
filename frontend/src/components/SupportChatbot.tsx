@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Bot, BookOpen, Shield, Key } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { auth } from "../lib/firebase";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
+import { tenantConfig } from "@/lib/whitelabel";
 
 interface Message {
     id: string;
@@ -88,10 +90,8 @@ export default function SupportChatbot() {
         try {
             const token = await auth.currentUser?.getIdToken();
             let effectiveToken = token;
-            if (!effectiveToken) {
-                const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
-                if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
-                else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+            if (!effectiveToken && isLocalMockMode()) {
+                effectiveToken = getLocalMockSession().token;
             }
 
             if (!effectiveToken || !organization?.id) {
@@ -100,7 +100,7 @@ export default function SupportChatbot() {
                 // Prevent duplicate auth warnings
                 if (messages.length > 0 && messages[messages.length - 1].text === response) return;
             } else {
-                setMessages(prev => [...prev, { id: "loading", role: "bot", text: "Consulting your AUM Context Foundry...", timestamp: new Date() }]);
+                setMessages(prev => [...prev, { id: "loading", role: "bot", text: `Consulting ${tenantConfig.brandName}...`, timestamp: new Date() }]);
 
                 const res = await fetch("/api/chatbot/ask", {
                     method: "POST",

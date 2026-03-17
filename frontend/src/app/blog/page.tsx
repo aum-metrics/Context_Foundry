@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
     title: "Insights | AUM Context Foundry",
-    description: "Practical guidance on brand fidelity, AI hallucination control, and Generative Engine Optimization for enterprise teams.",
+    description: "Practical guidance on brand fidelity, AI hallucination control, and AI search readiness for enterprise teams.",
     alternates: {
         canonical: "/blog",
     },
@@ -16,12 +16,12 @@ const posts = [
         href: "/blog/cmo-guide-ai-search",
         category: "Executive Strategy",
         title: "The CMO Guide to AI Search",
-        description: "Why SoM is the new KPI for marketing leaders, and how to protect your brand from AI-driven exclusion.",
+        description: "Why AI Recommendation Share is the new KPI for marketing leaders, and how to protect your brand from AI-driven exclusion.",
     },
     {
         href: "/blog/agentic-seo-operating-model",
         category: "Technical Data",
-        title: "The Agentic SEO Operating Model",
+        title: "The AI Search Operating Model",
         description: "Shifting from human-readable SEO to machine-interpretability. A technical deep dive into ASOM.",
     },
     {
@@ -38,9 +38,9 @@ const posts = [
     },
     {
         href: "/blog/generative-engine-optimization-geo",
-        category: "GEO",
-        title: "Generative Engine Optimization (GEO)",
-        description: "How GEO differs from classic SEO, why manifest alignment matters, and where measurement actually belongs.",
+        category: "AI Search",
+        title: "AI Search Readiness",
+        description: "How AI search readiness differs from classic SEO, why manifest alignment matters, and where measurement actually belongs.",
     },
 ];
 
@@ -57,7 +57,7 @@ export default function BlogIndexPage() {
                         High-fidelity content for teams dealing with AI search risk
                     </h1>
                     <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
-                        These articles are tightly aligned to what the product actually measures: brand safety, hallucination control, manifest quality, and Generative Engine Optimization.
+                        These articles are tightly aligned to what the product actually measures: brand safety, hallucination control, manifest quality, and AI search readiness.
                     </p>
                 </section>
 

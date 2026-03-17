@@ -3,7 +3,7 @@ Author: "Sambath Kumar Natarajan"
 Date: "02-Mar-2026"
 Org: "Start-up/AUM Context Foundry"
 Product: "AUM Context Foundry"
-Description: Public Transparency API - Methodology and Math for LCRS Scoring.
+Description: Public Transparency API - Methodology and Math for Visibility Scoring.
 """
 
 from fastapi import APIRouter
@@ -15,6 +15,7 @@ from core.model_config import (
     CLAUDE_SIMULATION_MODEL,
     MODEL_DISPLAY_NAMES,
     API_MODEL_MAPPING,
+    get_runtime_model_catalog,
 )
 
 router = APIRouter()
@@ -51,15 +52,15 @@ def _default_model_catalog():
 @router.get("/")
 async def get_methodology():
     """
-    Returns the formal methodology for the Latent Contextual Rigor Score (LCRS).
+    Returns the formal methodology for the Visibility Score.
     Ensures transparency and auditability for enterprise customers.
     """
     return {
-        "score_name": "Latent Contextual Rigor Score (LCRS)",
-        "acronym": "LCRS",
+        "score_name": "Visibility Score",
+        "acronym": "VS",
         "version": "1.2.0",
-        "philosophy": "Transition from proprietary magic to auditable science by combining geometric distance and deterministic claim verification.",
-        "formula": "LCRS = (0.4 * (1 - Dc)) + (0.6 * (Cs / Ct))",
+        "philosophy": "An auditable engineering heuristic that blends semantic alignment with deterministic claim verification.",
+        "formula": "Visibility Score = (0.4 * (1 - Dc)) + (0.6 * (Cs / Ct))",
         "variables": {
             "Dc": {
                 "name": "Cosine Distance",
@@ -78,31 +79,13 @@ async def get_methodology():
             }
         },
         "standards": [
-            "ISO/IEC 42001 (AI Management System) Alignment",
-            "NIST AI Risk Management Framework (RMF) Compatible",
-            "Zero-Retention Privacy Compliance"
+            "Deterministic scoring for auditability",
+            "Zero-retention ingestion pipeline",
+            "Explicit prompt + model traceability"
         ]
     }
 
 
 @router.get("/model-catalog")
 async def get_model_catalog():
-    payload = {
-        "models": _default_model_catalog(),
-        "source": "code_default",
-    }
-    if not db:
-        return payload
-
-    try:
-        doc = db.collection("platform_config").document("model_catalog").get()
-        if doc.exists:
-            data = doc.to_dict() or {}
-            models = data.get("models")
-            if isinstance(models, list) and models:
-                payload["models"] = sorted(models, key=lambda item: item.get("order", 999))
-                payload["source"] = "firestore"
-    except Exception:
-        pass
-
-    return payload
+    return get_runtime_model_catalog()

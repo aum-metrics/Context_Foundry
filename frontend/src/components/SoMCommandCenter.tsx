@@ -4,8 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis } from "recharts";
 import { 
     Zap, Activity, Globe, ShieldAlert, Sparkles, TrendingUp, Award, 
-    ArrowRight, Copy, Check, Download, MousePointer2, BriefcaseBusiness,
-    FilePenLine, FileText, Lock
+    BriefcaseBusiness, FilePenLine, FileText, Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
@@ -67,7 +66,16 @@ export default function SoMCommandCenter({
     }, [onReportClose]);
     
     const batchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const seoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const autoPilotKeyRef = useRef<string | null>(null);
     const analysisSubject = activeContextName || organization?.name || "the selected context";
+
+    const clearIntervalRef = useCallback((ref: { current: NodeJS.Timeout | null }) => {
+        if (ref.current) {
+            clearInterval(ref.current);
+            ref.current = null;
+        }
+    }, []);
 
     const getEffectiveToken = useCallback(async () => {
         const token = await auth.currentUser?.getIdToken();
@@ -88,14 +96,20 @@ export default function SoMCommandCenter({
     }, [getEffectiveToken]);
 
     // Consolidated SWR Data Fetching
-    const { data: competitorsData, error: competitorsError } = useSWR(
-        organization ? `/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}&cache=${refreshKey}` : null,
+    const competitorsKey = organization
+        ? `/api/competitor/displacement/${organization.id}?version=${encodeURIComponent(activeManifestVersion)}`
+        : null;
+    const { data: competitorsData, error: competitorsError, mutate: mutateCompetitors } = useSWR(
+        competitorsKey,
         fetcher
     );
     const competitors = useMemo<CompetitorInsight[]>(() => competitorsData?.competitors || [], [competitorsData]);
 
-    const { data: manifestData, error: manifestError } = useSWR(
-        organization ? `/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}&cache=${refreshKey}` : null,
+    const manifestKey = organization
+        ? `/api/workspaces/${organization.id}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`
+        : null;
+    const { data: manifestData, error: manifestError, mutate: mutateManifest } = useSWR(
+        manifestKey,
         fetcher
     );
     const manifestSnapshot: ManifestSnapshot | null = manifestData ? {
@@ -114,6 +128,7 @@ export default function SoMCommandCenter({
         try {
             const token = await getEffectiveToken();
             if (!token) throw new Error("auth");
+            const manifestVersion = currentManifestVersion || activeManifestVersion;
 
             const fallbackPrompts = [
                 "Who are the top enterprise analytics consulting firms for retail CPG transformation?",
@@ -152,7 +167,7 @@ export default function SoMCommandCenter({
                 body: JSON.stringify({
                     orgId: organization.id,
                     prompts,
-                    manifestVersion: activeManifestVersion,
+                    manifestVersion,
                 }),
             });
 
@@ -162,6 +177,7 @@ export default function SoMCommandCenter({
 
             const batchData = await batchRes.json();
             if (batchData.status === "processing" && batchData.jobId) {
+                clearIntervalRef(batchIntervalRef);
                 batchIntervalRef.current = setInterval(async () => {
                     const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${batchData.jobId}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
@@ -171,10 +187,10 @@ export default function SoMCommandCenter({
                         if (statusData.status === "completed" && (statusData.summary || statusData.result)) {
                             setBatchResult(statusData.summary || statusData.result);
                             setBatchLoading(false);
-                            if (batchIntervalRef.current) clearInterval(batchIntervalRef.current);
+                            clearIntervalRef(batchIntervalRef);
                         } else if (statusData.status === "failed") {
                             setBatchLoading(false);
-                            if (batchIntervalRef.current) clearInterval(batchIntervalRef.current);
+                            clearIntervalRef(batchIntervalRef);
                         }
                     }
                 }, 3000);
@@ -185,7 +201,7 @@ export default function SoMCommandCenter({
         } catch (_e) {
             setBatchLoading(false);
         }
-    }, [organization, batchLoading, getEffectiveToken, activeManifestVersion, analysisSubject]);
+    }, [organization, batchLoading, getEffectiveToken, activeManifestVersion, currentManifestVersion, analysisSubject, clearIntervalRef]);
 
     const isAuthError = (err: unknown) => {
         if (!err) return false;
@@ -201,12 +217,13 @@ export default function SoMCommandCenter({
 
     useEffect(() => {
         return () => {
-            if (batchIntervalRef.current) clearInterval(batchIntervalRef.current);
+            clearIntervalRef(batchIntervalRef);
+            clearIntervalRef(seoIntervalRef);
         };
-    }, []);
+    }, [clearIntervalRef]);
 
 
-    const fetchHistory = async (orgId: string) => {
+    const fetchHistory = useCallback(async (orgId: string) => {
         const effectiveToken = await getEffectiveToken();
         if (!effectiveToken) throw new Error("auth");
 
@@ -225,11 +242,15 @@ export default function SoMCommandCenter({
         }));
 
         return entries.slice().reverse(); // oldest first for chart
-    };
+    }, [getEffectiveToken]);
 
-    const { data: historyEntries, error: historyError, isLoading: loading } = useSWR(
-        organization ? `history-${organization.id}-${activeManifestVersion}-${refreshKey}` : null,
-        () => fetchHistory(organization!.id)
+    const orgId = organization?.id;
+    const historyKey = useMemo(() => {
+        return orgId ? [orgId, activeManifestVersion] as const : null;
+    }, [orgId, activeManifestVersion]);
+    const { data: historyEntries, error: historyError, isLoading: loading, mutate: mutateHistory } = useSWR(
+        historyKey,
+        ([orgId]) => fetchHistory(orgId)
     );
 
     const filteredHistoryEntries = useMemo(() => {
@@ -262,10 +283,23 @@ export default function SoMCommandCenter({
             }));
     }, [batchResult, filteredHistoryEntries]);
 
-    const competitorRanking = useMemo(() => {
-        return [...competitors].sort((a, b) => (b.displacementRate || 0) - (a.displacementRate || 0));
+    const competitorKeyRef = useRef<string>("");
+    const competitorRankingRef = useRef<CompetitorInsight[]>([]);
+    const competitorKey = useMemo(() => {
+        return competitors
+            .map((c) => `${c.name}|${c.displacementRate || 0}|${c.winningCategory || ""}|${(c.missingAssertions || []).length}`)
+            .join("||");
     }, [competitors]);
+    const competitorRanking = useMemo(() => {
+        if (competitorKey === competitorKeyRef.current) {
+            return competitorRankingRef.current;
+        }
+        competitorKeyRef.current = competitorKey;
+        competitorRankingRef.current = [...competitors].sort((a, b) => (b.displacementRate || 0) - (a.displacementRate || 0));
+        return competitorRankingRef.current;
+    }, [competitorKey, competitors]);
 
+    const isDemoOrg = organization?.id === "demo_org_id";
     const {
         queryClusterInsights,
         winningClusters,
@@ -279,6 +313,7 @@ export default function SoMCommandCenter({
         analysisSubject,
         seoResult,
         filteredHistoryEntries,
+        isDemoOrg,
     });
 
     const {
@@ -301,11 +336,22 @@ export default function SoMCommandCenter({
     const authError = [competitorsError, manifestError, historyError].find(isAuthError);
 
     useEffect(() => {
-        if (authError) return;
-        if (filteredHistoryEntries && filteredHistoryEntries.length === 0 && !batchLoading && !loading && organization) {
-            runAutoPilot();
-        }
-    }, [filteredHistoryEntries, loading, organization, batchLoading, runAutoPilot, authError]);
+        if (authError || !organization) return;
+        if (!filteredHistoryEntries || filteredHistoryEntries.length > 0) return;
+        if (batchLoading || loading) return;
+        if (!currentManifestVersion) return;
+        const autoKey = `${organization.id}|${currentManifestVersion}`;
+        if (autoPilotKeyRef.current === autoKey) return;
+        autoPilotKeyRef.current = autoKey;
+        runAutoPilot();
+    }, [filteredHistoryEntries, loading, organization, batchLoading, runAutoPilot, authError, activeManifestVersion, currentManifestVersion]);
+
+    useEffect(() => {
+        if (!refreshKey) return;
+        if (competitorsKey) mutateCompetitors();
+        if (manifestKey) mutateManifest();
+        if (historyKey) mutateHistory();
+    }, [refreshKey, competitorsKey, manifestKey, historyKey, mutateCompetitors, mutateManifest, mutateHistory]);
 
     useEffect(() => {
         if (modelTabs.length > 0 && !modelTabs.includes(activeTab)) {
@@ -318,8 +364,8 @@ export default function SoMCommandCenter({
         const strongest = winningClusters[0];
         const weakest = weakClusters[0];
         const geoLine = seoResult
-            ? `GEO is ${seoResult.geoScore}% and still needs stronger manifest-aligned proof on the public site.`
-            : "Run the SEO/GEO audit to validate whether site copy supports what the models are inferring.";
+            ? `AI Search Readiness is ${seoResult.geoScore}% and still needs stronger manifest-aligned proof on the public site.`
+            : "Run the AI Search Readiness audit to validate whether site copy supports what the models are inferring.";
         const competitorLine = topCompetitor
             ? `${topCompetitor.name} is currently owning ${topCompetitor.winningCategory || "high-intent buyer"} searches with ${topCompetitor.displacementRate}% competitive pressure.`
             : "No grounded competitor displacement has been detected from the current manifest yet.";
@@ -382,8 +428,8 @@ export default function SoMCommandCenter({
 
             if ((data.status === "processing" || data.status === "queued") && data.jobId) {
                 // Poll for completion
+                clearIntervalRef(batchIntervalRef);
                 const pollInterval = setInterval(async () => {
-                    batchIntervalRef.current = pollInterval;
                     try {
                         const currentToken = await getEffectiveToken();
                         const statusRes = await fetch(`/api/batch/batch/status/${organization.id}/${data.jobId}`, {
@@ -392,27 +438,28 @@ export default function SoMCommandCenter({
                         if (statusRes.ok) {
                             const statusData = await statusRes.json();
                             if (statusData.status === "completed" && (statusData.summary || statusData.result)) {
-                                clearInterval(pollInterval);
+                                clearIntervalRef(batchIntervalRef);
                                 const result = statusData.summary || statusData.result;
                                 setBatchResult(result);
                                 setBatchLoading(false);
                             } else if (statusData.status === "failed") {
-                                clearInterval(pollInterval);
+                                clearIntervalRef(batchIntervalRef);
                                 console.error("Batch Job Failed:", statusData.error);
                                 setBatchLoading(false);
                             }
                         } else {
                             // Non-OK response from status endpoint
-                            clearInterval(pollInterval);
+                            clearIntervalRef(batchIntervalRef);
                             console.error("Batch status check failed:", statusRes.statusText);
                             setBatchLoading(false);
                         }
                     } catch (pollErr) {
-                        clearInterval(pollInterval);
+                        clearIntervalRef(batchIntervalRef);
                         console.error("Polling error:", pollErr);
                         setBatchLoading(false);
                     }
                 }, 3000); // Poll every 3 seconds
+                batchIntervalRef.current = pollInterval;
             }
             else {
                 // Fallback direct response
@@ -454,10 +501,11 @@ export default function SoMCommandCenter({
             } else if (data.jobId) {
                 // Async polling fallback
                 let attempts = 0;
+                clearIntervalRef(seoIntervalRef);
                 const pollInterval = setInterval(async () => {
                     attempts++;
                     if (attempts > 20) {
-                        clearInterval(pollInterval);
+                        clearIntervalRef(seoIntervalRef);
                         setSeoLoading(false);
                         console.error("SEO Audit timeout");
                         return;
@@ -471,11 +519,11 @@ export default function SoMCommandCenter({
                         if (statusRes.ok) {
                             const statusData = await statusRes.json();
                             if (statusData.status === "completed" && statusData.result) {
-                                clearInterval(pollInterval);
+                                clearIntervalRef(seoIntervalRef);
                                 setSeoResult(statusData.result);
                                 setSeoLoading(false);
                             } else if (statusData.status === "failed") {
-                                clearInterval(pollInterval);
+                                clearIntervalRef(seoIntervalRef);
                                 console.error("SEO Audit Failed:", statusData.error || statusData);
                                 setSeoLoading(false);
                             }
@@ -484,6 +532,7 @@ export default function SoMCommandCenter({
                         console.error("SEO Polling error:", pollErr);
                     }
                 }, 3000); // Poll every 3 seconds
+                seoIntervalRef.current = pollInterval;
             } else {
                 setSeoLoading(false);
                 console.error("SEO Audit Failed:", data);
@@ -516,7 +565,7 @@ export default function SoMCommandCenter({
                             <span className="text-indigo-500">Market Intelligence Pulse</span>
                         </h1>
                         <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                            AI Share of Model (SoM) analysis across GPT-4o, Claude 4.5, and Gemini 3. <br/>
+                            AI Recommendation Share analysis across GPT-4o, Claude 4.5, and Gemini 3. <br/>
                             Identifying where you lose buyer intent to <span className="font-bold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</span>.
                         </p>
                     </div>
@@ -557,7 +606,7 @@ export default function SoMCommandCenter({
                         <>
                             <div className="group relative rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all">
                                 <div className="flex items-center justify-between mb-4">
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">AI Market Visibility (SoM)</p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">AI Recommendation Share</p>
                                     <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
                                         <Globe className="w-4 h-4" />
                                     </div>
@@ -575,8 +624,8 @@ export default function SoMCommandCenter({
                                 {/* TOOLTIP */}
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                                     <div className="p-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-[10px] shadow-2xl w-48 border border-white/10 ring-4 ring-black/5">
-                                        <p className="font-bold mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3 text-indigo-400" /> Share of Model (SoM)</p>
-                                        <p className="leading-relaxed opacity-80 italic">"The percentage of brand attributes correctly recalled by AI during buyer queries." Higher = Better Brand Authority.</p>
+                                        <p className="font-bold mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3 text-indigo-400" /> AI Recommendation Share</p>
+                                        <p className="leading-relaxed opacity-80 italic">"The percentage of buyer queries where AI recommends you with your verified claims intact."</p>
                                     </div>
                                 </div>
                             </div>
@@ -776,9 +825,9 @@ export default function SoMCommandCenter({
                                 </div>
                             </div>
 
-                            {/* SoM Radar */}
+                            {/* Context Radar */}
                             <div className="rounded-2xl p-6 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl">
-                                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400 mb-4">SoM Vector Analysis</h3>
+                                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400 mb-4">Context Radar Analysis</h3>
                                 <div className="h-[240px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
@@ -794,11 +843,11 @@ export default function SoMCommandCenter({
 
                     {/* Lower Intelligence Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* SEO + GEO Readiness */}
+                        {/* AI Search Readiness */}
                         <div className="rounded-2xl p-8 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl">
                             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center mb-6">
                                 <Globe className="w-5 h-5 mr-3 text-emerald-500" />
-                                SEO + GEO Readiness
+                                AI Search Readiness
                             </h2>
                             {["growth", "scale", "enterprise"].includes(organization?.subscriptionTier || "explorer") ? (
                                 <div className="space-y-6">
@@ -826,7 +875,7 @@ export default function SoMCommandCenter({
                                                     <p className={`text-2xl font-black ${seoResult.seoScore >= 70 ? 'text-emerald-500' : 'text-amber-500'}`}>{seoResult.seoScore}%</p>
                                                 </div>
                                                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center">
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">GEO Score</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">AI Search Readiness</p>
                                                     <p className={`text-2xl font-black ${seoResult.geoScore >= 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{seoResult.geoScore}%</p>
                                                 </div>
                                                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center">
@@ -846,7 +895,7 @@ export default function SoMCommandCenter({
                             ) : (
                                 <div className="py-8 text-center bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
                                     <Lock className="w-8 h-8 mx-auto text-slate-400 mb-4" />
-                                    <p className="text-sm text-slate-600 dark:text-slate-400">Upgrade to unlock deep SEO/GEO site audits.</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">Upgrade to unlock AI Search Readiness audits.</p>
                                     <button onClick={() => setIsUpgradeModalOpen(true)} className="mt-4 text-xs font-bold text-indigo-500 hover:underline">View Scaling Plans</button>
                                 </div>
                             )}

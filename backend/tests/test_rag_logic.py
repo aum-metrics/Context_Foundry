@@ -41,7 +41,7 @@ def test_rag_semantic_chunking_logic():
     assert chunks[-1].endswith("C")
 
 def test_lcrs_scoring_divergence():
-    """Verify the embedding divergence math for LCRS scoring."""
+    """Verify the embedding divergence math for Visibility Score scoring."""
     import numpy as np
     
     def cosine_sim(v1, v2):

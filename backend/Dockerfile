@@ -2,7 +2,7 @@
 # Date: "26-Dec-2025"
 # Org: " Start-up/AUM Context Foundry"
 # Product: "AUM Context Foundry"
-# Description: Dockerfile for Python GEO Backend Engine
+# Description: Dockerfile for Python AI Search Readiness Backend Engine
 
 # Use official Python lightweight image
 FROM python:3.11-slim

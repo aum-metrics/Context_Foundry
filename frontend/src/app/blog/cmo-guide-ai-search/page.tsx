@@ -1,5 +1,5 @@
 /**
- * CMO's Guide to AI Search (GEO)
+ * CMO's Guide to AI Search Visibility
  * High-fidelity cornerstone content for Acquisition Readiness.
  */
 "use client";
@@ -45,16 +45,16 @@ export default function CMOGuidePage() {
 
                         <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white pt-8">The Death of the Click</h2>
                         <p>
-                            Traditional SEO optimized for the click. Generative Engine Optimization (GEO) optimizes for the <strong>Shortlist</strong>. When a buyer asks GPT-4o or Gemini to "List the top risk management platforms for global supply chains," there is no "Page 2". There is only the recommendation — and the exclusion.
+                            Traditional SEO optimized for the click. AI Search Readiness optimizes for the <strong>Shortlist</strong>. When a buyer asks GPT-4o or Gemini to "List the top risk management platforms for global supply chains," there is no "Page 2". There is only the recommendation — and the exclusion.
                         </p>
 
                         <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-3xl p-10 my-12">
                             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                                 <TrendingUp className="w-5 h-5 text-indigo-500" />
-                                Share of Model (SoM): The New KPI
+                                AI Recommendation Share: The New KPI
                             </h3>
                             <p className="text-base text-slate-600 dark:text-slate-400 mb-0">
-                                Share of Model measures the percentage of simulations where your brand is cited correctly as a primary solution. For a CMO, losing SoM is the digital equivalent of being removed from a physical shelf at a retailer.
+                                AI Recommendation Share measures the percentage of simulations where your brand is cited correctly as a primary solution. For a CMO, losing that share is the digital equivalent of being removed from a physical shelf at a retailer.
                             </p>
                         </div>
 
@@ -70,9 +70,9 @@ export default function CMOGuidePage() {
 
                     <div className="mt-24 pt-16 border-t border-slate-200 dark:border-white/10">
                         <div className="rounded-[2.5rem] bg-indigo-600 p-12 text-center text-white">
-                            <h3 className="text-3xl font-bold mb-6">Position Your Brand for the Agentic Era</h3>
+                            <h3 className="text-3xl font-bold mb-6">Position Your Brand for the AI Search Era</h3>
                             <p className="text-indigo-100 mb-10 max-w-xl mx-auto">
-                                Get your Share of Model (SoM) score today and see exactly which competitors are displacing you in AI search queries.
+                                Get your AI Recommendation Share score today and see exactly which competitors are displacing you in AI search queries.
                             </p>
                             <Link href="/login" className="inline-flex h-14 items-center justify-center rounded-full bg-white px-8 text-indigo-600 font-bold hover:bg-slate-100 transition-colors">
                                 Start Your Audit

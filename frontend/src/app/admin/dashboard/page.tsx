@@ -95,12 +95,22 @@ export default function AdminDashboard() {
     const [subscriptionDraft, setSubscriptionDraft] = useState<Record<string, string | number | boolean>>({});
     const [modelConfig, setModelConfig] = useState<AdminModelConfig[]>([]);
     const [loadingModelConfig, setLoadingModelConfig] = useState(false);
+    const [adminProfile, setAdminProfile] = useState<{ role?: string; orgId?: string; tenantSlug?: string; isPlatformAdmin?: boolean } | null>(null);
 
     useEffect(() => {
         fetch("/api/admin/verify")
             .then(res => res.json())
             .then(data => {
-                if (!data.verified) router.push("/admin");
+                if (!data.verified) {
+                    router.push("/admin");
+                    return;
+                }
+                setAdminProfile({
+                    role: data.role,
+                    orgId: data.orgId,
+                    tenantSlug: data.tenantSlug,
+                    isPlatformAdmin: Boolean(data.isPlatformAdmin),
+                });
             })
             .catch(() => { router.push("/admin"); });
     }, [router]);
@@ -185,6 +195,7 @@ export default function AdminDashboard() {
     }, [selectedOrg?.id, fetchOrgDetail]);
 
     const fetchModelConfig = useCallback(async () => {
+        if (!adminProfile?.isPlatformAdmin) return;
         setLoadingModelConfig(true);
         try {
             const resp = await fetch("/api/admin/model-config", { credentials: "include" });
@@ -195,7 +206,7 @@ export default function AdminDashboard() {
             console.error("Failed to fetch model config:", err);
         }
         setLoadingModelConfig(false);
-    }, []);
+    }, [adminProfile?.isPlatformAdmin]);
 
     const handleLogout = async () => {
         await fetch("/api/admin/logout", { method: "POST" });
@@ -211,7 +222,7 @@ export default function AdminDashboard() {
                 setHealthStatus([
                     { name: "FastAPI Backend", endpoint: "/api/health", status: data.status === "healthy" ? "operational" : "degraded" },
                     { name: "Firebase Firestore", endpoint: "firestore.googleapis.com", status: data.dependencies?.firestore === "connected" ? "operational" : "degraded" },
-                    { name: "SoM Simulation Engine", endpoint: "/api/simulation", status: "operational" },
+                    { name: "Visibility Simulation Engine", endpoint: "/api/simulation", status: "operational" },
                     { name: "Semantic Ingestion", endpoint: "/api/ingestion", status: "operational" },
                     { name: "Batch Scheduler", endpoint: "/api/batch/scheduled", status: "operational" },
                 ]);
@@ -339,13 +350,14 @@ export default function AdminDashboard() {
         org.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const isPlatformAdmin = Boolean(adminProfile?.isPlatformAdmin);
     const tabs: { id: TabType, label: string, icon: React.ReactNode }[] = [
         { id: "organizations", label: "Organizations", icon: <Building2 className="w-4 h-4" /> },
         { id: "api-keys", label: "API Keys", icon: <Key className="w-4 h-4" /> },
         { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
         { id: "payments", label: "Payments", icon: <CreditCard className="w-4 h-4" /> },
         { id: "health", label: "System Health", icon: <Activity className="w-4 h-4" /> },
-        { id: "platform", label: "Model Control", icon: <RotateCcw className="w-4 h-4" /> },
+        ...(isPlatformAdmin ? [{ id: "platform" as TabType, label: "Model Control", icon: <RotateCcw className="w-4 h-4" /> }] : []),
     ];
 
     return (

@@ -19,8 +19,9 @@ Everything starts at `backend/app/main.py`. This file does four critical things:
 
 ### Directory Structure
 *   `app/api/`: Contains all the route handlers (15 modules):
-    *   `simulation.py` (810 lines) — SoM engine + B2B API gateway (v1.2.6 includes Zero-Burn caching)
+    *   `simulation.py` (810 lines) — Visibility Scoring Engine + B2B API gateway (v1.2.6 includes Zero-Burn caching)
     *   `ingestion.py` — Zero-retention PDF → CIM pipeline
+    *   `quick_scan.py` — Public GPT-4o “instant scan” for landing-page conversion
     *   `workspaces.py` — Org provisioning, members, invites, manifest, rate limiter
     *   `payments.py` — Razorpay orders, verify, webhooks, payment links
     *   `sso.py` — Enterprise SSO OAuth2 config + callback
@@ -32,18 +33,20 @@ Everything starts at `backend/app/main.py`. This file does four critical things:
     *   `batch_analysis.py` — Batch domain evaluation
     *   `audit.py` — SOC2 audit log writer
     *   `cron.py` — Internal scheduled task triggers (billing reset)
+    *   `data_management.py` — Data lifecycle cleanup (history redaction + manifest expiry)
     *   `methods.py` — Scoring methodology reference endpoint
 *   `app/core/`: Contains the foundational system logic:
     *   `config.py` — Pydantic Settings (single ENV source of truth)
     *   `security.py` — Auth: `get_current_user`, `get_auth_context`, `verify_user_org_access`, `validate_api_key`
     *   `firebase_config.py` — Firebase Admin SDK initialization
+    *   `email_sender.py` — Tenant-aware SendGrid email sender (white-label safe)
     *   `limiter.py` — SlowAPI global rate limiter config
     *   `rate_limiter.py` — Firestore-backed per-IP rate limiting
     *   `logging_config.py` — Structured logging with file rotation
 *   `app/utils/`: Contains helpers:
     *   `task_queue.py` — Async task queue + DLQ logic
     *   `task_queue_recovery.py` — Stalled job sweep + retry (5-min interval)
-    *   `email_service.py` — Transactional email sender (invites)
+    *   `email_service.py` — Legacy invite sender (kept for back-compat)
 
 ---
 
@@ -76,12 +79,12 @@ This performs a quick Firebase lookup to ensure the `uid` actually belongs to `o
 
 ---
 
-## 3. The SoM Simulation Pipeline (`api/simulation.py`)
+## 3. The Visibility Simulation Pipeline (`api/simulation.py`)
 
 This is the crown jewel of the platform. If you touch this file, test it locally first.
 
 ### The 60/40 Math
-The SoM (Share of Model) grades AI model accuracy using two blended metrics:
+The Visibility Score grades AI model accuracy using two blended metrics:
 *   **60% Weight - Claim Accuracy (Reproducible):** Did the AI output include all the strictly required facts from the source Context Document? We use an `LLM-as-a-judge` sub-routine to evaluate this at `temperature=0` for consistent results. Note: "reproducible" means same inputs yield same outputs, not "academically validated."
 *   **40% Weight - Semantic Alignment (Vector Math):** We convert the AI's answer into a vector embedding and compare its cosine distance to the original Context Document's embedding. This catches "vibe" drift or subtle hallucinations.
 *   **Zero-Burn Optimization (v1.2.6):** A SHA-256 hash of `org_id + prompt + manifest_version` is used to suppress redundant compute. Matching requests return cached results in <50ms.
@@ -148,6 +151,11 @@ For the public `/llms.txt` endpoint:
 - **Fail-closed**: Exception → `503` (never allows through on failure)
 - Frontend edge also fail-closed: non-OK backend response → `503`
 
+### Layer 3: Quick Scan In-Process Limiter
+For the public landing-page endpoint:
+- `POST /api/quick-scan` is rate-limited **in-process** to 3 scans per hour per IP.
+- This is an app-level throttle (not Firestore) to avoid unauthenticated write abuse.
+
 ---
 
 ## 7. Test Suite (`backend/tests/`)
@@ -159,7 +167,7 @@ All tests use `conftest.py` which automatically:
 
 | Test File | What It Tests |
 |-----------|---------------|
-| `test_simulation.py` | SoM endpoint (happy + unhappy + 60/40 math) |
+| `test_simulation.py` | Visibility scoring endpoint (happy + unhappy + 60/40 math) |
 | `test_ingestion.py` | `recursive_split` algorithm + parse endpoint |
 | `test_competitor.py` | Displacement endpoint + auth rejection |
 | `test_audit.py` | Audit log write + retrieval |

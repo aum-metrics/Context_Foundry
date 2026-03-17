@@ -42,6 +42,26 @@ def get_razorpay_client():
     return razorpay.Client(auth=(key_id, key_secret))
 
 
+def _get_tenant_razorpay_key_id(org_id: str) -> str:
+    """
+    Return the Razorpay key_id to display to the client for this tenant.
+    Orders are always created using the platform secret key server-side.
+    """
+    platform_key = os.getenv("RAZORPAY_KEY_ID", "")
+    if not org_id or not db:
+        return platform_key
+    try:
+        org_doc = db.collection("organizations").document(org_id).get()
+        if org_doc.exists:
+            data = org_doc.to_dict() or {}
+            custom_key = (data.get("tenantConfig") or {}).get("razorpayKeyId", "")
+            if custom_key:
+                return custom_key
+    except Exception:
+        pass
+    return platform_key
+
+
 # ============================================================================
 # PLAN DEFINITIONS
 # ============================================================================
@@ -52,7 +72,7 @@ PLANS = {
         "amounts": {"USD": 0, "INR": 0},
         "currency_display": "USD/INR",
         "period": "once",
-        "description": "1 simulation run, 1 document ingestion, basic ASoV score",
+        "description": "1 simulation run, 1 document ingestion, basic AI visibility score",
         "maxSimulations": 1,
         "seatLimit": 1,
     },
@@ -169,7 +189,7 @@ async def create_subscription_order(request: CreateSubscriptionRequest, auth: di
             "orderId": order["id"],
             "amount": amount,
             "currency": currency,
-            "keyId": os.getenv("RAZORPAY_KEY_ID"),
+            "keyId": _get_tenant_razorpay_key_id(request.orgId),
             "planName": plan["name"],
             "description": plan["description"],
             "displayPrice": plan.get("currency_display", f"{amount}{currency}"),

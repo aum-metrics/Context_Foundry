@@ -23,10 +23,10 @@ export default function AboutPage() {
                         <Logo size={48} showText={false} />
                     </div>
                     <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 bg-gradient-to-br from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-white dark:to-slate-400 bg-clip-text text-transparent">
-                        Defending Narrative<br />in the Agentic Era
+                        Defending Narrative<br />in the AI Search Era
                     </h1>
                     <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                        AUM Context Foundry is the category-defining platform for <strong>Share of Model (SoM)</strong> intelligence. We provide the governance and optimization layer for enterprise brand representation across the global AI search ecosystem.
+                        AUM Context Foundry is the category-defining platform for <strong>AI Recommendation Share</strong> intelligence. We provide the governance and optimization layer for enterprise brand representation across the global AI search ecosystem.
                     </p>
                 </div>
             </section>
@@ -41,7 +41,7 @@ export default function AboutPage() {
 
                     <div className="space-y-8 text-slate-600 dark:text-slate-300 text-lg leading-relaxed">
                         <p>
-                            Historically, market leaders controlled their narrative through PageRank and controlled media. The shift to <strong>Agentic Search</strong> has disrupted this model. Today, the "front door" to your brand is aLLM crawler — and if that crawler misses your core differentiators, your brand effectively disappears from the AI-driven buyer journey.
+                            Historically, market leaders controlled their narrative through PageRank and controlled media. The shift to <strong>AI Search</strong> has disrupted this model. Today, the "front door" to your brand is an AI answer system — and if it misses your core differentiators, your brand effectively disappears from the AI-driven buyer journey.
                         </p>
                         <p>
                             At AUM Context Foundry, we replace guesswork with <strong>Deterministic Reality</strong>. We empower global CMOs to measure exactly how often they are being displaced by rivals in LLM outputs, identifying the precise semantic gaps that cause brand erosion.
@@ -74,7 +74,7 @@ export default function AboutPage() {
                             </div>
                             <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Competitive Displacement Intelligence</h4>
                             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                                See exactly which competitors are shortlisted instead of you on each buyer query, with gap confidence scores and estimated SoM recovery per fix.
+                                See exactly which competitors are shortlisted instead of you on each buyer query, with gap confidence scores and estimated visibility recovery per fix.
                             </p>
                         </div>
 
@@ -92,7 +92,7 @@ export default function AboutPage() {
                             <div className="w-12 h-12 rounded-lg bg-cyan-500/10 dark:bg-cyan-500/20 flex items-center justify-center mb-6">
                                 <Sparkles className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
                             </div>
-                            <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Agentic SEO Protocol</h4>
+                            <h4 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">AI Search Protocol</h4>
                             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
                                 Download structured <code className="text-xs bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded">llms.txt</code> files and inject your ground truth context directly into LLM crawler nodes.
                             </p>

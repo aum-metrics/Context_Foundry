@@ -2,7 +2,7 @@
 
 > **Built by AUM Context Foundry — v5.1.0-hardened-v1.2.6**
 >
-> Enterprise-grade platform for evaluating and optimizing "Agentic Share of Voice" (ASoV)
+> Enterprise-grade platform for measuring AI visibility and competitive recommendation share
 > across RAG-based Generative Engines (GPT-4o, Claude 4.5 Sonnet, Gemini 3 Flash).
 
 ---
@@ -39,7 +39,7 @@ Current frontier models often compress, omit, or distort company positioning. Fo
 
 1. **Ingests** the source material into a zero-retention semantic pipeline (no raw source file persists).
 2. **Simulates** buyer-intent queries against GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash simultaneously.
-3. **Scores** each response using SoM - a 60/40 blend of claim recall and semantic alignment.
+3. **Scores** each response using Visibility Score - a 60/40 blend of claim recall and semantic alignment.
 4. **Publishes** a verified `/llms.txt` manifesto for AI crawlers and answer-engine retrieval workflows.
 
 ### Feature Maturity Matrix
@@ -48,7 +48,7 @@ Current frontier models often compress, omit, or distort company positioning. Fo
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| **SoM Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash). 60/40 blend with Zero-Burn SHA-256 caching. |
+| **Visibility Score Multi-Model Simulation** | ✅ Production | 3-model parallel scoring (GPT-4o, Claude 4.5 Sonnet, and Gemini 3 Flash). 60/40 blend with Zero-Burn SHA-256 caching. |
 | **Zero-Burn Caching** | ✅ Production | SHA-256 hash-based redundant request suppression. Services repeat queries for $0.00 cost. |
 | **Multi-model drift** | ✅ Production | Periodic drift checks + Dynamic Context Re-Embedding for high-precision vector search. |
 | **Zero-Retention PDF Ingestion** | ✅ Production | PDF → CIM pipeline, RAM-only processing. UI explicitly blocks raw data persistence. |
@@ -59,7 +59,7 @@ Current frontier models often compress, omit, or distort company positioning. Fo
 | **Payments (Razorpay)** | ✅ Production | Dedicated India (INR) regional routing enabled. |
 | **Support Chatbot** | ✅ Core Functional | RAG over latest manifest. Efficient low-latency context window. |
 | **Competitor Displacement** | ✅ Core Functional | Targeted displacement queries against primary competitors. |
-| **SEO & GEO Audit** | ✅ Production | `httpx` + `BeautifulSoup4` pipeline. Structural markup evaluation + LLM-based Generative Engine Optimization fidelity scoring against tenant manifest. |
+| **SEO & AI Search Readiness Audit** | ✅ Production | `httpx` + `BeautifulSoup4` pipeline. Structural markup evaluation + LLM-based AI Search Readiness fidelity scoring against tenant manifest. |
 | **Batch Stability** | ✅ Core Functional | High-volume domain evaluation via asynchronous architecture. |
 | **Email Delivery** | ✅ Core Functional | Standardized transactional delivery via Resend. |
 
@@ -67,11 +67,11 @@ Current frontier models often compress, omit, or distort company positioning. Fo
 
 | Dimension | Scope & Evidence Level |
 |-----------|------------------------|
-| Unit & Integration (Backend) | 62 tests validating SoM math, DB transactions, and module routing. Verified continuously via GitHub Actions. |
+| Unit & Integration (Backend) | 62 tests validating Visibility scoring math, DB transactions, and module routing. Verified continuously via GitHub Actions. |
 | UI Smoke Tests (Frontend) | Playwright Next.js build verification, testing DOM mounts and UI routing via auth-bypass. Verified via GitHub Actions. |
 | External E2E (Webhooks/SSO) | Manually gated prior to release (see `PRODUCTION_READINESS.md`). CI explicitly avoids third-party sandbox integration (Razorpay/IdP) to prevent artifact drift. |
 
-### SoM Methodology & Proprietary Heuristic
+### Visibility Score Methodology & Proprietary Heuristic
 
 The 60/40 blend of claim accuracy and cosine similarity is:
 - **Reproducible**: Same inputs always produce the same score (temperature=0).
@@ -96,7 +96,7 @@ To avoid environmental drift or placeholder confusion during staging/production 
 │                                                                     │
 │  Pages:  /login → /dashboard → /admin/dashboard                    │
 │  Components: CoIntelligenceSimulator, SemanticIngestion,            │
-│              SoMCommandCenter, TeamSettings, SSOSettings            │
+│              SoMCommandCenter (Visibility Command Center), TeamSettings, SSOSettings            │
 │  Auth: Firebase Auth (client SDK) → Bearer token on every API call  │
 │                                                                     │
 │  /api/admin/* routes: Next.js API routes (session cookies)          │
@@ -108,14 +108,14 @@ To avoid environmental drift or placeholder confusion during staging/production 
 │  FASTAPI GATEWAY (Python 3.12)                        Port 8000    │
 │                                                                     │
 │  Routers:                                                           │
-│    /api/simulation  – SoM engine + B2B API gateway                 │
+│    /api/simulation  – Visibility Scoring Engine + B2B API gateway                 │
 │    /api/ingestion   – Zero-retention PDF pipeline                   │
 │    /api/workspaces  – Org provisioning, members, invites, manifest  │
 │    /api/payments    – Razorpay orders, verify, webhooks             │
 │    /api/sso         – Enterprise OAuth2 SSO config + callback       │
 │    /api/keys        – B2B API key lifecycle                         │
 │    /api/chatbot     – RAG-powered support bot                       │
-│    /api/seo         – Async SEO/GEO audit                          │
+│    /api/seo         – Async SEO/AI Search Readiness audit                          │
 │    /api/competitor  – Competitive displacement analysis             │
 │    /api/batch       – Batch domain evaluation                      │
 │    /api/audit       – SOC2 audit logs                               │
@@ -135,7 +135,7 @@ To avoid environmental drift or placeholder confusion during staging/production 
 │    users/{uid}                    – Identity, orgId, role            │
 │    organizations/{orgId}          – Subscription, settings, apiKeys  │
 │      /manifests/{version}         – Ingested context documents       │
-│      /scoringHistory/{id}         – SoM simulation results          │
+│      /scoringHistory/{id}         – Visibility Score simulation results          │
 │      /simulationCache/{hash}      – Cached simulation responses      │
 │      /payments/{id}               – Payment records                  │
 │      /pendingInvites/{id}         – Pending member invitations       │
@@ -177,7 +177,7 @@ AUM/
 ├── backend/
 │   ├── app/
 │   │   ├── api/                        # All FastAPI route modules
-│   │   │   ├── simulation.py             # SoM engine (810 lines) — crown jewel
+│   │   │   ├── simulation.py             # Visibility Scoring Engine (810 lines) — crown jewel
 │   │   │   ├── ingestion.py              # Zero-retention PDF/URL → CIM pipeline
 │   │   │   ├── workspaces.py             # Org CRUD, members, invites, manifest, rate limiter
 │   │   │   ├── payments.py               # Razorpay order/verify/webhook/payment-link
@@ -185,7 +185,7 @@ AUM/
 │   │   │   ├── admin.py                  # Admin dashboard endpoints (session auth)
 │   │   │   ├── api_keys.py              # B2B API key generate/revoke/list
 │   │   │   ├── chatbot.py               # RAG-powered support chatbot
-│   │   │   ├── seo.py                   # Async SEO/GEO audit (httpx + BS4)
+│   │   │   ├── seo.py                   # Async SEO/AI Search Readiness audit (httpx + BS4)
 │   │   │   ├── competitor.py            # Competitive displacement analysis
 │   │   │   ├── batch_analysis.py        # Batch domain evaluation
 │   │   │   ├── audit.py                 # SOC2 audit log writer
@@ -212,7 +212,7 @@ AUM/
 │   │
 │   ├── tests/                           # pytest test suite
 │   │   ├── conftest.py                   # Auto-patches Firestore + security for all tests
-│   │   ├── test_simulation.py           # SoM engine + 60/40 math tests
+│   │   ├── test_simulation.py           # Visibility Scoring Engine + 60/40 math tests
 │   │   ├── test_ingestion.py            # Document ingestion pipeline tests
 │   │   ├── test_competitor.py           # Competitor analysis tests
 │   │   ├── test_audit.py               # SOC2 audit logging tests
@@ -248,8 +248,8 @@ AUM/
 │   │   │       └── payment-link/route.ts # Admin payment link proxy
 │   │   │
 │   │   ├── components/                  # React UI components
-│   │   │   ├── CoIntelligenceSimulator.tsx  # SoM simulation UI (run, results, charts)
-│   │   │   ├── SoMCommandCenter.tsx        # Share-of-Mind monitoring dashboard
+│   │   │   ├── CoIntelligenceSimulator.tsx  # Visibility Score simulation UI (run, results, charts)
+│   │   │   ├── SoMCommandCenter.tsx        # Visibility command center dashboard
 │   │   │   ├── SemanticIngestion.tsx        # Document upload + CIM visualization
 │   │   │   ├── TeamSettings.tsx            # Member management + invitations
 │   │   │   ├── SSOSettings.tsx             # Enterprise SSO configuration UI
@@ -399,7 +399,7 @@ PYTHONPATH=app python3 app/main.py
 ✅ Global Rate Limiter configured (100/min)
 ✅ Security middleware (CORS & TrustedHost) configured
 📡 Loading API routes...
-✅ Loaded SoM Simulation Engine     -> /api/simulation
+✅ Loaded Visibility Simulation Engine     -> /api/simulation
 ✅ Loaded Ingestion Pipeline         -> /api/ingestion
 ✅ Loaded Workspaces                 -> /api/workspaces
 ✅ Loaded Methodology Tracker        -> /api/methods
@@ -516,19 +516,19 @@ Build policy: `ignoreDuringBuilds: false` in `next.config.ts` means **lint error
 
 ## 9. Core Technical Moats
 
-### SoM Engine (60/40 Scoring Heuristic)
-The SoM engine (`backend/app/api/simulation.py`, 810 lines) produces reproducible fidelity scores:
+### Visibility Scoring Engine (60/40 Scoring Heuristic)
+The Visibility Scoring Engine (`backend/app/api/simulation.py`, 810 lines) produces reproducible fidelity scores:
 
 - **60% Claim Accuracy**: Atomic factual claims are extracted from AI responses using an LLM-as-a-judge sub-routine, then cross-verified against the organization's ground-truth document.
 - **40% Semantic Alignment**: Cosine similarity between the embedded AI response and the Context Information Model (CIM) in 1536-dimensional space.
-- **Formula**: `SoM = (0.6 * claim_accuracy) + (0.4 * semantic_alignment)`
+- **Formula**: `Visibility Score = (0.6 * claim_accuracy) + (0.4 * semantic_alignment)`
 - **Key functions**: `extract_claims()`, `verify_claims()`, `compute_divergence()`, `_score_model()`
 - **Parallel execution**: `asyncio.gather()` runs all 3 models simultaneously (~10s instead of ~25s).
 - **Methodology caveat**: The 60/40 weighting is an engineering design choice. It is not derived from ablation studies or peer-reviewed research. See the Methodology Candor section above.
 
 ### Centralized Model Versioning (`model_config.py`)
 - Single source of truth for all LLM/Embedding model endpoints.
-- Prevents version drift across SoM engines, claim extractors, semantic chunking, and GEO scoring pipelines.
+- Prevents version drift across Visibility Scoring Engines, claim extractors, semantic chunking, and AI Search Readiness scoring pipelines.
 - Supports **Claude 4.5 Sonnet**, **Gemini 3 Flash**, and **GPT-4o**.
 
 ### Zero-Burn Caching & Context Re-Embedding
@@ -567,7 +567,7 @@ The SoM engine (`backend/app/api/simulation.py`, 810 lines) produces reproducibl
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/simulation/run` | Firebase JWT | Run SoM simulation (3 models) |
+| POST | `/api/simulation/run` | Firebase JWT | Run Visibility Score simulation (3 models) |
 | POST | `/api/simulation/v1/run` | API Key | B2B simulation gateway (rate-limited) |
 | GET | `/api/simulation/export/{orgId}` | Firebase JWT + org-verify | Export scoring history as CSV |
 | POST | `/api/ingestion/parse` | Firebase JWT | Zero-retention PDF ingestion |
@@ -627,7 +627,7 @@ The SoM engine (`backend/app/api/simulation.py`, 810 lines) produces reproducibl
 |--------|------|------|-------------|
 | GET | `/` | Public | Root info endpoint |
 | GET | `/api/health` | Public | Health check with Firestore connectivity |
-| GET | `/api/methods/` | Public | Transparent algorithmic breakdown of SoM heuristics |
+| GET | `/api/methods/` | Public | Transparent algorithmic breakdown of Visibility Score heuristics |
 | GET | `/llms.txt` | Public | Default marketing manifesto |
 | GET | `/llms.txt?orgId=xxx&version=latest` | Public | Tenant-specific manifesto (503 on failure) |
 
@@ -649,15 +649,15 @@ The SoM engine (`backend/app/api/simulation.py`, 810 lines) produces reproducibl
 | `/privacy` | `app/privacy/page.tsx` | Privacy policy |
 | `/terms` | `app/terms/page.tsx` | Terms of service |
 | `/security` | `app/security/page.tsx` | Security information |
-| `/methods` | `app/methods/page.tsx` | SoM scoring methodology |
+| `/methods` | `app/methods/page.tsx` | Visibility Score scoring methodology |
 | `/status` | `app/status/page.tsx` | System status |
 
 ### Key Components
 
 | Component | File | What It Does |
 |-----------|------|-------------|
-| `CoIntelligenceSimulator` | SoM simulation UI — prompt input, run simulation, display results with radar charts |
-| `SoMCommandCenter` | Share-of-Mind monitoring — historical fidelity tracking, competitive positioning |
+| `CoIntelligenceSimulator` | Visibility Score simulation UI — prompt input, run simulation, display results with radar charts |
+| `SoMCommandCenter` | Visibility command center — historical fidelity tracking, competitive positioning |
 | `SemanticIngestion` | Document upload — PDF parsing, CIM visualization, manifest management |
 | `TeamSettings` | Member management — invite, resend, revoke, role assignment |
 | `SSOSettings` | Enterprise SSO — OAuth2 provider configuration, domain management |
@@ -665,7 +665,7 @@ The SoM engine (`backend/app/api/simulation.py`, 810 lines) produces reproducibl
 | `AgentManifest` | llms.txt manifest — editor/viewer for tenant manifest content |
 | `AuthWrapper` | Auth state provider — Firebase listener, mock auth in dev |
 | `OrganizationContext` | React Context — org state, subscription, workspace info |
-| `BrandHealthCertificate` | AI Brand Intelligence Report — Firestore persisted stats, SoM methodology, PDF export |
+| `BrandHealthCertificate` | AI Brand Intelligence Report — Firestore persisted stats, Visibility scoring methodology, PDF export |
 
 ---
 
@@ -903,7 +903,7 @@ To prevent narrative fragmentation during enterprise acquisition or technical au
 | Document | Audience | Scope |
 |----------|----------|-------|
 | `docs/02_Frontend_Implementation_Guide.md` | React Devs | App Router structural boundaries, Context providers, Hook usage |
-| `docs/03_Backend_API_and_Logic_Reference.md` | Python Devs | FastAPI patterns, Pydantic strict-models, SoM math functions |
+| `docs/03_Backend_API_and_Logic_Reference.md` | Python Devs | FastAPI patterns, Pydantic strict-models, Visibility scoring math functions |
 | `Admin_Support_Handbook.md` | Support | Resolving member invitation races, Razorpay webhook stalls |
 | `DEV_MOCK_PATHS.md` | Security | Exhaustive map of development bypasses (hard-blocked in prod) |
 

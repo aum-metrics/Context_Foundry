@@ -1,5 +1,5 @@
 /**
- * The Agentic SEO Operating Model
+ * The AI Search Operating Model
  * Deep dive into machine-readable positioning for Acquisition Readiness.
  */
 "use client";
@@ -23,7 +23,7 @@ export default function AgenticSEOPage() {
                     >
                         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-600 dark:text-cyan-400 mb-4">Technical Strategy</p>
                         <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 dark:text-white mb-8 leading-[0.9]">
-                            The Agentic SEO <br />
+                            The AI Search <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-indigo-500">Operating Model</span>
                         </h1>
                         <div className="flex items-center gap-4 text-sm text-slate-500 mb-12">
@@ -40,12 +40,12 @@ export default function AgenticSEOPage() {
 
                     <div className="prose prose-slate dark:prose-invert max-w-none space-y-8 text-lg font-light leading-relaxed">
                         <p>
-                            Traditional SEO was built for the <em>Browser</em>. Agentic SEO is built for the <em>Crawler</em>. This transition represents a fundamental shift from human-readability to machine-interpretability.
+                            Traditional SEO was built for the <em>Browser</em>. AI Search is built for the <em>Crawler</em>. This transition represents a fundamental shift from human-readability to machine-interpretability.
                         </p>
 
                         <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white pt-8">Beyond PageRank</h2>
                         <p>
-                            In the agentic era, a crawler visits your site, extracts a subset of information, and maps it into a vector space. If your content is wrapped in ambiguous marketing speak, the "semantic density" is too low for a model to make a high-confidence recommendation.
+                            In the AI search era, a crawler visits your site, extracts a subset of information, and maps it into a vector space. If your content is wrapped in ambiguous marketing speak, the "semantic density" is too low for a model to make a high-confidence recommendation.
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-12">
@@ -72,12 +72,12 @@ export default function AgenticSEOPage() {
                         </p>
                         
                         <p>
-                            The Agentic SEO Operating Model (ASOM) is the framework we use at AUM Context Foundry to ensure that when an AI speaks for your brand, it says exactly what you intended — no more, no less.
+                            The AI Search Operating Model is the framework we use at AUM Context Foundry to ensure that when an AI speaks for your brand, it says exactly what you intended — no more, no less.
                         </p>
                     </div>
 
                     <div className="mt-24 pt-16 border-t border-slate-200 dark:border-white/10 text-center">
-                        <p className="text-slate-500 mb-8 italic">Interested in implementing ASOM for your enterprise?</p>
+                        <p className="text-slate-500 mb-8 italic">Interested in implementing an AI Search operating model for your enterprise?</p>
                         <Link href="/methods" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
                             Read about our Methodology →
                         </Link>

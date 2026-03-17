@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { tenantConfig } from "@/lib/whitelabel";
 
 interface Props {
     children?: ReactNode;
@@ -36,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
                         </div>
                         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Something went wrong</h1>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                            AUM Context Foundry encountered an unexpected UI render error. You can attempt to recover by refreshing the application.
+                            {tenantConfig.brandName} encountered an unexpected UI render error. You can attempt to recover by refreshing the application.
                         </p>
                         <div className="w-full bg-slate-100 dark:bg-slate-800 p-4 rounded-lg text-left overflow-hidden">
                             <p className="text-xs font-mono text-slate-600 dark:text-slate-400 break-words line-clamp-3">

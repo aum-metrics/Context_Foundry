@@ -237,12 +237,6 @@ async def parse_document(
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
 
-        hint_org_name = ""
-        if db:
-            org_doc = db.collection("organizations").document(orgId).get()
-            if org_doc.exists:
-                hint_org_name = org_doc.to_dict().get("name", "")
-            
         # Fetch current organization name for better semantic pinning
         hint_org_name = ""
         if db:
@@ -478,6 +472,12 @@ async def parse_url(
         doc_sample = raw_text[:20000]
         if len(raw_text) > 30000:
             doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
+
+        hint_org_name = ""
+        if db:
+            org_doc = db.collection("organizations").document(orgId).get()
+            if org_doc.exists:
+                hint_org_name = org_doc.to_dict().get("name", "")
 
         schema_prompt = (
             "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema from this web page.\n"

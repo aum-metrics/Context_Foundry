@@ -44,7 +44,7 @@ from utils.task_queue import FirestoreTaskQueue
 
 
 async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
-    """Background worker: scrape page with httpx + BS4, score SEO/GEO fidelity."""
+    """Background worker: scrape page with httpx + BS4, score AI Search Readiness."""
     async def worker():
         from core.config import settings
         is_dev = settings.ENV == "development"
@@ -142,7 +142,7 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
             "detail": f"HTTP {status_code}"
         })
 
-        # --- GEO / JSON-LD CHECKS ---
+        # --- AI SEARCH READINESS / JSON-LD CHECKS ---
         checks.append({
             "check": "Schema.org JSON-LD",
             "status": "pass" if jsonld_count > 0 else "fail",
@@ -167,7 +167,7 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
         geo_score = structural_geo_score
         geo_method = "structural-readiness"
 
-        # --- LLM-BASED GEO COMPARISON (if org has OpenAI key) ---
+        # --- LLM-BASED AI SEARCH READINESS COMPARISON (if org has OpenAI key) ---
         geo_recommendation = ""
         if db:
             try:
@@ -184,7 +184,7 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
 
                     if openai_key and manifest_content:
                         client = OpenAI(api_key=openai_key)
-                        geo_prompt = f"""You are an AI SEO/GEO auditor. Compare the page content below against the organization's verified manifest.
+                        geo_prompt = f"""You are an AI search readiness auditor. Compare the page content below against the organization's verified manifest.
 
 Page Title: {title}
 Page Body: {body_text[:1500]}
@@ -193,7 +193,7 @@ Existing JSON-LD blocks: {jsonld_count}
 Org Manifest:
 {manifest_content}
 
-Rate GEO (Generative Engine Optimization) fidelity 0-100: how well would AI engines like GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet represent this company based only on this page?
+Rate AI Search Readiness 0-100: how well would AI engines like GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet represent this company based only on this page?
 Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement tip"}}"""
                         resp = client.chat.completions.create(
                             messages=[{"role": "user", "content": geo_prompt}],
@@ -207,7 +207,7 @@ Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement t
                         geo_method = "blended-structural-and-manifest-alignment"
                         geo_recommendation = llm_result.get("recommendation", "")
             except Exception as e:
-                logger.warning(f"LLM GEO scoring failed: {e}")
+                logger.warning(f"LLM AI Search Readiness scoring failed: {e}")
 
         overall = round((seo_score * 0.5) + (geo_score * 0.5))
         return {

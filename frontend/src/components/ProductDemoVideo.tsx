@@ -80,11 +80,11 @@ export default function ProductFlowShowcase() {
         },
         {
             id: 2,
-            title: "SoM Command Center",
+            title: "AI Recommendation Command Center",
             subtitle: "Live competitive ranking: see which AI buyers see first, second, or not at all.",
             icon: Activity,
             tag: "The Result",
-            outputLabel: "Share of Model Index",
+            outputLabel: "AI Recommendation Index",
             outputDetail: "Real-time ranking of how AI engines shortlist your firm across buyer-intent queries.",
             accent: "cyan",
             preview: (
@@ -103,7 +103,7 @@ export default function ProductFlowShowcase() {
                             <p className="text-[11px] text-slate-400">"Recommended for broad enterprise scale, but not for specialist analytics depth."</p>
                         </div>
                         <div className="p-2 rounded bg-indigo-500/10 border border-indigo-500/20">
-                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">NORTHSTAR ANALYTICS (SoM: 18% — Displaced)</p>
+                            <p className="text-[10px] text-indigo-400 font-bold mb-1 font-mono">NORTHSTAR ANALYTICS (Visibility: 18% — Displaced)</p>
                             <p className="text-[11px] text-slate-400">&quot;Recommended for data modernization, but displaced on enterprise transformation scale by Accenture.&quot;</p>
                         </div>
                     </div>
@@ -117,7 +117,7 @@ export default function ProductFlowShowcase() {
             icon: Globe,
             tag: "The Output",
             outputLabel: "/llms.txt Provisioning",
-            outputDetail: "Corrected narrative pushed to the Agentic SEO layer.",
+            outputDetail: "Corrected narrative pushed to the AI search layer.",
             accent: "fuchsia",
             preview: (
                 <div className="space-y-4">
@@ -314,7 +314,7 @@ export default function ProductFlowShowcase() {
             <div className="mt-16 w-full py-8 border-t border-slate-200 dark:border-white/5 flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
                 <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">NIST AI RMF</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Deterministic Scoring</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <Database className="w-4 h-4" />

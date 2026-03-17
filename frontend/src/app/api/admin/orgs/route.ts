@@ -23,7 +23,11 @@ export async function GET(request: NextRequest) {
 
     try {
         const resp = await fetch(`${BACKEND_URL}/api/admin/orgs?${params.toString()}`, {
-            headers: { "X-Admin-Token": adminToken },
+            headers: {
+                "X-Admin-Token": adminToken,
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            cache: "no-store",
         });
         const data = await resp.json();
         return NextResponse.json(data, { status: resp.status });

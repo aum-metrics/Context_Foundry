@@ -57,7 +57,7 @@ export default function ContactPage() {
                 >
                     <h1 className="text-5xl md:text-6xl font-light tracking-tighter mb-6 text-slate-900 dark:text-white">Get in Touch</h1>
                     <p className={`text-xl font-light max-w-2xl mx-auto ${textMuted}`}>
-                        Connect with AUM Context Foundry to secure your Agentic SEO pipeline and monitor brand visibility in generative search.
+                        Connect with AUM Context Foundry to secure your AI search presence and monitor brand visibility in generative search.
                     </p>
                 </motion.div>
 

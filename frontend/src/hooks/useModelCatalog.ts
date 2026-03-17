@@ -9,6 +9,7 @@ export interface CatalogModel {
     apiModelId: string;
     enabled: boolean;
     order: number;
+    slot?: string;
 }
 
 const fetcher = async (url: string) => {
@@ -19,7 +20,20 @@ const fetcher = async (url: string) => {
 
 export function useModelCatalog() {
     const { data, error, isLoading, mutate } = useSWR("/api/methods/model-catalog", fetcher);
-    const models: CatalogModel[] = (data?.models || []).filter((model: CatalogModel) => model.enabled !== false);
+    const rawModels: CatalogModel[] = (data?.models || [])
+        .filter((model: CatalogModel) => model.enabled !== false)
+        .filter((model: CatalogModel) => model.slot ? model.slot === "simulation" : true)
+        .sort((a: CatalogModel, b: CatalogModel) => (a.order ?? 999) - (b.order ?? 999));
+
+    // Deduplicate by provider so we only show one model per provider in the UI.
+    const byProvider = new Map<string, CatalogModel>();
+    rawModels.forEach((model) => {
+        const key = model.provider?.toLowerCase() || model.displayName;
+        if (!byProvider.has(key)) {
+            byProvider.set(key, model);
+        }
+    });
+    const models: CatalogModel[] = Array.from(byProvider.values());
     return {
         models,
         loading: isLoading,

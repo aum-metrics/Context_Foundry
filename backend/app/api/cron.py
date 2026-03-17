@@ -48,15 +48,22 @@ def _count_usage_since(org_id: str, cycle_start: datetime) -> int:
         return 0
     usage_ref = db.collection("organizations").document(org_id).collection("usageLedger")
     query = usage_ref.where("timestamp", ">=", cycle_start)
+    # Try Firestore count aggregation first (server-side, O(1))
     try:
-        count_snapshot = query.count().get()
-        if count_snapshot:
-            return int(count_snapshot[0].value)
-    except Exception:
-        pass
+        agg = query.count()
+        result = agg.get()
+        if result:
+            for row in result:
+                if hasattr(row, "value"):
+                    return int(row.value)
+    except Exception as count_err:
+        logger.debug(f"count() aggregation failed ({count_err}), falling back to stream")
+    # Fallback: stream all docs and count client-side
     try:
-        return len(list(query.stream()))
-    except Exception:
+        docs = list(query.limit(10000).stream())
+        return len(docs)
+    except Exception as e:
+        logger.error(f"Usage count fallback also failed for {org_id}: {e}")
         return 0
 
 def verify_cron_secret(request: Request):

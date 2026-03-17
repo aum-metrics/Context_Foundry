@@ -7,7 +7,7 @@
 ---
 
 ## 1. Executive Summary
-AUM Context Foundry is the first-to-market **Decision Intelligence System** designed to solve the "Hallucination & Exclusion" problem in agentic search. As enterprises shift from PageRank to LLM-driven discovery (Generative Engine Optimization), AUM provides the critical governance, measurement, and optimization layer that ensures brand fidelity.
+AUM Context Foundry is the first-to-market **Decision Intelligence System** designed to solve the "Hallucination & Exclusion" problem in agentic search. As enterprises shift from PageRank to LLM-driven discovery (AI Search Readiness), AUM provides the critical governance, measurement, and optimization layer that ensures brand fidelity.
 
 ## 2. Technical Architecture
 ### 2.1 The Simulation Engine
@@ -20,7 +20,7 @@ AUM Context Foundry is the first-to-market **Decision Intelligence System** desi
 *   **Identity Management**: Integrated with Firebase Auth and Google Cloud SSO, supporting enterprise-wide secure access.
 
 ## 3. Market Differentiation (The "Moat")
-*   **Share of Model (SoM)**: The first deterministic metric for measuring AI search visibility relative to competitors.
+*   **Visibility Score**: The deterministic metric for measuring AI search visibility relative to competitors.
 *   **Prescriptive Remediation**: Unlike generic "Audit" tools, AUM provides exact copy blocks and $llms.txt manifests to fix detected gaps.
 *   **Industry Agnostic**: Automated vertical-detection libraries allow immediate deployment across SaaS, Healthcare, Banking, and Retail.
 

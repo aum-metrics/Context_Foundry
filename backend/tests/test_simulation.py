@@ -121,7 +121,7 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
 
 def test_lcrs_scoring_math():
     """
-    Test the fundamental LCRS 60/40 blend mathematics independently of external APIs.
+    Test the fundamental Visibility Score 60/40 blend mathematics independently of external APIs.
     """
     claim_match = 1.0
     semantic_sim = 1.0

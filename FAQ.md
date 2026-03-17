@@ -11,8 +11,8 @@ The current runtime model set is:
 - Claude 4.5 Sonnet
 - Gemini 3 Flash
 
-**What is LCRS?**  
-LCRS is the product's representation score. It blends:
+**What is Visibility Score?**  
+Visibility Score is the product's representation score. It blends:
 - claim recall against the verified manifest
 - semantic alignment between the answer and the verified context
 
@@ -50,7 +50,7 @@ Growth is the first paid operating tier:
 - 100 simulations per billing cycle
 - full tri-model comparison
 - full dashboard access
-- SEO + GEO readiness
+- SEO + AI Search Readiness audit
 - report export
 - API-key generation
 
@@ -103,10 +103,10 @@ Yes. Scale and Enterprise organizations can configure SSO for supported provider
 **Can AUM be deployed in a private environment?**  
 The product is containerized and can be discussed for private deployment or custom enterprise environments. That is a commercial / implementation discussion, not the default self-serve path.
 
-**How should buyers think about GEO vs drift?**  
+**How should buyers think about AI Search Readiness vs drift?**  
 They are not the same metric:
-- drift / LCRS measures how well model answers match the verified context on tested prompts
-- GEO measures page-level readiness and manifest alignment for generative discovery
+- drift / Visibility Score measures how well model answers match the verified context on tested prompts
+- AI Search Readiness measures page-level readiness and manifest alignment for generative discovery
 
 A company can improve one without automatically improving the other.
 
@@ -114,4 +114,3 @@ A company can improve one without automatically improving the other.
 
 **How do customers contact AUM?**  
 hello@aumcontextfoundry.com
-

@@ -72,6 +72,7 @@ interface UseRemediationArgs {
     analysisSubject: string;
     seoResult: SEOResult | null;
     filteredHistoryEntries: ScoringHistoryEntry[] | null | undefined;
+    isDemoOrg?: boolean;
 }
 
 export function useRemediation({
@@ -81,6 +82,7 @@ export function useRemediation({
     analysisSubject,
     seoResult,
     filteredHistoryEntries,
+    isDemoOrg = false,
 }: UseRemediationArgs) {
     const queryClusterInsights = useMemo<QueryClusterInsight[]>(() => {
         const getCompetitorForCategory = (category: string) => {
@@ -151,7 +153,7 @@ export function useRemediation({
         if (!filteredHistoryEntries || filteredHistoryEntries.length < 2) return null;
         
         // 🚨 DEMO REFINEMENT: If this is a demo org, hide the delta som to avoid misleading prospect
-        const isDemo = analysisSubject.toLowerCase().includes("latentview") || analysisSubject.toLowerCase().includes("demo");
+        const isDemo = isDemoOrg;
 
         const chronological = [...filteredHistoryEntries];
         const baseline = chronological[0];
@@ -172,7 +174,7 @@ export function useRemediation({
             deltaHallucinationRate: isDemo ? 0 : currentHallucinationRate - baselineHallucinationRate,
             isDemoBypass: isDemo
         };
-    }, [filteredHistoryEntries, analysisSubject]);
+    }, [filteredHistoryEntries, isDemoOrg]);
 
     const remediationRecommendations = useMemo<RemediationRecommendation[]>(() => {
         const recommendations = weakClusters.map((cluster) => {
@@ -201,13 +203,13 @@ export function useRemediation({
             const weakChecks = seoResult.checks.filter((check) => check.status !== "pass").slice(0, 2);
             if (weakChecks.length > 0) {
                 recommendations.push({
-                    title: "Close GEO evidence gaps on the public site",
-                    category: "Site-level GEO readiness",
-                    observedOutcome: `${seoResult.geoScore}% GEO score with ${weakChecks.map((check) => check.check).join(", ")} flagged.`,
+                    title: "Close AI Search Readiness gaps on the public site",
+                    category: "Site-level AI Search Readiness",
+                    observedOutcome: `${seoResult.geoScore}% AI Search Readiness score with ${weakChecks.map((check) => check.check).join(", ")} flagged.`,
                     winningCompetitor: competitorRanking[0]?.name || "No competitor identified",
                     missingClaims: weakChecks.map((check) => check.check),
                     pageTargets: resolveRemediationTargets({
-                        category: "Site-level GEO readiness",
+                        category: "Site-level AI Search Readiness",
                         schemaData: manifestSnapshot?.schemaData || undefined,
                         sourceUrl: manifestSnapshot?.sourceUrl,
                         missingClaims: weakChecks.map((check) => check.check),

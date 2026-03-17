@@ -11,7 +11,7 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | Edge Client | Next.js 15 (App Router, React 19) | Dashboard, Simulator UI, Dynamic `/llms.txt` |
-| Gateway | Python FastAPI 0.115+ | SoM evaluation, ingestion, billing, SSO |
+| Gateway | Python FastAPI 0.115+ | Visibility Score evaluation, ingestion, billing, SSO |
 | State | Google Firestore (NoSQL) | Semantic namespaces, org metadata, audit logs |
 | Identity | Firebase Auth + firebase-admin | Multi-tenant session management |
 | Payments | Razorpay | Subscription lifecycle (INR billing) |
@@ -62,11 +62,11 @@ AUM is a decoupled, multi-tenant infrastructure platform with a stateless edge c
 
 ---
 
-## 3. SoM Engine (Simulation)
+## 3. Visibility Scoring Engine (Simulation)
 
 ### Mathematical Formula
 ```
-SoM Score = (0.60 × claim_accuracy) + (0.40 × semantic_fidelity)
+Visibility Score = (0.60 × claim_accuracy) + (0.40 × semantic_fidelity)
 ```
 
 Where:
@@ -88,12 +88,12 @@ if openai_key == "internal_platform_managed":
 ```
 Sensitive keys are **always redacted** from the final API response to prevent client-side exposure.
 
-### SoM Formula (Scoring Heuristic)
+### Visibility Score Formula (Scoring Heuristic)
 
 The Logical Contextual Representation Score is a blended metric:
 
 ```
-SoM = (0.6 × Cs/Ct) + (0.4 × (1 − Dc))
+Visibility Score = (0.6 × Cs/Ct) + (0.4 × (1 − Dc))
 ```
 
 > **Methodology candor**: The 60/40 weighting is an engineering design choice optimizing for factual accuracy over semantic similarity. It is not derived from ablation studies, published research, or peer review. A diligence buyer should understand this is a practical heuristic, not a scientifically validated metric.
@@ -307,7 +307,7 @@ POST /api/payments/webhook
 ```
 backend/tests/
   conftest.py          — autouse Firestore mock + dependency override cleanup per test
-  test_simulation.py   — SoM math + simulation endpoint (happy + unhappy path)
+  test_simulation.py   — Visibility scoring math + simulation endpoint (happy + unhappy path)
   test_ingestion.py    — recursive_split + parse endpoint
   test_competitor.py   — displacement endpoint + dev fallback
   test_audit.py        — audit log write + retrieval endpoint

@@ -42,10 +42,10 @@ The place where the active company context is created or refreshed through:
 
 ### Brand Health Report
 The executive artifact. It summarizes:
-- average SoM
+- average Visibility Score
 - model breakdown
 - executive interpretation
-- GEO snapshot
+- AI Search Readiness snapshot
 - competitor displacement
 - remediation delta
 
@@ -67,7 +67,7 @@ Operating tier for internal teams:
 - full dashboard
 - tri-model access
 - report export
-- SEO + GEO readiness
+- SEO + AI Search Readiness audit
 - API-key generation
 
 Public price:
@@ -108,4 +108,3 @@ External API-key generation is a paid-tier capability. Explorer does not auto-pr
 ## Contact
 
 hello@aumcontextfoundry.com
-

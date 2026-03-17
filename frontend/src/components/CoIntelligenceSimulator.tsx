@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Zap, Shield, CheckCircle2, XCircle, AlertTriangle, Beaker, Send, MessageSquare, Cpu, CheckCircle, Lock, Download, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrganization } from "./OrganizationContext";
@@ -52,6 +52,7 @@ export default function CoIntelligenceSimulator() {
     const [byokError, setByokError] = useState(false);
     const isExplorer = organization?.subscriptionTier === "explorer";
     const analysisSubject = organization ? (analysisContexts.find((context) => context.version === activeManifestVersion)?.name || organization.name) : "your company";
+    const promptFetchKeyRef = useRef<string>("");
 
     const getEffectiveToken = async () => {
         const token = await auth.currentUser?.getIdToken();
@@ -64,6 +65,10 @@ export default function CoIntelligenceSimulator() {
 
     useEffect(() => {
         if (!organization) return;
+        const key = `${organization.id}|${activeManifestVersion}|${refreshKey}`;
+        if (promptFetchKeyRef.current === key) return;
+        promptFetchKeyRef.current = key;
+        let cancelled = false;
 
         const fetchData = async () => {
             try {
@@ -92,8 +97,9 @@ export default function CoIntelligenceSimulator() {
                             if (res.ok) {
                                 const d = await res.json();
                                 if (d.prompts && d.prompts.length > 0) {
+                                    if (cancelled) return;
                                     setDynamicPrompts(d.prompts);
-                                    setActivePrompt(d.prompts[0]);
+                                    setActivePrompt((prev) => (prev && d.prompts.includes(prev)) ? prev : d.prompts[0]);
                                     return;
                                 }
                             }
@@ -116,25 +122,33 @@ export default function CoIntelligenceSimulator() {
                         `How does ${analysisSubject} differentiate from other established players in its market category?`,
                         `What specific outcomes and proof points does ${analysisSubject} offer that enterprise buyers care most about?`
                     ];
+                    if (cancelled) return;
                     setDynamicPrompts(fallbackPrompts);
-                    setActivePrompt(fallbackPrompts[0]);
+                    setActivePrompt((prev) => (prev && fallbackPrompts.includes(prev)) ? prev : fallbackPrompts[0]);
                 } else {
+                    if (cancelled) return;
                     setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
                     // No manifest yet — show generic but sensible prompts
-                    setDynamicPrompts([
+                    const genericPrompts = [
                         `Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`,
                         `What are the key criteria enterprise buyers use to shortlist a partner like ${analysisSubject}?`,
                         `How does ${analysisSubject} differentiate from other established players in its market category?`,
                         `Which partner is best for large-scale enterprise transformation for Fortune 500 companies, and why would a buyer shortlist ${analysisSubject}?`
-                    ]);
-                    setActivePrompt(`Which companies are leading AI-driven enterprise transformation, and how does ${analysisSubject} compare?`);
+                    ];
+                    setDynamicPrompts(genericPrompts);
+                    setActivePrompt((prev) => (prev && genericPrompts.includes(prev)) ? prev : genericPrompts[0]);
                 }
             } catch (e) {
                 console.error("Manifest fetch error:", e);
-                setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
+                if (!cancelled) {
+                    setManifestVersions([{ id: "latest", name: "Current Context" }, ...analysisContexts.map((context) => ({ id: context.version, name: context.name }))]);
+                }
             }
         };
         fetchData();
+        return () => {
+            cancelled = true;
+        };
     }, [organization, refreshKey, activeManifestVersion, analysisContexts, analysisSubject]);
 
     useEffect(() => {
@@ -518,7 +532,7 @@ export default function CoIntelligenceSimulator() {
                                         {!isExplorer && !result.error && (
                                             <button
                                                 onClick={() => {
-                                                    const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | SoM v1.2.0*`;
+                                                    const md = `### Model: ${result.model}\n\n**Accuracy:** ${result.accuracy}%\n\n**Response:**\n${result.answer}\n\n---\n*Audit Log: ${new Date().toISOString()} | AI Search Presence v1.2.0*`;
                                                     navigator.clipboard.writeText(md);
                                                 }}
                                                 className="ml-auto flex items-center text-[10px] text-indigo-500 hover:text-indigo-400 font-semibold uppercase tracking-widest"
@@ -559,7 +573,7 @@ export default function CoIntelligenceSimulator() {
                                     <div className="flex-1">
                                         <div className="flex items-center space-x-2 mb-2">
                                             <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold">Buyer Ranking Verdict</span>
-                                            <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold border border-emerald-500/30">SoM Verified</span>
+                                            <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-bold border border-emerald-500/30">Verified</span>
                                         </div>
                                         <h4 className="text-xl font-medium mb-2 leading-tight">{adjudication.master_verdict}</h4>
                                         <p className="text-indigo-100 text-sm opacity-80 leading-relaxed italic">&ldquo;{adjudication.audit_notes}&rdquo;</p>

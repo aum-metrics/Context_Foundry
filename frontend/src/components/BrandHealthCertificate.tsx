@@ -9,6 +9,8 @@ import { useOrganization } from "./OrganizationContext";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { auth } from "@/lib/firebase";
 import { describeGeoMethod } from "@/lib/geoMethod";
+import { tenantConfig } from "@/lib/whitelabel";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
 import type { RemediationPageTarget } from "@/lib/remediationTargets";
 
 interface ModelResult {
@@ -111,6 +113,31 @@ function hallucinationRate(results: ModelResult[]): number {
     return Math.round((results.filter((result) => result.hasHallucination).length / results.length) * 100);
 }
 
+async function fetchImageAsBase64(url: string): Promise<{ dataUrl: string; format: "PNG" | "JPEG" } | null> {
+    try {
+        const resp = await fetch(url, { mode: "cors" });
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        const mime = blob.type.toLowerCase();
+        const format = mime.includes("png") ? "PNG" : "JPEG";
+        return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUrl = reader.result as string;
+                if (!dataUrl?.startsWith("data:image")) {
+                    resolve(null);
+                    return;
+                }
+                resolve({ dataUrl, format });
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        return null;
+    }
+}
+
 export default function BrandHealthCertificate({
     organizationName: propOrgName,
     asovScore,
@@ -138,6 +165,8 @@ export default function BrandHealthCertificate({
     const [historyRecords, setHistoryRecords] = useState<ScoringRecord[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const isDemoOrg = organization?.id === "demo_org_id";
+    const displayOrgName = activeContextName || organizationName || "Organization";
 
     useEffect(() => {
         setIssuedDate(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
@@ -154,10 +183,8 @@ export default function BrandHealthCertificate({
             try {
                 const token = await auth.currentUser?.getIdToken();
                 let effectiveToken = token;
-                if (!effectiveToken) {
-                    const savedMockUser = typeof window !== 'undefined' ? localStorage.getItem("mock_auth_user") : null;
-                    if (savedMockUser === "demo@demo.com") effectiveToken = "mock-demo-token";
-                    else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") effectiveToken = "mock-dev-token";
+                if (!effectiveToken && isLocalMockMode()) {
+                    effectiveToken = getLocalMockSession().token;
                 }
 
                 if (!effectiveToken) {
@@ -185,8 +212,17 @@ export default function BrandHealthCertificate({
                     })),
                     timestamp: entry.timestamp || null,
                 }));
-                setHistoryRecords(normalizedHistory);
-                const record = normalizedHistory[0];
+                const sortedHistory = [...normalizedHistory].sort((a, b) => {
+                    const aTs = typeof a.timestamp === "string"
+                        ? new Date(a.timestamp).getTime()
+                        : a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0;
+                    const bTs = typeof b.timestamp === "string"
+                        ? new Date(b.timestamp).getTime()
+                        : b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0;
+                    return bTs - aTs;
+                });
+                setHistoryRecords(sortedHistory);
+                const record = sortedHistory[0];
                 if (record) {
                     setLatestRecord(record);
                 }
@@ -216,7 +252,7 @@ export default function BrandHealthCertificate({
         const baselineHallucinationRate = hallucinationRate(baseline.results || []);
         const currentHallucinationRate = hallucinationRate(current.results || []);
         // 🚨 DEMO REFINEMENT: If this is a demo org, hide the delta som to avoid misleading prospect
-        const isDemo = organizationName.toLowerCase().includes("latentview") || organizationName.toLowerCase().includes("demo");
+        const isDemo = isDemoOrg;
 
         return {
             baselinePrompt: baseline.prompt,
@@ -229,7 +265,7 @@ export default function BrandHealthCertificate({
             deltaHallucinationRate: isDemo ? 0 : currentHallucinationRate - baselineHallucinationRate,
             isDemoBypass: isDemo
         };
-    }, [historyRecords]);
+    }, [historyRecords, isDemoOrg]);
 
     const scoreColor = (s: number) => s >= 85 ? "#10b981" : s >= 65 ? "#f59e0b" : s >= 40 ? "#fb923c" : "#ef4444";
     const gradeLabel = (s: number) => s >= 85 ? "HIGH FIDELITY" : s >= 65 ? "MINOR DRIFT" : s >= 40 ? "SEVERE DRIFT" : "CRITICAL DRIFT";
@@ -266,24 +302,34 @@ export default function BrandHealthCertificate({
         const totalMod = results.length;
 
         if (score >= 85 && hCount === 0) {
-            return `AUM Context Foundry certifies that ${orgName} maintains High Fidelity across LLM representations. AI agents accurately retrieve, synthesize, and present your core claims without introducing hallucinated artifacts. Your unstructured data assets are optimally RAG-ready.`;
+            return `${tenantConfig.brandName} certifies that ${orgName} maintains high recommendation fidelity across AI answers. Models retrieve and restate your core claims accurately, with no competitive displacement detected.`;
         }
         if (score >= 65) {
-            return `${orgName} exhibits Minor Data Drift across modern AI agents. While core capabilities are recognized, some nuances are either omitted or mildly conflated. We recommend injecting clearer Context Manifests to prevent further brand erosion.`;
+            return `${orgName} shows minor drift in AI answers. Core capabilities are recognized, but key differentiators are being softened or skipped. Strengthen your public claims and structured context to close the gap.`;
         }
         if (score >= 40) {
-            return `ALERT: ${orgName} is experiencing Severe Data Drift. ${hCount > 0 ? `Hallucinations detected in ${hCount}/${totalMod} tested models.` : "Material facts are being omitted or misattributed."} Generative engines are failing to recall specific product differentiators. Immediate semantic alignment is recommended.`;
+            return `ALERT: ${orgName} is experiencing severe AI visibility loss. ${hCount > 0 ? `Competitive displacement detected in ${hCount}/${totalMod} tested models.` : "Material facts are being omitted or misattributed."} Immediate remediation is recommended.`;
         }
         if (hCount > 0) {
-            return `WARNING: ${orgName} suffers from Critical Data Drift. Generative AI engines are hallucinating material facts across ${hCount}/${totalMod} models and misrepresenting your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
+            return `WARNING: ${orgName} is critically under-represented. AI engines are recommending competitors across ${hCount}/${totalMod} models. Immediate remediation is required to protect pipeline integrity.`;
         }
-        return `WARNING: ${orgName} suffers from Critical Data Drift. Even without explicit hallucinations, models are failing to recall enough verified claims from your context, causing under-representation of your core offerings. Immediate remediation via structured Semantic Ingestion is required to protect brand integrity.`;
+        return `WARNING: ${orgName} is critically under-represented. Even without hallucinations, models fail to recall enough verified claims, leading to lost recommendations.`;
     };
     const GradeBadgeIcon = avgSom >= 85 ? CheckCircle2 : avgSom >= 55 ? Shield : AlertTriangle;
 
     const handleDownload = async () => {
         setIsDownloading(true);
+        // Yield to the browser so the loading state paints before PDF work
+        await new Promise((resolve) => setTimeout(resolve, 16));
         try {
+            const primaryHex = tenantConfig.colorPrimary || "#4f46e5";
+            const rgbMatch = primaryHex.replace("#", "").match(/.{2}/g);
+            const [pr, pg, pb] = rgbMatch
+                ? rgbMatch.map((h) => parseInt(h, 16))
+                : [79, 70, 229];
+            const logoAsset = tenantConfig.logoUrl
+                ? await fetchImageAsBase64(tenantConfig.logoUrl)
+                : null;
             const pdf = new jsPDF({
                 orientation: "portrait",
                 unit: "mm",
@@ -300,7 +346,7 @@ export default function BrandHealthCertificate({
             // DRAW PREMIUM HEADER BACKGROUND
             pdf.setFillColor(248, 250, 252); // slate-50
             pdf.rect(0, 0, pageWidth, 50, 'F');
-            pdf.setDrawColor(99, 102, 241); // indigo-500
+            pdf.setDrawColor(pr, pg, pb);
             pdf.setLineWidth(1);
             pdf.line(0, 50, pageWidth, 50);
 
@@ -355,13 +401,18 @@ export default function BrandHealthCertificate({
 
             // HEADER CONTENT
             y = 15;
+            const headerTextX = logoAsset ? margin + 18 : margin;
+            if (logoAsset) {
+                // Render logo in the header (small, left-aligned)
+                pdf.addImage(logoAsset.dataUrl, logoAsset.format, margin, y - 8, 14, 14);
+            }
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(22);
             pdf.setTextColor(30, 41, 59);
-            pdf.text("AUM CONTEXT FOUNDRY", margin, y);
+            pdf.text(tenantConfig.brandName.toUpperCase(), headerTextX, y);
             y += 8;
             pdf.setFontSize(10);
-            pdf.setTextColor(99, 102, 241);
+            pdf.setTextColor(pr, pg, pb);
             pdf.text("EXECUTIVE BRAND HEALTH CERTIFICATE", margin, y);
             
             pdf.setTextColor(148, 163, 184);
@@ -372,13 +423,13 @@ export default function BrandHealthCertificate({
             y = 65; // Start content below header block
 
             // EXECUTIVE SUMMARY BLOCK
-            writeHeading("Executive Summary", [79, 70, 229]);
-            const executiveSummary = getExecutiveSummary(avgSom, organizationName);
+            writeHeading("Executive Summary", [pr, pg, pb]);
+            const executiveSummary = getExecutiveSummary(avgSom, displayOrgName);
             pdf.setFont("helvetica", "italic");
             writeBody(executiveSummary, 11, [30, 41, 59]);
 
             // 🚨 CRITICAL MARKET INSIGHT (The "Killer Query")
-            if (organizationName.toLowerCase().includes("latentview") || organizationName.toLowerCase().includes("demo")) {
+            if (isDemoOrg) {
                 y += 5;
                 pdf.setFillColor(254, 242, 242); // rose-50
                 pdf.rect(margin, y, contentWidth, 28, 'F');
@@ -394,7 +445,7 @@ export default function BrandHealthCertificate({
                 pdf.setFont("helvetica", "normal");
                 pdf.setFontSize(11);
                 pdf.setTextColor(30, 41, 59);
-                const insightText = "When enterprise buyers ask AI which analytics firm to hire for 'Fortune 500 retail transformation', LatentView appears in fewer than 1 in 4 responses. Mu Sigma appears in 9 out of 10.";
+                const insightText = "When enterprise buyers ask AI which analytics firm to hire for 'Fortune 500 retail transformation', a single competitor appears in most responses. Your brand appears far less often.";
                 pdf.text(pdf.splitTextToSize(insightText, contentWidth - 15), margin + 5, y + 16);
                 y += 35;
             }
@@ -405,10 +456,10 @@ export default function BrandHealthCertificate({
             writeHeading("Standard KPIs");
             const colWidth = contentWidth / 2;
             
-            // Box 1: SoM
+            // Box 1: Recommendation Share
             pdf.setFillColor(248, 250, 252);
             pdf.rect(margin, y, colWidth - 2, 20, 'F');
-            pdf.setFontSize(9); pdf.setTextColor(100); pdf.text("SHARE OF MODEL (SoM)", margin + 5, y + 7);
+            pdf.setFontSize(9); pdf.setTextColor(100); pdf.text("AI RECOMMENDATION SHARE", margin + 5, y + 7);
             pdf.setFontSize(16); pdf.setTextColor(30); pdf.text(`${avgSom}%`, margin + 5, y + 15);
             
             // Box 2: Fidelity
@@ -500,7 +551,7 @@ export default function BrandHealthCertificate({
 
             // 6. RADAR CONTEXT
             if (results.length > 0) {
-                writeHeading("SoM Radar Context (5-D)");
+                writeHeading("Context Radar (5-D)");
                 writeBody("These contextual dimensions explain where narrative preservation is strong vs weak across model families.", 9);
                 CANONICAL_MODEL_ORDER.forEach((model) => {
                     const m = radarMetrics[model];
@@ -547,7 +598,7 @@ export default function BrandHealthCertificate({
                     
                     if (comp.remediationRecommendation) {
                         pdf.setFont("helvetica", "italic");
-                        pdf.setTextColor(79, 70, 229);
+                        pdf.setTextColor(pr, pg, pb);
                         pdf.text(pdf.splitTextToSize(`" ${comp.remediationRecommendation} "`, contentWidth - 10), margin + 5, y + 28);
                     }
                     y += 42;
@@ -558,13 +609,13 @@ export default function BrandHealthCertificate({
             // 8. REMEDIATION DELTA
             if (remediationSnapshot && !remediationSnapshot.isDemoBypass) {
                 writeHeading("Remediation Delta");
-                writeBody(`SoM movement: ${remediationSnapshot.baselineAvg}% to ${remediationSnapshot.currentAvg}% (${remediationSnapshot.deltaSom >= 0 ? "+" : ""}${remediationSnapshot.deltaSom} points)`);
+                writeBody(`Visibility movement: ${remediationSnapshot.baselineAvg}% to ${remediationSnapshot.currentAvg}% (${remediationSnapshot.deltaSom >= 0 ? "+" : ""}${remediationSnapshot.deltaSom} points)`);
                 writeBody(`Hallucination-rate movement: ${remediationSnapshot.baselineHallucinationRate}% to ${remediationSnapshot.currentHallucinationRate}% (${remediationSnapshot.deltaHallucinationRate >= 0 ? "+" : ""}${remediationSnapshot.deltaHallucinationRate} points)`);
                 writeDivider();
             }
 
             // 9. ENHANCED REMEDIATION PLAN
-            writeHeading("Prescriptive Remediation Plan", [99, 102, 241]);
+            writeHeading("Prescriptive Remediation Plan", [pr, pg, pb]);
             const recs = (remediationRecommendations && remediationRecommendations.length > 0) ? remediationRecommendations : [];
             if (recs.length === 0) {
                 writeBody("Simulation data implies baseline grounding. No immediate remediation actions generated.");
@@ -591,7 +642,7 @@ export default function BrandHealthCertificate({
                         pdf.text("Page(s) to update:", margin, y);
                         y += 5;
                         item.pageTargets.forEach(target => {
-                            writeBody(`• ${target.label}: ${target.url}`, 8, [79, 70, 229]);
+                            writeBody(`• ${target.label}: ${target.url}`, 8, [pr, pg, pb]);
                             writeBody(`  Reason: ${target.reason}`, 8);
                         });
                     }
@@ -602,7 +653,7 @@ export default function BrandHealthCertificate({
                     pdf.rect(margin, y, contentWidth, (copyLines.length * 5) + 6, 'F');
                     pdf.setFont("helvetica", "italic");
                     pdf.setFontSize(9);
-                    pdf.setTextColor(79, 70, 229);
+                    pdf.setTextColor(pr, pg, pb);
                     pdf.text(copyLines, margin + 5, y + 6);
                     y += (copyLines.length * 5) + 12;
 
@@ -626,15 +677,15 @@ export default function BrandHealthCertificate({
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(9);
             pdf.setTextColor(71, 85, 105);
-            pdf.text("SoM Formula", margin, y);
+            pdf.text("Visibility Score Formula", margin, y);
             pdf.text("Inference Audit", margin + colWidth, y);
             y += 5;
             pdf.setFont("helvetica", "normal");
             pdf.setFontSize(8);
-            pdf.text("SoM = (0.4 × Semantic) + (0.6 × Claim Recall)", margin, y);
+            pdf.text("Visibility Score = (0.4 × Semantic) + (0.6 × Claim Recall)", margin, y);
             pdf.text(`GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet`, margin + colWidth, y);
             y += 4;
-            pdf.text("Aligned to: ISO/IEC 42001 · NIST AI RMF", margin, y);
+            pdf.text("Aligned to: deterministic scoring · zero-retention ingestion · prompt traceability", margin, y);
             pdf.text(`Timestamp: ${isoTimestamp}`, margin + colWidth, y);
 
             // FOOTER BRANDING
@@ -642,9 +693,10 @@ export default function BrandHealthCertificate({
             pdf.setFontSize(7);
             pdf.setTextColor(148, 163, 184);
             pdf.text("CONFIDENTIAL - FOR BOARD OF DIRECTORS ONLY", margin, footerY);
-            pdf.text("© 2026 AUM CONTEXT FOUNDRY - ALL RIGHTS RESERVED", pageWidth - margin - 70, footerY);
+            pdf.text(`© 2026 ${tenantConfig.brandName.toUpperCase()} - ALL RIGHTS RESERVED`, pageWidth - margin - 70, footerY);
 
-            const fileName = `AUM-Executive-Report-${organizationName.replace(/\s+/g, "-")}.pdf`;
+            const safeBrand = tenantConfig.brandSlug || tenantConfig.brandName.replace(/\s+/g, "-");
+            const fileName = `${safeBrand}-Executive-Report-${displayOrgName.replace(/\s+/g, "-")}.pdf`;
             pdf.save(fileName);
             setIsDownloading(false);
         } catch (err) {
@@ -696,7 +748,7 @@ export default function BrandHealthCertificate({
                                 <div className="flex items-center gap-3">
                                     <Logo size={36} isCapture={isDownloading} />
                                     <div>
-                                        <p className="text-[9px] text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] font-bold">AUM Context Foundry</p>
+                                        <p className="text-[9px] text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] font-bold">{tenantConfig.brandName}</p>
                                         <p className="text-slate-900 dark:text-white font-semibold text-sm">Brand Health Certificate</p>
                                     </div>
                                 </div>
@@ -709,9 +761,9 @@ export default function BrandHealthCertificate({
                             {/* ORGANIZATION + OVERALL SCORE */}
                             <div className="flex items-center gap-6 mb-10 p-6 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
                                 <div className="flex-1">
-                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Organization</p>
-                                    <p className="text-2xl font-semibold text-slate-900 dark:text-white">{organizationName}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">AI Contextual Representation Audit</p>
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Analysis Context</p>
+                                    <p className="text-2xl font-semibold text-slate-900 dark:text-white">{displayOrgName}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">AI Search Presence Audit</p>
                                     {activeContextName && (
                                         <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">Context: {activeContextName}</p>
                                     )}
@@ -732,18 +784,18 @@ export default function BrandHealthCertificate({
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                                             <span className="text-2xl font-bold text-slate-900 dark:text-white">{avgSom}%</span>
-                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg SoM</span>
+                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Visibility</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* MODEL-BY-MODEL SoM BREAKDOWN */}
+                            {/* MODEL-BY-MODEL VISIBILITY BREAKDOWN */}
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Cpu className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Multi-Model SoM Breakdown</p>
-                                    <span className="ml-auto text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-2 py-0.5 rounded-full">Share of Model Score</span>
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Multi-Model Visibility Breakdown</p>
+                                    <span className="ml-auto text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-2 py-0.5 rounded-full">Visibility Score</span>
                                 </div>
                                 {loadingHistory ? (
                                     <div className="text-center text-slate-500 text-xs py-6">Loading simulation data...</div>
@@ -754,7 +806,7 @@ export default function BrandHealthCertificate({
                                     </div>
                                 ) : results.length === 0 ? (
                                     <div className="text-center text-slate-500 text-xs py-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
-                                        Run a simulation first to populate SoM data.
+                                        Run a simulation first to populate visibility data.
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -830,7 +882,7 @@ export default function BrandHealthCertificate({
                                     <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">Executive Interpretation</p>
                                 </div>
                                 <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                    {getExecutiveSummary(avgSom, organizationName)}
+                                    {getExecutiveSummary(avgSom, displayOrgName)}
                                 </p>
                             </div>
 
@@ -840,14 +892,14 @@ export default function BrandHealthCertificate({
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">AI Visibility:</span> how strongly your brand shows up with the right narrative in model outputs.</p>
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">Fidelity Rate:</span> the share of models that stayed grounded instead of drifting.</p>
                                     <p><span className="font-semibold text-slate-800 dark:text-slate-200">Competitive Displacement:</span> how many models recommended a competitor instead of you or omitted your material claims.</p>
-                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">SoM Score:</span> a blended score using semantic alignment plus claim recall against your verified context.</p>
-                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Why Critical Drift can still happen at 0/3 displacement:</span> this usually means models stayed non-fabricated but missed too many required claims, so claim recall stayed low and SoM remained in drift territory.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Visibility Score:</span> a blended score using semantic alignment plus claim recall against your verified context.</p>
+                                    <p><span className="font-semibold text-slate-800 dark:text-slate-200">Why Critical Drift can still happen at 0/3 displacement:</span> this usually means models stayed non-fabricated but missed too many required claims, so claim recall stayed low and visibility remained in drift territory.</p>
                                 </div>
                             </div>
 
                             {results.length > 0 && (
                                 <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8">
-                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">SoM Radar Context (5-D)</p>
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">Context Radar (5-D)</p>
                                     <p className="text-xs text-slate-500 mb-4">
                                         These contextual dimensions are derived from this exact run&apos;s observed accuracy, claim recall, and hallucination flags.
                                         They explain where narrative preservation is strong vs weak across model families.
@@ -874,7 +926,7 @@ export default function BrandHealthCertificate({
                                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{seoResult.seoScore}%</p>
                                                 </div>
                                                 <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 text-center">
-                                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">GEO</p>
+                                                    <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">AI Search Readiness</p>
                                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{seoResult.geoScore}%</p>
                                                 </div>
                                                 <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 text-center">
@@ -884,10 +936,10 @@ export default function BrandHealthCertificate({
                                             </div>
                                             <p className="text-xs text-slate-600 dark:text-slate-400">{seoResult.recommendation}</p>
                                             <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
-                                                GEO method: {describeGeoMethod(seoResult.geoMethod)}
+                                                Readiness method: {describeGeoMethod(seoResult.geoMethod)}
                                             </p>
                                             <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
-                                                GEO reflects page-level generative readiness and manifest alignment, not the same thing as simulation drift on an individual prompt.
+                                                AI Search Readiness reflects page-level clarity and manifest alignment, not the same thing as per-query simulation drift.
                                             </p>
                                         </div>
                                     )}
@@ -933,7 +985,7 @@ export default function BrandHealthCertificate({
                                     <Globe className="w-5 h-5 mx-auto mb-2 text-indigo-500 dark:text-indigo-400" />
                                     <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">AI Visibility</p>
                                     <p className="text-lg font-semibold text-slate-900 dark:text-white">{asovScore}%</p>
-                                    <p className="text-[9px] text-slate-500">Share of Model</p>
+                                    <p className="text-[9px] text-slate-500">AI Recommendation Share</p>
                                 </div>
                                 <div className="p-4 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/8 text-center shadow-sm dark:shadow-none">
                                     <Shield className="w-5 h-5 mx-auto mb-2 text-emerald-500 dark:text-emerald-400" />
@@ -957,7 +1009,7 @@ export default function BrandHealthCertificate({
                                 {remediationSnapshot ? (
                                     <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                                         <p>
-                                            <span className="font-semibold text-slate-800 dark:text-slate-200">SoM movement:</span>{" "}
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200">Visibility movement:</span>{" "}
                                             {remediationSnapshot.baselineAvg}% to {remediationSnapshot.currentAvg}% ({remediationSnapshot.deltaSom >= 0 ? "+" : ""}{remediationSnapshot.deltaSom} points)
                                         </p>
                                         <p>
@@ -1034,8 +1086,8 @@ export default function BrandHealthCertificate({
                             <div className="p-5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 font-mono text-[9px] text-slate-500 dark:text-slate-400 leading-relaxed shadow-inner">
                                 <div className="grid grid-cols-2 gap-4 mb-3">
                                     <div>
-                                        <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">SoM Formula</p>
-                                        <p className="text-indigo-600 dark:text-indigo-300 font-bold text-[10px]">SoM = (0.4 × Semantic) + (0.6 × Claim Recall)</p>
+                                        <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mb-1.5">Visibility Score Formula</p>
+                                        <p className="text-indigo-600 dark:text-indigo-300 font-bold text-[10px]">Visibility Score = (0.4 × Semantic) + (0.6 × Claim Recall)</p>
                                         <p className="mt-1">Semantic = 1 − cosine_distance(manifest_vector, response_vector)</p>
                                         <p>Claim Recall = supported_claims / total_claims</p>
                                     </div>
@@ -1048,7 +1100,7 @@ export default function BrandHealthCertificate({
                                     </div>
                                 </div>
                                 <div className="pt-3 border-t border-slate-300 dark:border-white/5 flex items-center justify-between">
-                                    <span className="text-slate-500">Aligned to: ISO/IEC 42001 · NIST AI RMF · Zero-Retention Architecture</span>
+                                    <span className="text-slate-500">Aligned to: deterministic scoring · zero-retention ingestion · prompt traceability</span>
                                     <span className="text-slate-400 dark:text-slate-600">{isoTimestamp}</span>
                                 </div>
                             </div>
@@ -1056,7 +1108,7 @@ export default function BrandHealthCertificate({
 
                         {/* BOTTOM TAGLINE */}
                         <div className="bg-slate-100 dark:bg-slate-950 py-3 text-center border-t border-slate-200 dark:border-white/5">
-                            <p className="text-[9px] text-slate-500 dark:text-slate-600 uppercase tracking-[0.4em]">Precision Monitoring for the Agentic Era • AUM Context Foundry v1.2.0</p>
+                            <p className="text-[9px] text-slate-500 dark:text-slate-600 uppercase tracking-[0.4em]">Precision Monitoring for the AI Search Era • {tenantConfig.brandName} v1.2.0</p>
                         </div>
                     </div>
 
@@ -1099,13 +1151,13 @@ export default function BrandHealthCertificate({
                                 className="w-full bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10 p-6 overflow-hidden mt-4"
                             >
                                 <h3 className="text-slate-900 dark:text-white font-bold mb-4 flex items-center gap-2">
-                                    <BookOpen className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> SoM Methodology
+                                    <BookOpen className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> Visibility Score Methodology
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                                     <div>
                                         <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Formula</p>
                                         <code className="text-emerald-600 dark:text-emerald-400 font-mono text-xs bg-slate-200 dark:bg-black/30 px-3 py-2 rounded-lg block mb-3 overflow-x-auto">
-                                            SoM = (0.4 × Semantic) + (0.6 × Claim Recall)
+                                            Visibility Score = (0.4 × Semantic) + (0.6 × Claim Recall)
                                         </code>
                                         <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
                                             <strong className="text-slate-800 dark:text-slate-300">Semantic (40%):</strong> Cosine similarity between your verified manifest vector and the AI&apos;s response vector. Measures directional alignment.
@@ -1115,7 +1167,7 @@ export default function BrandHealthCertificate({
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Score Bands (SoM)</p>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mb-2">Score Bands (Visibility)</p>
                                         <div className="space-y-2 text-xs">
                                             <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-emerald-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">&gt;85%</span><span className="text-slate-500">High Fidelity</span></div>
                                             <div className="flex items-start gap-2"><span className="w-3 h-3 shrink-0 mt-0.5 rounded-full bg-amber-500" /><span className="text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">66–85%</span><span className="text-slate-500">Minor Drift</span></div>
@@ -1124,9 +1176,9 @@ export default function BrandHealthCertificate({
                                         </div>
                                         <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">Grounding & Fidelity Rule</p>
                                         <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                                            A model is flagged when verified contradictions are detected (Hallucination), or when claim recall is very low together with high semantic divergence. Under-representation (Low SoM) is the most common risk.
+                                            A model is flagged when verified contradictions are detected (Hallucination), or when claim recall is very low together with high semantic divergence. Under-representation (Low Visibility) is the most common risk.
                                         </p>
-                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">ASoV Radar (Contextual)</p>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-semibold mt-4 mb-2">Visibility Radar (Contextual)</p>
                                         <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
                                             The radar expands/collapses based on this run&apos;s observed consistency, factual grounding, safety alignment, sentiment, and authority retention across model families.
                                         </p>

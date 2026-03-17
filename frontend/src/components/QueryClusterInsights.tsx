@@ -25,7 +25,7 @@ export default function QueryClusterInsights({
                             <div className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold text-slate-500 uppercase tracking-widest">{insight.category}</div>
                             <div className="text-right">
                                 <p className={`text-2xl font-bold leading-none ${insight.avgAccuracy >= 80 ? 'text-emerald-500' : insight.avgAccuracy >= 60 ? 'text-amber-500' : 'text-rose-500'}`}>{insight.avgAccuracy}%</p>
-                                <p className="text-[9px] text-slate-400 uppercase font-bold mt-1 tracking-tighter">Share of Model</p>
+                                <p className="text-[9px] text-slate-400 uppercase font-bold mt-1 tracking-tighter">AI Recommendation Share</p>
                             </div>
                         </div>
                         <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2 leading-relaxed">&ldquo;{insight.prompt}&rdquo;</h4>

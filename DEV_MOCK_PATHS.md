@@ -161,7 +161,7 @@ if (process.env.NODE_ENV === "development" &&
 ### `frontend/src/components/SoMCommandCenter.tsx` — Mock Dashboard Data
 
 **Guard**: `NODE_ENV === "development"` AND mock Firebase key
-**Behavior**: Uses mock data for Share-of-Mind dashboard; falls back to `"mock-dev-token"` for API calls
+**Behavior**: Uses mock data for Visibility Command Center; falls back to `"mock-dev-token"` for API calls
 **Lines**: 83, 197
 
 ### `frontend/src/components/AgentManifest.tsx` — Mock Manifest

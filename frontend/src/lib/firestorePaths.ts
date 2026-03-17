@@ -7,7 +7,7 @@ export const db = getFirestore(app);
 export const workspacesRef = collection(db, "workspaces");
 export const getWorkspaceDoc = (workspaceId: string) => doc(db, "workspaces", workspaceId);
 
-// LCRS Metrics tracking
+// Visibility score metrics tracking
 export const lcrsMetricsRef = collection(db, "lcrs_metrics");
 
 // Generated JSON-LD schemas

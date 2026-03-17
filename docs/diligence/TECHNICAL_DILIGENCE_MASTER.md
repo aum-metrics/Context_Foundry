@@ -8,7 +8,7 @@
 ---
 
 ## 1. Executive Summary
-AUM Context Foundry is a production-grade B2B SaaS platform for LLM Brand Accuracy & Safety. It provides a specialized SoM (Library-Claim-Recall-Score) engine that mathematically proves how accurately frontier models (GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet) represent a corporate "Source of Truth."
+AUM Context Foundry is a production-grade B2B SaaS platform for LLM Brand Accuracy & Safety. It provides a specialized Visibility Score engine that mathematically proves how accurately frontier models (GPT-4o, Gemini 3 Flash, Claude 4.5 Sonnet) represent a corporate "Source of Truth."
 
 ### Verification Maturity & Proof Pack
 This document serves as a **Diligence Draft Pack**. We have transitioned from narrative-only claims to **Hard Artifact Verification**. 
@@ -60,7 +60,7 @@ The following artifacts provide high-fidelity request/response traces captured i
 ---
 
 ## 5. Maintenance & Reliability
-- **Test Suite**: 62 Backend tests covering SoM math, DB transactions, and security controllers.
+- **Test Suite**: 62 Backend tests covering Visibility scoring math, DB transactions, and security controllers.
 - **CI/CD**: Gated via GitHub Actions (Lint + Build + Test).
 - **Graceful Degradation**: System handles missing third-party providers via standardized mock paths in development mode.
 

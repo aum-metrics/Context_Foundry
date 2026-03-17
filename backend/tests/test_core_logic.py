@@ -32,8 +32,8 @@ def test_cosine_similarity_zero_vector():
 
 
 def test_lcrs_formula_perfect_match():
-    """Test LCRS formula with perfect scores."""
-    # LCRS = (0.6 * claim_accuracy) + (0.4 * (1 - cosine_distance))
+    """Test Visibility Score formula with perfect scores."""
+    # Visibility Score = (0.6 * claim_accuracy) + (0.4 * (1 - cosine_distance))
     claim_accuracy = 1.0  # All claims supported
     cosine_distance = 0.0  # Identical
     lcrs = (0.6 * claim_accuracy) + (0.4 * (1.0 - cosine_distance))
@@ -41,7 +41,7 @@ def test_lcrs_formula_perfect_match():
 
 
 def test_lcrs_formula_total_hallucination():
-    """Test LCRS formula with zero claim accuracy and high divergence."""
+    """Test Visibility Score formula with zero claim accuracy and high divergence."""
     claim_accuracy = 0.0
     cosine_distance = 1.0  # Orthogonal
     lcrs = (0.6 * claim_accuracy) + (0.4 * (1.0 - cosine_distance))
@@ -49,7 +49,7 @@ def test_lcrs_formula_total_hallucination():
 
 
 def test_lcrs_formula_partial_match():
-    """Test LCRS formula with realistic partial match."""
+    """Test Visibility Score formula with realistic partial match."""
     claim_accuracy = 0.7  # 7/10 claims supported
     cosine_distance = 0.15  # Close but not identical
     lcrs = (0.6 * claim_accuracy) + (0.4 * (1.0 - cosine_distance))
@@ -64,7 +64,7 @@ def test_lcrs_claim_weight_dominance():
     lcrs_high_claims = (0.6 * 0.9) + (0.4 * 0.3)
     # Low claim accuracy, high semantic
     lcrs_high_semantic = (0.6 * 0.3) + (0.4 * 0.9)
-    # High claims should produce higher LCRS
+    # High claims should produce higher Visibility Score
     assert lcrs_high_claims > lcrs_high_semantic
 
 

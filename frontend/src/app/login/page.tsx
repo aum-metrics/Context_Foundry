@@ -31,7 +31,7 @@ export default function LoginPage() {
             const isMockMode = isLocalMockMode();
             const isDemoLogin = email === "demo@demo.com" && password === "testdemo";
 
-            if (isDemoLogin || isMockMode) {
+            if ((isDemoLogin || isMockMode) && isMockMode) {
                 // Local mock bypass when user hasn't setup Firebase OR is using demo account
                 localStorage.setItem("mock_auth_user", isDemoLogin ? "demo@demo.com" : email);
 
@@ -40,6 +40,9 @@ export default function LoginPage() {
                     router.push(targetUrl);
                 }, 1000);
                 return;
+            }
+            if (isDemoLogin || isMockMode) {
+                throw new Error("Mock login is only available on localhost.");
             }
 
             if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-key-to-prevent-crash") {

@@ -73,6 +73,22 @@ export default function SemanticIngestion() {
     // Processing simulation logs
     const [logs, setLogs] = useState<string[]>([]);
 
+    const waitForManifestReady = async (token: string, orgId: string, version?: string) => {
+        if (!version) return;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+                const res = await fetch(`/api/workspaces/${orgId}/manifest-data?version=${encodeURIComponent(version)}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    cache: "no-store",
+                });
+                if (res.ok) return;
+            } catch {
+                // ignore and retry
+            }
+            await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+    };
+
     useEffect(() => {
         if (!organization?.id) return;
         // Zero-Retention Compliance: Only load the structured JSON-LD output from Firestore.
@@ -152,6 +168,7 @@ export default function SemanticIngestion() {
         setLogs(prev => [...prev, "SUCCESS: Structured JSON-LD generated."]);
         if (organization?.id && typeof window !== "undefined") {
             if (result.version) setActiveManifestVersion(result.version);
+            await waitForManifestReady(token, organization.id, result.version);
             window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
         }
 
@@ -227,6 +244,7 @@ export default function SemanticIngestion() {
             setStep("editor");
             if (typeof window !== "undefined") {
                 if (result.version) setActiveManifestVersion(result.version);
+                await waitForManifestReady(token, organization.id, result.version);
                 window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
             }
         } catch (error) {

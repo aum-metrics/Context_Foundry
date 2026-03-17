@@ -108,8 +108,8 @@ import { motion } from "framer-motion";
 </motion.div>
 ```
 
-### The Radar Charts (`SoMCommandCenter.tsx`)
-The heartbeat pulsing inside the System of Metrics (SoM) dashboard utilizes complex React `useEffect` loops driving SVG circles.
+### The Radar Charts (`SoMCommandCenter.tsx` — Visibility Command Center)
+The heartbeat pulsing inside the Visibility Command Center dashboard utilizes complex React `useEffect` loops driving SVG circles.
 *   **Performance Warning:** If you ever edit the radar chart loops, you MUST wrap the derivations in `useMemo`. If you don't, React will re-render the entire 1,000-line DOM tree 60 times a second, crashing the user's browser.
 
 ---

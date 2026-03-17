@@ -108,7 +108,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Contextual Rigor & Generative Engine Optimization (GEO) Infrastructure",
+    description="Contextual Rigor & AI Search Readiness Infrastructure",
     version="2.2.0-hardened",
     docs_url="/api/docs" if settings.ENV != "production" else None,
     redoc_url="/api/redoc" if settings.ENV != "production" else None,
@@ -215,8 +215,9 @@ logger.info("\n📡 Loading API routes...")
 # ============================================================================
 # CORE CONTEXT FOUNDRY ENGINES
 # ============================================================================
-load_router("api.simulation", "/api/simulation", "LCRS Simulation Engine")
-load_router("api.ingestion", "/api/ingestion", "GEO Semantic Ingestion")
+load_router("api.simulation", "/api/simulation", "Visibility Simulation Engine")
+load_router("api.ingestion", "/api/ingestion", "Semantic Ingestion")
+load_router("api.quick_scan", "/api", "Quick Scan")
 load_router("api.batch_analysis", "/api/batch", "Batch Evaluation")
 
 # ============================================================================
@@ -225,17 +226,19 @@ load_router("api.batch_analysis", "/api/batch", "Batch Evaluation")
 load_router("api.api_keys", "/api/keys", "API Keys")
 load_router("api.workspaces", "/api/workspaces", "Workspaces")
 load_router("api.sso", "/api/sso", "Enterprise SSO")
+load_router("api.tenant_config", "/api", "Tenant Config")
 
 # ============================================================================
 # PAYMENTS, CHATBOT & SEO
 # ============================================================================
 load_router("api.payments", "/api/payments", "Razorpay Payments")
 load_router("api.chatbot", "/api/chatbot", "RAG Support Chatbot")
-load_router("api.seo", "/api/seo", "SEO/GEO Audit")
+load_router("api.seo", "/api/seo", "SEO/AI Search Readiness Audit")
 load_router("api.audit", "/api/audit", "SOC2 Audit Logs")
 load_router("api.competitor", "/api/competitor", "Competitor Monitoring")
 load_router("api.methods", "/api/methods", "Scoring Methodology")
 load_router("api.cron", "/api/cron", "Internal Cron Jobs")
+load_router("api.data_management", "/api/cron", "Data Management")
 
 # ============================================================================
 # ADMIN DASHBOARD API (Admin SDK — bypasses Firestore client rules)

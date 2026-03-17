@@ -138,11 +138,11 @@ Here is the exact framework you take:
 
 If you hear senior engineers throw around these terms, here is what they mean:
 
-*   **SoM (Share of Model):** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. v1.2.6 introduces Zero-Burn caching to serve redundant evaluations instantly.
+*   **Visibility Score:** Our scoring heuristic. It's the 60/40 blend of claim verification (LLM-as-a-judge) and semantic similarity (cosine distance) that gives an AI a grade from 0-100%. v1.2.6 introduces Zero-Burn caching to serve redundant evaluations instantly.
 *   **DLQ (Dead Letter Queue):** The graveyard for background tasks that crashed. Jobs that fail 3 times are marked `failed_permanent`. Found in `backend/app/utils/task_queue_recovery.py`.
 *   **CIM (Context Information Model):** The mathematical and semantic representation of an organization's verified ground truth — JSON-LD schema + 1536-dimensional embeddings. Now supports **Versioned Context Switching**.
 *   **Manifest (`llms.txt`):** The CIM synthesized into AI-crawler-friendly plain text. Served at `/llms.txt?orgId=...`. Hardened: org-specific failures return 503 (no silent fallback).
-*   **ASoV (Agentic Share of Voice):** The competitive metric AUM tracks — what percentage of AI-generated answers represent your brand vs. competitors.
+*   **AI Visibility Index:** The competitive metric AUM tracks — what percentage of AI-generated answers represent your brand vs. competitors.
 
 ---
 

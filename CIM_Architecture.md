@@ -6,7 +6,7 @@
 
 ## What is the CIM?
 
-The **Context Information Model (CIM)** is the mathematical and semantic representation of an organization's verified ground truth. It is the core data structure that powers the SoM evaluation engine — the authoritative source that AI responses are measured against.
+The **Context Information Model (CIM)** is the mathematical and semantic representation of an organization's verified ground truth. It is the core data structure that powers the Visibility Score evaluation engine — the authoritative source that AI responses are measured against.
 
 Think of it as:
 > "A compressed, mathematically indexed copy of everything your brand wants to be known for — stored in a form that can be compared to anything an AI model says."
@@ -21,7 +21,7 @@ Think of it as:
   "@type": "TechArticle",
   "name": "Product Specification v3.0",
   "description": "AUM Context Foundry real-time evaluation platform features...",
-  "keywords": ["SoM", "zero-retention", "agentic SEO", "context drift"],
+  "keywords": ["Visibility Score", "zero-retention", "AI search presence", "context drift"],
   "datePublished": "2026-03-02T00:00:00Z",
   "version": "1.0.0",
   "totalChunks": 42,
@@ -116,7 +116,7 @@ Limit check queries the `manifests` collection document count (not `documents`).
 
 ---
 
-## How the SoM Engine Uses the CIM
+## How the Visibility Scoring Engine Uses the CIM
 
 ### At Simulation Time
 

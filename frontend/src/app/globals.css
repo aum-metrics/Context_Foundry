@@ -5,6 +5,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-primary: #4f46e5;
+  --brand-accent: #06b6d4;
 }
 
 .dark {

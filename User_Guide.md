@@ -9,6 +9,8 @@ AUM Context Foundry helps a company understand how GPT-4o, Claude 4.5 Sonnet, an
 - competitor displacement
 - remediation suggestions
 
+Optional quick start: the landing page offers a **Quick Scan** that returns a fast, directional AI visibility snapshot from just a company name (and optional domain). It is a preview only — full scoring requires ingestion of a verified context.
+
 ## 2. First login
 
 1. Go to [https://aumcontextfoundry.com](https://aumcontextfoundry.com).
@@ -59,16 +61,16 @@ The current default prompts are B2B enterprise-oriented. They focus on:
 
 ## 6. Understanding the scores
 
-### SoM
-SoM is the core answer-quality score. It combines:
+### Visibility Score
+Visibility Score is the core answer-quality score. It combines:
 - claim recall against the verified manifest
 - semantic alignment with the active context
 
-### ASoV
-ASoV is the broader visibility / representation lens. It is intended to show how strongly the company shows up with the right narrative across the model outputs.
+### AI Visibility Index
+AI Visibility Index is the broader visibility / representation lens. It is intended to show how strongly the company shows up with the right narrative across the model outputs.
 
-### GEO
-GEO is not the same thing as prompt-level drift. GEO focuses on:
+### AI Search Readiness
+AI Search Readiness is not the same thing as prompt-level drift. AI Search Readiness focuses on:
 - page readiness
 - structured data quality
 - manifest alignment
@@ -90,12 +92,12 @@ The main operating flow is:
 ## 8. Reports
 
 The executive report is the buyer-facing artifact. It includes:
-- average SoM
+- average Visibility Score
 - model breakdown
 - executive interpretation
-- GEO snapshot
+- AI Search Readiness snapshot
 - competitor displacement summary
-- ASoV radar explanation
+- AI Visibility Index radar explanation
 - remediation delta when historical baseline is available
 
 Explorer can view the teaser/free-report experience. Paid tiers unlock the full export workflow.
@@ -133,4 +135,3 @@ Scale and Enterprise organizations can configure SSO. Supported provider pattern
 ## 13. Support
 
 Contact: hello@aumcontextfoundry.com
-

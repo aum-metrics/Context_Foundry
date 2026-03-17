@@ -5,6 +5,7 @@ import { X, CheckCircle, ShieldCheck, Cpu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
+import { tenantConfig } from "@/lib/whitelabel";
 
 interface UpgradeModalProps {
     isOpen: boolean;
@@ -92,7 +93,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                         Unlock {featureHighlight}
                                     </h2>
                                     <p className="text-slate-500 dark:text-slate-400 mb-8">
-                                        You're currently on the Starter plan. Upgrade to the Growth plan to unlock the full power of AUM Context Foundry.
+                                        You're currently on the Starter plan. Upgrade to the Growth plan to unlock the full power of {tenantConfig.brandName}.
                                     </p>
                                 </>
                             )}
@@ -109,7 +110,7 @@ export function UpgradeModal({ isOpen, onClose, featureHighlight = "Premium Feat
                                 <div className="flex items-start">
                                     <ShieldCheck className="w-5 h-5 text-emerald-500 mr-3 mt-0.5" />
                                     <div>
-                                        <p className="font-medium text-slate-900 dark:text-white">SEO & GEO Readiness Audits</p>
+                                        <p className="font-medium text-slate-900 dark:text-white">AI Search Readiness Audits</p>
                                         <p className="text-sm text-slate-500 dark:text-slate-400">Simulate brand recall and optimization scores against major AI search tools.</p>
                                     </div>
                                 </div>

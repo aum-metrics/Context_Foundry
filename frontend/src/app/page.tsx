@@ -14,6 +14,7 @@ import React from "react";
 import ProductFlowShowcase from "@/components/ProductDemoVideo";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import QuickScan from "@/components/QuickScan";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firestorePaths";
@@ -96,7 +97,7 @@ export default function LandingPage() {
                         className="inline-flex items-center space-x-2 bg-indigo-50/50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-widest mb-10 border border-indigo-200/50 dark:border-indigo-500/20 backdrop-blur-sm shadow-[0_0_30px_rgba(99,102,241,0.1)] dark:shadow-[0_0_30px_rgba(99,102,241,0.2)]"
                     >
                         <Sparkle className="w-3.5 h-3.5" />
-                        <span>Generative Engine Optimization (GEO)</span>
+                        <span>AI Search Presence</span>
                     </motion.div>
 
                     <motion.h1
@@ -118,6 +119,9 @@ export default function LandingPage() {
                         className="text-xl md:text-2xl text-slate-600 dark:text-slate-400/80 mb-12 max-w-3xl leading-relaxed font-light"
                     >
                         <div className="space-y-4">
+                            <span className="block text-slate-800 dark:text-slate-200 font-medium">
+                                Find out which competitor AI recommends instead of you — and fix it.
+                            </span>
                             <span>
                                 Industry forecasts indicate that by 2028, over <strong className="font-semibold text-slate-800 dark:text-slate-200">60% of B2B sales work</strong> will be driven by generative AI interfaces.
                             </span>
@@ -146,6 +150,15 @@ export default function LandingPage() {
                             View Sample Executive Report
                         </button>
                     </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.45 }}
+                        className="mt-10 w-full max-w-2xl"
+                    >
+                        <QuickScan />
+                    </motion.div>
                 </section>
 
                 {/* The Moat Section */}
@@ -153,10 +166,10 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div>
                             <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-6">
-                                Drive Pipeline with <span className="font-semibold text-emerald-600 dark:text-emerald-400">Agentic SEO</span>
+                                Drive Pipeline with <span className="font-semibold text-emerald-600 dark:text-emerald-400">AI Search Presence</span>
                             </h2>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
-                                <strong>Track your Share of Model (SoM).</strong> We run enterprise buyer queries across AI engines, rank how often your firm is shortlisted over competitors, and prescribe exactly what to change to reclaim those queries.
+                                <strong>Track your AI Recommendation Share.</strong> We run enterprise buyer queries across AI engines, rank how often your firm is shortlisted over competitors, and prescribe exactly what to change to reclaim those queries.
                             </p>
                             <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8 font-light">
                                 Stop losing pipeline to competitors favoured by AI. Get the exact positioning gaps — with confidence scores — so your marketing team can close them this sprint.
@@ -199,7 +212,7 @@ export default function LandingPage() {
                                 <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-200/50 dark:border-white/10">
                                     <h3 className="font-medium text-slate-900 dark:text-white flex items-center">
                                         <Activity className="w-4 h-4 mr-2 text-indigo-500" />
-                                        Global ASoV Index
+                                        AI Visibility Index
                                     </h3>
                                     <span className="text-2xl font-light text-cyan-600 dark:text-cyan-400">84.2%</span>
                                 </div>
@@ -249,13 +262,13 @@ export default function LandingPage() {
                                 <Binary className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white transition-colors group-hover:text-indigo-500">
-                                <Link href="/methods">SoM Scoring Engine</Link>
+                                <Link href="/methods">Visibility Scoring Engine</Link>
                             </h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Our <strong>Share of Model (SoM)</strong> engine runs enterprise buyer queries across AI models and scores how often your firm is shortlisted, with gap confidence bars and estimated SoM recovery per fix.
+                                Our <strong>AI Recommendation Share</strong> engine runs enterprise buyer queries across AI models and scores how often your firm is shortlisted, with gap confidence bars and estimated recovery per fix.
                             </p>
                             <div className="font-mono text-[10px] bg-slate-100 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-white/5 text-slate-500 dark:text-indigo-300/60 leading-relaxed">
-                                SoM% = visible_assertions / total_buyer_assertions × 100
+                                Visibility% = visible_assertions / total_buyer_assertions × 100
                             </div>
                         </motion.div>
 
@@ -283,7 +296,7 @@ export default function LandingPage() {
                             </ul>
                         </motion.div>
 
-                        {/* Moat 3: ASoV */}
+                        {/* Moat 3: AI Visibility */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -295,14 +308,14 @@ export default function LandingPage() {
                                 <BarChart3 className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
                             </div>
                             <h4 className="text-xl font-medium mb-4 text-slate-900 dark:text-white transition-colors group-hover:text-cyan-500">
-                                <Link href="/methods">ASoV Indexing</Link>
+                                <Link href="/methods">AI Visibility Indexing</Link>
                             </h4>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6 font-light">
-                                Move beyond clicks. <strong>Agentic Share of Voice</strong> measures how often and how accurately your brand is cited by LLMs during competitive purchasing simulations.
+                                Move beyond clicks. <strong>AI Visibility</strong> measures how often and how accurately your brand is cited by LLMs during competitive purchasing simulations.
                             </p>
                             <div className="flex items-center space-x-2">
                                 <span className="px-3 py-1 bg-cyan-500/10 text-cyan-500 rounded-full text-[10px] uppercase font-bold tracking-widest">Moat Factor: 1.8x</span>
-                                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[10px] uppercase font-bold tracking-widest">ASoV Score: Delta+</span>
+                                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[10px] uppercase font-bold tracking-widest">Visibility Delta+</span>
                             </div>
                         </motion.div>
                     </div>
@@ -410,7 +423,7 @@ export default function LandingPage() {
                                 The Verified Identity Router
                             </h2>
                             <p className="text-lg font-light text-slate-600 dark:text-slate-400 mb-10 leading-relaxed max-w-xl">
-                                AUM is not just a dashboard; it is core B2B data infrastructure. We provide the REST API layer that enterprise SEO and PR platforms license to bring Agentic Search insights directly into their native workflows.
+                                AUM is not just a dashboard; it is core B2B data infrastructure. We provide the REST API layer that enterprise SEO and PR platforms license to bring AI search presence insights directly into their native workflows.
                             </p>
 
                             <div className="space-y-8">
@@ -425,7 +438,7 @@ export default function LandingPage() {
                                     <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-mono text-lg group-hover:scale-110 transition-transform">02</div>
                                     <div>
                                         <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">Live Competitive Positioning Scores</h3>
-                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time Share of Model (SoM) scores showing how often your firm is recommended over named competitors across OpenAI, Anthropic Claude, and Google Gemini — power your own analytics dashboards.</p>
+                                        <p className="text-sm font-light text-slate-500 dark:text-slate-400 leading-relaxed">Pull real-time AI Recommendation Share scores showing how often your firm is recommended over named competitors across OpenAI, Anthropic Claude, and Google Gemini — power your own analytics dashboards.</p>
                                     </div>
                                 </div>
                             </div>
@@ -487,7 +500,7 @@ export default function LandingPage() {
                 <section id="pricing" className="max-w-7xl mx-auto px-6 py-32 border-t border-slate-200 dark:border-white/5">
                     <div className="text-center mb-20">
                         <h2 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mb-4">Transparent Pricing</h2>
-                        <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white">Choose Your GEO Strategy</h3>
+                        <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white">Choose Your AI Search Strategy</h3>
                         <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mt-4 font-light">All plans include zero-retention data processing and multi-tenant isolation.</p>
 
                         {/* Currency Toggle */}
@@ -522,7 +535,7 @@ export default function LandingPage() {
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">1</strong>{" "}simulation run (all 3 models, so users see real value)</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> 1 document ingestion</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic SoM score</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Basic visibility score</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> <code>/llms.txt</code>{" "}preview</li>
                                 <li className="flex items-start text-slate-400 dark:text-slate-500"><CheckCircle2 className="w-4 h-4 mr-2.5 mt-0.5 shrink-0" /> No scoring history</li>
                                 <li className="flex items-start text-slate-400 dark:text-slate-500"><CheckCircle2 className="w-4 h-4 mr-2.5 mt-0.5 shrink-0" /> No team seats</li>
@@ -554,7 +567,7 @@ export default function LandingPage() {
                             <ul className="space-y-3 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-400">
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-indigo-500 mr-2.5 mt-0.5 shrink-0" /> <strong className="text-slate-900 dark:text-white">100</strong>{" "}simulations/month</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Unlimited document ingestion</li>
-                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full Share of Model dashboard</li>
+                                <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Full visibility dashboard</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Download <code>/llms.txt</code>{" "}manifest</li>
                                 <li className="flex items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 shrink-0" /> Up to 5 seats</li>
                             </ul>
@@ -640,9 +653,9 @@ export default function LandingPage() {
                             },
                             {
                                 href: "/blog/generative-engine-optimization-geo",
-                                category: "GEO",
-                                title: "Generative Engine Optimization (GEO)",
-                                description: "Why GEO is not just SEO with a new label, and where measurement belongs in the operating loop.",
+                                category: "AI Search",
+                                title: "AI Search Readiness",
+                                description: "Why AI search readiness is not just SEO with a new label, and where measurement belongs in the operating loop.",
                             },
                         ].map((article) => (
                             <Link
@@ -673,7 +686,7 @@ export default function LandingPage() {
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
                             <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">What is a &quot;Buyer Query Simulation&quot;?</h4>
                             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                A Buyer Query Simulation tests a single enterprise procurement question (e.g. &quot;Who are the top analytics firms for Fortune 500 retail transformation?&quot;) simultaneously across all three major model families. One simulation against OpenAI, Anthropic Claude, and Google Gemini builds your Share of Model score and surfaces which competitors are being recommended instead of you.
+                                A Buyer Query Simulation tests a single enterprise procurement question (e.g. &quot;Who are the top analytics firms for Fortune 500 retail transformation?&quot;) simultaneously across all three major model families. One simulation against OpenAI, Anthropic Claude, and Google Gemini builds your visibility score and surfaces which competitors are being recommended instead of you.
                             </p>
                         </div>
                         <div className="p-6 rounded-2xl bg-white/50 dark:bg-[#0a0a0a]/50 border border-slate-200 dark:border-white/10 backdrop-blur-xl">
@@ -753,7 +766,10 @@ export default function LandingPage() {
                                 llmsSuggestion: "llms.txt: Add Security section."
                             }
                         ]}
-                        allowPdfDownload={true}
+                        allowPdfDownload={false}
+                        onUpgradeRequired={() => {
+                            window.location.href = "/login";
+                        }}
                     />
                 )}
             </AnimatePresence>

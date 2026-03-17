@@ -36,7 +36,7 @@ class CompetitorResponse(BaseModel):
 @router.get("/displacement/{org_id}", response_model=CompetitorResponse)
 async def get_competitor_displacement(org_id: str, version: str = Query("latest"), auth: dict = Depends(get_auth_context)):
     """
-    Live Agentic Competitor Analysis:
+    Live AI Search Competitor Analysis:
     Runs a parallel LLM simulation to determine which competitors are most likely 
     to be recommended by AI over the tenant's brand.
     """

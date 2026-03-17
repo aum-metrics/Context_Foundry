@@ -130,7 +130,7 @@ The tenant IT admin must provide:
 
 ## 6. Billing & Subscription Enforcement
 
-The LCRS Engine enforces quotas via a per-run usage ledger to avoid Firestore contention.
+The Visibility Score Engine enforces quotas via a per-run usage ledger to avoid Firestore contention.
 
 ### Understanding the Billing Cycle
 Every time an AI simulation runs, a ledger entry is written to `organizations/{orgId}/usageLedger`. Quota enforcement counts ledger entries since `subscription.lastUsageResetAt` (or the cycle anchor). If usage exceeds `maxSimulations`, a `402 Payment Required` is thrown. `simsThisCycle` is a rollup field for dashboards, not the source of truth.
@@ -169,7 +169,7 @@ If jobs (e.g., scraping competitor sites) fail, they enter the DLQ (Dead Letter 
 
 ## 8. Troubleshooting Common Issues & Fixes
 
-### Issue 1: LCRS Simulation Returns "Simulation Engine Unavailable"
+### Issue 1: Visibility Score Simulation Returns "Simulation Engine Unavailable"
 * **Cause 1:** Org `apiKeys` are missing or invalid.
 * **Cause 2:** Organization has reached its simulation quota limit (`402`).
 * **Fix:** Tell the client to supply valid keys in Settings, or upgrade their Subscription Tier via the billing portal.
@@ -206,6 +206,6 @@ This platform enforces **Fail-Closed Security**.
 - [ ] Review DLQ entries for failed web-scraping jobs.
 - [ ] Verify `firestore.indexes.json` is perfectly matched with frontend sorting requirements.
 - [ ] Re-issue Cron trigger manually if webhook provider failed.
-- [ ] Export LCRS Scoring History CSVs for enterprise clients upon request to prove SLA adherence.
+- [ ] Export Visibility Score Scoring History CSVs for enterprise clients upon request to prove SLA adherence.
 
 *End of Runbook*
