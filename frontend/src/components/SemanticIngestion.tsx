@@ -60,6 +60,15 @@ const VectorCloud = () => {
     );
 };
 
+// --- TYPES ---
+interface IngestionResult {
+    name?: string;
+    schemaData?: Record<string, unknown>;
+    rawText?: string;
+    version?: string;
+    [key: string]: unknown;
+}
+
 export default function SemanticIngestion() {
     const { organization, refreshKey, activeManifestVersion, setActiveManifestVersion, loadingOrg } = useOrganization();
     const [step, setStep] = useState<"upload" | "processing" | "editor">("upload");
@@ -186,7 +195,7 @@ export default function SemanticIngestion() {
         setLogs(prev => [...prev, "PDF Binary Streamed to Volatile Memory. (Zero-Retention Active)"]);
         setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
 
-        const result = await parseJsonResponse(response, "Backend processing failed");
+        const result = await parseJsonResponse<IngestionResult>(response, "Backend processing failed");
 
         if (result.name === "Key Missing") {
             setLogs(prev => [...prev, "WARNING: Tenant Key Missing in Vault."]);
@@ -194,7 +203,7 @@ export default function SemanticIngestion() {
 
         // Update UI state with extracted JSON-LD
         setSchemaData(JSON.stringify(result.schemaData || result, null, 2));
-        setRawText(result.rawText || "No text extracted.");
+        setRawText((result.rawText as string) || "No text extracted.");
         setLogs(prev => [...prev, "SUCCESS: Structured JSON-LD generated."]);
         if (organization?.id && typeof window !== "undefined") {
             if (result.version) setActiveManifestVersion(result.version);
@@ -274,11 +283,11 @@ export default function SemanticIngestion() {
             setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
             setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
 
-            const result = await parseJsonResponse(response, "URL processing failed");
+            const result = await parseJsonResponse<IngestionResult>(response, "URL processing failed");
             setLogs(prev => [...prev, "JSON-LD Schema verified."]);
             setLogs(prev => [...prev, "Manifest generated."]);
 
-            setSchemaData(JSON.stringify(result.schemaData, null, 2));
+            setSchemaData(JSON.stringify(result.schemaData || result, null, 2));
             setRawText(null); // Zero-retention
             setStep("editor");
             if (typeof window !== "undefined") {
