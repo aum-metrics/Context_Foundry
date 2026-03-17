@@ -255,8 +255,34 @@ export function OrganizationProvider({ children, user }: { children: React.React
                     if (orgResponse.ok) {
                         setOrganization(await orgResponse.json());
                     } else if (orgResponse.status === 404) {
-                        // Stale org ID? Reset and retry with user's base org.
-                        console.warn("Organization profile 404. Clearing overrides.");
+                        // Org doc missing. Attempt server-side repair provisioning, then retry.
+                        console.warn("Organization profile 404. Attempting repair provisioning.");
+                        try {
+                            const reprovision = await fetch("/api/workspaces/provision", {
+                                method: "POST",
+                                headers: { "Authorization": `Bearer ${token}` }
+                            });
+                            if (reprovision.ok) {
+                                const prov = await reprovision.json();
+                                const repairedOrgId = prov.orgId || currentOrgUser.orgId;
+                                setOrgUser((prev) => prev ? { ...prev, orgId: repairedOrgId } : prev);
+                                setActiveOrgIdState(repairedOrgId);
+                                const retryProfile = await fetch(
+                                    `/api/workspaces/${repairedOrgId}/profile?version=${encodeURIComponent(manifestVersion)}`,
+                                    { headers: { "Authorization": `Bearer ${token}` } }
+                                );
+                                if (retryProfile.ok) {
+                                    setOrganization(await retryProfile.json());
+                                } else {
+                                    throw new Error("Re-provisioned org profile fetch failed.");
+                                }
+                                setLoadingOrg(false);
+                                return;
+                            }
+                        } catch (e) {
+                            console.warn("Repair provisioning failed:", e);
+                        }
+                        // Fallback: clear overrides and exit.
                         if (typeof window !== "undefined") {
                             localStorage.removeItem(ACTIVE_ORG_OVERRIDE_KEY);
                         }

@@ -68,17 +68,21 @@ export default function SemanticIngestion() {
     const [rawText, setRawText] = useState<string | null>(null);
     const [urlInput, setUrlInput] = useState<string>("");
     const [isIngesting, setIsIngesting] = useState(false);
+    const [preflightError, setPreflightError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Processing simulation logs
     const [logs, setLogs] = useState<string[]>([]);
 
-    const parseJsonResponse = async (response: Response, defaultError: string) => {
+    const parseJsonResponse = async <T extends Record<string, unknown>>(
+        response: Response,
+        defaultError: string
+    ): Promise<T> => {
         const raw = await response.text();
-        let data: any = null;
+        let data: unknown = null;
         if (raw) {
             try {
-                data = JSON.parse(raw);
+                data = JSON.parse(raw) as unknown;
             } catch {
                 if (!response.ok) {
                     throw new Error(raw || defaultError);
@@ -87,10 +91,21 @@ export default function SemanticIngestion() {
             }
         }
         if (!response.ok) {
-            const message = (data as any)?.detail || (data as any)?.message || defaultError;
+            let message = defaultError;
+            if (typeof data === "object" && data !== null) {
+                const payload = data as { detail?: unknown; message?: unknown };
+                if (typeof payload.detail === "string" && payload.detail.trim()) {
+                    message = payload.detail;
+                } else if (typeof payload.message === "string" && payload.message.trim()) {
+                    message = payload.message;
+                }
+            }
             throw new Error(message);
         }
-        return (data as any) || {};
+        if (typeof data === "object" && data !== null) {
+            return data as T;
+        }
+        return {} as T;
     };
 
     const waitForManifestReady = async (token: string, orgId: string, version?: string) => {
@@ -199,12 +214,17 @@ export default function SemanticIngestion() {
 
     const handleFileUpload = async (file: File) => {
         if (!file || isIngesting) return;
+        if (!organization?.id || loadingOrg) {
+            setPreflightError("Workspace still initializing. Please wait a few seconds and retry.");
+            return;
+        }
 
         setIsIngesting(true);
         setStep("processing");
         setLogs([]);
         setSchemaData(null);
         setRawText(null);
+        setPreflightError(null);
 
         setLogs(prev => [...prev, `Initiating secure ingestion for: ${file.name}`]);
         setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
@@ -224,13 +244,18 @@ export default function SemanticIngestion() {
         if (normalizedUrl && !/^https?:\/\//i.test(normalizedUrl)) {
             normalizedUrl = `https://${normalizedUrl}`;
         }
-        if (!normalizedUrl || !organization?.id || isIngesting) return;
+        if (!normalizedUrl || isIngesting) return;
+        if (!organization?.id || loadingOrg) {
+            setPreflightError("Workspace still initializing. Please wait a few seconds and retry.");
+            return;
+        }
 
         setIsIngesting(true);
         setStep("processing");
         setLogs([]);
         setSchemaData(null);
         setRawText(null);
+        setPreflightError(null);
 
         setLogs(prev => [...prev, `Initiating secure URL ingestion for: ${url}`]);
         setLogs(prev => [...prev, `Protocol: Zero-Retention Processing (volatile memory only)`]);
@@ -298,7 +323,7 @@ export default function SemanticIngestion() {
                                 className={`relative group rounded-3xl border-2 border-dashed transition-all duration-300 ${isDragging
                                     ? "border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-400/10"
                                     : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-500 dark:hover:bg-slate-800/50"
-                                    } ${isIngesting ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"} backdrop-blur-xl p-16 flex flex-col items-center justify-center shadow-sm dark:shadow-none`}
+                                    } ${isIngesting || loadingOrg || !organization?.id ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"} backdrop-blur-xl p-16 flex flex-col items-center justify-center shadow-sm dark:shadow-none`}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => {
@@ -317,6 +342,11 @@ export default function SemanticIngestion() {
                                 <p className="text-slate-500 dark:text-slate-400 text-center mb-8 max-w-md">
                                     Upload raw marketing PDFs, documentation, or enter URLs to translate them into machine-readable JSON-LD.
                                 </p>
+                                {preflightError && (
+                                    <div className="mb-6 w-full rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400">
+                                        {preflightError}
+                                    </div>
+                                )}
 
                                 <div className="flex items-center space-x-4 w-full max-w-md">
                                     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>

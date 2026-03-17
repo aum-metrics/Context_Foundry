@@ -432,9 +432,11 @@ async def razorpay_webhook(request: Request):
                     logger.info(f"✅ Webhook: Org {org_id} upgraded to {plan_id} via {event}")
 
         return {"status": "ok"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Webhook processing failed: {e}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 
 @router.get("/status/{org_id}")

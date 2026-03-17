@@ -163,7 +163,29 @@ async def provision_organization(
         if user_doc.exists:
             user_data = user_doc.to_dict() or {}
             org_id = user_data.get("orgId")
-            return {"status": "existing", "orgId": org_id, "message": "User already provisioned."}
+            if not org_id:
+                logger.warning(f"Provisioning repair: user {uid} exists without orgId. Re-provisioning.")
+            else:
+                org_ref = db.collection("organizations").document(org_id)
+                org_snap = await asyncio.to_thread(org_ref.get)
+                if org_snap.exists:
+                    return {"status": "existing", "orgId": org_id, "message": "User already provisioned."}
+                # Repair path: org missing but user points to it
+                logger.warning(f"Provisioning repair: org {org_id} missing for user {uid}. Recreating org.")
+                org_payload = {
+                    "id": org_id,
+                    "name": (user_data.get("orgName") or name).strip(),
+                    "activeSeats": 1,
+                    "subscription": {
+                        "planId": "explorer", "status": "active", "simsThisCycle": 0, "maxSimulations": 1,
+                        "activatedAt": datetime.now(timezone.utc).isoformat(), "currentPeriodStart": datetime.now(timezone.utc),
+                        "lastUsageResetAt": datetime.now(timezone.utc),
+                    },
+                    "apiKeys": {"openai": "internal_platform_managed", "gemini": "internal_platform_managed", "anthropic": "internal_platform_managed"},
+                    "createdAt": datetime.now(timezone.utc)
+                }
+                await asyncio.to_thread(org_ref.set, org_payload)
+                return {"status": "repaired", "orgId": org_id, "message": "Organization recreated for existing user."}
             
         # Check for invites (blocking stream converted to list)
         invited_users = list(await asyncio.to_thread(db.collection("users").where("email", "==", email).where("status", "==", "invited_pending_auth").limit(1).stream))
@@ -392,7 +414,59 @@ async def get_manifest_data(org_id: str, version: str = Query("latest"), auth: d
     if not manifest_doc.exists: raise HTTPException(status_code=404)
     data = manifest_doc.to_dict() or {}
     data.pop("apiKeys", None)
-    return {"orgId": org_id, "content": data.get("content", ""), "version": data.get("version", version)}
+    return {
+        "orgId": org_id,
+        "content": data.get("content", ""),
+        "version": data.get("version", version),
+        "schemaData": data.get("schemaData", {}),
+        "sourceUrl": data.get("sourceUrl") or (data.get("metadata") or {}).get("source_url"),
+        "industryTaxonomy": data.get("industryTaxonomy"),
+        "industryTags": data.get("industryTags", []),
+        "name": _extract_manifest_entity_name(data),
+        "createdAt": _serialize_timestamp(data.get("createdAt")),
+    }
+
+@router.get("/{org_id}/contexts")
+async def list_manifest_contexts(org_id: str, auth: dict = Depends(get_auth_context)):
+    if not verify_user_org_access(auth.get("uid"), org_id): raise HTTPException(status_code=403)
+    if not db: raise HTTPException(status_code=503)
+
+    org_ref = db.collection("organizations").document(org_id)
+    latest_version = None
+    try:
+        latest_doc = await asyncio.to_thread(org_ref.collection("manifests").document("latest").get)
+        if latest_doc.exists:
+            latest_version = (latest_doc.to_dict() or {}).get("version")
+    except Exception:
+        latest_version = None
+
+    try:
+        docs = await asyncio.to_thread(lambda: list(
+            org_ref.collection("manifests")
+            .order_by("createdAt", direction=firestore.Query.DESCENDING)
+            .limit(50)
+            .stream()
+        ))
+    except Exception as e:
+        logger.error(f"Failed to list contexts for org {org_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load contexts")
+
+    contexts = []
+    for doc in docs:
+        if doc.id == "latest":
+            continue
+        payload = doc.to_dict() or {}
+        version = payload.get("version") or doc.id
+        contexts.append({
+            "id": doc.id,
+            "version": version,
+            "name": _extract_manifest_entity_name(payload) or _humanize_org_name(payload.get("metadata", {}).get("title", "")) or "Untitled Context",
+            "sourceUrl": payload.get("sourceUrl") or (payload.get("metadata") or {}).get("source_url"),
+            "createdAt": _serialize_timestamp(payload.get("createdAt")),
+            "isLatest": bool(latest_version and version == latest_version),
+        })
+
+    return {"contexts": contexts}
 
 @router.get("/{org_id}/manifest")
 async def get_public_manifest(org_id: str, version: str = Query("latest")):
@@ -400,6 +474,19 @@ async def get_public_manifest(org_id: str, version: str = Query("latest")):
     if org_id == "demo_org_id" and _demo_mode_enabled():
          from fastapi.responses import PlainTextResponse
          return PlainTextResponse(content="# Sight Spectrum Manifest")
+    allow_public = str(os.getenv("ALLOW_PUBLIC_LLM_MANIFEST", "")).lower() in {"1", "true", "yes"}
+    org_public = False
+    if db:
+        try:
+            org_doc = await asyncio.to_thread(db.collection("organizations").document(org_id).get)
+            if org_doc.exists:
+                org_data = org_doc.to_dict() or {}
+                org_public = bool(org_data.get("publicManifest") or org_data.get("llmsPublic"))
+        except Exception:
+            org_public = False
+
+    if not (allow_public or org_public):
+        raise HTTPException(status_code=404, detail="Not found")
     manifest_doc = await _get_manifest_doc(org_id, version)
     if manifest_doc.exists:
         from fastapi.responses import PlainTextResponse

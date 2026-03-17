@@ -33,6 +33,9 @@ def _reservation_shard_id(org_id: str, prompt: str) -> str:
     shard = int(digest, 16) % RESERVATION_SHARDS
     return f"shard_{shard}"
 
+def _reservation_cycle_key(cycle_start: datetime) -> str:
+    return cycle_start.isoformat() if hasattr(cycle_start, "isoformat") else str(cycle_start)
+
 @firestore.transactional
 def _reserve_quota_txn(txn, org_ref, org_id, cycle_start, plan_limit, reservation_shard_id: str):
     """
@@ -44,18 +47,37 @@ def _reserve_quota_txn(txn, org_ref, org_id, cycle_start, plan_limit, reservatio
     if not org_snap.exists:
         raise HTTPException(status_code=404, detail="Organization not found")
     
-    # 2. Count current usage (canonical)
+    # 2. Count current usage (canonical) + active reservations for this cycle
     usage = count_usage_since(db, org_id, cycle_start)
-    
-    if usage >= plan_limit:
+    cycle_key = _reservation_cycle_key(cycle_start)
+    total_reserved = 0
+    for i in range(RESERVATION_SHARDS):
+        shard_ref = org_ref.collection("usageReservations").document(f"shard_{i}")
+        shard_snap = shard_ref.get(transaction=txn)
+        if shard_snap.exists:
+            shard = shard_snap.to_dict() or {}
+            if shard.get("cycleStart") == cycle_key:
+                total_reserved += int(shard.get("count", 0))
+
+    if usage + total_reserved + 1 > plan_limit:
         raise HTTPException(status_code=402, detail=f"Quota exceeded: {usage}/{plan_limit} sims used.")
-    
+
     # 3. Increment reservation counter (sharded to avoid hot org doc writes)
+    now = datetime.now(timezone.utc)
     reservation_ref = org_ref.collection("usageReservations").document(reservation_shard_id)
-    txn.set(reservation_ref, {
-        "count": firestore.Increment(1),
-        "updatedAt": datetime.now(timezone.utc)
-    }, merge=True)
+    current_snap = reservation_ref.get(transaction=txn)
+    if current_snap.exists and (current_snap.to_dict() or {}).get("cycleStart") == cycle_key:
+        txn.set(reservation_ref, {
+            "count": firestore.Increment(1),
+            "updatedAt": now,
+            "cycleStart": cycle_key,
+        }, merge=True)
+    else:
+        txn.set(reservation_ref, {
+            "count": 1,
+            "updatedAt": now,
+            "cycleStart": cycle_key,
+        }, merge=True)
     return True
 from fastapi.responses import StreamingResponse
 import io
@@ -561,7 +583,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
 
 
 
-async def _record_usage(org_id: str, prompt: str, manifest_version: str, org_plan: str):
+async def _record_usage(org_id: str, prompt: str, manifest_version: str, org_plan: str, reservation_shard_id: Optional[str] = None, reservation_cycle_key: Optional[str] = None):
     """Atomic billing record write after successful simulation completion."""
     if not db:
         return
@@ -574,6 +596,27 @@ async def _record_usage(org_id: str, prompt: str, manifest_version: str, org_pla
             "planId": org_plan,
         })
         logger.info(f"Billing: Usage recorded for org {org_id}")
+        if reservation_shard_id:
+            try:
+                @firestore.transactional
+                def _release_reservation(txn):
+                    ref = org_ref.collection("usageReservations").document(reservation_shard_id)
+                    snap = ref.get(transaction=txn)
+                    if not snap.exists:
+                        return
+                    data = snap.to_dict() or {}
+                    if reservation_cycle_key and data.get("cycleStart") != reservation_cycle_key:
+                        return
+                    current = int(data.get("count", 0))
+                    next_count = max(current - 1, 0)
+                    txn.set(ref, {
+                        "count": next_count,
+                        "updatedAt": datetime.now(timezone.utc),
+                        "cycleStart": data.get("cycleStart") or reservation_cycle_key
+                    }, merge=True)
+                _release_reservation(db.transaction())
+            except Exception as e:
+                logger.warning(f"Billing: Reservation release failed for {org_id}: {e}")
     except Exception as e:
         logger.error(f"Billing: Usage recording failed for {org_id}: {e}")
 
@@ -811,6 +854,8 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     }
     plan_limit = org_data.get("subscription", {}).get("maxSimulations", limits.get(org_plan, 1))
 
+    reservation_shard = None
+    reservation_cycle_key = None
     if db and not is_dev and not skip_billing:
         org_ref = db.collection("organizations").document(request.orgId)
         subscription = org_data.get("subscription", {})
@@ -819,6 +864,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         # 🛡️ SECURITY HARDENING (P0): Atomic quota reservation
         try:
             reservation_shard = _reservation_shard_id(request.orgId, request.prompt)
+            reservation_cycle_key = _reservation_cycle_key(cycle_start)
             await asyncio.to_thread(
                 _reserve_quota_txn,
                 db.transaction(),
@@ -1102,7 +1148,15 @@ Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model
         background_tasks.add_task(_store_simulation_results, request.orgId, request.prompt, resolved_manifest_version, results, cache_key)
         # 🛡️ BILLING INTEGRITY (P0): Only record usage if models actually returned results
         if results and len(results) > 0:
-            background_tasks.add_task(_record_usage, request.orgId, request.prompt, resolved_manifest_version, org_plan)
+            background_tasks.add_task(
+                _record_usage,
+                request.orgId,
+                request.prompt,
+                resolved_manifest_version,
+                org_plan,
+                reservation_shard,
+                reservation_cycle_key,
+            )
         
         import random
         if random.random() < 0.1:
@@ -1191,8 +1245,12 @@ async def export_scoring_history(orgId: str, auth: dict = Depends(get_auth_conte
     Export the Visibility Score history for an organization as a verifiable CSV.
     Allows enterprises to audit the 60/40 blend mathematics independently.
     """
-    if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], orgId):
-        raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], orgId):
+            raise HTTPException(status_code=403, detail="Unauthorized access to this organization")
+    elif auth.get("type") == "api_key":
+        if auth.get("orgId") != orgId:
+            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
     org_plan = _get_org_plan(orgId)
     if org_plan not in ["growth", "scale", "enterprise"]:
@@ -1258,8 +1316,12 @@ async def get_simulation_history(org_id: str, auth: dict = Depends(get_auth_cont
     Fetch the historical simulation results for the dashboard.
     Intercepts demo_org_id to serve a fixed high-fidelity dataset.
     """
-    if auth.get("type") == "session" and not verify_user_org_access(auth["uid"], org_id):
-        raise HTTPException(status_code=403, detail="Unauthorized")
+    if auth.get("type") == "session":
+        if not verify_user_org_access(auth["uid"], org_id):
+            raise HTTPException(status_code=403, detail="Unauthorized")
+    elif auth.get("type") == "api_key":
+        if auth.get("orgId") != org_id:
+            raise HTTPException(status_code=403, detail="API key is not authorized for this organization")
 
     org_plan = _get_org_plan(org_id)
 
