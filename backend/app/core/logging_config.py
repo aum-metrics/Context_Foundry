@@ -28,30 +28,8 @@ def setup_logging():
     console_handler.addFilter(EnvFilter())
     root_logger.addHandler(console_handler)
     
-    # File Handler
-    if settings.ENV == "production":
-        # In prod, we might want a rotating file handler for errors specifically
-        error_file_handler = RotatingFileHandler(
-            "error.log",
-            maxBytes=10 * 1024 * 1024, # 10MB
-            backupCount=5,
-            encoding='utf-8'
-        )
-        error_file_handler.setLevel(logging.ERROR)
-        error_file_handler.setFormatter(logging.Formatter(log_format))
-        error_file_handler.addFilter(EnvFilter())
-        root_logger.addHandler(error_file_handler)
-
-    # Main App File Handler
-    app_file_handler = RotatingFileHandler(
-        "app.log",
-        maxBytes=10 * 1024 * 1024, # 10MB
-        backupCount=3,
-        encoding='utf-8'
-    )
-    app_file_handler.setFormatter(logging.Formatter(log_format))
-    app_file_handler.addFilter(EnvFilter())
-    root_logger.addHandler(app_file_handler)
+    # File Handlers - Disabled for Cloud Run to avoid write issues & persistent storage lack.
+    # We rely on Standard Output (Console Handler) which Cloud Logging captures.
 
     # Suppress verbose logs from external libraries
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
