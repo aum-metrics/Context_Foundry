@@ -201,19 +201,24 @@ async def provision_organization(
 
         @firestore.transactional
         def _txn(transaction, u_ref, o_ref):
-            if u_ref.get(transaction=transaction).exists: return u_ref.get(transaction=transaction).to_dict().get("orgId")
+            # 1. Check for user existence again inside transaction to prevent race conditions
+            u_snap = u_ref.get(transaction=transaction)
+            if u_snap.exists:
+                return {"status": "existing", "orgId": u_snap.to_dict().get("orgId")}
+            
+            # 2. Atomic Provisioning
             transaction.set(o_ref, org_payload)
             transaction.set(u_ref, user_payload)
-            return None
+            return {"status": "provisioned", "orgId": new_org_id, "message": "Onboarding complete."}
 
         org_ref = db.collection("organizations").document(new_org_id)
-        existing_org_id = await asyncio.to_thread(_txn, db.transaction(), user_ref, org_ref)
+        # Using db.run_transaction which handles retries and commits automatically
+        result = await asyncio.to_thread(db.run_transaction, _txn, user_ref, org_ref)
 
-        if existing_org_id:
-            return {"status": "existing", "orgId": existing_org_id}
-
-        log_audit_event(org_id=new_org_id, actor_id=uid, event_type="organization_provisioned", resource_id=new_org_id)
-        return {"status": "provisioned", "orgId": new_org_id, "message": "Onboarding complete."}
+        if result["status"] == "provisioned":
+             log_audit_event(org_id=new_org_id, actor_id=uid, event_type="organization_provisioned", resource_id=new_org_id)
+        
+        return result
     except Exception as e:
         logger.error(f"Provisioning fail: {e}")
         raise HTTPException(status_code=500, detail="Provisioning workflow failed.")

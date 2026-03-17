@@ -38,4 +38,5 @@ def initialize_firebase():
         db = None
         return None
 
-# Initialization handled by app lifespan
+# Initialization
+initialize_firebase()

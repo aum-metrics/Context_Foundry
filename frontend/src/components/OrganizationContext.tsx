@@ -246,6 +246,16 @@ export function OrganizationProvider({ children, user }: { children: React.React
 
                     if (orgResponse.ok) {
                         setOrganization(await orgResponse.json());
+                    } else if (orgResponse.status === 404) {
+                        // Stale org ID? Reset and retry with user's base org.
+                        console.warn("Organization profile 404. Clearing overrides.");
+                        if (typeof window !== "undefined") {
+                            localStorage.removeItem(ACTIVE_ORG_OVERRIDE_KEY);
+                        }
+                        setActiveOrgIdState(currentOrgUser.orgId);
+                        setOrganization(null);
+                        setLoadingOrg(false);
+                        return;
                     } else {
                         throw new Error("Failed to load organization profile.");
                     }

@@ -220,7 +220,11 @@ export default function SemanticIngestion() {
     };
 
     const handleUrlIngest = async (url: string) => {
-        if (!url || !organization?.id || isIngesting) return;
+        let normalizedUrl = url.trim();
+        if (normalizedUrl && !/^https?:\/\//i.test(normalizedUrl)) {
+            normalizedUrl = `https://${normalizedUrl}`;
+        }
+        if (!normalizedUrl || !organization?.id || isIngesting) return;
 
         setIsIngesting(true);
         setStep("processing");
@@ -322,19 +326,20 @@ export default function SemanticIngestion() {
 
                                 <div className="mt-8 w-full max-w-md relative">
                                     <input
-                                        type="url"
+                                        type="text"
                                         id="url-ingestion-input"
                                         value={urlInput || ""}
                                         onChange={e => setUrlInput(e.target.value)}
                                         onKeyDown={e => { if (e.key === "Enter" && urlInput) handleUrlIngest(urlInput); }}
                                         onClick={(e) => e.stopPropagation()}
-                                        placeholder="https://yourcompany.com/about"
+                                        placeholder="yourcompany.com"
                                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg py-3 px-4 text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm dark:shadow-none placeholder-slate-400"
                                     />
                                     <button
+                                        type="button"
                                         onClick={(e) => { e.stopPropagation(); if (urlInput && !isIngesting) handleUrlIngest(urlInput); }}
                                         disabled={!urlInput || isIngesting}
-                                        className="absolute right-2 top-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
+                                        className="absolute right-2 top-2 bg-indigo-600 hover:bg_indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
                                     >
                                         {isIngesting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
                                     </button>
