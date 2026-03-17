@@ -6,7 +6,7 @@ and the full RAG pipeline with semantic chunk retrieval.
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from main import app
+from app.main import app
 
 client = TestClient(app, base_url="http://localhost")
 

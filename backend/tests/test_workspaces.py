@@ -4,7 +4,7 @@ Tests for the Workspaces module — provisioning, members, invites, rate limiter
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from main import app
+from app.main import app
 
 client = TestClient(app, base_url="http://localhost")
 
@@ -93,7 +93,7 @@ def test_list_org_members_unauthorized(mock_verify):
 def test_get_org_profile_redacted(mock_db):
     """Test org profile endpoint redacts apiKeys."""
     from core.security import get_auth_context
-    from main import app
+    from app.main import app
     app.dependency_overrides[get_auth_context] = lambda: {
         "uid": "mock-dev-uid",
         "email": "mock@dev.local",

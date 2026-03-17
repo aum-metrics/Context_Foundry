@@ -33,6 +33,6 @@ def clean_dependency_overrides():
     """
     After every test, clear FastAPI dependency overrides to prevent test contamination.
     """
-    from main import app
+    from app.main import app
     yield
     app.dependency_overrides.clear()
