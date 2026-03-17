@@ -282,8 +282,8 @@ async def health_check():
     try:
         from core.firebase_config import db
         if db:
-            # Performs a lightweight read to verify connectivity
-            db.collection("health_check").document("ping").get()
+            # Performs a lightweight read to verify connectivity (wrapped in thread to prevent blocking event loop)
+            await asyncio.to_thread(db.collection("health_check").document("ping").get)
             firestore_status = "connected"
         else:
             firestore_status = "unavailable"
