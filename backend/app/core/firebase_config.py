@@ -5,15 +5,15 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-db = None
-app = None
+# Internal state
+_db = None
+_app = None
 
 def initialize_firebase():
     """
     Initializes Firebase Admin SDK.
-    Returns a Firestore client, or None if credentials are not available.
     """
-    global db, app
+    global _db, _app
     try:
         import firebase_admin
         from firebase_admin import credentials, firestore
@@ -24,19 +24,21 @@ def initialize_firebase():
             
             if cred_path and Path(cred_path).exists():
                 cred = credentials.Certificate(cred_path)
-                app = firebase_admin.initialize_app(cred, options={'projectId': firebase_project_id})
+                _app = firebase_admin.initialize_app(cred, options={'projectId': firebase_project_id})
                 logger.info(f"✅ Firebase Admin SDK initialized with service account for project: {firebase_project_id}")
             else:
-                app = firebase_admin.initialize_app(options={'projectId': firebase_project_id})
+                _app = firebase_admin.initialize_app(options={'projectId': firebase_project_id})
                 logger.info(f"✅ Firebase Admin SDK initialized with default credentials for project: {firebase_project_id}")
         
-        db = firestore.client()
-        return db
+        _db = firestore.client()
+        return _db
 
     except Exception as e:
         logger.warning(f"⚠️  Firebase not available (non-fatal): {e}")
-        db = None
         return None
 
-# Initialization
+# Eager initialization on module load
 initialize_firebase()
+
+# Export 'db' for compatibility with 'from core.firebase_config import db'
+db = _db

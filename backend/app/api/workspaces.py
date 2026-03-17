@@ -212,8 +212,12 @@ async def provision_organization(
             return {"status": "provisioned", "orgId": new_org_id, "message": "Onboarding complete."}
 
         org_ref = db.collection("organizations").document(new_org_id)
-        # Using db.run_transaction which handles retries and commits automatically
-        result = await asyncio.to_thread(db.run_transaction, _txn, user_ref, org_ref)
+        # 🛡️ FIX: run_transaction callback must only take 'transaction'
+        # We use a wrapper to pass additional refs
+        async def _run_txn_safely():
+            return db.run_transaction(lambda t: _txn(t, user_ref, org_ref))
+            
+        result = await asyncio.to_thread(db.run_transaction, lambda t: _txn(t, user_ref, org_ref))
 
         if result["status"] == "provisioned":
              log_audit_event(org_id=new_org_id, actor_id=uid, event_type="organization_provisioned", resource_id=new_org_id)
