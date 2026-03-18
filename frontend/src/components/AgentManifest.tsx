@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Copy, Check, FileCode, RadioReceiver, FileDown, Lock } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
 import { UpgradeModal } from "./UpgradeModal";
+import { auth } from "@/lib/firebase";
+import { getLocalMockSession, isLocalMockMode } from "@/lib/localMockMode";
+
+type ManifestData = {
+    content?: string;
+    schemaData?: Record<string, unknown>;
+    sourceUrl?: string | null;
+    industryTaxonomy?: string | null;
+    industryTags?: string[];
+};
 
 export default function AgentManifest() {
     const { organization, refreshKey, activeManifestVersion } = useOrganization();
@@ -15,34 +25,82 @@ export default function AgentManifest() {
         "llms-full.txt": "Connecting to Ground Truth Directory...\nVerifying semantic index availability...",
     });
 
+    const buildFullManifest = useCallback((data: ManifestData): string => {
+        const content = (data.content || "").trim();
+        const schema = data.schemaData || {};
+        const sourceUrl = data.sourceUrl || undefined;
+        const industryTaxonomy = data.industryTaxonomy || undefined;
+        const industryTags = data.industryTags || [];
+
+        const sections: string[] = [];
+        if (content) {
+            sections.push(content);
+        } else {
+            sections.push("# Organization - AI Protocol Manifest");
+        }
+
+        if (Object.keys(schema).length > 0) {
+            sections.push("## Structured Data (JSON-LD)\n" + JSON.stringify(schema, null, 2));
+        } else {
+            sections.push("## Structured Data (JSON-LD)\nNot found in manifest.");
+        }
+
+        if (sourceUrl) sections.push(`## Source\n${sourceUrl}`);
+        if (industryTaxonomy) sections.push(`## Industry Taxonomy\n${industryTaxonomy}`);
+        if (industryTags.length) sections.push(`## Industry Tags\n${industryTags.join(", ")}`);
+
+        return sections.join("\n\n").trim();
+    }, []);
+
     useEffect(() => {
         const orgId = organization?.id;
         if (!orgId) return;
 
-        async function fetchManifest(kind: "llms.txt" | "llms-full.txt") {
+        async function fetchManifestData() {
             try {
-                const endpoint = kind === "llms-full.txt" ? "manifest-full" : "manifest";
-                const res = await fetch(`/api/workspaces/${orgId}/${endpoint}?version=${encodeURIComponent(activeManifestVersion)}`);
-                if (res.ok) {
-                    const text = await res.text();
-                    const nextValue = text.includes("<!DOCTYPE html>")
-                        ? "Error loading manifest. Missing document ingestion."
-                        : text;
-                    setManifestContent(prev => ({ ...prev, [kind]: nextValue }));
-                } else {
+                const token = isLocalMockMode()
+                    ? getLocalMockSession().token
+                    : await auth.currentUser?.getIdToken();
+
+                if (!token) {
                     setManifestContent(prev => ({
                         ...prev,
-                        [kind]: "No Agent Manifest found. Please ingest a source document first in the Semantic Ingestion Engine."
+                        "llms.txt": "Authentication required to load manifest.",
+                        "llms-full.txt": "Authentication required to load manifest."
                     }));
+                    return;
                 }
+
+                const res = await fetch(
+                    `/api/workspaces/${orgId}/manifest-data?version=${encodeURIComponent(activeManifestVersion)}`,
+                    { headers: { "Authorization": `Bearer ${token}` } }
+                );
+
+                if (!res.ok) {
+                    setManifestContent(prev => ({
+                        ...prev,
+                        "llms.txt": "No Agent Manifest found. Please ingest a source document first in the Semantic Ingestion Engine.",
+                        "llms-full.txt": "No Agent Manifest found. Please ingest a source document first in the Semantic Ingestion Engine."
+                    }));
+                    return;
+                }
+
+                const data = (await res.json()) as ManifestData;
+                const llmsTxt = typeof data.content === "string" && data.content.trim()
+                    ? data.content.trim()
+                    : "No Agent Manifest found. Please ingest a source document first in the Semantic Ingestion Engine.";
+
+                setManifestContent({
+                    "llms.txt": llmsTxt,
+                    "llms-full.txt": buildFullManifest(data),
+                });
             } catch {
-                setManifestContent(prev => ({ ...prev, [kind]: "Error fetching Edge manifest." }));
+                setManifestContent(prev => ({ ...prev, "llms.txt": "Error fetching manifest.", "llms-full.txt": "Error fetching manifest." }));
             }
         }
 
-        fetchManifest("llms.txt");
-        fetchManifest("llms-full.txt");
-    }, [organization?.id, refreshKey, activeManifestVersion]);
+        fetchManifestData();
+    }, [organization?.id, refreshKey, activeManifestVersion, buildFullManifest]);
 
     const content = manifestContent[activeTab];
     const isExplorer = organization?.subscriptionTier === "explorer";

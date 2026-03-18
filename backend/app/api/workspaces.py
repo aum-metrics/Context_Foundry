@@ -74,6 +74,41 @@ def _is_placeholder_org_name(name: Optional[str]) -> bool:
     return normalized in {"", "unnamed organization", "your company"}
 
 
+def _build_llms_full(manifest_data: Dict[str, Any]) -> str:
+    """
+    Deterministic, non-LLM expansion of llms.txt into a richer llms-full.txt.
+    This never invents facts: it only uses fields already stored in Firestore.
+    """
+    data = manifest_data or {}
+    content = (data.get("content") or "").strip()
+    schema = data.get("schemaData") or {}
+    source_url = data.get("sourceUrl") or (data.get("metadata") or {}).get("source_url")
+    industry_taxonomy = data.get("industryTaxonomy")
+    industry_tags = data.get("industryTags") or []
+
+    sections: list[str] = []
+    if content:
+        sections.append(content)
+    else:
+        # Fallback header if content is missing
+        title = _extract_manifest_entity_name(data) or "Organization"
+        sections.append(f"# {title} - AI Protocol Manifest")
+
+    if schema:
+        sections.append("## Structured Data (JSON-LD)\n" + json.dumps(schema, indent=2, ensure_ascii=True))
+    else:
+        sections.append("## Structured Data (JSON-LD)\nNot found in manifest.")
+
+    if source_url:
+        sections.append(f"## Source\n{source_url}")
+    if industry_taxonomy:
+        sections.append(f"## Industry Taxonomy\n{industry_taxonomy}")
+    if industry_tags:
+        sections.append("## Industry Tags\n" + ", ".join([str(t) for t in industry_tags if t]))
+
+    return "\n\n".join(sections).strip()
+
+
 async def _get_manifest_doc(org_id: str, version: str = "latest"):
     org_ref = db.collection("organizations").document(org_id)
     if version == "latest":
@@ -514,6 +549,34 @@ async def get_public_manifest(org_id: str, version: str = Query("latest")):
     if manifest_doc.exists:
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse(content=manifest_doc.to_dict().get("content", ""))
+    raise HTTPException(status_code=404)
+
+
+@router.get("/{org_id}/manifest-full")
+async def get_public_manifest_full(org_id: str, version: str = Query("latest")):
+    # Public route for llms-full.txt (deterministic expansion, no LLM calls).
+    if org_id == "demo_org_id" and _demo_mode_enabled():
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content="# Sight Spectrum Manifest\n\n## Structured Data (JSON-LD)\nNot found in manifest.")
+
+    allow_public = str(os.getenv("ALLOW_PUBLIC_LLM_MANIFEST", "")).lower() in {"1", "true", "yes"}
+    org_public = False
+    if db:
+        try:
+            org_doc = await asyncio.to_thread(db.collection("organizations").document(org_id).get)
+            if org_doc.exists:
+                org_data = org_doc.to_dict() or {}
+                org_public = bool(org_data.get("publicManifest") or org_data.get("llmsPublic"))
+        except Exception:
+            org_public = False
+
+    if not (allow_public or org_public):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    manifest_doc = await _get_manifest_doc(org_id, version)
+    if manifest_doc.exists:
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content=_build_llms_full(manifest_doc.to_dict() or {}))
     raise HTTPException(status_code=404)
 
 @router.post("/llms-rate-limit")
