@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     initialize_firebase()
     
     logger.info("\n" + "="*60)
-    logger.info("🚀 AUM ANALYTICS API STARTUP - v2.2.0-hardened")
+    logger.info(f"🚀 AUM ANALYTICS API STARTUP - v{app.version}")
     logger.info("="*60)
     
     # Check Required Environment Variables & Security Secrets

@@ -208,7 +208,8 @@ gcloud run deploy "${SERVICE_NAME}" \
   --min-instances 1 \
   --max-instances 10 \
   --set-env-vars "${ENV_VARS}" \
-  --set-secrets "${SET_SECRETS}"
+  --set-secrets "${SET_SECRETS}" \
+  --startup-probe="tcpSocket.port=8000,failureThreshold=30,periodSeconds=10,timeoutSeconds=5"
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(status.url)')"
 echo "==> Cloud Run URL: ${SERVICE_URL}"
