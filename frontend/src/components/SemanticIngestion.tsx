@@ -280,20 +280,56 @@ export default function SemanticIngestion() {
                 body: JSON.stringify({ url: normalizedUrl, orgId: organization.id }),
             });
 
-            setLogs(prev => [...prev, "URL content fetched and streamed to volatile memory. (Zero-Retention Active)"]);
-            setLogs(prev => [...prev, "LLM Schema Mapping in progress..."]);
+            const initialResult = await parseJsonResponse<IngestionResult>(response, "URL processing initiation failed");
+            
+            if (initialResult.jobId) {
+                setLogs(prev => [...prev, "Ingestion job queued successfully. Monitoring progress..."]);
+                
+                // --- POLLING LOOP ---
+                let completed = false;
+                const startTime = Date.now();
+                const timeout = 120000; // 2 minute maximum wait
 
-            const result = await parseJsonResponse<IngestionResult>(response, "URL processing failed");
-            setLogs(prev => [...prev, "JSON-LD Schema verified."]);
-            setLogs(prev => [...prev, "Manifest generated."]);
+                while (!completed) {
+                    if (Date.now() - startTime > timeout) {
+                        throw new Error("Ingestion timed out after 2 minutes.");
+                    }
 
-            setSchemaData(JSON.stringify(result.schemaData || result, null, 2));
-            setRawText(null); // Zero-retention
-            setStep("editor");
-            if (typeof window !== "undefined") {
-                if (result.version) setActiveManifestVersion(result.version);
-                await waitForManifestReady(token, organization.id, result.version);
-                window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
+                    await new Promise(r => setTimeout(r, 3000)); // Poll every 3 seconds
+
+                    const statusResp = await fetch(`/api/ingestion/job/${initialResult.jobId}?orgId=${organization.id}`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    
+                    if (!statusResp.ok) continue; // Retry on transient errors
+
+                    const job = await statusResp.json();
+                    
+                    if (job.status === "completed" && job.result) {
+                        setLogs(prev => [...prev, "SUCCESS: Structured JSON-LD generated."]);
+                        const result = job.result;
+                        setSchemaData(JSON.stringify(result.schemaData || result, null, 2));
+                        if (result.version) setActiveManifestVersion(result.version);
+                        
+                        if (typeof window !== "undefined") {
+                            await waitForManifestReady(token, organization.id, result.version);
+                            window.dispatchEvent(new CustomEvent("aum_manifest_updated", { detail: { orgId: organization.id, version: result.version } }));
+                        }
+                        
+                        setStep("editor");
+                        completed = true;
+                    } else if (job.status === "failed") {
+                        throw new Error(job.error || "Background processing failed.");
+                    } else if (job.status === "processing") {
+                        if (logs.length < 10) { // Throttle internal status logs
+                             setLogs(prev => [...prev, "LLM Extraction in progress..."]);
+                        }
+                    }
+                }
+            } else {
+                // Fallback for immediate response (if any)
+                setSchemaData(JSON.stringify(initialResult.schemaData || initialResult, null, 2));
+                setStep("editor");
             }
         } catch (error) {
             console.error("URL Ingestion Error:", error);

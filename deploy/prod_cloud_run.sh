@@ -178,7 +178,7 @@ if [[ -n "${EXISTING_SERVICE_URL}" ]]; then
   EXTRA_HOSTS=",\"${HOST_ONLY}\",\"${EXISTING_SERVICE_URL}\""
 fi
 
-ENV_VARS="^@@^ENV=production@@ALLOW_MOCK_AUTH=false@@FRONTEND_URL=https://${APP_DOMAIN}@@PAYMENT_CALLBACK_URL=https://${APP_DOMAIN}/payment/success@@CORS_ORIGINS=[\"https://${APP_DOMAIN}\",\"https://${API_DOMAIN}\"${EXTRA_HOSTS}]@@TRUSTED_HOSTS=[\"${API_DOMAIN}\",\"${APP_DOMAIN}\",\"localhost\",\"127.0.0.1\"${EXTRA_HOSTS}]@@FIREBASE_SERVICE_ACCOUNT_PATH=/secrets/firebase/google-credentials.json"
+ENV_VARS="^@@^ENV=production@@ALLOW_MOCK_AUTH=false@@FRONTEND_URL=https://${APP_DOMAIN}@@PAYMENT_CALLBACK_URL=https://${APP_DOMAIN}/payment/success@@CORS_ORIGINS=[\"https://${APP_DOMAIN}\",\"https://${API_DOMAIN}\"${EXTRA_HOSTS}]@@TRUSTED_HOSTS=[\"${API_DOMAIN}\",\"${APP_DOMAIN}\",\"localhost\",\"127.0.0.1\",\"*.run.app\",\"*.a.run.app\"${EXTRA_HOSTS}]@@FIREBASE_SERVICE_ACCOUNT_PATH=/secrets/firebase/google-credentials.json"
 
 OPTIONAL_SECRETS=""
 if gcloud secrets describe "${SECRET_RAZORPAY_WEBHOOK_SECRET}" >/dev/null 2>&1; then

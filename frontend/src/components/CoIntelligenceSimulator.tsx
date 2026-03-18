@@ -95,8 +95,8 @@ export default function CoIntelligenceSimulator() {
                                 body: JSON.stringify({ orgId: organization.id, manifestSnippet: manifestContent.slice(0, 2000) }),
                             });
                             if (res.ok) {
-                                const d = await res.json();
-                                if (d.prompts && d.prompts.length > 0) {
+                                const d = await res.json().catch(() => null);
+                                if (d && Array.isArray(d.prompts) && d.prompts.length > 0) {
                                     if (cancelled) return;
                                     setDynamicPrompts(d.prompts);
                                     setActivePrompt((prev) => (prev && d.prompts.includes(prev)) ? prev : d.prompts[0]);

@@ -430,7 +430,8 @@ async def parse_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-from pydantic import BaseModel as PydanticBaseModel
+from utils.task_queue import FirestoreTaskQueue
+from fastapi import BackgroundTasks
 
 class URLIngestionRequest(PydanticBaseModel):
     url: str
@@ -439,16 +440,18 @@ class URLIngestionRequest(PydanticBaseModel):
 @router.post("/parse-url")
 async def parse_url(
     request: URLIngestionRequest,
+    background_tasks: BackgroundTasks,
     auth: dict = Depends(get_auth_context)
 ):
     """
-    URL Semantic Ingestion: Fetches a public URL and runs the same zero-retention
-    semantic pipeline as PDF ingestion. Raw HTML is never stored.
+    URL Semantic Ingestion (V1.7.6 - Polling Architecture):
+    Offloads heavy LLM work to a background task to avoid Vercel 502 timeouts.
+    Returns a jobId immediately for the frontend to poll.
     """
     uid = auth.get("uid")
-    source_url = request.url # Standardize for metadata logic
     orgId = request.orgId
 
+    # Security & Limit checks (Keep in-request for immediate feedback)
     if auth.get("type") == "session":
         if not verify_user_org_access(uid, orgId):
             raise HTTPException(status_code=403, detail="Unauthorized")
@@ -456,7 +459,6 @@ async def parse_url(
         if auth.get("orgId") != orgId:
             raise HTTPException(status_code=403, detail="API key unauthorized for this organization")
 
-    # Enforce Document Limits
     if db:
         try:
             org_doc = db.collection("organizations").document(orgId).get()
@@ -472,185 +474,176 @@ async def parse_url(
         except Exception as e:
             logger.warning(f"Limit check failure: {e}")
 
-    # --- FETCH URL (volatile memory only) ---
     await _validate_public_url(request.url)
-    # 🛡️ RESOURCE HARDENING (P2): Limit RAM usage for PDF extraction
+
+    # Register Job
+    job_id = f"job_ingest_{int(datetime.datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:6]}"
+    FirestoreTaskQueue.register_job(orgId, "ingestionJobs", job_id, {"url": request.url, "type": "url_ingestion"})
+
+    # Launch Background Task
+    background_tasks.add_task(
+        FirestoreTaskQueue.run_persistent_task,
+        orgId, "ingestionJobs", job_id,
+        _process_url_ingestion_task,
+        request.url, orgId, uid
+    )
+
+    return {"jobId": job_id, "status": "queued"}
+
+
+@router.get("/job/{jobId}")
+async def get_job_status(
+    jobId: str,
+    orgId: str,
+    auth: dict = Depends(get_auth_context)
+):
+    """Returns the current status and results of a background ingestion job."""
+    uid = auth.get("uid")
+    if not verify_user_org_access(uid, orgId):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    job_ref = db.collection("organizations").document(orgId).collection("ingestionJobs").document(jobId).get()
+    if not job_ref.exists:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return job_ref.to_dict()
+
+
+async def _process_url_ingestion_task(url: str, orgId: str, uid: str = None):
+    """Persistent background worker for URL ingestion LLM pipeline."""
+    # 🛡️ RESOURCE HARDENING (P2): Limit RAM usage
     try:
         soft, hard = resource.getrlimit(resource.RLIMIT_AS)
-        resource.setrlimit(resource.RLIMIT_AS, (1024 * 1024 * 1024, hard)) # 1GB limit
+        resource.setrlimit(resource.RLIMIT_AS, (1024 * 1024 * 1024, hard)) 
     except Exception as e:
         logger.warning(f"Failed to set resource limit: {e}")
 
     raw_text = ""
-    html = None
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; AUMContextFoundry/1.0; +https://aumcontextfoundry.com/bot)"}
         async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as hclient:
-            # 1. Primary: Use Jina Reader API to get clean Markdown (Handles JS-rendered sites like React)
-            jina_url = f"https://r.jina.ai/{request.url}"
+            jina_url = f"https://r.jina.ai/{url}"
             jina_resp = await hclient.get(jina_url)
             if jina_resp.status_code < 400 and len(jina_resp.text.strip()) > 100:
                 raw_text = jina_resp.text
-                logger.info(f"Successfully extracted {len(raw_text)} chars via Jina Reader.")
             else:
-                # 2. Fallback: Direct Fetch + BeautifulSoup
-                logger.info("Jina Reader failed or returned empty. Falling back to direct HTML fetch.")
-                resp = await hclient.get(request.url)
+                resp = await hclient.get(url)
                 if resp.status_code >= 400:
-                    raise HTTPException(status_code=400, detail=f"URL returned HTTP {resp.status_code}")
-                
-                html = resp.text
+                    raise Exception(f"URL returned HTTP {resp.status_code}")
                 if BS4_AVAILABLE:
-                    soup = BeautifulSoup(html, "html.parser")
+                    soup = BeautifulSoup(resp.text, "html.parser")
                     for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                         tag.decompose()
                     raw_text = soup.get_text(separator="\n", strip=True)
                 else:
                     import re as _re
-                    raw_text = _re.sub(r"<[^>]+>", " ", html)
-    except HTTPException:
-        raise
+                    raw_text = _re.sub(r"<[^>]+>", " ", resp.text)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Could not extract Semantic text from URL: {str(e)}")
+        raise Exception(f"Extraction failed: {str(e)}")
 
     if len(raw_text.strip()) < 100:
-        raise HTTPException(status_code=422, detail="Could not extract meaningful text from this URL. The site might block bots or require JavaScript rendering.")
+        raise Exception("Meaningless content extracted from URL.")
 
-    # --- RESOLVE API KEY ---
+    # Resolve API Key
     api_key = os.getenv("OPENAI_API_KEY")
+    hint_org_name = ""
     if db:
-        try:
-            org_doc = db.collection("organizations").document(orgId).get()
-            if org_doc.exists:
-                org_data = org_doc.to_dict() or {}
-                # 🛡️ SECURITY HARDENING (P0): pop apiKeys FIRST before any other use to prevent log leaks
-                api_keys = org_data.pop("apiKeys", {})
-                stored_key = api_keys.get("openai", "")
-                if stored_key and stored_key != "internal_platform_managed":
-                    api_key = stored_key
-        except Exception:
-            pass
+        org_doc = db.collection("organizations").document(orgId).get()
+        if org_doc.exists:
+            org_data = org_doc.to_dict() or {}
+            hint_org_name = org_data.get("name", "")
+            api_keys = org_data.pop("apiKeys", {})
+            stored_key = api_keys.get("openai", "")
+            if stored_key and stored_key != "internal_platform_managed":
+                api_key = stored_key
 
     if not api_key:
-        raise HTTPException(status_code=503, detail="Infrastructure API key missing.")
+        raise Exception("Infrastructure API key missing.")
 
-    try:
-        oai = AsyncOpenAI(api_key=api_key)
-        full_text = raw_text[:100000]
-        chunks = recursive_split(full_text, 2000, 200)
+    oai = AsyncOpenAI(api_key=api_key)
+    full_text = raw_text[:100000]
+    chunks = recursive_split(full_text, 2000, 200)
 
-        chunk_vectors = []
-        for i in range(0, len(chunks), 16):
-            batch = chunks[i:i+16]
-            embed_batch = await oai.embeddings.create(input=batch, model=OPENAI_EMBEDDING_MODEL)
-            chunk_vectors.extend([e.embedding for e in embed_batch.data])
+    chunk_vectors = []
+    for i in range(0, len(chunks), 16):
+        batch = chunks[i:i+16]
+        embed_batch = await oai.embeddings.create(input=batch, model=OPENAI_EMBEDDING_MODEL)
+        chunk_vectors.extend([e.embedding for e in embed_batch.data])
 
-        doc_sample = raw_text[:20000]
-        if len(raw_text) > 30000:
-            doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
+    doc_sample = raw_text[:20000]
+    if len(raw_text) > 30000:
+        doc_sample += "\n\n[...]\n\n" + raw_text[-10000:]
 
-        hint_org_name = ""
-        if db:
-            org_doc = db.collection("organizations").document(orgId).get()
-            if org_doc.exists:
-                hint_org_name = org_doc.to_dict().get("name", "")
+    schema_prompt = (
+        "You are a strategic semantic extraction engine. Extract structured JSON-LD schema.\n"
+        f"Source: {url}\n"
+        f"<Doc>\n{doc_sample}\n</Doc>"
+    )
+    schema_completion = await oai.chat.completions.create(
+        messages=[{"role": "user", "content": schema_prompt}],
+        model=OPENAI_SCHEMA_MODEL,
+        response_format={"type": "json_object"}
+    )
+    schema_data = json.loads(schema_completion.choices[0].message.content)
+    schema_vector_resp = await oai.embeddings.create(input=[json.dumps(schema_data)], model=OPENAI_EMBEDDING_MODEL)
+    schema_vector = schema_vector_resp.data[0].embedding
+    industry_taxonomy, industry_tags = await classify_industry_taxonomy(oai, doc_sample, schema_data, hint_org_name)
 
-        schema_prompt = (
-            "You are a strategic semantic extraction engine. Extract a structured JSON-LD schema from this web page.\n"
-            "CRITICAL: Identify the PRIMARY BRAND or ORGANIZATION name. Do NOT use descriptive headers, navigation menus (e.g. 'Wi-Fi, Postpaid, Prepaid'), or SEO taglines as the entity name.\n"
-            "Example: If the page is from airtel.in, the name is 'Airtel', not 'Wi-Fi, Postpaid, Prepaid'.\n"
-            f"Source: {request.url}\n"
-            "Be strictly faithful — do NOT invent or use placeholder data.\n\n"
-            f"<Doc>\n{doc_sample}\n</Doc>"
-        )
-        schema_completion = await oai.chat.completions.create(
-            messages=[{"role": "user", "content": schema_prompt}],
-            model=OPENAI_SCHEMA_MODEL,
-            response_format={"type": "json_object"}
-        )
-        schema_data = json.loads(schema_completion.choices[0].message.content)
-        schema_vector_resp = await oai.embeddings.create(input=[json.dumps(schema_data)], model=OPENAI_EMBEDDING_MODEL)
-        schema_vector = schema_vector_resp.data[0].embedding
-        industry_taxonomy, industry_tags = await classify_industry_taxonomy(oai, doc_sample, schema_data, hint_org_name)
+    manifest_prompt = (
+        f"Generate 'llms.txt' AI Protocol Manifest.\nSource URL: {url}\n"
+        f"<Doc>\n{doc_sample}\n</Doc>"
+    )
+    manifest_completion = await oai.chat.completions.create(
+        messages=[{"role": "user", "content": manifest_prompt}],
+        model=OPENAI_MANIFEST_MODEL
+    )
+    llms_txt_content = manifest_completion.choices[0].message.content
 
-        manifest_prompt = (
-            f"Generate a concise 'llms.txt' AI Protocol Manifest from this web page.\n"
-            f"Source URL: {request.url}\n"
-            "Include: Core Identity, Key Offerings, Key Claims.\n"
-            "Start with '# [Entity Name] - AI Protocol Manifest'.\n"
-            "DO NOT hallucinate. Only include what is stated in the page.\n\n"
-            f"<Doc>\n{doc_sample}\n</Doc>"
-        )
-        manifest_completion = await oai.chat.completions.create(
-            messages=[{"role": "user", "content": manifest_prompt}],
-            model=OPENAI_MANIFEST_MODEL
-        )
-        llms_txt_content = manifest_completion.choices[0].message.content
-
-        # Zero-Retention: Overwrite volatile memory before GC
-        raw_text = full_text = doc_sample = html = None
-        gc.collect()
-
-        if db:
-            manifest_id = f"manifest_{int(datetime.datetime.now(timezone.utc).timestamp())}"
-            manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
-            latest_ref = db.collection("organizations").document(orgId).collection("manifests").document("latest")
-
-            transaction = db.transaction()
-
-            @firestore.transactional
-            def write_manifest_only_url(txn, m_ref, data, vector, id_val, total_chunks, manifest_md):
-                expiry = datetime.datetime.now(timezone.utc) + timedelta(hours=24)
-                payload = {
-                    "content": manifest_md, "schemaData": data, "embedding": vector,
-                    "createdAt": datetime.datetime.now(timezone.utc), "expiresAt": expiry,
-                    "version": id_val, "totalChunks": total_chunks, "sourceUrl": request.url,
-                    "industryTaxonomy": industry_taxonomy,
-                    "industryTags": industry_tags,
-                }
-                txn.set(m_ref, payload)
-                return payload
-
-            success_payload = write_manifest_only_url(transaction, manifest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
-
-            if success_payload:
-                batch_w = db.batch()
-                for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
-                    c_ref = manifest_ref.collection("chunks").document(str(i))
-                    batch_w.set(c_ref, {"text": txt, "embedding": vec, "index": i,
-                                       "expiresAt": datetime.datetime.now(timezone.utc) + timedelta(hours=24)})
-                    if (i + 1) % 400 == 0:
-                        batch_w.commit()
-                        batch_w = db.batch()
-                batch_w.commit()
-                # 🛡️ FINAL LINK: Only now point 'latest' to the new manifest
-                db.collection("organizations").document(orgId).collection("manifests").document("latest").set(success_payload)
-
-
-            extracted_name = schema_data.get("name")
-            if isinstance(extracted_name, str) and extracted_name.strip():
-                org_ref = db.collection("organizations").document(orgId)
-                org_snap = org_ref.get()
-                current_org_data = org_snap.to_dict() if org_snap.exists else {}
-                current_org_name = (current_org_data or {}).get("name")
-                
-                # Only overwrite if current name is a placeholder
-                if not current_org_name or current_org_name.lower().strip() in {"unnamed organization", "your company"}:
-                    org_ref.set({"name": extracted_name.strip()}, merge=True)
-
-            log_audit_event(org_id=orgId, actor_id=uid or "unknown", event_type="url_ingestion",
-                            resource_id=manifest_id, metadata={"url": request.url, "chunks": len(chunks)})
-
-        return {
-            "rawText": None,  # Zero-retention: URL text is never stored
-            "schemaData": schema_data,
-            "markdownManifest": llms_txt_content,
-            "version": manifest_id,
-            "sourceUrl": request.url,
-            "industryTaxonomy": industry_taxonomy,
-            "industryTags": industry_tags,
+    manifest_id = f"manifest_{int(datetime.datetime.now(timezone.utc).timestamp())}"
+    manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
+    
+    @firestore.transactional
+    def write_manifest(txn, m_ref, data, vector, id_val, total_chunks, manifest_md):
+        expiry = datetime.datetime.now(timezone.utc) + timedelta(hours=24)
+        payload = {
+            "content": manifest_md, "schemaData": data, "embedding": vector,
+            "createdAt": datetime.datetime.now(timezone.utc), "expiresAt": expiry,
+            "version": id_val, "totalChunks": total_chunks, "sourceUrl": url,
+            "industryTaxonomy": industry_taxonomy, "industryTags": industry_tags,
         }
+        txn.set(m_ref, payload)
+        return payload
 
-    except Exception as e:
-        logger.error(f"URL Ingestion Pipeline Failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    transaction = db.transaction()
+    success_payload = write_manifest(transaction, manifest_ref, schema_data, schema_vector, manifest_id, len(chunks), llms_txt_content)
+
+    if success_payload:
+        batch_w = db.batch()
+        for i, (txt, vec) in enumerate(zip(chunks, chunk_vectors)):
+            c_ref = manifest_ref.collection("chunks").document(str(i))
+            batch_w.set(c_ref, {"text": txt, "embedding": vec, "index": i,
+                               "expiresAt": datetime.datetime.now(timezone.utc) + timedelta(hours=24)})
+            if (i + 1) % 400 == 0:
+                batch_w.commit()
+                batch_w = db.batch()
+        batch_w.commit()
+        db.collection("organizations").document(orgId).collection("manifests").document("latest").set(success_payload)
+
+    extracted_name = schema_data.get("name")
+    if extracted_name and extracted_name.strip():
+        org_ref = db.collection("organizations").document(orgId)
+        current_name = (org_ref.get().to_dict() or {}).get("name")
+        if not current_name or current_name.lower().strip() in {"unnamed organization", "your company"}:
+            org_ref.set({"name": extracted_name.strip()}, merge=True)
+
+    log_audit_event(org_id=orgId, actor_id=uid or "system", event_type="url_ingestion", resource_id=manifest_id, metadata={"url": url})
+
+    return {
+        "version": manifest_id,
+        "schemaData": schema_data,
+        "industryTaxonomy": industry_taxonomy,
+        "sourceUrl": url
+    }
