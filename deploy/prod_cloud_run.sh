@@ -193,7 +193,7 @@ fi
 
 SET_SECRETS="JWT_SECRET=${SECRET_JWT_SECRET}:latest,SSO_ENCRYPTION_KEY=${SECRET_SSO_ENCRYPTION_KEY}:latest,SSO_JWT_SECRET=${SECRET_SSO_JWT_SECRET}:latest,OPENAI_API_KEY=${SECRET_OPENAI_API_KEY}:latest,GEMINI_API_KEY=${SECRET_GEMINI_API_KEY}:latest,ANTHROPIC_API_KEY=${SECRET_ANTHROPIC_API_KEY}:latest,RAZORPAY_KEY_ID=${SECRET_RAZORPAY_KEY_ID}:latest,RAZORPAY_KEY_SECRET=${SECRET_RAZORPAY_KEY_SECRET}:latest,/secrets/firebase/google-credentials.json=firebase-admin-sdk-json:latest${OPTIONAL_SECRETS}"
 
-echo "==> Deploying Cloud Run service"
+echo "==> Deploying Cloud Run service (Bootstrapped Demo Tier)"
 gcloud run deploy "${SERVICE_NAME}" \
   --image "${IMAGE_URI}" \
   --region "${REGION}" \
@@ -201,12 +201,12 @@ gcloud run deploy "${SERVICE_NAME}" \
   ${AUTH_FLAG} \
   --service-account "${RUNTIME_SA}" \
   --port 8000 \
-  --memory 2Gi \
-  --cpu 1 \
+  --memory 4Gi \
+  --cpu 2 \
   --timeout 300 \
-  --concurrency 40 \
-  --min-instances 1 \
-  --max-instances 10 \
+  --concurrency 20 \
+  --min-instances 0 \
+  --max-instances 1 \
   --set-env-vars "${ENV_VARS}" \
   --set-secrets "${SET_SECRETS}" \
   --startup-probe="tcpSocket.port=8000,failureThreshold=30,periodSeconds=10,timeoutSeconds=5"
