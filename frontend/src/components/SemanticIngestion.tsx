@@ -21,10 +21,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Box, UploadCloud, ChevronRight,
   Terminal as TerminalIcon, CheckCircle2, RefreshCw, Download,
-  AlertCircle, Globe, Sparkles,
+  AlertCircle, Globe, Sparkles, RotateCcw, Trash2,
 } from "lucide-react";
 import { useOrganization } from "./OrganizationContext";
-import { apiFetch, pollJob, isAuthError, ApiError, sleep } from "@/lib/apiClient";
+import { apiFetch, pollJob, isAuthError, ApiError, sleep, createRequestId } from "@/lib/apiClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,7 @@ interface IngestionResult {
   schemaData?: Record<string, unknown>;
   rawText?: string;
   version?: string;
+  sourceUrl?: string;
   jobId?: string;
   status?: string;
   [key: string]: unknown;
@@ -101,11 +102,14 @@ export default function SemanticIngestion() {
   const [schemaEdited, setSchemaEdited] = useState(false);
   const [copyLabel, setCopyLabel] = useState<"Copy" | "Copied!">("Copy");
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [lastSourceUrl, setLastSourceUrl] = useState<string | null>(null);
 
   const logIdRef = useRef(0);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
+  const lastIngestRef = useRef<{ mode: "file" | "url"; file?: File; url?: string } | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -138,6 +142,7 @@ export default function SemanticIngestion() {
           setSchemaEdited(false);
           setStep("editor");
         }
+        setLastSourceUrl(data.sourceUrl ?? null);
       } catch (e) {
         if (!cancelled && !isAuthError(e)) console.warn("Manifest load:", e);
       }
@@ -173,11 +178,14 @@ export default function SemanticIngestion() {
     logIdRef.current = 0;
 
     try {
+      const requestId = createRequestId();
       // ── Step 1: Submit job ────────────────────────────────────────────────
       let initialResult: IngestionResult;
 
       if (mode === "file") {
         const file = payload as File;
+        lastIngestRef.current = { mode: "file", file };
+        setLastSourceUrl(null);
         addLog(`Secure ingestion: ${file.name}`, "system");
         addLog("Protocol: Zero-Retention (volatile memory only)", "system");
         addLog("Connecting to Semantic Ingestion Engine…", "info");
@@ -185,6 +193,7 @@ export default function SemanticIngestion() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("orgId", organization.id);
+        formData.append("requestId", requestId);
 
         initialResult = await apiFetch<IngestionResult>("/api/ingestion/parse", {
           method: "POST",
@@ -194,6 +203,8 @@ export default function SemanticIngestion() {
       } else {
         const rawUrl = payload as string;
         const normalizedUrl = /^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`;
+        lastIngestRef.current = { mode: "url", url: normalizedUrl };
+        setLastSourceUrl(normalizedUrl);
         addLog(`URL ingestion: ${normalizedUrl}`, "system");
         addLog("Protocol: Zero-Retention (volatile memory only)", "system");
         addLog("Connecting to Semantic Ingestion Engine…", "info");
@@ -201,7 +212,7 @@ export default function SemanticIngestion() {
         initialResult = await apiFetch<IngestionResult>("/api/ingestion/parse-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: normalizedUrl, orgId: organization.id }),
+          body: JSON.stringify({ url: normalizedUrl, orgId: organization.id, requestId }),
         });
         addLog("URL queued — monitoring extraction pipeline…", "info");
       }
@@ -241,6 +252,7 @@ export default function SemanticIngestion() {
       const schema = result.schemaData ?? (result as Record<string, unknown>);
       setSchemaData(JSON.stringify(schema, null, 2));
       if (result.rawText) setRawText(result.rawText as string);
+      if (result.sourceUrl) setLastSourceUrl(String(result.sourceUrl));
 
       setProgress(100);
       await dispatchManifestUpdate(organization.id, result.version as string | undefined);
@@ -291,6 +303,62 @@ export default function SemanticIngestion() {
   };
 
   const isReady = !loadingOrg && !!organization?.id;
+  const isBusy = isIngesting || isDeleting;
+
+  const handleRerun = async () => {
+    if (!organization?.id || loadingOrg || isIngesting) return;
+    setInlineError(null);
+
+    const last = lastIngestRef.current;
+    if (last?.mode === "file" && last.file) {
+      await runIngestion("file", last.file);
+      return;
+    }
+    const rerunUrl = last?.mode === "url" ? last.url : lastSourceUrl;
+    if (rerunUrl) {
+      setUrlInput(rerunUrl);
+      await runIngestion("url", rerunUrl);
+      return;
+    }
+    setInlineError("No prior ingestion source available to re-run. Please upload a file or enter a URL.");
+  };
+
+  const handleDeleteManifest = async () => {
+    if (!organization?.id || loadingOrg || isDeleting) return;
+    const targetVersion = activeManifestVersion || "latest";
+    const label = targetVersion === "latest" ? "current context" : targetVersion;
+    const confirmed = typeof window !== "undefined" && window.confirm(
+      `Delete ${label}? This permanently removes the ingested manifest and its chunks.`
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setInlineError(null);
+    try {
+      const resp = await apiFetch<{ success: boolean; deletedVersion: string; newLatestVersion?: string }>(
+        `/api/workspaces/${organization.id}/manifest?version=${encodeURIComponent(targetVersion)}`,
+        { method: "DELETE" },
+      );
+      setSchemaData(null);
+      setRawText(null);
+      setLogs([]);
+      setProgress(0);
+      setSchemaEdited(false);
+      lastIngestRef.current = null;
+      setLastSourceUrl(null);
+      setStep("upload");
+
+      const nextVersion = resp.newLatestVersion || "latest";
+      await dispatchManifestUpdate(organization.id, nextVersion);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message
+        : err instanceof Error ? err.message
+        : "Failed to delete manifest.";
+      setInlineError(msg);
+    } finally {
+      if (mounted.current) setIsDeleting(false);
+    }
+  };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -554,6 +622,13 @@ export default function SemanticIngestion() {
                     <button onClick={handleDownload} className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors border border-slate-700 flex items-center gap-1.5">
                       <Download className="w-3 h-3" /> JSON
                     </button>
+                    <button
+                      onClick={handleRerun}
+                      disabled={isBusy}
+                      className="text-xs bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/60 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors border border-slate-700 flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Re-run
+                    </button>
                     <button onClick={handleReset} className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors border border-slate-600 flex items-center gap-1.5">
                       <RefreshCw className="w-3 h-3" /> Re-ingest
                     </button>
@@ -562,6 +637,13 @@ export default function SemanticIngestion() {
                       className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-lg transition-colors border border-emerald-500/20"
                     >
                       Sync ↺
+                    </button>
+                    <button
+                      onClick={handleDeleteManifest}
+                      disabled={isBusy}
+                      className="text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 disabled:bg-rose-500/5 px-2.5 py-1.5 rounded-lg transition-colors border border-rose-500/20 flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
                     </button>
                   </div>
                 </div>

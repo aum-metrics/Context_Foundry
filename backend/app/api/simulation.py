@@ -473,6 +473,11 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
     return manifest_content, manifest_embedding, api_keys, resolved_version
 
 
+async def _fetch_manifest_and_keys_async(request: SimulationRequest):
+    """Run Firestore-bound manifest/key retrieval off the event loop."""
+    return await asyncio.to_thread(_fetch_manifest_and_keys, request)
+
+
 async def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                  system_prompt: str, user_prompt: str, manifest_embedding: list,
                  claims: list, eps_div: float, gemini_api_model: Optional[str] = None) -> dict:
@@ -888,7 +893,7 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
         pass
 
     # 2. FETCH CONTEXT & KEYS 
-    manifest_content, manifest_embedding, api_keys, resolved_version_from_fetch = _fetch_manifest_and_keys(request)
+    manifest_content, manifest_embedding, api_keys, resolved_version_from_fetch = await _fetch_manifest_and_keys_async(request)
     if resolved_version_from_fetch and resolved_version_from_fetch != "latest":
         resolved_manifest_version = resolved_version_from_fetch
 

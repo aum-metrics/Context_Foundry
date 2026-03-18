@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import os
 from fastapi.testclient import TestClient
 from app.main import app
@@ -8,7 +8,7 @@ client = TestClient(app, base_url="http://localhost")
 
 
 @patch("api.competitor.verify_user_org_access")
-@patch("api.competitor.OpenAI")
+@patch("api.competitor.AsyncOpenAI")
 @patch("api.competitor.db")
 def test_get_competitor_displacement(mock_db, mock_openai, mock_verify):
     """
@@ -44,7 +44,7 @@ def test_get_competitor_displacement(mock_db, mock_openai, mock_verify):
     mock_choice.message = mock_message
     mock_completion = MagicMock()
     mock_completion.choices = [mock_choice]
-    mock_client.chat.completions.create.return_value = mock_completion
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_completion)
 
     response = client.get("/api/competitor/displacement/test_org", headers={"Authorization": "Bearer mock-dev-token"})
     assert response.status_code == 200, response.text

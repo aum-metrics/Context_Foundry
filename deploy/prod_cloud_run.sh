@@ -203,10 +203,10 @@ gcloud run deploy "${SERVICE_NAME}" \
   --port 8000 \
   --memory 4Gi \
   --cpu 2 \
-  --timeout 300 \
-  --concurrency 20 \
-  --min-instances 0 \
-  --max-instances 1 \
+  --timeout 3600 \
+  --concurrency 2 \
+  --min-instances 1 \
+  --max-instances 3 \
   --set-env-vars "${ENV_VARS}" \
   --set-secrets "${SET_SECRETS}" \
   --startup-probe="tcpSocket.port=8000,failureThreshold=30,periodSeconds=10,timeoutSeconds=5"

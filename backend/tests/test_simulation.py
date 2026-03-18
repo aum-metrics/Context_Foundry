@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -7,7 +7,7 @@ client = TestClient(app, base_url="http://localhost")
 
 
 @patch("api.simulation.verify_user_org_access")
-@patch("api.simulation.OpenAI")
+@patch("api.simulation.AsyncOpenAI")
 @patch("api.simulation.db")
 def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
     """
@@ -61,7 +61,7 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
     mock_embed.embedding = [0.1] * 1536
     mock_embed_response = MagicMock()
     mock_embed_response.data = [mock_embed]
-    mock_client.embeddings.create.return_value = mock_embed_response
+    mock_client.embeddings.create = AsyncMock(return_value=mock_embed_response)
 
     # Mock chat completions (Sequence: Extraction -> Answer -> Verification)
     def mock_completion_side_effect(*args, **kwargs):
@@ -90,7 +90,7 @@ def test_evaluate_query(mock_sim_db, mock_openai, mock_verify):
         mock_resp.choices = [mock_choice]
         return mock_resp
 
-    mock_client.chat.completions.create.side_effect = mock_completion_side_effect
+    mock_client.chat.completions.create = AsyncMock(side_effect=mock_completion_side_effect)
 
     # Happy Path — user belongs to test_org
     response = client.post(
@@ -133,7 +133,7 @@ def test_lcrs_scoring_math():
     drift = 100.0 - ((claim_match * 0.6 + semantic_sim * 0.4) * 100.0)
     assert round(drift, 1) == 38.0
 @patch("api.simulation.verify_user_org_access")
-@patch("api.simulation.OpenAI")
+@patch("api.simulation.AsyncOpenAI")
 @patch("api.simulation.db")
 def test_frontier_model_labels(mock_sim_db, mock_openai, mock_verify):
     """
@@ -157,12 +157,12 @@ def test_frontier_model_labels(mock_sim_db, mock_openai, mock_verify):
     mock_client = MagicMock()
     mock_openai.return_value = mock_client
     mock_embed = MagicMock(embedding=[0.1]*1536)
-    mock_client.embeddings.create.return_value = MagicMock(data=[mock_embed])
+    mock_client.embeddings.create = AsyncMock(return_value=MagicMock(data=[mock_embed]))
     
     # Mock response
     mock_choice = MagicMock()
     mock_choice.message.content = '{"results": [], "claims": ["claim1"], "answer": "mock answer"}'
-    mock_client.chat.completions.create.return_value = MagicMock(choices=[mock_choice])
+    mock_client.chat.completions.create = AsyncMock(return_value=MagicMock(choices=[mock_choice]))
 
     # 3. Request
     response = client.post(

@@ -35,7 +35,7 @@ import QueryClusterInsights from "./QueryClusterInsights";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useRemediation } from "@/hooks/useRemediation";
-import { apiFetch, pollJob, isAuthError, swrFetcher } from "@/lib/apiClient";
+import { apiFetch, pollJob, isAuthError, swrFetcher, createRequestId } from "@/lib/apiClient";
 import { normalizeModelName } from "@/lib/somUtils";
 import type {
   BatchResult, CompetitorInsight, ManifestSnapshot,
@@ -180,10 +180,11 @@ export default function SoMCommandCenter({
       const prompts = explicitPrompts ?? await getSuggestedPrompts();
       const manifestVersion = currentManifestVersion ?? activeManifestVersion;
 
+      const requestId = createRequestId();
       const initial = await apiFetch<{ status?: string; jobId?: string } & BatchResult>("/api/batch/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId: organization.id, prompts, manifestVersion }),
+        body: JSON.stringify({ orgId: organization.id, prompts, manifestVersion, requestId }),
       });
 
       let result: BatchResult;
@@ -302,10 +303,11 @@ export default function SoMCommandCenter({
 
     try {
       const endpoint = isDemoOrg ? "/api/seo/audit/mock" : "/api/seo/audit";
+      const requestId = createRequestId();
       const data = await apiFetch<{ seoScore?: number; jobId?: string } & SEOResult>(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizedUrl, orgId: organization.id, manifestVersion: activeManifestVersion }),
+        body: JSON.stringify({ url: normalizedUrl, orgId: organization.id, manifestVersion: activeManifestVersion, requestId }),
       });
 
       if (data.seoScore !== undefined) {

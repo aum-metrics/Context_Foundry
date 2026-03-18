@@ -17,6 +17,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from fastapi import Depends, BackgroundTasks
 from utils.task_queue import FirestoreTaskQueue
 import asyncio
+from typing import Optional
 from openai import AsyncOpenAI
 from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
@@ -394,6 +395,7 @@ async def parse_document(
 class URLIngestionRequest(PydanticBaseModel):
     url: str
     orgId: str
+    requestId: Optional[str] = None
 
 @router.post("/parse-url")
 async def parse_url(
@@ -434,9 +436,20 @@ async def parse_url(
 
     await validate_public_url(request.url)
 
-    # Register Job
-    job_id = f"job_ingest_{int(datetime.datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:6]}"
-    FirestoreTaskQueue.register_job(orgId, "ingestionJobs", job_id, {"url": request.url})
+    # Register Job (idempotent if requestId provided)
+    job_id = request.requestId or f"job_ingest_{int(datetime.datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:6]}"
+
+    if db and request.requestId:
+        try:
+            existing = db.collection("organizations").document(orgId).collection("ingestionJobs").document(job_id).get()
+            if existing.exists:
+                data = existing.to_dict() or {}
+                status = data.get("status", "processing")
+                return {"jobId": job_id, "status": status, "deduped": True}
+        except Exception as e:
+            logger.warning(f"Ingestion job lookup failed for {job_id}: {e}")
+
+    FirestoreTaskQueue.register_job(orgId, "ingestionJobs", job_id, {"url": request.url, "requestId": request.requestId})
 
     # Launch Background Task
     background_tasks.add_task(

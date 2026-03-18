@@ -32,6 +32,7 @@ class BatchSimulationRequest(BaseModel):
     prompts: List[str]
     orgId: str
     manifestVersion: Optional[str] = "latest"
+    requestId: Optional[str] = None
 
 
 from utils.task_queue import FirestoreTaskQueue
@@ -129,7 +130,18 @@ async def run_batch_simulation(
         if plan not in ["growth", "scale", "enterprise"]:
             raise HTTPException(status_code=403, detail=f"Batch Analysis requires a Growth, Scale, or Enterprise plan. Current plan: {plan}.")
 
-    job_id = str(uuid.uuid4())
+    job_id = request.requestId or str(uuid.uuid4())
+
+    if db and request.requestId:
+        try:
+            existing = db.collection("organizations").document(request.orgId).collection("batchJobs").document(job_id).get()
+            if existing.exists:
+                data = existing.to_dict() or {}
+                status = data.get("status", "processing")
+                return {"status": status, "jobId": job_id, "message": "Batch analysis already running", "deduped": True}
+        except Exception as e:
+            logger.warning(f"Batch job lookup failed for {job_id}: {e}")
+
     FirestoreTaskQueue.register_job(request.orgId, "batchJobs", job_id, request.model_dump())
     
     background_tasks.add_task(_process_batch_background, request, job_id)

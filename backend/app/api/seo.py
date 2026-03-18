@@ -33,6 +33,7 @@ class SEOAuditRequest(BaseModel):
     url: str
     orgId: str
     manifestVersion: Optional[str] = "latest"
+    requestId: Optional[str] = None
 
 
 def _normalize_audit_url(url: str) -> str:
@@ -266,7 +267,18 @@ async def run_seo_audit(
             if plan not in ["growth", "scale", "enterprise"]:
                 raise HTTPException(status_code=403, detail="SEO audit is available on Growth or Scale plans.")
 
-    job_id = str(uuid.uuid4())
+    job_id = request.requestId or str(uuid.uuid4())
+
+    if db and request.requestId:
+        try:
+            existing = db.collection("organizations").document(request.orgId).collection("seoJobs").document(job_id).get()
+            if existing.exists:
+                data = existing.to_dict() or {}
+                status = data.get("status", "processing")
+                return {"status": status, "jobId": job_id, "message": "SEO audit already running", "deduped": True}
+        except Exception as e:
+            logger.warning(f"SEO job lookup failed for {job_id}: {e}")
+
     FirestoreTaskQueue.register_job(request.orgId, "seoJobs", job_id, request.model_dump())
 
     background_tasks.add_task(_process_seo_audit, request, job_id)

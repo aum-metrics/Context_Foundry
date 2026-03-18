@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.api.ingestion import recursive_split
@@ -20,7 +20,7 @@ def test_recursive_split():
 
 
 @patch("api.ingestion.verify_user_org_access")
-@patch("api.ingestion.OpenAI")
+@patch("api.ingestion.AsyncOpenAI")
 @patch("api.ingestion.db")
 def test_process_markdown(mock_db, mock_openai, mock_verify):
     """
@@ -56,7 +56,7 @@ def test_process_markdown(mock_db, mock_openai, mock_verify):
     mock_embedding.embedding = [0.1] * 1536
     mock_data = MagicMock()
     mock_data.data = [mock_embedding]
-    mock_client.embeddings.create.return_value = mock_data
+    mock_client.embeddings.create = AsyncMock(return_value=mock_data)
 
     # Mock Completion Response for Schema Extraction
     mock_message = MagicMock()
@@ -65,7 +65,7 @@ def test_process_markdown(mock_db, mock_openai, mock_verify):
     mock_choice.message = mock_message
     mock_completion = MagicMock()
     mock_completion.choices = [mock_choice]
-    mock_client.chat.completions.create.return_value = mock_completion
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_completion)
 
     # Happy Path — user belongs to test_org
     response = client.post(

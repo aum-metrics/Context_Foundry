@@ -164,7 +164,8 @@ def test_rate_limiter_unknown_ip_allowed(mock_db):
     """Test rate limiter allows unknown IP through."""
     response = client.post(
         "/api/workspaces/llms-rate-limit",
-        json={"ip": "unknown"}
+        json={"ip": "unknown"},
+        headers={"x-forwarded-for": "unknown"}
     )
     assert response.status_code == 200
     data = response.json()

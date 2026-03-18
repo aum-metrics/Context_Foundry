@@ -109,6 +109,24 @@ def _build_llms_full(manifest_data: Dict[str, Any]) -> str:
     return "\n\n".join(sections).strip()
 
 
+async def _delete_subcollection(doc_ref, subcollection: str, batch_size: int = 400) -> int:
+    if not db:
+        return 0
+    deleted = 0
+    while True:
+        docs = await asyncio.to_thread(lambda: list(doc_ref.collection(subcollection).limit(batch_size).stream()))
+        if not docs:
+            break
+        batch = db.batch()
+        for doc in docs:
+            batch.delete(doc.reference)
+        await asyncio.to_thread(batch.commit)
+        deleted += len(docs)
+        if len(docs) < batch_size:
+            break
+    return deleted
+
+
 async def _get_manifest_doc(org_id: str, version: str = "latest"):
     org_ref = db.collection("organizations").document(org_id)
     if version == "latest":
@@ -525,6 +543,67 @@ async def list_manifest_contexts(org_id: str, auth: dict = Depends(get_auth_cont
         })
 
     return {"contexts": contexts}
+
+
+@router.delete("/{org_id}/manifest")
+async def delete_manifest(org_id: str, version: str = Query("latest"), auth: dict = Depends(get_auth_context)):
+    if not verify_user_org_access(auth.get("uid"), org_id):
+        raise HTTPException(status_code=403)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    org_ref = db.collection("organizations").document(org_id)
+    latest_ref = org_ref.collection("manifests").document("latest")
+
+    # Resolve "latest" to the actual version id
+    if version == "latest":
+        latest_doc = await asyncio.to_thread(latest_ref.get)
+        if not latest_doc.exists:
+            raise HTTPException(status_code=404, detail="No manifest to delete")
+        version = (latest_doc.to_dict() or {}).get("version") or version
+        if version == "latest":
+            raise HTTPException(status_code=404, detail="No manifest to delete")
+
+    manifest_ref = org_ref.collection("manifests").document(version)
+    manifest_doc = await asyncio.to_thread(manifest_ref.get)
+    if not manifest_doc.exists:
+        raise HTTPException(status_code=404, detail="Manifest not found")
+
+    # Delete chunks first
+    await _delete_subcollection(manifest_ref, "chunks")
+    await asyncio.to_thread(manifest_ref.delete)
+
+    latest_doc = await asyncio.to_thread(latest_ref.get)
+    latest_version = (latest_doc.to_dict() or {}).get("version") if latest_doc.exists else None
+    new_latest_version = None
+
+    if latest_version == version:
+        # Find next most recent manifest
+        try:
+            docs = await asyncio.to_thread(lambda: list(
+                org_ref.collection("manifests")
+                .order_by("createdAt", direction=firestore.Query.DESCENDING)
+                .limit(10)
+                .stream()
+            ))
+        except Exception as e:
+            logger.error(f"Failed to scan manifests for org {org_id}: {e}")
+            docs = []
+
+        for doc in docs:
+            if doc.id in {"latest", version}:
+                continue
+            payload = doc.to_dict() or {}
+            new_latest_version = payload.get("version") or doc.id
+            await asyncio.to_thread(latest_ref.set, payload)
+            break
+
+        if not new_latest_version:
+            await asyncio.to_thread(latest_ref.delete)
+
+    log_audit_event(org_id=org_id, actor_id=auth.get("uid") or "unknown", event_type="manifest_deleted", resource_id=version, metadata={"new_latest": new_latest_version})
+
+    return {"success": True, "deletedVersion": version, "newLatestVersion": new_latest_version}
 
 @router.get("/{org_id}/manifest")
 async def get_public_manifest(org_id: str, version: str = Query("latest")):

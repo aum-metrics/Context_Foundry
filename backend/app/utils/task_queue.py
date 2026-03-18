@@ -17,12 +17,16 @@ class FirestoreTaskQueue:
         """Registers a new job in Firestore with 'queued' status."""
         if not db: return
         try:
-            db.collection("organizations").document(org_id).collection(collection).document(job_id).set({
+            request_id = payload.get("requestId") if isinstance(payload, dict) else None
+            doc = {
                 "status": "queued",
                 "createdAt": datetime.now(timezone.utc),
                 "payload": payload,
                 "workerId": f"worker-{uuid.uuid4().hex[:8]}"
-            })
+            }
+            if request_id:
+                doc["requestId"] = request_id
+            db.collection("organizations").document(org_id).collection(collection).document(job_id).set(doc)
         except Exception as e:
             logger.error(f"Failed to register job {job_id}: {e}")
 

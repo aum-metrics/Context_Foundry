@@ -4,7 +4,7 @@ Covers: auth, BYOK key extraction (Bug #1 fix), dev-mode fallback, missing manif
 and the full RAG pipeline with semantic chunk retrieval.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -12,7 +12,7 @@ client = TestClient(app, base_url="http://localhost")
 
 
 @patch("api.chatbot.verify_user_org_access")
-@patch("api.chatbot.OpenAI")
+@patch("api.chatbot.AsyncOpenAI")
 @patch("api.chatbot.db")
 def test_chatbot_happy_path(mock_db, mock_openai, mock_verify):
     """Test chatbot endpoint returns a response when manifest chunks exist."""
@@ -51,11 +51,11 @@ def test_chatbot_happy_path(mock_db, mock_openai, mock_verify):
 
     mock_embed = MagicMock()
     mock_embed.embedding = [0.1] * 1536
-    mock_client.embeddings.create.return_value = MagicMock(data=[mock_embed])
+    mock_client.embeddings.create = AsyncMock(return_value=MagicMock(data=[mock_embed]))
 
     mock_choice = MagicMock()
     mock_choice.message.content = "Based on the retrieved context, AUM monitors AI brand health."
-    mock_client.chat.completions.create.return_value = MagicMock(choices=[mock_choice])
+    mock_client.chat.completions.create = AsyncMock(return_value=MagicMock(choices=[mock_choice]))
 
     response = client.post(
         "/api/chatbot/ask",
@@ -127,9 +127,9 @@ def test_chatbot_no_manifest_returns_upload_prompt(mock_db, mock_verify):
     mock_client = MagicMock()
     mock_embed = MagicMock()
     mock_embed.embedding = [0.1] * 1536
-    mock_client.embeddings.create.return_value = MagicMock(data=[mock_embed])
+    mock_client.embeddings.create = AsyncMock(return_value=MagicMock(data=[mock_embed]))
 
-    with patch("api.chatbot.OpenAI", return_value=mock_client):
+    with patch("api.chatbot.AsyncOpenAI", return_value=mock_client):
         response = client.post(
             "/api/chatbot/ask",
             headers={"Authorization": "Bearer mock-dev-token"},

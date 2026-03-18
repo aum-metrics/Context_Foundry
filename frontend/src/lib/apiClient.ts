@@ -49,11 +49,21 @@ interface FetchOptions extends Omit<RequestInit, "headers"> {
   noAuth?: boolean;
 }
 
+export function createRequestId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 export async function apiFetch<T = unknown>(
   url: string,
   options: FetchOptions = {},
 ): Promise<T> {
-  const { maxGatewayRetries = 5, noAuth = false, headers = {}, ...rest } = options;
+  const { noAuth = false, headers = {}, ...rest } = options;
+  const method = (rest.method ?? "GET").toString().toUpperCase();
+  const isIdempotent = method === "GET" || method === "HEAD" || method === "OPTIONS";
+  const maxGatewayRetries = options.maxGatewayRetries ?? (isIdempotent ? 5 : 0);
 
   const token = noAuth ? null : await getAuthToken().catch(() => null);
   if (!noAuth && !token) throw new ApiError(401, "Authentication required.", true);
@@ -72,6 +82,7 @@ export async function apiFetch<T = unknown>(
       resp = await fetch(url, { ...rest, headers: finalHeaders });
     } catch (networkErr) {
       lastError = networkErr instanceof Error ? networkErr : new Error(String(networkErr));
+      if (!isIdempotent || maxGatewayRetries <= 0) throw lastError;
       gatewayErrors++;
       if (gatewayErrors > maxGatewayRetries) throw lastError;
       await sleep(1000 * Math.min(gatewayErrors, 4));
@@ -83,6 +94,9 @@ export async function apiFetch<T = unknown>(
     }
 
     if (resp.status === 502 || resp.status === 503) {
+      if (!isIdempotent || maxGatewayRetries <= 0) {
+        throw new ApiError(resp.status, "Backend gateway error — please retry in a moment.");
+      }
       gatewayErrors++;
       if (gatewayErrors > maxGatewayRetries) {
         throw new ApiError(resp.status, "Backend gateway error — please retry in a moment.");
