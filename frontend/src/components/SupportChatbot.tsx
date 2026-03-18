@@ -50,21 +50,22 @@ export default function SupportChatbot() {
         setIsInitialized(true);
     }, []);
 
-        if (isInitialized) {
-            // Keep last 50 messages to prevent QuotaExceededError
-            const messagesToStore = messages.length > 50 ? messages.slice(messages.length - 50) : messages;
+    useEffect(() => {
+        if (!isInitialized) return;
+        // Keep last 50 messages to prevent QuotaExceededError
+        const messagesToStore = messages.length > 50 ? messages.slice(messages.length - 50) : messages;
+        try {
+            sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore));
+        } catch (e) {
+            console.warn("sessionStorage quota exceeded, clearing old messages:", e);
             try {
-                sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore));
-            } catch (e) {
-                console.warn("sessionStorage quota exceeded, clearing old messages:", e);
-                try {
-                    // Try saving just the last 10
-                    sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore.slice(-10)));
-                } catch {
-                    // Fallback: don't crash
-                }
+                // Try saving just the last 10
+                sessionStorage.setItem('aum_chat_history', JSON.stringify(messagesToStore.slice(-10)));
+            } catch {
+                // Fallback: don't crash
             }
         }
+    }, [isInitialized, messages]);
     const [input, setInput] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -87,8 +88,9 @@ export default function SupportChatbot() {
         setMessages(prev => [...prev, userMsg]);
         setInput("");
 
+        const sanitized = input.trim();
         setTimeout(() => {
-            generateBotResponse(input.toLowerCase());
+            generateBotResponse(sanitized);
         }, 800);
     };
 

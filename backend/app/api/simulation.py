@@ -697,6 +697,8 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
 
     # Fallback prompts — intentionally generic so they work for any industry/company.
     # The LLM path below generates context-specific prompts when a manifest is available.
+    return await _generate_suggested_prompts_llm(api_key, org_name, manifest_content)
+
 async def _generate_suggested_prompts_llm(api_key: str, org_name: str, manifest_content: str) -> dict:
     fallback = [
         f"Which companies are leading AI-driven enterprise transformation in the market, and how does {org_name} compare?",
@@ -1077,10 +1079,15 @@ ANSWER GUIDELINES:
     tasks = []
     
     if not is_dev:
-        if not GEMINI_AVAILABLE or not CLAUDE_AVAILABLE:
+        if gemini_key and gemini_enabled and not GEMINI_AVAILABLE:
             raise HTTPException(
-                status_code=500, 
-                detail="Multi-model simulation requires google-genai and anthropic packages. They are missing in this production environment."
+                status_code=500,
+                detail="Gemini simulation requires google-genai package. It is missing in this production environment."
+            )
+        if claude_key and claude_enabled and not CLAUDE_AVAILABLE:
+            raise HTTPException(
+                status_code=500,
+                detail="Claude simulation requires anthropic package. It is missing in this production environment."
             )
 
     openai_runner = partial(run_openai, api_model=openai_api_model)

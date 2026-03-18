@@ -93,24 +93,45 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
             latest_manifest_doc = next(manifests, None)
             
             if latest_manifest_doc:
-                chunks_ref = latest_manifest_doc.reference.collection("chunks").get()
-                
-                import numpy as np
-                def cosine_sim(v1, v2):
-                    norm_prod = (np.linalg.norm(v1) * np.linalg.norm(v2))
-                    return float(np.dot(v1, v2) / norm_prod) if norm_prod > 0 else 0.0
+                top_chunks: list[str] = []
+                try:
+                    from google.cloud.firestore_v1.vector import Vector
+                    from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 
-                chunk_matches = []
-                for doc in chunks_ref:
-                    data = doc.to_dict()
-                    if "embedding" in data and "text" in data:
-                        sim = cosine_sim(query_vector, data["embedding"])
-                        chunk_matches.append((sim, data["text"]))
-                
-                # Sort by similarity descending and pick top 5
-                chunk_matches.sort(key=lambda x: x[0], reverse=True)
-                relevant_chunks = [m[1] for m in chunk_matches[:5]]
-                context_text = "\n\n---\n\n".join(relevant_chunks)
+                    collection_ref = latest_manifest_doc.reference.collection("chunks")
+                    vector_query = collection_ref.find_nearest(
+                        vector_field="embedding",
+                        query_vector=Vector(query_vector),
+                        distance_measure=DistanceMeasure.COSINE,
+                        limit=5
+                    )
+                    top_chunks = [doc.to_dict().get("text", "") for doc in vector_query.get()]
+                except Exception as e:
+                    logger.warning(f"Chatbot vector search failed, falling back to scan: {e}")
+                    try:
+                        chunks_ref = latest_manifest_doc.reference.collection("chunks").limit(50).stream()
+
+                        import numpy as np
+
+                        def cosine_sim(v1, v2):
+                            norm_prod = (np.linalg.norm(v1) * np.linalg.norm(v2))
+                            return float(np.dot(v1, v2) / norm_prod) if norm_prod > 0 else 0.0
+
+                        chunk_matches = []
+                        for doc in chunks_ref:
+                            data = doc.to_dict()
+                            if "embedding" in data and "text" in data:
+                                sim = cosine_sim(query_vector, data["embedding"])
+                                chunk_matches.append((sim, data["text"]))
+
+                        # Sort by similarity descending and pick top 5
+                        chunk_matches.sort(key=lambda x: x[0], reverse=True)
+                        top_chunks = [m[1] for m in chunk_matches[:5]]
+                    except Exception as scan_err:
+                        logger.warning(f"Chatbot fallback scan failed: {scan_err}")
+
+                if top_chunks:
+                    context_text = "\n\n---\n\n".join(top_chunks)
         except Exception as e:
             logger.warning(f"Semantic search failed: {e}")
 

@@ -7,6 +7,8 @@ export function isLocalHostRuntime(): boolean {
 
 export function isLocalMockMode(): boolean {
   if (!isLocalHostRuntime()) return false;
+  const forceMock = typeof window !== "undefined" && (window as unknown as { AUM_MOCK_ENV?: boolean }).AUM_MOCK_ENV === true;
+  if (forceMock) return true;
   const allowMock = process.env.NEXT_PUBLIC_ALLOW_MOCK_AUTH === "true";
   const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
   const hasMockFirebaseConfig = !firebaseApiKey || firebaseApiKey === "mock-key-to-prevent-crash";

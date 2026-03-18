@@ -10,42 +10,7 @@ import type {
   ScoringHistoryEntry, SEOResult,
 } from "@/types/som";
 import { averageAccuracy, clampPct, getFirstSentence, hallucinationRate, parseClaimRecallPercent } from "@/lib/somUtils";
-
-// ─── Inline page target resolver (replaces @/lib/remediationTargets) ─────────
-// Returns a prioritized list of page/asset targets for a given remediation category.
-
-interface RemediationTargetArgs {
-  category: string;
-  sourceUrl?: string;
-  schemaData?: Record<string, unknown>;
-  missingClaims: string[];
-}
-
-function resolveRemediationTargets({ category, sourceUrl, missingClaims }: RemediationTargetArgs): string[] {
-  const targets: string[] = [];
-  const cat = category.toLowerCase();
-
-  if (sourceUrl) {
-    // Always start with the homepage/about page
-    targets.push(`${sourceUrl} (Homepage — update above-the-fold copy)`);
-    if (/proof|credib|case|outcome/.test(cat)) targets.push(`${sourceUrl}/case-studies`);
-    if (/trust|compli|certif|secur/.test(cat)) targets.push(`${sourceUrl}/security`);
-    if (/roi|value|business/.test(cat)) targets.push(`${sourceUrl}/pricing`);
-    if (/expert|domain|industry/.test(cat)) targets.push(`${sourceUrl}/solutions`);
-    if (/enterprise|scale|fortune/.test(cat)) targets.push(`${sourceUrl}/enterprise`);
-  }
-
-  // Generic schema + content targets always apply
-  targets.push("Organization schema (add knowsAbout, hasOfferCatalog)");
-  targets.push("FAQ page (add buyer-intent Q&A pairs)");
-  targets.push("llms.txt (add verified capability assertions)");
-
-  if (missingClaims.length > 0) {
-    targets.push(`Blog/resources section (publish content on: ${missingClaims.slice(0, 2).join(", ")})`);
-  }
-
-  return targets.slice(0, 5);
-}
+import { resolveRemediationTargets } from "@/lib/remediationTargets";
 
 // ─── Generic cluster classification ──────────────────────────────────────────
 // Derives a label purely from the prompt's signal words — no vertical hardcoding.

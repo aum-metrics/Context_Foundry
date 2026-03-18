@@ -118,7 +118,9 @@ export async function apiFetch<T = unknown>(
 
 // ─── SWR fetcher (compatible with useSWR key patterns) ───────────────────────
 
-export const swrFetcher = async (url: string) => apiFetch(url);
+export async function swrFetcher<T = unknown>(url: string): Promise<T> {
+  return apiFetch<T>(url);
+}
 
 // ─── Job polling ──────────────────────────────────────────────────────────────
 

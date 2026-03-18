@@ -581,8 +581,15 @@ async def get_public_manifest_full(org_id: str, version: str = Query("latest")):
 
 @router.post("/llms-rate-limit")
 async def check_llms_rate_limit(request: Request):
-    data = await request.json()
-    ip = data.get("ip", "unknown")
+    _ = await request.json()
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    real_ip = request.headers.get("x-real-ip", "")
+    ip = (
+        forwarded_for.split(",")[0].strip()
+        or real_ip.strip()
+        or (request.client.host if request.client else "")
+        or "unknown"
+    )
     if ip == "unknown": return {"allowed": True}
     rl_ref = db.collection("rate_limits").document(f"llms_{ip.replace('.', '_')}")
     

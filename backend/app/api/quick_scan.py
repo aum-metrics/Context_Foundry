@@ -53,17 +53,33 @@ _RATE_LIMIT = 3          # calls per IP
 _RATE_WINDOW_H = 1       # per hour
 
 
+def _check_rate_local(ip: str, now: datetime) -> bool:
+    """In-process fallback limiter (per instance)."""
+    try:
+        calls = _rate.get(ip, [])
+        window_start = now - timedelta(hours=_RATE_WINDOW_H)
+        calls = [t for t in calls if t > window_start]
+        if len(calls) >= _RATE_LIMIT:
+            _rate[ip] = calls
+            return False
+        calls.append(now)
+        _rate[ip] = calls
+        return True
+    except Exception:
+        return False
+
+
 async def _check_rate(ip: str) -> bool:
     """Return True if the request is allowed, False if rate-limited. Cloud-safe via Firestore."""
     db = firebase_config.db
+    now = datetime.now(timezone.utc)
     if not db:
-        return True # Fail open if DB is down for public tool
+        return _check_rate_local(ip, now)
         
     try:
         # Generic rate limiting collection
         doc_ref = db.collection("rateLimits").document(f"quickscan_{hashlib.md5(ip.encode()).hexdigest()}")
         doc = doc_ref.get()
-        now = datetime.now(timezone.utc)
         
         if doc.exists:
             data = doc.to_dict() or {}
@@ -82,7 +98,7 @@ async def _check_rate(ip: str) -> bool:
         return True
     except Exception as e:
         logger.error(f"Rate limit check failed: {e}")
-        return True # Fail open to prevent blocking legitimate users on DB transient issues
+        return _check_rate_local(ip, now)
 
 
 def _cache_get(key: str) -> Optional[dict]:

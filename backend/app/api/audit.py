@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 from datetime import datetime, timezone
 from core.firebase_config import db
-from core.security import get_current_user
+from core.security import get_auth_context
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def log_audit_event(org_id: str, actor_id: str, event_type: str, resource_id: st
         logger.error(f"Failed to write audit log: {e}")
 
 @router.get("/logs/{org_id}")
-async def get_org_audit_logs(org_id: str, current_user: dict = Depends(get_current_user)):
+async def get_org_audit_logs(org_id: str, auth: dict = Depends(get_auth_context)):
     """
     Retrieves audit logs for a specific organization.
     Restricted to authorized users with administrative access scope.
@@ -47,10 +47,14 @@ async def get_org_audit_logs(org_id: str, current_user: dict = Depends(get_curre
     if not db:
         raise HTTPException(status_code=503, detail="Audit service unavailable")
 
-    uid = current_user.get("uid")
+    uid = auth.get("uid")
     from core.security import verify_user_org_access
     if not verify_user_org_access(uid, org_id):
         raise HTTPException(status_code=403, detail="Unauthorized access to audit logs")
+
+    role = auth.get("role")
+    if role not in {"admin", "tenant_admin", "super_admin"}:
+        raise HTTPException(status_code=403, detail="Admin access required for audit logs")
 
     try:
         logs = db.collection("organizations").document(org_id)\

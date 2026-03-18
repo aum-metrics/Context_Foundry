@@ -35,7 +35,7 @@ import QueryClusterInsights from "./QueryClusterInsights";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useRemediation } from "@/hooks/useRemediation";
-import { apiFetch, pollJob, isAuthError, ApiError, swrFetcher } from "@/lib/apiClient";
+import { apiFetch, pollJob, isAuthError, swrFetcher } from "@/lib/apiClient";
 import { normalizeModelName } from "@/lib/somUtils";
 import type {
   BatchResult, CompetitorInsight, ManifestSnapshot,
@@ -199,7 +199,7 @@ export default function SoMCommandCenter({
           },
         });
       } else {
-        result = (initial.summary ?? initial.result ?? initial) as BatchResult;
+        result = initial as BatchResult;
       }
 
       if (mounted.current) {
@@ -260,9 +260,20 @@ export default function SoMCommandCenter({
 
     return source.map((e) => ({
       prompt: (e as { prompt?: string }).prompt ?? "",
-      results: ((e as { results?: { model?: string }[] }).results ?? []).map((r) => ({
-        ...r,
-        model: normalizeModelName((r as { model?: string }).model ?? ""),
+      results: ((e as { results?: Array<{
+        model?: string;
+        accuracy?: number;
+        hasDisplacement?: boolean;
+        hasHallucination?: boolean;
+        claimScore?: string;
+        answer?: string;
+      }> }).results ?? []).map((r) => ({
+        model: normalizeModelName(r.model ?? ""),
+        accuracy: typeof r.accuracy === "number" ? r.accuracy : 0,
+        hasDisplacement: r.hasDisplacement ?? r.hasHallucination ?? false,
+        hasHallucination: r.hasHallucination ?? r.hasDisplacement ?? false,
+        claimScore: r.claimScore,
+        answer: r.answer,
       })),
     }));
   }, [batchResult, filteredHistoryEntries]);
@@ -361,7 +372,7 @@ export default function SoMCommandCenter({
               <span className="text-indigo-500">Market Intelligence Pulse</span>
             </h1>
             <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-              AI Recommendation Share across GPT-4o, Claude 4.5, and Gemini 3 — identifying where you lose buyer intent to{" "}
+              AI Recommendation Share (Share of Model) across GPT-4o, Claude 4.5, and Gemini 3 — identifying where you lose buyer intent to{" "}
               <span className="font-bold text-slate-900 dark:text-white">{dashboardKpis.topCompetitorName}</span>.
             </p>
           </div>

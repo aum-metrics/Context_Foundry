@@ -10,6 +10,7 @@ from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List
 import asyncio
+from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ from core.firebase_config import db
 from core.model_config import OPENAI_SIMULATION_MODEL
 from core.security import get_current_user, verify_user_org_access
 from core.config import settings
+from core.url_security import validate_public_url
 
 router = APIRouter()
 
@@ -59,8 +61,26 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
                 "User-Agent": "Mozilla/5.0 (compatible; AUMContextFoundry/1.0; +https://aumcontextfoundry.com/bot)",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             }
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers=headers) as client:
-                resp = await client.get(request.url)
+            async with httpx.AsyncClient(timeout=15, follow_redirects=False, headers=headers) as client:
+                current_url = request.url
+                await validate_public_url(current_url)
+                resp = None
+
+                for _ in range(3):
+                    resp = await client.get(current_url)
+                    if resp.status_code in {301, 302, 303, 307, 308}:
+                        location = resp.headers.get("location")
+                        if not location:
+                            break
+                        next_url = urljoin(current_url, location)
+                        await validate_public_url(next_url)
+                        current_url = next_url
+                        continue
+                    break
+
+                if resp is None:
+                    raise RuntimeError("No response from upstream")
+
                 html = resp.text
                 status_code = resp.status_code
         except Exception as e:

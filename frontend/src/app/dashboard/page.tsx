@@ -335,7 +335,15 @@ export default function AUMContextFoundry() {
             >
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4 px-1">1.1 Ingest Source Material</h3>
+                  <h3
+                    className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2 px-1"
+                    aria-label="Ingest Source Material"
+                  >
+                    <span aria-hidden="true">1.1 </span>Ingest Source Material
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mb-4 px-1">
+                    Upload raw marketing PDFs, documentation, or enter URLs
+                  </p>
                   <SemanticIngestion />
                 </div>
                 <div className="pt-8 border-t border-slate-100 dark:border-white/5">

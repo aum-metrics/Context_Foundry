@@ -25,9 +25,7 @@ from core.model_config import OPENAI_SCHEMA_MODEL, OPENAI_MANIFEST_MODEL, OPENAI
 from api.audit import log_audit_event
 from core.industry_prompts import detect_vertical_from_name, get_queries_for_vertical
 import httpx
-import ipaddress
-import socket
-from urllib.parse import urlparse
+from core.url_security import validate_public_url
 try:
     from bs4 import BeautifulSoup
     BS4_AVAILABLE = True
@@ -48,48 +46,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _is_blocked_ip(ip: ipaddress._BaseAddress) -> bool:
-    return bool(
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_reserved
-        or ip.is_multicast
-        or ip.is_unspecified
-    )
-
-
-async def _validate_public_url(url: str) -> None:
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"}:
-        raise HTTPException(status_code=400, detail="Only http/https URLs are allowed.")
-    host = parsed.hostname
-    if not host:
-        raise HTTPException(status_code=400, detail="Invalid URL.")
-    if host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".local"):
-        raise HTTPException(status_code=400, detail="Local URLs are not allowed.")
-
-    try:
-        ip = ipaddress.ip_address(host)
-        if _is_blocked_ip(ip):
-            raise HTTPException(status_code=400, detail="Private or restricted network targets are not allowed.")
-        return
-    except ValueError:
-        pass
-
-    try:
-        infos = await asyncio.to_thread(socket.getaddrinfo, host, None)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Unable to resolve URL host.")
-
-    for info in infos:
-        ip_str = info[4][0]
-        try:
-            ip = ipaddress.ip_address(ip_str)
-        except ValueError:
-            continue
-        if _is_blocked_ip(ip):
-            raise HTTPException(status_code=400, detail="Private or restricted network targets are not allowed.")
 
 def recursive_split(text, max_size, overlap_size):
     """
@@ -335,7 +291,7 @@ async def parse_document(
         # --- ATOMIC BATCH PERSISTENCE ---
         if db:
             # Standardizing on 'latest' as the primary pointer for current context
-            manifest_id = f"manifest_{int(datetime.datetime.now(timezone.utc).timestamp())}"
+            manifest_id = f"manifest_{uuid.uuid4().hex[:12]}"
             manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
             latest_ref = db.collection("organizations").document(orgId).collection("manifests").document("latest")
             
@@ -476,7 +432,7 @@ async def parse_url(
         except Exception as e:
             logger.warning(f"Limit check failure: {e}")
 
-    await _validate_public_url(request.url)
+    await validate_public_url(request.url)
 
     # Register Job
     job_id = f"job_ingest_{int(datetime.datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:6]}"
@@ -608,7 +564,7 @@ async def _process_url_ingestion_task(url: str, orgId: str, uid: str = None):
     )
     llms_txt_content = manifest_completion.choices[0].message.content
 
-    manifest_id = f"manifest_{int(datetime.datetime.now(timezone.utc).timestamp())}"
+    manifest_id = f"manifest_{uuid.uuid4().hex[:12]}"
     manifest_ref = db.collection("organizations").document(orgId).collection("manifests").document(manifest_id)
     
     @firestore.transactional
