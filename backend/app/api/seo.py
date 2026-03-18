@@ -5,7 +5,7 @@ import json
 import os
 import uuid
 from datetime import datetime
-from openai import OpenAI
+from openai import AsyncOpenAI
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List
@@ -183,7 +183,7 @@ async def _process_seo_audit(request: SEOAuditRequest, job_id: str):
                         manifest_content = (manifest_doc.to_dict() or {}).get("content", "")[:2000]
 
                     if openai_key and manifest_content:
-                        client = OpenAI(api_key=openai_key)
+                        client = AsyncOpenAI(api_key=openai_key)
                         geo_prompt = f"""You are an AI search readiness auditor. Compare the page content below against the organization's verified manifest.
 
 Page Title: {title}
@@ -195,7 +195,7 @@ Org Manifest:
 
 Rate AI Search Readiness 0-100: how well would AI engines like GPT-4o, Gemini 3 Flash, and Claude 4.5 Sonnet represent this company based only on this page?
 Return JSON: {{"geo_score": 0-100, "recommendation": "one sentence improvement tip"}}"""
-                        resp = client.chat.completions.create(
+                        resp = await client.chat.completions.create(
                             messages=[{"role": "user", "content": geo_prompt}],
                             model=OPENAI_SIMULATION_MODEL,
                             response_format={"type": "json_object"},

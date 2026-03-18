@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import os
 import json
-from openai import OpenAI
+from openai import AsyncOpenAI
 from typing import List, Dict
 import numpy as np
 
@@ -72,11 +72,11 @@ async def chat_with_manifest(request: ChatRequest, auth: dict = Depends(get_auth
             return {"response": f"I am the AUM Support Bot (Simulated). I've analyzed your query: '{request.query}'. This is a mock response because no OpenAI API key is configured."}
         raise HTTPException(status_code=402, detail="OpenAI API key missing for this organization")
 
-    client = OpenAI(api_key=openai_key)
+    client = AsyncOpenAI(api_key=openai_key)
 
     # 2. Vectorize User Query for Semantic Search
     try:
-        query_embed_resp = client.embeddings.create(input=[request.query], model="text-embedding-3-small")
+        query_embed_resp = await client.embeddings.create(input=[request.query], model="text-embedding-3-small")
         query_vector = query_embed_resp.data[0].embedding
     except Exception as e:
         logger.error(f"Query embedding failed: {e}")
@@ -149,7 +149,7 @@ Rules:
     messages.append({"role": "user", "content": request.query})
 
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=OPENAI_SIMULATION_MODEL,
             messages=messages,
             temperature=0.3

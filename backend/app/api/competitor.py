@@ -10,7 +10,7 @@ from typing import List, Dict
 from pydantic import BaseModel
 from core.security import get_auth_context, verify_user_org_access
 from core.firebase_config import db
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 import json
 import logging
@@ -175,7 +175,7 @@ async def get_competitor_displacement(org_id: str, version: str = Query("latest"
         # 🛡️ SECURITY HARDENING (P1): Sanitize manifest_content to prevent XML injection
         clean_content = manifest_content[:6000].replace("</Context>", "[CONTEXT_END]").replace("<Context>", "[CONTEXT_START]")
         
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         prompt = f"""You are a market analyst simulating AI search behavior.
 IMPORTANT: The 'displacementRate' must be a grounded estimate (0-100) of how often an AI would recommend the competitor over {org_name}. 
 DO NOT hallucinate 100% or 0% unless absolute certainty exists. 
@@ -211,7 +211,7 @@ For each competitor, return a JSON object with:
 
 Return ONLY valid JSON: {{"competitors": [...]}}"""
 
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="gpt-4o",
             response_format={"type": "json_object"},

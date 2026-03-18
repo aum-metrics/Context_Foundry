@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger(__name__)
 
 from core.security import get_auth_context, verify_user_org_access
-from openai import OpenAI
+from openai import AsyncOpenAI
 from core.firebase_config import db
 from core.utils import count_usage_since, sanitize_for_prompt
 from google.cloud import firestore
@@ -145,7 +145,7 @@ def cosine_sim(v1, v2):
     return float(dot_product / (norm_v1 * norm_v2))
 
 
-def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_api_model: Optional[str] = None) -> list:
+async def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_api_model: Optional[str] = None) -> list:
     """
     Extract enterprise buyer positioning assertions from the Context Document.
     These are the claims a shortlisting AI engine SHOULD make about this company
@@ -171,8 +171,8 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_
     
     try:
         if openai_key:
-            client = OpenAI(api_key=openai_key)
-            resp = client.chat.completions.create(
+            client = AsyncOpenAI(api_key=openai_key)
+            resp = await client.chat.completions.create(
                 messages=[{"role": "system", "content": prompt}, {"role": "user", "content": manifest_content[:6000]}],
                 model=OPENAI_CLAIM_MODEL,
                 response_format={"type": "json_object"},
@@ -182,7 +182,7 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_
         elif gemini_key and GEMINI_AVAILABLE:
             api_model = gemini_api_model or API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
             client = genai.Client(api_key=gemini_key)
-            resp = client.models.generate_content(
+            resp = await client.aio.models.generate_content(
                 model=api_model,
                 contents=[f"{prompt}\n\nDocument:\n{manifest_content[:6000]}"],
                 config={'response_mime_type': 'application/json'}
@@ -198,7 +198,7 @@ def extract_claims(manifest_content: str, question: str, api_keys: dict, gemini_
         return []
 
 
-def verify_claims(claims: list, ai_response: str, api_keys: dict, gemini_api_model: Optional[str] = None) -> list:
+async def verify_claims(claims: list, ai_response: str, api_keys: dict, gemini_api_model: Optional[str] = None) -> list:
     """
     Score each enterprise positioning assertion against the AI model's response.
     Measures competitive visibility: did the AI surface this company's proof points
@@ -219,8 +219,8 @@ Return JSON: {"results": [{"claim": "...", "verdict": "visible|displaced|absent"
 
     try:
         if openai_key:
-            client = OpenAI(api_key=openai_key)
-            resp = client.chat.completions.create(
+            client = AsyncOpenAI(api_key=openai_key)
+            resp = await client.chat.completions.create(
                 messages=[{"role": "system", "content": sys_prompt}, 
                           {"role": "user", "content": f"POSITIONING ASSERTIONS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"}],
                 model=OPENAI_CLAIM_MODEL,
@@ -231,7 +231,7 @@ Return JSON: {"results": [{"claim": "...", "verdict": "visible|displaced|absent"
         elif gemini_key and GEMINI_AVAILABLE:
             api_model = gemini_api_model or API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
             client = genai.Client(api_key=gemini_key)
-            resp = client.models.generate_content(
+            resp = await client.aio.models.generate_content(
                 model=api_model,
                 contents=[f"{sys_prompt}\n\nPOSITIONING ASSERTIONS:\n{json.dumps(claims)}\n\nAI RESPONSE:\n{ai_response}"],
                 config={'response_mime_type': 'application/json'}
@@ -246,14 +246,14 @@ Return JSON: {"results": [{"claim": "...", "verdict": "visible|displaced|absent"
 
 
 
-def compute_divergence(api_key: str, manifest_embedding: list, answer: str) -> float:
+async def compute_divergence(api_key: str, manifest_embedding: list, answer: str) -> float:
     """Embedding-based divergence (0 = identical, 1 = divergent)."""
     try:
         if not manifest_embedding:
             return 0.5
             
-        client = OpenAI(api_key=api_key)
-        answer_resp = client.embeddings.create(input=[answer], model="text-embedding-3-small")
+        client = AsyncOpenAI(api_key=api_key)
+        answer_resp = await client.embeddings.create(input=[answer], model="text-embedding-3-small")
         sim = cosine_sim(
             np.array(manifest_embedding),
             np.array(answer_resp.data[0].embedding)
@@ -269,10 +269,10 @@ def compute_divergence(api_key: str, manifest_embedding: list, answer: str) -> f
 # ============================================================================
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def run_openai(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
+async def run_openai(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
     api_model = api_model or API_MODEL_MAPPING.get(OPENAI_SIMULATION_MODEL, OPENAI_SIMULATION_MODEL)
-    client = OpenAI(api_key=api_key)
-    completion = client.chat.completions.create(
+    client = AsyncOpenAI(api_key=api_key)
+    completion = await client.chat.completions.create(
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -283,24 +283,25 @@ def run_openai(api_key: str, system_prompt: str, user_prompt: str, api_model: Op
     return completion.choices[0].message.content or ""
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def run_gemini(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
+async def run_gemini(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
     if not GEMINI_AVAILABLE:
         raise Exception("google-genai not installed")
     api_model = api_model or API_MODEL_MAPPING.get(GEMINI_SIMULATION_MODEL, GEMINI_SIMULATION_MODEL)
+    # The new google-genai SDK uses client.aio for async
     client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
+    response = await client.aio.models.generate_content(
         model=api_model,
         contents=[f"{system_prompt}\n\nQuestion: {user_prompt}"]
     )
     return response.text or ""
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def run_claude(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
+async def run_claude(api_key: str, system_prompt: str, user_prompt: str, api_model: Optional[str] = None) -> str:
     if not CLAUDE_AVAILABLE:
         raise Exception("anthropic not installed")
     api_model = api_model or API_MODEL_MAPPING.get(CLAUDE_SIMULATION_MODEL, CLAUDE_SIMULATION_MODEL)
-    client = anthropic.Anthropic(api_key=api_key)
-    response = client.messages.create(
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
         model=api_model,
         max_tokens=1000,
         temperature=0.2,
@@ -472,7 +473,7 @@ def _fetch_manifest_and_keys(request: SimulationRequest):
     return manifest_content, manifest_embedding, api_keys, resolved_version
 
 
-def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
+async def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                  system_prompt: str, user_prompt: str, manifest_embedding: list,
                  claims: list, eps_div: float, gemini_api_model: Optional[str] = None) -> dict:
     """Score a single model's response against the manifest."""
@@ -505,13 +506,13 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
                 "claimScore": "1/1 claims supported",
             }
 
-        answer = runner_fn(runner_key, system_prompt, user_prompt)
+        answer = await runner_fn(runner_key, system_prompt, user_prompt)
 
         openai_key = api_keys.get("openai")
         
         # Embedding-based divergence (measures how closely the AI answer relates to the Context)
         if openai_key:
-            divergence = compute_divergence(openai_key, manifest_embedding, answer)
+            divergence = await compute_divergence(openai_key, manifest_embedding, answer)
         else:
             divergence = 0.5
 
@@ -524,7 +525,7 @@ def _score_model(model_name: str, runner_fn, runner_key: str, api_keys: dict,
         total = 0
         
         if claims:
-            claim_results = verify_claims(claims, answer, api_keys, gemini_api_model=gemini_api_model)
+            claim_results = await verify_claims(claims, answer, api_keys, gemini_api_model=gemini_api_model)
             visible = sum(1 for c in claim_results if c.get("verdict") == "visible")
             displaced = sum(1 for c in claim_results if c.get("verdict") == "displaced")
             absent = sum(1 for c in claim_results if c.get("verdict") == "absent")
@@ -696,6 +697,7 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
 
     # Fallback prompts — intentionally generic so they work for any industry/company.
     # The LLM path below generates context-specific prompts when a manifest is available.
+async def _generate_suggested_prompts_llm(api_key: str, org_name: str, manifest_content: str) -> dict:
     fallback = [
         f"Which companies are leading AI-driven enterprise transformation in the market, and how does {org_name} compare?",
         f"What are the key criteria enterprise buyers use to shortlist partners like {org_name}?",
@@ -707,7 +709,7 @@ async def suggest_prompts(request: SuggestPromptsRequest, auth: dict = Depends(g
         return {"prompts": fallback}
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         prompt = f"""You are helping test how well AI models know the company '{org_name}'.
 Based on the following business context, generate exactly 4 specific, factual test questions that mirror how B2B enterprise buyers compare analytics, consulting, and AI-transformation partners. These should NOT be generic SaaS questions.
 
@@ -721,7 +723,7 @@ Rules:
 - Do NOT ask about pricing unless pricing is explicitly in the context.
 - Return ONLY a JSON object: {{"prompts": ["question1", "question2", "question3", "question4"]}}"""
 
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model=OPENAI_SCHEMA_MODEL,
             response_format={"type": "json_object"},
@@ -963,8 +965,9 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
     # --- PHASE 7: DEEP CONTEXT RETRIEVAL ---
     if openai_key and db:
         try:
-            client = OpenAI(api_key=openai_key)
-            q_embed = client.embeddings.create(input=[request.prompt], model="text-embedding-3-small").data[0].embedding
+            client = AsyncOpenAI(api_key=openai_key)
+            q_embed_resp = await client.embeddings.create(input=[request.prompt], model="text-embedding-3-small")
+            q_embed = q_embed_resp.data[0].embedding
             
             manifest_version = resolved_manifest_version
 
@@ -1014,10 +1017,11 @@ async def run_simulation(request: SimulationRequest, background_tasks: Backgroun
                 manifest_content = "\n\n---\n\n".join(top_chunks)
                 if openai_key:
                     try:
-                        manifest_embedding = client.embeddings.create(
+                        manifest_embedding_resp = await client.embeddings.create(
                             input=[manifest_content[:8000]],
                             model="text-embedding-3-small"
-                        ).data[0].embedding
+                        )
+                        manifest_embedding = manifest_embedding_resp.data[0].embedding
                     except Exception as embed_err:
                         logger.warning(f"Simulation context re-embedding failed: {embed_err}")
             elif not is_dev and not manifest_content:
@@ -1060,14 +1064,12 @@ ANSWER GUIDELINES:
 - Do NOT fabricate facts. Keep the answer authoritative, specific, and 150-250 words."""
 
     eps_div = 0.45
-    claims = []
     # Hardened Claim Extraction with multi-provider fallback
-    claims = extract_claims(manifest_content, request.prompt, effective_api_keys, gemini_api_model=gemini_api_model)
+    claims = await extract_claims(manifest_content, request.prompt, effective_api_keys, gemini_api_model=gemini_api_model)
 
     # --- PARALLEL INFERENCE & SCORING ---
     async def _run_and_score(model_name: str, runner_fn, key: str):
-        return await asyncio.to_thread(
-            _score_model,
+        return await _score_model(
             model_name, runner_fn, key, effective_api_keys,
             system_prompt, request.prompt, manifest_embedding, claims, eps_div, gemini_api_model
         )
@@ -1131,8 +1133,8 @@ YOUR TASK:
 
 Return JSON: {{"master_verdict": "concise competitive verdict", "winner": "model name", "audit_notes": "which competitors were ranked above or instead, and why"}}"""
 
-                    client = OpenAI(api_key=openai_key)
-                    adj_resp = client.chat.completions.create(
+                    client = AsyncOpenAI(api_key=openai_key)
+                    adj_resp = await client.chat.completions.create(
                         model="gpt-4o-mini", # 🛡️ COST OPTIMIZATION: Use cheaper model for meta-analysis
                         messages=[{"role": "system", "content": adjudication_prompt}],
                         response_format={"type": "json_object"},

@@ -14,7 +14,7 @@ from datetime import timedelta, timezone
 import logging
 from fastapi import Depends
 import asyncio
-from openai import OpenAI
+from openai import AsyncOpenAI
 from core.firebase_config import db
 from core.security import get_auth_context, verify_user_org_access
 from core.config import settings
@@ -145,7 +145,7 @@ VERTICAL_TO_TAXONOMY = {
 }
 
 
-def classify_industry_taxonomy(client: OpenAI, doc_sample: str, schema_data: dict, hint_org_name: str) -> tuple[str, list]:
+async def classify_industry_taxonomy(client: AsyncOpenAI, doc_sample: str, schema_data: dict, hint_org_name: str) -> tuple[str, list]:
     org_name = schema_data.get("name") if isinstance(schema_data, dict) else None
     org_label = org_name or hint_org_name or "the organization"
     prompt = f"""You are a taxonomy classifier. Based ONLY on the document content, choose the single best-fit industry taxonomy label and up to 5 short tags.
@@ -163,7 +163,7 @@ Organization hint: {org_label}
 </Doc>
 """
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model=OPENAI_SCHEMA_MODEL,
             response_format={"type": "json_object"},
@@ -271,7 +271,7 @@ async def parse_document(
         raise HTTPException(status_code=503, detail="Infrastructure API key missing.")
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         
         # --- SEMANTIC CHUNKING ---
         full_text = raw_text[:100000]
@@ -281,7 +281,7 @@ async def parse_document(
         chunk_vectors = []
         for i in range(0, len(chunks), 16):
             batch = chunks[i:i+16]
-            embed_batch = client.embeddings.create(input=batch, model="text-embedding-3-small")
+            embed_batch = await client.embeddings.create(input=batch, model="text-embedding-3-small")
             chunk_vectors.extend([e.embedding for e in embed_batch.data])
 
         # Schema Extraction Strategy
@@ -305,14 +305,15 @@ async def parse_document(
             "Respond ONLY with the JSON-LD object.\n"
             f"<Doc>\n{doc_sample}\n</Doc>"
         )
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model=OPENAI_SCHEMA_MODEL,
             response_format={ "type": "json_object" }
         )
         schema_data = json.loads(completion.choices[0].message.content)
-        schema_vector = client.embeddings.create(input=[json.dumps(schema_data)], model="text-embedding-3-small").data[0].embedding
-        industry_taxonomy, industry_tags = classify_industry_taxonomy(client, doc_sample, schema_data, hint_org_name)
+        schema_vector_resp = await client.embeddings.create(input=[json.dumps(schema_data)], model="text-embedding-3-small")
+        schema_vector = schema_vector_resp.data[0].embedding
+        industry_taxonomy, industry_tags = await classify_industry_taxonomy(client, doc_sample, schema_data, hint_org_name)
         
         # Markdown Manifest Generation (llms.txt)
         manifest_prompt = (
@@ -322,7 +323,7 @@ async def parse_document(
             "DO NOT hallucinate, invent, or include any information not present in the document.\n\n"
             f"<Doc>\n{doc_sample}\n</Doc>"
         )
-        manifest_completion = client.chat.completions.create(
+        manifest_completion = await client.chat.completions.create(
             messages=[{"role": "user", "content": manifest_prompt}],
             model=OPENAI_MANIFEST_MODEL
         )
@@ -534,14 +535,14 @@ async def parse_url(
         raise HTTPException(status_code=503, detail="Infrastructure API key missing.")
 
     try:
-        oai = OpenAI(api_key=api_key)
+        oai = AsyncOpenAI(api_key=api_key)
         full_text = raw_text[:100000]
         chunks = recursive_split(full_text, 2000, 200)
 
         chunk_vectors = []
         for i in range(0, len(chunks), 16):
             batch = chunks[i:i+16]
-            embed_batch = oai.embeddings.create(input=batch, model=OPENAI_EMBEDDING_MODEL)
+            embed_batch = await oai.embeddings.create(input=batch, model=OPENAI_EMBEDDING_MODEL)
             chunk_vectors.extend([e.embedding for e in embed_batch.data])
 
         doc_sample = raw_text[:20000]
@@ -562,14 +563,15 @@ async def parse_url(
             "Be strictly faithful — do NOT invent or use placeholder data.\n\n"
             f"<Doc>\n{doc_sample}\n</Doc>"
         )
-        schema_completion = oai.chat.completions.create(
+        schema_completion = await oai.chat.completions.create(
             messages=[{"role": "user", "content": schema_prompt}],
             model=OPENAI_SCHEMA_MODEL,
             response_format={"type": "json_object"}
         )
         schema_data = json.loads(schema_completion.choices[0].message.content)
-        schema_vector = oai.embeddings.create(input=[json.dumps(schema_data)], model=OPENAI_EMBEDDING_MODEL).data[0].embedding
-        industry_taxonomy, industry_tags = classify_industry_taxonomy(oai, doc_sample, schema_data, hint_org_name)
+        schema_vector_resp = await oai.embeddings.create(input=[json.dumps(schema_data)], model=OPENAI_EMBEDDING_MODEL)
+        schema_vector = schema_vector_resp.data[0].embedding
+        industry_taxonomy, industry_tags = await classify_industry_taxonomy(oai, doc_sample, schema_data, hint_org_name)
 
         manifest_prompt = (
             f"Generate a concise 'llms.txt' AI Protocol Manifest from this web page.\n"
@@ -579,7 +581,7 @@ async def parse_url(
             "DO NOT hallucinate. Only include what is stated in the page.\n\n"
             f"<Doc>\n{doc_sample}\n</Doc>"
         )
-        manifest_completion = oai.chat.completions.create(
+        manifest_completion = await oai.chat.completions.create(
             messages=[{"role": "user", "content": manifest_prompt}],
             model=OPENAI_MANIFEST_MODEL
         )
