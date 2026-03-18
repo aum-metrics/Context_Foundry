@@ -12,7 +12,10 @@ import json
 import datetime
 from datetime import timedelta, timezone
 import logging
-from fastapi import Depends
+import uuid
+from pydantic import BaseModel as PydanticBaseModel
+from fastapi import Depends, BackgroundTasks
+from utils.task_queue import FirestoreTaskQueue
 import asyncio
 from openai import AsyncOpenAI
 from core.firebase_config import db
@@ -430,8 +433,7 @@ async def parse_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-from utils.task_queue import FirestoreTaskQueue
-from fastapi import BackgroundTasks
+
 
 class URLIngestionRequest(PydanticBaseModel):
     url: str
