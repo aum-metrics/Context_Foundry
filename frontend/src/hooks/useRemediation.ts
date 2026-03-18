@@ -1,253 +1,279 @@
+/**
+ * useRemediation.ts
+ * Generic remediation hook — derives cluster categories from prompt text,
+ * never from hardcoded industry verticals.
+ */
 import { useMemo } from "react";
-import { resolveRemediationTargets } from "@/lib/remediationTargets";
-import type { CompetitorInsight, GapAssertion, ManifestSnapshot, PromptRun, QueryClusterInsight, RemediationRecommendation, ScoringHistoryEntry, SEOResult } from "@/types/som";
+import type {
+  CompetitorInsight, GapAssertion, ManifestSnapshot,
+  PromptRun, QueryClusterInsight, RemediationRecommendation,
+  ScoringHistoryEntry, SEOResult,
+} from "@/types/som";
 import { averageAccuracy, clampPct, getFirstSentence, hallucinationRate, parseClaimRecallPercent } from "@/lib/somUtils";
 
-function classifyPromptCluster(prompt: string): string {
-    const value = prompt.toLowerCase();
-    
-    // Strategic / Executive
-    if (value.includes("fortune 500") || value.includes("retail transformation") || value.includes("analytics partner") || value.includes("modernization")) {
-        return "Executive Market Positioning";
-    }
-    
-    // Supply Chain / Retail
-    if (value.includes("iphone") || value.includes("electronics") || value.includes("appliances") || value.includes("store near me") || value.includes("delivery") || value.includes("inventory")) {
-        return "Retail Availability & Logistics";
-    }
-    
-    // Cyber / Risk
-    if (value.includes("crisis") || value.includes("simulation") || value.includes("resilience") || value.includes("training") || value.includes("threat") || value.includes("incumbent")) {
-        return "Cyber Readiness & Training";
-    }
-    
-    // Tech / Infrastructure
-    if (value.includes("crm") || value.includes("billing") || value.includes("compliance") || value.includes("scalability") || value.includes("cloud") || value.includes("architecture")) {
-        return "Enterprise Scale & Reliability";
-    }
-    
-    // Competitive
-    if (value.includes("compare with") || value.includes("vs") || value.includes("competitor") || value.includes("alternative") || value.includes("better than")) {
-        return "Competitive Differentiation";
-    }
+// ─── Inline page target resolver (replaces @/lib/remediationTargets) ─────────
+// Returns a prioritized list of page/asset targets for a given remediation category.
 
-    // AI Specific
-    if (value.includes("ai driver") || value.includes("llm") || value.includes("rag") || value.includes("generative")) {
-        return "AI Innovation Authority";
-    }
-
-    return "Geographic & Market Authority";
+interface RemediationTargetArgs {
+  category: string;
+  sourceUrl?: string;
+  schemaData?: Record<string, unknown>;
+  missingClaims: string[];
 }
+
+function resolveRemediationTargets({ category, sourceUrl, missingClaims }: RemediationTargetArgs): string[] {
+  const targets: string[] = [];
+  const cat = category.toLowerCase();
+
+  if (sourceUrl) {
+    // Always start with the homepage/about page
+    targets.push(`${sourceUrl} (Homepage — update above-the-fold copy)`);
+    if (/proof|credib|case|outcome/.test(cat)) targets.push(`${sourceUrl}/case-studies`);
+    if (/trust|compli|certif|secur/.test(cat)) targets.push(`${sourceUrl}/security`);
+    if (/roi|value|business/.test(cat)) targets.push(`${sourceUrl}/pricing`);
+    if (/expert|domain|industry/.test(cat)) targets.push(`${sourceUrl}/solutions`);
+    if (/enterprise|scale|fortune/.test(cat)) targets.push(`${sourceUrl}/enterprise`);
+  }
+
+  // Generic schema + content targets always apply
+  targets.push("Organization schema (add knowsAbout, hasOfferCatalog)");
+  targets.push("FAQ page (add buyer-intent Q&A pairs)");
+  targets.push("llms.txt (add verified capability assertions)");
+
+  if (missingClaims.length > 0) {
+    targets.push(`Blog/resources section (publish content on: ${missingClaims.slice(0, 2).join(", ")})`);
+  }
+
+  return targets.slice(0, 5);
+}
+
+// ─── Generic cluster classification ──────────────────────────────────────────
+// Derives a label purely from the prompt's signal words — no vertical hardcoding.
+
+function classifyPromptCluster(prompt: string): string {
+  const p = prompt.toLowerCase();
+
+  if (/\b(vs\.?|versus|compare|comparison|alternative|differ|better than)\b/.test(p))
+    return "Competitive Differentiation";
+  if (/\b(roi|revenue|cost|saving|budget|price|payback|profit|value)\b/.test(p))
+    return "Business Value & ROI";
+  if (/\b(case stud|proof|evidence|outcome|client|customer|win|success story)\b/.test(p))
+    return "Proof & Credibility";
+  if (/\b(market|leader|rank|top|best|leading|shortlist|recommend)\b/.test(p))
+    return "Market Leadership";
+  if (/\b(certif|compli|secure|soc2|iso|gdpr|regulation|audit|trust|govern)\b/.test(p))
+    return "Trust & Compliance";
+  if (/\b(scale|enterprise|fortune|large|global|multi|complex|transform)\b/.test(p))
+    return "Enterprise Fit";
+  if (/\b(implement|deploy|integrat|onboard|migrat|adopt|partner|support)\b/.test(p))
+    return "Delivery & Partnership";
+  if (/\b(ai|ml|data|cloud|platform|technolog|digital|automat|innovat)\b/.test(p))
+    return "Technology & Innovation";
+  if (/\b(domain|industry|vertical|sector|specialist|expert|niche)\b/.test(p))
+    return "Domain Expertise";
+
+  // Last resort: derive from first meaningful words
+  const words = prompt.split(/\s+/).filter((w) => w.length > 4).slice(0, 3);
+  return words.length ? words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") : "General Positioning";
+}
+
+// ─── Category fallback claims (generic buyer-intent signals) ──────────────────
 
 function getCategoryFallbackClaims(category: string): string[] {
-    switch (category) {
-        case "Executive Market Positioning":
-            return ["verified Fortune 500 retail decision cases", "top-tier analytics partnership authority", "enterprise-scale ROI proof"];
-        case "Retail Availability & Logistics":
-            return ["verified same-day delivery proof", "nationwide store inventory visibility", "post-purchase service network"];
-        case "Cyber Readiness & Training":
-            return ["crisis simulation realism", "executive board governance proof", "automated scenario generation depth"];
-        case "Enterprise Scale & Reliability":
-            return ["99.99% uptime SLA evidence", "enterprise-grade security SOC2", "multi-region deployment proof"];
-        case "Competitive Differentiation":
-            return ["proprietary innovation signals", "named buyer-intent differentiators", "clear proof of outcome"];
-        case "AI Innovation Authority":
-            return ["proprietary model fine-tuning evidence", "high-fidelity RAG architecture proof", "AI safety and governance signals"];
-        default:
-            return ["industry-specific outcome proof", "localized market authority signals", "explicit sector trust factors"];
-    }
+  const map: Record<string, string[]> = {
+    "Competitive Differentiation":  ["named differentiators vs top rivals", "unique methodology or IP", "buyer-facing comparison proof"],
+    "Business Value & ROI":         ["quantified ROI or cost savings", "time-to-value benchmarks", "financial outcome case studies"],
+    "Proof & Credibility":          ["named client outcomes", "verifiable case studies", "third-party validation"],
+    "Market Leadership":            ["analyst recognition or rankings", "market share signals", "category leadership assertions"],
+    "Trust & Compliance":           ["security certifications (SOC2, ISO)", "regulatory compliance proof", "audit track record"],
+    "Enterprise Fit":               ["Fortune 500 or large-org references", "scalability and uptime evidence", "enterprise procurement readiness"],
+    "Delivery & Partnership":       ["implementation success metrics", "partner ecosystem depth", "post-sale support proof"],
+    "Technology & Innovation":      ["proprietary technology proof", "AI/data capability assertions", "innovation track record"],
+    "Domain Expertise":             ["vertical-specific outcome evidence", "named industry credentials", "domain thought leadership"],
+  };
+  return map[category] ?? ["specific outcome proof points", "named buyer-relevant differentiators", "verifiable capability assertions"];
 }
 
-function buildCopyBlock(subject: string, category: string, competitorName: string, missingClaims: string[]): string {
-    const claim = missingClaims[0] || "industry-leading signals";
-    const competitorSignal = competitorName === "Shopify"
-        ? "'Ecosystem App Scale'"
-        : competitorName === "Reliance Digital"
-            ? "'Nationwide Network Presence'"
-            : "'Category Authority'";
+// ─── Copy builders (fully generic — no industry mentions) ────────────────────
 
-    return `AI identifies that ${competitorName} is winning on ${competitorSignal}. To counter this, ${subject} must inject explicit assertions around '${claim}' into your primary value proposition. We recommend adding a "Compare vs ${competitorName}" section on your homepage specifically highlighting ${missingClaims.slice(0, 2).join(" and ")}.`;
+function buildCopyBlock(subject: string, category: string, competitor: string, missing: string[]): string {
+  return (
+    `AI identifies that ${competitor} is winning on '${category}'. ` +
+    `${subject} lacks explicit signals around '${missing[0] ?? "key proof points"}'. ` +
+    `Add a section addressing '${missing.slice(0, 2).join(" and ")}' with verifiable evidence.`
+  );
+}
+function buildSchemaSuggestion(category: string, missing: string[]): string {
+  return `Add '${missing[0] ?? "core capability"}' to Organization schema under 'knowsAbout' and 'description' for the '${category}' cluster.`;
+}
+function buildFaqSuggestion(subject: string, category: string, competitor: string): string {
+  return `FAQ: "How does ${subject} differ from ${competitor} on ${category.toLowerCase()}?" — answer with specific, verifiable proof.`;
+}
+function buildLlmsSuggestion(category: string, missing: string[]): string {
+  return `llms.txt: Under '${category}', add a 'Verified Capabilities' list: ${missing.slice(0, 2).join("; ") || "key differentiators"}.`;
 }
 
-function buildSchemaSuggestion(category: string, subject: string, missingClaims: string[]): string {
-    const claim = missingClaims[0] || "core service proof";
-    return `Update Organization schema: Add '${claim}' to 'knowsAbout' and 'description' properties to improve extraction for the ${category.toLowerCase()} cluster.`;
-}
-
-function buildFaqSuggestion(subject: string, category: string, competitorName: string): string {
-    return `Enterprise FAQ: "How does ${subject}'s approach to ${category.toLowerCase()} differ from legacy providers like ${competitorName}?" (Focus answer on verified ROI and specific delivery proof).`;
-}
-
-function buildLlmsSuggestion(category: string, subject: string, missingClaims: string[]): string {
-    const claims = missingClaims.slice(0, 2).join("; ") || "differentiated signals";
-    return `llms.txt: Under the '${category}' header, add a 'Verified Capabilities' list claiming: ${claims}. This ensures crawler-based crawlers prioritize these signals.`;
-}
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 interface UseRemediationArgs {
-    promptRuns: PromptRun[];
-    competitorRanking: CompetitorInsight[];
-    manifestSnapshot: ManifestSnapshot | null;
-    analysisSubject: string;
-    seoResult: SEOResult | null;
-    filteredHistoryEntries: ScoringHistoryEntry[] | null | undefined;
-    isDemoOrg?: boolean;
+  promptRuns: PromptRun[];
+  competitorRanking: CompetitorInsight[];
+  manifestSnapshot: ManifestSnapshot | null;
+  analysisSubject: string;
+  seoResult: SEOResult | null;
+  filteredHistoryEntries: ScoringHistoryEntry[] | null | undefined;
+  isDemoOrg?: boolean;
 }
 
 export function useRemediation({
-    promptRuns,
-    competitorRanking,
-    manifestSnapshot,
-    analysisSubject,
-    seoResult,
-    filteredHistoryEntries,
-    isDemoOrg = false,
+  promptRuns,
+  competitorRanking,
+  manifestSnapshot,
+  analysisSubject,
+  seoResult,
+  filteredHistoryEntries,
+  isDemoOrg = false,
 }: UseRemediationArgs) {
-    const queryClusterInsights = useMemo<QueryClusterInsight[]>(() => {
-        const getCompetitorForCategory = (category: string) => {
-            const normalizedCategory = category.toLowerCase();
-            return competitorRanking.find((competitor) => {
-                const winningCategory = (competitor.winningCategory || "").toLowerCase();
-                return winningCategory.includes(normalizedCategory) || normalizedCategory.includes(winningCategory);
-            }) || competitorRanking[0];
-        };
 
-        return promptRuns.map((run) => {
-            const sortedResults = [...run.results].sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
-            const avgAccuracy = sortedResults.length > 0
-                ? clampPct(sortedResults.reduce((sum, result) => sum + (result.accuracy || 0), 0) / sortedResults.length)
-                : 0;
-            const claimRecallValues = sortedResults
-                .map((result) => parseClaimRecallPercent(result.claimScore))
-                .filter((value): value is number => value !== null);
-            const claimRecall = claimRecallValues.length > 0
-                ? clampPct(claimRecallValues.reduce((sum, value) => sum + value, 0) / claimRecallValues.length)
-                : avgAccuracy;
-            const category = classifyPromptCluster(run.prompt);
-            const matchedCompetitor = getCompetitorForCategory(category);
-            const observedOutcome = getFirstSentence(sortedResults[0]?.answer)
-                || `${category} prompts are currently scoring ${avgAccuracy}% average fidelity across the audited model set.`;
-            const fallbackClaims = getCategoryFallbackClaims(category);
-            const missingClaims: string[] = (matchedCompetitor?.missingAssertions && matchedCompetitor.missingAssertions.length > 0)
-                ? matchedCompetitor.missingAssertions.map((a: string | GapAssertion) => typeof a === "string" ? a : a.assertion)
-                : fallbackClaims;
+  // ── Query cluster insights ─────────────────────────────────────────────────
+  const queryClusterInsights = useMemo<QueryClusterInsight[]>(() => {
+    const getCompetitorForCategory = (cat: string): CompetitorInsight | undefined => {
+      const cl = cat.toLowerCase();
+      return (
+        competitorRanking.find((c) => {
+          const wc = (c.winningCategory ?? "").toLowerCase();
+          return wc.includes(cl) || cl.includes(wc);
+        }) ?? competitorRanking[0]
+      );
+    };
 
-            return {
-                prompt: run.prompt,
-                category,
-                avgAccuracy,
-                claimRecall,
-                hallucinationCount: sortedResults.filter((result) => result.hasDisplacement ?? result.hasHallucination).length,
-                winnerModel: sortedResults[0]?.model || "No data",
-                weakestModel: sortedResults[sortedResults.length - 1]?.model || "No data",
-                observedOutcome,
-                winningCompetitor: matchedCompetitor?.name || "No competitor identified",
-                claimsOwned: matchedCompetitor?.claimsOwned || [],
-                missingClaims,
-            };
-        }).sort((a, b) => b.avgAccuracy - a.avgAccuracy);
-    }, [promptRuns, competitorRanking]);
+    return promptRuns
+      .map((run) => {
+        const sorted = [...run.results].sort((a, b) => (b.accuracy ?? 0) - (a.accuracy ?? 0));
+        const avgAcc = sorted.length
+          ? clampPct(sorted.reduce((s, r) => s + (r.accuracy ?? 0), 0) / sorted.length)
+          : 0;
+        const recallVals = sorted.map((r) => parseClaimRecallPercent(r.claimScore)).filter((v): v is number => v !== null);
+        const claimRecall = recallVals.length
+          ? clampPct(recallVals.reduce((s, v) => s + v, 0) / recallVals.length)
+          : avgAcc;
 
-    const winningClusters = useMemo(() => queryClusterInsights.slice(0, 2), [queryClusterInsights]);
+        const category = classifyPromptCluster(run.prompt);
+        const matched = getCompetitorForCategory(category);
+        const observedOutcome = getFirstSentence(sorted[0]?.answer) || `'${category}' prompts scoring ${avgAcc}% average fidelity.`;
 
-    const weakClusters = useMemo(() => {
-        const meaningful = queryClusterInsights
-            .filter((cluster) => cluster.avgAccuracy < 80 || cluster.hallucinationCount > 0 || cluster.claimRecall < 80)
-            .sort((a, b) => a.avgAccuracy - b.avgAccuracy);
+        const missingClaims: string[] =
+          matched?.missingAssertions?.length
+            ? matched.missingAssertions.map((a: string | GapAssertion) => typeof a === "string" ? a : a.assertion)
+            : getCategoryFallbackClaims(category);
 
-        // Deduplicate by category to avoid redundant remediation plans
-        const uniqueByCategory: QueryClusterInsight[] = [];
-        const categories = new Set<string>();
-        for (const cluster of meaningful) {
-            if (!categories.has(cluster.category)) {
-                uniqueByCategory.push(cluster);
-                categories.add(cluster.category);
-            }
-        }
-
-        return uniqueByCategory.length > 0 ? uniqueByCategory.slice(0, 3) : queryClusterInsights.slice(-2).reverse();
-    }, [queryClusterInsights]);
-
-    const remediationSnapshot = useMemo(() => {
-        if (!filteredHistoryEntries || filteredHistoryEntries.length < 2) return null;
-        
-        // 🚨 DEMO REFINEMENT: If this is a demo org, hide the delta som to avoid misleading prospect
-        const isDemo = isDemoOrg;
-
-        const chronological = [...filteredHistoryEntries];
-        const baseline = chronological[0];
-        const current = chronological[chronological.length - 1];
-        const baselineAvg = averageAccuracy(baseline.results || []);
-        const currentAvg = averageAccuracy(current.results || []);
-        const baselineHallucinationRate = hallucinationRate(baseline.results || []);
-        const currentHallucinationRate = hallucinationRate(current.results || []);
-        
         return {
-            baselinePrompt: baseline.prompt,
-            currentPrompt: current.prompt,
-            baselineAvg,
-            currentAvg,
-            deltaSom: isDemo ? 0 : currentAvg - baselineAvg,
-            baselineHallucinationRate,
-            currentHallucinationRate,
-            deltaHallucinationRate: isDemo ? 0 : currentHallucinationRate - baselineHallucinationRate,
-            isDemoBypass: isDemo
-        };
-    }, [filteredHistoryEntries, isDemoOrg]);
+          prompt: run.prompt,
+          category,
+          avgAccuracy: avgAcc,
+          claimRecall,
+          hallucinationCount: sorted.filter((r) => r.hasDisplacement ?? r.hasHallucination).length,
+          winnerModel: sorted[0]?.model ?? "No data",
+          weakestModel: sorted[sorted.length - 1]?.model ?? "No data",
+          observedOutcome,
+          winningCompetitor: matched?.name ?? "No competitor identified",
+          claimsOwned: matched?.claimsOwned ?? [],
+          missingClaims,
+        } satisfies QueryClusterInsight;
+      })
+      .sort((a, b) => b.avgAccuracy - a.avgAccuracy);
+  }, [promptRuns, competitorRanking]);
 
-    const remediationRecommendations = useMemo<RemediationRecommendation[]>(() => {
-        const recommendations = weakClusters.map((cluster) => {
-            const missingClaims = cluster.missingClaims.length > 0 ? cluster.missingClaims : getCategoryFallbackClaims(cluster.category);
-            const pageTargets = resolveRemediationTargets({
-                category: cluster.category,
-                schemaData: manifestSnapshot?.schemaData || undefined,
-                sourceUrl: manifestSnapshot?.sourceUrl,
-                missingClaims,
-            });
-            return {
-                title: `Close the ${cluster.category.toLowerCase()} visibility gap`,
-                category: cluster.category,
-                observedOutcome: cluster.observedOutcome,
-                winningCompetitor: cluster.winningCompetitor,
-                missingClaims,
-                pageTargets,
-                copyBlock: buildCopyBlock(analysisSubject, cluster.category, cluster.winningCompetitor, missingClaims),
-                schemaSuggestion: buildSchemaSuggestion(cluster.category, analysisSubject, missingClaims),
-                faqSuggestion: buildFaqSuggestion(analysisSubject, cluster.category, cluster.winningCompetitor),
-                llmsSuggestion: buildLlmsSuggestion(cluster.category, analysisSubject, missingClaims),
-            };
-        });
+  const winningClusters = useMemo(() => queryClusterInsights.slice(0, 2), [queryClusterInsights]);
 
-        if (seoResult) {
-            const weakChecks = seoResult.checks.filter((check) => check.status !== "pass").slice(0, 2);
-            if (weakChecks.length > 0) {
-                recommendations.push({
-                    title: "Close AI Search Readiness gaps on the public site",
-                    category: "Site-level AI Search Readiness",
-                    observedOutcome: `${seoResult.geoScore}% AI Search Readiness score with ${weakChecks.map((check) => check.check).join(", ")} flagged.`,
-                    winningCompetitor: competitorRanking[0]?.name || "No competitor identified",
-                    missingClaims: weakChecks.map((check) => check.check),
-                    pageTargets: resolveRemediationTargets({
-                        category: "Site-level AI Search Readiness",
-                        schemaData: manifestSnapshot?.schemaData || undefined,
-                        sourceUrl: manifestSnapshot?.sourceUrl,
-                        missingClaims: weakChecks.map((check) => check.check),
-                    }),
-                    copyBlock: `${analysisSubject} should restate its core identity, category fit, and differentiators in the title block, opening H1, and above-the-fold descriptive copy so AI retrieval systems stop defaulting to generic vendor language.`,
-                    schemaSuggestion: "Add complete Organization / Service / FAQ schema and align the visible page copy with the same core claims.",
-                    faqSuggestion: `FAQ: What makes ${analysisSubject} credible for enterprise AI and analytics transformation?`,
-                    llmsSuggestion: "llms.txt: Add a short top section that names the company category, buyer fit, and primary service lines in plain language.",
-                });
-            }
-        }
+  const weakClusters = useMemo(() => {
+    const meaningful = queryClusterInsights
+      .filter((c) => c.avgAccuracy < 80 || c.hallucinationCount > 0 || c.claimRecall < 80)
+      .sort((a, b) => a.avgAccuracy - b.avgAccuracy);
 
-        return recommendations.slice(0, 4);
-    }, [weakClusters, manifestSnapshot?.schemaData, manifestSnapshot?.sourceUrl, analysisSubject, seoResult, competitorRanking]);
+    // Deduplicate by category
+    const seen = new Set<string>();
+    const unique = meaningful.filter((c) => { if (seen.has(c.category)) return false; seen.add(c.category); return true; });
+    return unique.length > 0 ? unique.slice(0, 3) : queryClusterInsights.slice(-2).reverse();
+  }, [queryClusterInsights]);
+
+  // ── Remediation snapshot ───────────────────────────────────────────────────
+  const remediationSnapshot = useMemo(() => {
+    if (!filteredHistoryEntries || filteredHistoryEntries.length < 2) return null;
+    const chrono = [...filteredHistoryEntries];
+    const baseline = chrono[0];
+    const current = chrono[chrono.length - 1];
+    const baselineAvg = averageAccuracy(baseline.results ?? []);
+    const currentAvg = averageAccuracy(current.results ?? []);
+    const baselineHR = hallucinationRate(baseline.results ?? []);
+    const currentHR = hallucinationRate(current.results ?? []);
 
     return {
-        queryClusterInsights,
-        winningClusters,
-        weakClusters,
-        remediationSnapshot,
-        remediationRecommendations,
+      baselinePrompt: baseline.prompt,
+      currentPrompt: current.prompt,
+      baselineAvg,
+      currentAvg,
+      deltaSom: isDemoOrg ? 0 : Math.round(currentAvg - baselineAvg),
+      baselineHallucinationRate: baselineHR,
+      currentHallucinationRate: currentHR,
+      deltaHallucinationRate: isDemoOrg ? 0 : Math.round((currentHR - baselineHR) * 10) / 10,
+      isDemoBypass: isDemoOrg,
     };
+  }, [filteredHistoryEntries, isDemoOrg]);
+
+  // ── Remediation recommendations ────────────────────────────────────────────
+  const remediationRecommendations = useMemo<RemediationRecommendation[]>(() => {
+    const recs = weakClusters.map((cluster) => {
+      const missing = cluster.missingClaims.length > 0
+        ? cluster.missingClaims
+        : getCategoryFallbackClaims(cluster.category);
+
+      return {
+        title: `Close the ${cluster.category.toLowerCase()} visibility gap`,
+        category: cluster.category,
+        observedOutcome: cluster.observedOutcome,
+        winningCompetitor: cluster.winningCompetitor,
+        missingClaims: missing,
+        pageTargets: resolveRemediationTargets({
+          category: cluster.category,
+          schemaData: manifestSnapshot?.schemaData,
+          sourceUrl: manifestSnapshot?.sourceUrl,
+          missingClaims: missing,
+        }),
+        copyBlock: buildCopyBlock(analysisSubject, cluster.category, cluster.winningCompetitor, missing),
+        schemaSuggestion: buildSchemaSuggestion(cluster.category, missing),
+        faqSuggestion: buildFaqSuggestion(analysisSubject, cluster.category, cluster.winningCompetitor),
+        llmsSuggestion: buildLlmsSuggestion(cluster.category, missing),
+      } satisfies RemediationRecommendation;
+    });
+
+    // Append SEO-based recommendation when available
+    if (seoResult) {
+      const failing = seoResult.checks.filter((c) => c.status !== "pass").slice(0, 2);
+      if (failing.length > 0) {
+        const missing = failing.map((c) => c.check);
+        recs.push({
+          title: "Close AI Search Readiness gaps on the public site",
+          category: "AI Search Readiness",
+          observedOutcome: `${seoResult.geoScore}% AI Search Readiness — ${missing.join(", ")} flagged.`,
+          winningCompetitor: competitorRanking[0]?.name ?? "Leading competitors",
+          missingClaims: missing,
+          pageTargets: resolveRemediationTargets({
+            category: "AI Search Readiness",
+            schemaData: manifestSnapshot?.schemaData,
+            sourceUrl: manifestSnapshot?.sourceUrl,
+            missingClaims: missing,
+          }),
+          copyBlock: `${analysisSubject} should restate its core identity and differentiators in page titles, H1 headings, and above-the-fold copy so AI retrieval systems stop defaulting to generic language.`,
+          schemaSuggestion: "Add complete Organization/Service/FAQ schema aligned to visible page copy.",
+          faqSuggestion: `FAQ: What makes ${analysisSubject} the right choice for enterprise buyers in this category?`,
+          llmsSuggestion: "llms.txt: Add a plain-language section naming the company category, buyer fit, and primary service lines.",
+        });
+      }
+    }
+
+    return recs.slice(0, 4);
+  }, [weakClusters, manifestSnapshot, analysisSubject, seoResult, competitorRanking]);
+
+  return { queryClusterInsights, winningClusters, weakClusters, remediationSnapshot, remediationRecommendations };
 }

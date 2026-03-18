@@ -480,14 +480,18 @@ async def parse_url(
 
     # Register Job
     job_id = f"job_ingest_{int(datetime.datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:6]}"
-    FirestoreTaskQueue.register_job(orgId, "ingestionJobs", job_id, {"url": request.url, "type": "url_ingestion"})
+    FirestoreTaskQueue.register_job(orgId, "ingestionJobs", job_id, {"url": request.url})
 
     # Launch Background Task
     background_tasks.add_task(
         FirestoreTaskQueue.run_persistent_task,
-        orgId, "ingestionJobs", job_id,
+        orgId,
+        "ingestionJobs",
+        job_id,
         _process_url_ingestion_task,
-        request.url, orgId, uid
+        request.url,
+        orgId,
+        uid
     )
 
     return {"jobId": job_id, "status": "queued"}
