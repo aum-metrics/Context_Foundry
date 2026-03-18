@@ -205,7 +205,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --cpu 1 \
   --timeout 300 \
   --concurrency 40 \
-  --min-instances 0 \
+  --min-instances 1 \
   --max-instances 10 \
   --set-env-vars "${ENV_VARS}" \
   --set-secrets "${SET_SECRETS}"
