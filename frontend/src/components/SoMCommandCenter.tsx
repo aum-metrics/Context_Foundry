@@ -40,6 +40,7 @@ import { normalizeModelName } from "@/lib/somUtils";
 import type {
   BatchResult, CompetitorInsight, ManifestSnapshot,
   PromptRun, ScoringHistoryEntry, SEOResult,
+  CompetitorResponse, ManifestDataResponse,
 } from "@/types/som";
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -93,9 +94,9 @@ export default function SoMCommandCenter({
     : null;
 
   const { data: competitorsData, error: competitorsError, mutate: mutateCompetitors } =
-    useSWR(competitorsKey, swrFetcher);
+    useSWR<CompetitorResponse>(competitorsKey, swrFetcher);
   const { data: manifestData, error: manifestError, mutate: mutateManifest } =
-    useSWR(manifestKey, swrFetcher);
+    useSWR<ManifestDataResponse>(manifestKey, swrFetcher);
 
   const competitors = useMemo<CompetitorInsight[]>(() => competitorsData?.competitors ?? [], [competitorsData]);
 

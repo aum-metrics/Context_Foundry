@@ -44,6 +44,22 @@ export interface CompetitorInsight {
     remediationRecommendation?: string;
 }
 
+export interface CompetitorResponse {
+    competitors: CompetitorInsight[];
+}
+
+export interface ManifestDataResponse {
+    orgId?: string;
+    content?: string;
+    version?: string;
+    schemaData?: Record<string, unknown>;
+    sourceUrl?: string | null;
+    industryTaxonomy?: string | null;
+    industryTags?: string[];
+    name?: string | null;
+    createdAt?: string | null;
+}
+
 export interface ManifestSnapshot {
     sourceUrl?: string | null;
     name?: string | null;
